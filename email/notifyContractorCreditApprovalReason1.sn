@@ -1,0 +1,35 @@
+{{
+    /*
+        @title 			creditApproved
+        Description		Email for the contractor when a credit is accepted for one of his project. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use contractor;
+    use id_projet;
+    use credit;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    titre = (contractor.rows.contact_gender eq "f") ? mme : mr; 
+    
+    uid_contractor = contractor.rows.uid;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+    msg = credit.rows.msg_acceptation;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

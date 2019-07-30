@@ -1,0 +1,83 @@
+{{
+    /*
+        @title contractor_supplier_discounts
+        Description: List all the supplier discounts.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    for d sql("SELECT * FROM sr_supplier_discount WHERE active='yes'") do
+  
+}}
+    <div class="panel">
+        <div class="row">
+            <div class="col-md-5">
+                <div class="logo">
+                    <img src="{{d.rows.logo}}?size=450x200&crop" alt="{{d.rows.supplier_name}}">   
+                </div>
+                <div class="website">
+                    <a class="btn btn-primary btn-block" href="{{d.rows{"website_".+lg.rows.lg} }}" target="_blank">{{sn_ct("contractor_supplier_discounts Site web", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+                </div>
+                <div class="contact">
+                    {{sn_ct("contractor_supplier_discounts Personne contact : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} {{d.rows.contact_name}}<br/>
+                    {{sn_ct("contractor_supplier_discounts Tel : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} {{d.rows.contact_phone}}<br/>
+                    {{sn_ct("contractor_supplier_discounts Courriel : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} {{d.rows.contact_email}}<br/>
+                </div>
+            </div>
+            
+            <div class="col-md-7">
+                <div class="title">
+                    {{d.rows.supplier_name}}
+                </div>
+                <div class="aimed-job">
+                    {{sn_ct("contractor_supplier_discounts Travaux visés : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} {{d.rows{"aimed_job_".+lg.rows.lg} }}
+                </div>
+                <div class="description">
+                    {{d.rows{"description_".+lg.rows.lg} }}
+                </div>
+                <div>
+                    {{sn_ct("contractor_supplier_discounts Lieu desservis : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} {{d.rows{"place_served_".+lg.rows.lg} }}
+                </div>
+            </div>
+        </div>
+    </div>
+{{  endfor}}
+
+<style>
+    .panel{
+        background-color:#E8E8E8;
+        padding:10px 20px;
+    }
+    .aimed-job{
+        font-size:14px;
+        font-weight:bold;
+        margin-bottom:10px;
+    }
+    .title{
+        font-size:36px;
+        font-weight:bold;
+        margin-bottom:15px;
+    }
+    .contact{
+        font-weight:bold;
+        margin-top:10px;
+    }
+    .description{
+        margin-bottom:10px;
+    }
+    .logo{
+        margin-bottom:10px;
+    }
+    .logo > img{
+        width:100%;
+    }
+</style>

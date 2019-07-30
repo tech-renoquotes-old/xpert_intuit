@@ -1,0 +1,110 @@
+{{
+    /*
+        @title contractor_request
+        Description: This widget is the form used for a contractor to suscribe to SR.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-20
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    col_label = ' col-md-4'; 
+    col_input = 'col-md-8';
+}}
+<style>
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    
+</style>
+<div class="anchor" id="contractor_request"></div>
+<div class="page-header bck-bleu-pale section-title">
+	<h2>{{sn_ct("contractor_request JE VEUX PLUS D'INFORMATION")}}</h2>
+    <h3></h3>
+</div>
+<div class="well custom-well">
+    <form class="form-horizontal" action="{{pages('sr_contractor_form', lg.rows.lg, table:'pages')}}" name="contractor_request" method="POST">
+        <fieldset class="form-group">
+            <label for="name" class="control-label{{col_label}}">
+                {{sn_ct("contractor_request Votre nom", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+            </label>
+            <div class="{{col_input}}">
+                <input class="form-control" type="text" name="name" id="name" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid name')}}" data-validator-error="name"></span>     
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="phone" class="control-label{{col_label}}">
+                {{sn_ct("contractor_request Votre téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+            </label>
+            <div class="{{col_input}}">
+                <input class="form-control" type="text" name="phone" id="phone" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid phone')}}" data-validator-error="phone"></span>  
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="email" class="control-label{{col_label}}">
+                {{sn_ct("contractor_request Votre courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+            </label>
+            <div class="{{col_input}}">
+                <input class="form-control" type="text" name="email" id="email" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>    
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="company_name" class="control-label{{col_label}}">
+                {{sn_ct("contractor_request Nom de l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+            </label>
+            <div class="{{col_input}}">
+                <input class="form-control" type="text" name="company_name" id="company_name" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid company_name')}}" data-validator-error="company_name"></span>        
+            </div>
+        </fieldset>
+        
+        <input name="url" type="hidden" value="{{page.rows{"folder_".+lg.rows.lg} .+ page.rows{"page_".+lg.rows.lg} ;}}">
+        
+        <div class="form-group">
+            <div class="{{col_label}}">
+                
+            </div>
+            <div class="{{col_input}}">
+                <button type="submit" class="btn btn-primary">
+                    {{sn_ct(edit:false,"contractor_request Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_request/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'contractor_request');
+}}
+
+<script>
+    // Bind contractor_request form to ajaxform plugin to send the form via ajax
+    // $('form[name=contractor_request]').ajaxForm({
+    //     resetForm:true, // to reset the form once it is sent
+    //     success:function(data){
+    //         console.log(data);
+    //         location = "{{pages(table:'pages','sr_contractor_form_confirmation',lg.rows.lg)}}";
+    //     },
+    //     error:function(data){
+
+    //     }
+    // });
+    
+</script>

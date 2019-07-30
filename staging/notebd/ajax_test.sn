@@ -1,0 +1,135 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    "testtttt1234"
+}}
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.17/jquery-ui.min.js">        </script>
+
+\{{
+    //cgidata = cgidata();
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/");  // to see images
+    
+    "test234";
+}}
+
+ttttttttt
+
+<div class="jumbotron text-center">
+  <h1>My First Bootstrap Page</h1>
+  <p>Resize this responsive page to see the effect!</p> 
+</div>
+
+
+<div id="simplemodal-container" class="simplemodal-container" style="position: fixed; z-index: 502; height: 534px; width: 700px; left: 12px; top: 15%;">
+  <div tabindex="-1" class="simplemodal-wrap" style="height: 100%; outline: 0px; width: 100%; overflow: visible;">
+    <div id="simplemodal-data" class="simplemodal-data">
+      <div id="new-login-modal">
+        <div class="logo"> <img src="//main.cdn.wish.com/f2ad4f968504/img/logo/wish_logo_header.png?v=13"> </div>
+        <div id="jssor-product-images" class="column" jssor-slider="true" style="visibility: visible; width: 350px; height: 450px;">
+          <div style="position: absolute; top: 0px; left: 0px; width: 350px; height: 450px; transform-origin: 0px 0px 0px; transform: scale(1);">
+            <div class="column" style="visibility: visible; display: block; position: relative; top: 0px; left: 0px; overflow: visible;">
+              <div class="product-prices">
+                <div class="price-container"> <span class="retail-price">18 $<span class="currency-subscript">CAD</span></span> <span class="actual-price">3 $<span class="currency-subscript">CAD</span></span>
+                </div><span class="price-triangle"></span> </div>
+              <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; display: none;"></div>
+              <div u="slides" style="width: 350px; height: 450px; z-index: 0; position: absolute;">
+                <div style="position: absolute; z-index: 0; pointer-events: none; left: -350px; top: 0px;"></div>
+              </div>
+              <div u="slides" style="width: 350px; height: 450px; z-index: 0; position: absolute; overflow: hidden;">
+                <div style="width: 350px; height: 450px; top: 0px; left: 0px; position: absolute; background-color: rgb(0, 0, 0); opacity: 0; display: none;"></div>
+                <div style="width: 350px; height: 450px; top: 0px; left: -350px; position: absolute; overflow: hidden;"> <img class="jssor-image" src="https://contestimg.wish.com/api/webimage/54377f7b01c0c041c9aa9262-large.jpg?cache_buster=07b5799ef8e21bf6af86e64dd5f8c4f5" u="image" border="0" style="width: 350px; height: 350px; top: 50px; left: 0px; position: absolute;">
+                  <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; z-index: 1000; display: none;"></div>
+                </div>
+                <div style="width: 350px; height: 450px; top: 0px; left: -350px; position: absolute; overflow: hidden;"> <img class="jssor-image" src="https://contestimg.wish.com/api/webimage/5436380e8edcfa7c960397bb-large.jpg?cache_buster=d43ab4fa2fa28a4d4e889d2c4892df08" u="image" border="0" style="width: 350px; height: 350px; top: 50px; left: 0px; position: absolute;">
+                  <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; z-index: 1000; display: none;"></div>
+                </div>
+                <div style="width: 350px; height: 450px; top: 0px; left: 0px; position: absolute; overflow: hidden;"> <img class="jssor-image" src="https://contestimg.wish.com/api/webimage/53ce59d0d911397a42460ac0-large.jpg?cache_buster=f49cb333dc4660a94c7a0a66a733b82b" u="image" border="0" style="width: 350px; height: 350px; top: 50px; left: 0px; position: absolute;">
+                  <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; z-index: 1000; display: none;"></div>
+                </div>
+                <div style="width: 350px; height: 450px; top: 0px; left: 350px; position: absolute; overflow: hidden;"> <img class="jssor-image" src="https://contestimg.wish.com/api/webimage/53231383ab980a5b29dbd9e0-large.jpg" u="image" border="0" style="width: 350px; height: 349.301px; top: 50.3493px; left: 0px; position: absolute;">
+                  <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; z-index: 1000; display: none;"></div>
+                </div>
+                <div style="width: 350px; height: 450px; top: 0px; left: -350px; position: absolute; overflow: hidden;"> <img class="jssor-image" src="https://contestimg.wish.com/api/webimage/54b8b435d630ed0e67a8635e-large.jpg?cache_buster=a952cce4bbd3fbe3d4f9592ccea4a10d" u="image" border="0" style="width: 350px; height: 311.5px; top: 69.25px; left: 0px; position: absolute;">
+                  <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; z-index: 1000; display: none;"></div>
+                </div>
+                <div style="width: 350px; height: 450px; top: 0px; left: -350px; position: absolute; overflow: hidden;"> <img class="jssor-image" src="https://contestimg.wish.com/api/webimage/544613653dabbe03c0b535b0-large.jpg?cache_buster=91dbe07a41d736031bbb235746f40002" u="image" border="0" style="width: 350px; height: 315.583px; top: 67.2083px; left: 0px; position: absolute;">
+                  <div u="loading" class="jssor-loader" style="width: 350px; height: 450px; top: 0px; left: 0px; z-index: 1000; display: none;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="login-modal-forms" class="column">
+          <div class="back left soft-hide"><img src="//main.cdn.wish.com/f2ad4f968504/img/login_modal/back.png?v=13"></div>
+          <div id="signup-form" class="login-modal-form">
+            <div class="title"> Inscrivez-vous pour voir nos produits ! </div>
+            <div class="fb-login-btn btn cronkite" data-tid="1518">
+              <div class="image"><img src="//main.cdn.wish.com/f2ad4f968504/img/login_modal/facebook.png?v=13"> </div><span class="text">S'inscrire avec Facebook</span> </div>
+            <div class="gplus-login-btn btn cronkite" data-tid="1814">
+              <div class="image"><img src="//main.cdn.wish.com/f2ad4f968504/img/login_modal/googleplus.png?v=13"> </div><span class="text">S'incrire avec Google</span> </div>
+            <div class="email-signup-btn btn cronkite" data-tid="1519"> <span class="text">S'inscrire avec Email</span> </div>
+            <div class="login-separator">
+              <hr>
+              <div class="text">ou</div>
+            </div>
+            <div class="email-login-btn btn"> <span class="text">Se connecter</span> </div>
+          </div>
+          <form id="email-signup-form" class="login-modal-form input-fields soft-hide">
+            <div class="title">Presque terminé !</div>
+            <label class="first-name-label" for="signup-first-name">Prénom</label>
+            <input type="text" id="signup-first-name">
+            <br>
+            <label class="last-name-label" for="signup-last-name">Nom de famille</label>
+            <input type="text" id="signup-last-name">
+            <br>
+            <label class="email-label" for="signup-email">Email</label>
+            <input type="text" id="signup-email">
+            <br>
+            <label class="password-label" for="signup-password">Mot de passe</label>
+            <input type="password" id="signup-password">
+            <br>
+            <button class="submit-btn btn cronkite" data-tid="1524" type="submit"> <span class="text">S'inscrire</span> </button>
+            <div class="login-link text-link"> Vous avez déjà un compte ? </div>
+          </form>
+          <div id="login-form" class="login-modal-form soft-hide">
+            <div class="title">Se connecter</div>
+            <div class="fb-login-btn btn cronkite" data-tid="1518">
+              <div class="image"><img src="//main.cdn.wish.com/f2ad4f968504/img/login_modal/facebook.png?v=13"> </div><span class="text">Se connecter avec Facebook</span> </div>
+            <div class="gplus-login-btn btn cronkite" data-tid="1814">
+              <div class="image"><img src="//main.cdn.wish.com/f2ad4f968504/img/login_modal/googleplus.png?v=13"> </div><span class="text">Se connecter avec Google</span> </div>
+            <div class="login-separator">
+              <hr>
+              <div class="text">ou</div>
+            </div>
+            <form id="email-login-form" class="input-fields">
+              <label class="email-label" for="login-email">Email</label>
+              <input id="login-email" type="email" spellcheck="false" placeholder="Enter your email">
+              <br>
+              <label class="password-label" for="login-password">Mot de passe</label>
+              <input id="login-password" type="password">
+              <br>
+              <button class="submit-btn btn" type="submit"> <span class="text">Se connecter</span> </button>
+              <div class="forgot-password-link text-link"> Mot de passe oublié ? </div>
+            </form>
+          </div>
+          <form id="forgot-password-form" class="login-modal-form input-fields soft-hide">
+            <div class="title">Mot de passe oublié ?</div>
+            <label class="email-label" for="account-email">Email</label>
+            <input type="text" id="account-email">
+            <button class="submit-btn btn cronkite" data-tid="1525" type="submit"> <span class="text">Envoyer</span> </button>
+          </form>
+          <div id="message"></div>
+          <div class="soft-hide loader"><img src="//main.cdn.wish.com/f2ad4f968504/img/ajax_loader_24_transparent.gif?v=13"></div>
+        </div>
+        <div class="mobile-app-buttons">
+          <a class="cronkite" data-tid="1828" target="_blank" href="http://itunes.apple.com/us/app/wish-discover-products-youll/id530621395?mt=8"> <img src="//main.cdn.wish.com/f2ad4f968504/img/banner_apple.png?v=13"> </a>
+          <a class="cronkite" data-tid="1829" target="_blank" href="https://play.google.com/store/apps/details?id=com.contextlogic.wish"> <img src="//main.cdn.wish.com/f2ad4f968504/img/banner_google.png?v=13"> </a>
+          <a class="cronkite windows-download-button" data-tid="1866" target="_blank" href="https://www.microsoft.com/en-us/store/apps/wish-shopping-made-fun/9wzdncrcwb76"> <img src="//main.cdn.wish.com/f2ad4f968504/img/banner_windows.png?v=13"> </a>
+          <a class="cronkite amazon-download-button" data-tid="1867" target="_blank" href="http://www.amazon.com/ContextLogic-Inc-Wish-Shopping-Made/dp/B00AEAVSKC"> <img src="//main.cdn.wish.com/f2ad4f968504/img/banner_amazon.png?v=13"> </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

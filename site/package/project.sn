@@ -1,0 +1,913 @@
+\{{
+    /*
+        @title project package
+        
+        @author olivier@sednove.com
+        
+        @version 1.0 2016-07-27
+        @version 1.01 2017-02-10     add limit amount by contractor
+        
+        @modified by louis.jhonny@gmail.com
+        @version 1.02 2017-05-03    Modify findContractorForProject function to include project type
+
+    */
+    package project;
+        
+        function activateProject(uid)
+            project = sql(single:true, "SELECT * FROM sr_project WHERE uid = '?'", uid);
+            locks = sql(single:true,"SELECT count(*) as nbr_lck FROM sr_project p 
+                        INNER JOIN sr_client c ON c.uid = p.uid_client 
+                        WHERE c.locked = 'yes' AND p.status = 'new' AND p.uid_client = '?'", project.rows.uid_client);
+                        
+            if (project.nbrows > 0) then
+                client = sql(single:true, "SELECT * FROM sr_client WHERE uid = '?'", project.rows.uid_client);
+                if (client.nbrows > 0) then
+                
+                    //Unlock all client's project
+                    if(locks.rows.nbr_lck == 0) then
+                        void sql("UPDATE `sr_client` SET `locked` = '', `locked_by` = '' WHERE `uid` = '?'", project.rows.uid_client);
+                    endif
+                    
+                    //activate project
+                    void sql("UPDATE `sr_project` SET `active_date` = NOW() WHERE `uid` = '?'", project.rows.uid);
+                    automail::projectActivatedClient(project.rows.uid);
+                    automail::projectActivatedAdmin(project.rows.uid);
+                    // Refresh client qualification status
+                    project::qualifyClient(client); 
+                endif
+            endif
+        endf
+        
+        function qualifyClient(client)
+            if (type(client) ne 'context' && client ne '') then
+                client = sql(single:true, "SELECT * FROM sr_client WHERE uid = '?'", client);
+            endif
+            if (client ne '' && client.nbrows > 0 && client.rows.to_qualify eq 'yes') then
+                projects_to_qualify = sql("SELECT uid FROM sr_project WHERE uid_client = '?' AND status = 'new'", client.rows.uid);
+                if (projects_to_qualify.nbrows == 0) then
+                    void update(tables: 'sr_client', fields:{
+                        'to_qualify': 'no'
+                    }, uid:client.rows.uid);
+                endif
+            endif
+        endf
+        
+        function completeProject(uid_project)
+            void update(tables:'sr_project', fields: {
+                'status': 'completed',
+                'completion_date':datetime()
+            }, uid: uid_project);
+        endf
+        
+        function incompleteProject(uid_project)
+            void update(tables:'sr_project', fields: {
+                'status': 'inactive-incomplete',
+                'completion_date':datetime()
+            }, uid: uid_project);
+        endf
+        
+        function cancel_project(uid_project)
+            project = sql(single:true, "SELECT * FROM sr_project WHERE uid = '?'", uid_project);
+            locks = sql(single:true,"SELECT count(*) as nbr_lck FROM sr_project p 
+                        INNER JOIN sr_client c ON c.uid = p.uid_client 
+                        WHERE c.locked = 'yes' AND p.status = 'new' AND p.uid_client = '?'", project.rows.uid_client);
+                        
+            if (project.nbrows > 0) then
+                client = sql(single:true, "SELECT * FROM sr_client WHERE uid = '?'", project.rows.uid_client);
+                if (client.nbrows > 0) then
+                
+                    //Unlock all client's project
+                    if(locks.rows.nbr_lck == 0) then
+                        void sql("UPDATE `sr_client` SET `locked` = '', `locked_by` = '' WHERE `uid` = '?'", project.rows.uid_client);
+                    endif
+                    
+                    //Cancel project by setting status depending on project's existing status
+                    if (project.rows.status eq 'new') then
+                        void update(tables:'sr_project', fields: {
+                            'status': 'cancelled-before-qualification'
+                        }, uid: uid_project);
+                    else
+                        void update(tables:'sr_project', fields: {
+                            'status': 'cancelled-after-qualification'
+                        }, uid: uid_project);
+                    endif
+                endif
+            endif
+        endf
+        
+        function acceptProjectContractor(uid_project_contractor, lead_price)
+            // Update project_contractor link
+            void update(tables:'sr_project_contractor', fields: {
+                'accepted': 'yes',
+                'lead_price': lead_price,
+                "accepted_date":datetime()
+            }, uid: uid_project_contractor);
+            // Check for existing invoice
+            invoice = sql(single:true,"SELECT uid FROM sr_invoice WHERE uid_project_contractor='?'", uid_project_contractor);
+            if invoice.nbrows == 0 then
+                // Create invoice
+                void insert(table:'sr_invoice', fields:{
+                    'uid_project_contractor': uid_project_contractor,
+                    'amount': lead_price
+                });
+                
+                project_contractor = sql(single:true, "SELECT * FROM sr_project_contractor where uid = '?'", uid_project_contractor);
+                
+                if(project_contractor.rows.accepted_free ne 'yes') then
+                    // Send emails
+                    automail::sendContractorToClient(uid_project_contractor);
+                    automail::notifyContractorWinProject(uid_project_contractor);
+                    automail::notifyAdminContractorAcceptQuoteProject(uid_project_contractor);
+                endif
+            endif
+        endf
+        
+        function generateProjectContractorToken(uid_project, uid_contractor)
+            time = time();
+            token = hash(algo:"sha512", uid_project .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:999999));
+            doublon = sql(single:true, "select uid_project, uid_contractor  from sr_project_contractor  where uid_project = '?' and  uid_contractor = '?'", uid_project, uid_contractor);
+            if doublon.nbrows > 0 then
+                if (doublon.rows.token ne '') then
+                    token = doublon.rows.token;
+                else
+                    void sql("UPDATE sr_project_contractor SET token = '?' WHERE uid_contractor = '?' AND uid_project = '?'", token, uid_contractor, uid_project);
+                endif
+            else
+                void insert(table:'sr_project_contractor', fields:{
+                    'uid_contractor': uid_contractor,
+                    'uid_project': uid_project,
+                    'token': token
+                });
+            endif
+            return token;
+        endf
+        
+        function generateFreeProjectContractorToken(uid_project, uid_contractor)
+            time = time();
+            token = hash(algo:"sha512", uid_project .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:999999));
+            project = sql(single:true, "select * from sr_project  where uid = '?'", uid_project);
+            doublon = sql(single:true, "select uid_project, uid_contractor from sr_project_contractor  where uid_project = '?' and  uid_contractor = '?'", uid_project, uid_contractor);
+            if doublon.nbrows > 0 then
+                if (doublon.rows.token ne '') then
+                    token = doublon.rows.token;
+                else
+                    void sql("UPDATE sr_project_contractor SET token = '?', accepted_free = 'yes' WHERE uid_contractor = '?' AND uid_project = '?'", token, uid_contractor, uid_project);
+                endif
+            else
+                project_contractor =  insert(table:'sr_project_contractor', fields:{
+                    'uid_contractor': uid_contractor,
+                    'uid_project': uid_project,
+                    'token': token,
+                    'accepted_free': 'yes'
+                });
+            endif
+            
+            //complete the project immediately if its status is free
+            project::acceptProjectContractor(project_contractor.uid, 0);
+
+            return token;
+        endf
+        
+        function connectProjectContractor(uid_project, uid_contractor)
+            token = project::generateProjectContractorToken(uid_project, uid_contractor);
+            automail::suggestProjectToContractor(token);
+        endf
+        
+        function connectFreeProjectContractor(uid_project, uid_contractor)
+            token = project::generateFreeProjectContractorToken(uid_project, uid_contractor);
+            automail::suggestFreeProjectToContractor(token);
+        endf
+
+        function findContractorsForProject_v2(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+                
+            //verify if the project is from of an external network (eg: Groupe Reso)
+            if project.rows.network > 0 then
+                //if project is from an external network, offer that project to contractors from that network, if there are contractors remaining in that network, use the usual query but with that extra condition, if none remain, use the usual query without that extra condition.
+                network_remaining = sql(single:true, "
+                    SELECT c.*
+                    FROM   sr_contractor c 
+                           INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid 
+                                  AND ct.uid_territory = ifnull('?',0)
+                                  AND IFNULL(?,0) BETWEEN IFNULL(ct.min_amount,0) AND IF(IFNULL(ct.max_amount,0) = 0,9999999,ct.max_amount)
+                    WHERE  c.active = 'yes' 
+                    AND    c.verified = 'yes' 
+                    AND    languages + ? != 3 
+                    AND    ( 
+                                  '?' IN 
+                                  ( 
+                                         SELECT cs.uid_service 
+                                         FROM   sr_contractor_service cs 
+                                         WHERE  cs.uid_contractor = c.uid 
+                                         AND    approved = 'yes') 
+                           OR     '?' IN 
+                                  ( 
+                                         SELECT cs.uid_service 
+                                         FROM   sr_contractor_service cs 
+                                         WHERE  cs.uid_contractor = c.uid 
+                                         AND    approved = 'yes')) 
+                    AND    NOT EXISTS 
+                           ( 
+                                  SELECT NULL 
+                                  FROM   sr_project_contractor pc 
+                                  WHERE  pc.uid_project = '?' 
+                                  AND    pc.uid_contractor = c.uid) 
+                    AND    (( 
+                                         Now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) 
+                           OR     ( 
+                                         c.enable_vacation = 'no' OR c.enable_vacation is null)) 
+                    AND    (( 
+                                         date_format(Now(),'%H:%i') BETWEEN c.from_active_hour AND c.to_active_hour)
+                           OR     ( 
+                                         c.enable_daily_schedule = 'no') 
+                           OR     isnull(c.enable_daily_schedule))
+                           
+                    AND (
+                            c.allow_budget = 'yes' 
+                            AND EXISTS
+                                (
+                                SELECT * FROM sr_project WHERE 
+                                    (
+                                        (shared_budget IS NOT NULL AND shared_budget <> '') 
+                                    ) 
+                                    AND uid = '?' 
+                                ) 
+                            OR c.allow_budget <> 'yes'
+                            OR isnull(c.allow_budget)
+                        )
+                    AND c.network = '?'
+                    ORDER BY (note_global + IF(c.uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT 1",  project.rows.uid_territory, 
+                    project.rows.estimated_value, 
+                    project.rows.languages, 
+                    project.rows.uid_service, 
+                    project.rows.uid_secondary_service, 
+                    project.rows.uid, 
+                    project.rows.uid,
+                    project.rows.network,
+                    project.rows.uid_territory
+                    );
+                if network_remaining.nbrows > 0 then
+                    network_query = "AND c.network = " .+ project.rows.network;
+                endif
+            endif
+                
+            return sql("
+                SELECT c.*
+                FROM   sr_contractor c 
+                       INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid 
+                              AND ct.uid_territory = ifnull('?',0)
+                              AND IFNULL(?,0) BETWEEN IFNULL(ct.min_amount,0) AND IF(IFNULL(ct.max_amount,0) = 0,9999999,ct.max_amount)
+                WHERE  c.active = 'yes' 
+                AND    c.verified = 'yes' 
+                AND    languages + ? != 3 
+                AND    ( 
+                              '?' IN 
+                              ( 
+                                     SELECT cs.uid_service 
+                                     FROM   sr_contractor_service cs 
+                                     WHERE  cs.uid_contractor = c.uid 
+                                     AND    approved = 'yes') 
+                       OR     '?' IN 
+                              ( 
+                                     SELECT cs.uid_service 
+                                     FROM   sr_contractor_service cs 
+                                     WHERE  cs.uid_contractor = c.uid 
+                                     AND    approved = 'yes')) 
+                AND    NOT EXISTS 
+                       ( 
+                              SELECT NULL 
+                              FROM   sr_project_contractor pc 
+                              WHERE  pc.uid_project = '?' 
+                              AND    pc.uid_contractor = c.uid) 
+                AND    (( 
+                                     Now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) 
+                       OR     ( 
+                                     c.enable_vacation = 'no' OR c.enable_vacation is null)) 
+                AND    (( 
+                                     date_format(Now(),'%H:%i') BETWEEN c.from_active_hour AND c.to_active_hour)
+                       OR     ( 
+                                     c.enable_daily_schedule = 'no') 
+                       OR     isnull(c.enable_daily_schedule))
+                       
+                AND (
+                        c.allow_budget = 'yes' 
+                        AND EXISTS
+                            (
+                            SELECT * FROM sr_project WHERE 
+                                (
+                                    (shared_budget IS NOT NULL AND shared_budget <> '') 
+                                ) 
+                                AND uid = '?' 
+                            ) 
+                        OR c.allow_budget <> 'yes'
+                        OR isnull(c.allow_budget)
+                    )
+                " .+ network_query .+ "
+                ORDER BY (note_global + IF(c.uid_territory = '?', 1.1, 0)) DESC
+                LIMIT ?
+            ",   project.rows.uid_territory, 
+                project.rows.estimated_value, 
+                project.rows.languages, 
+                project.rows.uid_service, 
+                project.rows.uid_secondary_service, 
+                project.rows.uid, 
+                project.rows.uid,
+                project.rows.uid_territory, 
+                limit
+                );
+                
+                
+            /*return sql("
+                SELECT c.*
+                FROM   sr_contractor c 
+                       INNER JOIN sr_project_type_contractor ON uid_contractor = c.uid 
+                              AND uid_project_type = ?
+                       INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid 
+                              AND ct.uid_territory = ifnull('?',0)
+                              AND IFNULL(?,0) BETWEEN IFNULL(ct.min_amount,0) AND IF(IFNULL(ct.max_amount,0) = 0,9999999,ct.max_amount)
+                WHERE  c.active = 'yes' 
+                AND    c.verified = 'yes' 
+                AND    languages + ? != 3 
+                AND    ( 
+                              '?' IN 
+                              ( 
+                                     SELECT cs.uid_service 
+                                     FROM   sr_contractor_service cs 
+                                     WHERE  cs.uid_contractor = c.uid 
+                                     AND    approved = 'yes') 
+                       OR     '?' IN 
+                              ( 
+                                     SELECT cs.uid_service 
+                                     FROM   sr_contractor_service cs 
+                                     WHERE  cs.uid_contractor = c.uid 
+                                     AND    approved = 'yes')) 
+                AND    NOT EXISTS 
+                       ( 
+                              SELECT NULL 
+                              FROM   sr_project_contractor pc 
+                              WHERE  pc.uid_project = '?' 
+                              AND    pc.uid_contractor = c.uid) 
+                AND    (( 
+                                     Now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) 
+                       OR     ( 
+                                     c.enable_vacation = 'no')) 
+                AND    (( 
+                                     date_format(Now(),'%H:%i') BETWEEN c.from_active_hour AND c.to_active_hour)
+                       OR     ( 
+                                     c.enable_daily_schedule = 'no') 
+                       OR     isnull(c.enable_daily_schedule))
+                       
+                AND (
+                        ('?' >= DATE(NOW() + INTERVAL ifnull(c.delay_dynamic, 0) DAY ) AND (isnull(c.delay_to) OR c.delay_to = '' OR c.delay_to = '0000-00-00') AND (isnull(c.delay_from) or c.delay_from = '' OR c.delay_from = '0000-00-00'))
+                       
+                       OR
+                       
+                       (('?' >= ifnull(c.delay_from,0)) AND ('?' <= ifnull(c.delay_to, '2028-01-01') OR c.delay_to = '' OR c.delay_to = '0000-00-00') AND (isnull(c.delay_dynamic) OR c.delay_dynamic = ''))
+                
+                    )
+                AND (
+                        c.allow_budget = 'yes' 
+                        AND EXISTS
+                            (
+                            SELECT * FROM sr_project WHERE 
+                                (
+                                    (shared_budget IS NOT NULL AND shared_budget <> '') 
+                                ) 
+                                AND uid = '?' 
+                            ) 
+                        OR c.allow_budget <> 'yes'
+                        OR isnull(c.allow_budget)
+                    )
+                ORDER BY (note_global + IF(c.uid_territory = '?', 1.1, 0)) DESC
+                LIMIT ?
+            ",project.rows.uid_project_type, 
+                project.rows.uid_territory, 
+                project.rows.estimated_value, 
+                project.rows.languages, 
+                project.rows.uid_service, 
+                project.rows.uid_secondary_service, 
+                project.rows.uid, 
+                project.rows.delay_to,
+                project.rows.delay_to,
+                project.rows.delay_from,
+                project.rows.uid,
+                project.rows.uid_territory, 
+                limit
+                );*/
+
+            /*return sql("
+                    SELECT c.* 
+                    FROM sr_contractor c
+                    WHERE   c.active = 'yes'
+                    AND c.verified = 'yes'
+                        AND ((now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) OR (c.enable_vacation = 'no'))
+                        AND ((DATE_FORMAT(now(),'%H:%i') BETWEEN c.from_active_hour AND c.to_active_hour) OR (c.enable_daily_schedule = 'no') OR isnull(c.enable_daily_schedule))
+                        AND '?' IN (SELECT ifnull(uid_project_type,0) FROM sr_project_type_contractor WHERE uid_contractor = c.uid)
+                        AND languages + ? <> 3
+                        AND ('?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid AND approved = 'yes') OR '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid AND approved = 'yes'))
+                        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                        AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid AND ifnull(?,0) between ifnull(ct.min_amount,0) and if(ifnull(ct.max_amount,0)=0,9999999,ct.max_amount))
+
+                    ORDER BY (note_global + IF(uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT ?
+                ", project.rows.uid_project_type, project.rows.languages, project.rows.uid_service, project.rows.uid_secondary_service, project.rows.uid, project.rows.uid_territory,
+                   project.rows.estimated_value, project.rows.uid_territory, limit);*/
+                    
+        endf
+
+         
+        function findContractorsForProject(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+                
+            return sql("
+                    SELECT c.* 
+                    FROM sr_contractor c
+                    WHERE   c.active = 'yes'
+                        AND languages + ? <> 3
+                        AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid) 
+                        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                        AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid)
+                        AND (
+                            0 = (select ifnull(estimated_value,0)as estimated from sr_project where uid ='?')
+                            OR
+                            (select ifnull(estimated_value,0)as estimated from sr_project where uid ='?') 
+                                between ifnull(amount_min,0) 
+                                        and if(ifnull(amount_max,0)=0,9999999,amount_max)
+
+                        )
+                        
+                    ORDER BY (note_global + IF(uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT ?
+                ",  project.rows.languages, project.rows.uid_service, project.rows.uid, project.rows.uid_territory,
+                    project.rows.uid, project.rows.uid,
+                    project.rows.uid_territory, limit);
+                    
+         endf
+         
+         
+         
+    
+        function findContractorsForProject_old(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+            return sql("
+                    SELECT c.* 
+                    FROM sr_contractor c
+                    WHERE   c.active = 'yes'
+                        AND languages + '?' <> 3
+                        AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid)
+                        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                        AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid)
+                    ORDER BY (note_global + IF(uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT ?
+                ", project.rows.languages, project.rows.uid_service, project.rows.uid, project.rows.uid_territory, project.rows.uid_territory, limit);
+        endf
+        
+        
+        /*
+        *
+        *@description: accept a project half-price
+        *@args: uid_project(id of project), uid_contractor (id of contractor)
+        *@return:
+        *   (-1): Exit if max half price to accept is reached.
+        *   (0): if project is not a valid half-price project
+        *   (1): if credit card has been used for the payment
+        *   (2): if transaction has previously been executed or Limit > balance.
+        *   (-2): if accept
+        *
+        */
+        function accept_half_price(uid_project, uid_contractor)
+        
+            configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+            project = sql(single:true, 
+                    "SELECT p.*,
+                    city.uid_territory,
+                    DATEDIFF(now(), active_date) as 'age_in_days',
+                    (SELECT COUNT(*) FROM sr_project_contractor WHERE uid_project = p.uid) as 'total_links',
+                    (SELECT IFNULL(SUM(IF(lead_price > 0,1,0)),0) FROM sr_project_contractor WHERE uid_project = p.uid) as 'accepted_links'
+                    FROM sr_project as p
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.status = 'active'
+                    AND p.uid = '?'
+                ", uid_project); 
+        
+
+            // If project is more than 7 days old, half price!
+            if (project.rows.age_in_days >= configs.rows.project_halfprice_days) then
+                // Find contractors that accepted the project if half price and accept them
+                accepted_links = project.rows.accepted_links;
+                max_halfprice_to_accept = project.rows.max_quotes - accepted_links;
+                
+                contractor = sql(single:true,"
+                        SELECT c.uid, c.credit_threshold, pc.uid AS 'uid_project_contractor', c.credit_cards
+                        FROM sr_contractor c
+                        INNER JOIN sr_project_contractor pc
+                            ON pc.uid_contractor = c.uid
+                        WHERE pc.accepted_rebate = 'yes'
+                            AND (pc.accepted != 'yes' OR pc.accepted IS NULL)
+                            AND pc.uid_project = '?'
+                            AND c.active = 'yes'
+                            AND c.can_accept_projects = 'yes'
+                            AND c.uid = '?'
+                    ", uid_project, uid_contractor);
+        
+                    if (max_halfprice_to_accept  <= 0) then
+                        return -1;
+                        stop();
+                    endif
+        
+                    //  Vérifier si la balance courante de l'entrepreneur dépasse sa limite de crédit
+                    total = contractor::getCurrentBillingTotal(contractor.rows.uid);
+        
+                    if (total >= contractor.rows.credit_threshold && contractor.rows.credit_cards eq 'yes') then
+                        // Effectuer un prélevement sur la carte de crédit
+                        void insert(table:'sr_debug', fields:{'description':'Cron Project to Contractor debit_charge on half price for contractor '.+contractor.rows.uid,'text':'projet='.+project.rows.uid});
+                        transaction_uid = contractor::debit_charge(contractor.rows.uid, total);
+                        return 1;
+                    endif
+                    
+                    // Si la balance ne dépasse pas la limite de crédit OU que la transaction à été effectuée
+                    if (total < contractor.rows.credit_threshold || (transaction_uid != false && transaction_uid ne "")) then
+                        project::acceptProjectContractor(contractor.rows.uid_project_contractor, project.rows.lead_price / 2);
+                        max_halfprice_to_accept--;
+                        accepted_links++;
+                        return 2;
+                    endif
+                
+        
+                if (max_halfprice_to_accept <= 0) then
+                    //V1.02
+                    void insert(table:'sr_debug', fields:{'description':'Cron Project to Contractor project complete max_halfprice_to_accept=  '.+max_halfprice_to_accept,'text':'projet='.+project.rows.uid});
+                    project::completeProject(project.rows.uid);
+                endif
+                
+                if (accepted_links < configs.rows.project_min_quotes && project.rows.appologised ne 'yes' && project.rows.age_in_days == configs.rows.project_halfprice_days) then
+                    automail::appologiesToClientNotEnoughQuotes(project.rows.uid);
+                    void update(tables:'sr_project', fields: {
+                        'appologised': 'yes'
+                    }, uid: project.rows.uid);
+                endif 
+            else
+                return 0;
+            endif
+        endf
+        
+        
+         // start CLIENT MANAGEMENT TOOL
+        
+        
+        /**
+         * 
+         * 
+        **/
+        function updateProject(puid,auid,pro_data,addr_data)
+            // description = description;
+            // description = html2text(description);//empêche script de passer
+        
+            
+            if(puid ne "") then
+                project = update(
+                    tables:"sr_project",
+                    fields: pro_data, 
+                    uid:puid
+                );
+            endif
+
+            if(auid eq "" || auid == 0) then
+                address = insert(
+                    table:"sr_address",
+                    fields:addr_data
+                );
+                
+                project_upd = update(
+                    tables:"sr_project",
+                    fields: {"uid_address": address.uid},
+                    uid:puid
+                );
+            else
+                addr = update(
+                    tables:"sr_address",
+                    fields:addr_data,
+                    uid:auid
+                );
+                
+                prj_upd = update(
+                    tables:"sr_project",
+                    fields: {"uid_address": auid},
+                    uid:puid
+                );
+                
+            endif
+            
+        endf
+        
+        
+        /**
+         * Add lock to client only if it has not locked already
+         * 
+        **/
+
+        function addLock(uid_client, username)
+            client = sql(single:true,"SELECT * FROM sr_client WHERE locked = 'yes' AND uid = '?'", uid_client);
+            
+            if(client.nbrows == 0) then
+                void update(tables:'sr_client', fields: {
+                    'locked': 'yes',
+                    'locked_by': username,
+                    'request_state': 'pending'
+                    }, uid:uid_client
+                );
+                return 1;
+            else
+                return client.rows.locked_by;
+            endif
+        endf
+        
+        
+        /**
+         * remove lock from client
+         * 
+        **/
+        function rmLock(uid_client)
+        
+            a = update(tables:'sr_client', fields: {
+                'locked': '',
+                'locked_by': ''
+                }, uid: uid_client
+            );
+            return a;
+        endf
+        
+        
+        /**
+         * remove lock from client
+         * 
+        **/
+        function rmMyLocks(username)
+            a = sql("UPDATE sr_client set locked = '', locked_by = '' WHERE locked_by = '?'", username);
+            return a;
+        endf
+        
+        
+        /**
+         * remove lock from client
+         * 
+        **/
+        function isLocked(uid_client)
+            locked =  sql("SELECT uid, locked_by, locked FROM sr_client WHERE locked='yes' AND uid = '?'",uid_client);
+            if(locked.nbrows > 0) then
+                return true;
+            else
+                return false;
+            endif
+        endf
+        
+        
+        /**
+         * remove lock from client
+         * 
+        **/
+        function isLockedBy(uid_client,username)
+            locked =  sql("SELECT uid, locked_by, locked FROM sr_client WHERE locked='yes' AND locked_by = '?' AND uid = '?'",username, uid_client);
+            if(locked.nbrows > 0) then
+                return locked_by;
+            else
+                return false;
+            endif
+        endf
+        
+        
+        /**
+         * Desc Look for current locked projects
+         * args: none
+         * return: array
+        **/
+        function getLocks()
+            locked =  sql("SELECT uid, locked_by, locked FROM sr_client WHERE locked='yes'");
+            return locked.rows;
+        endf
+        
+        
+        /**
+         * 
+         * 
+        **/
+        
+        function followup(...)
+        
+            if(fulldate == undefined) then
+                void  insert(
+                    table:"sr_followup",
+                    fields:{
+                    "msg_uid": uid_msg,
+                    "uid_client": clientID,
+                    "uid_project": uid_project,
+                    "followup_agent": username,
+                    "comments": comments
+                    }
+                );
+                
+            else
+                void  insert(
+                    table:"sr_followup",
+                    fields:{
+                    "msg_uid": uid_msg,
+                    "when_to_callback": fulldate,
+                    "uid_client": clientID,
+                    "uid_project": uid_project,
+                    "followup_agent": username,
+                    "comments": comments
+                    }
+                );
+            endif
+        endf
+        
+        function followup_all(...)
+        project = sql("SELECT * FROM sr_project where uid_client = '?' AND status = 'new'",clientID);
+            for p in project.rows do
+                if(fulldate == undefined) then
+                    void  insert(
+                        table:"sr_followup",
+                        fields:{
+                        "msg_uid": uid_msg,
+                        "uid_client": p.uid_client,
+                        "uid_project": p.uid,
+                        "followup_agent": username,
+                        "comments": comments
+                        }
+                    );
+                    
+                else
+                    void  insert(
+                        table:"sr_followup",
+                        fields:{
+                        "msg_uid": uid_msg,
+                        "when_to_callback": fulldate,
+                        "uid_client": p.uid_client,
+                        "uid_project": p.uid,
+                        "followup_agent": username,
+                        "comments": comments
+                        }
+                    );
+                endif
+            endfor
+            project;
+        endf
+        
+        
+        /**
+         * desc: Ignore a client with all projects
+         * @args: uid_client integer
+         * @args: username string
+         * @return: void
+        **/
+        function skip(uid_client, username)
+            void update(tables:'sr_client', fields: {
+                'skipped_by': username
+                }, uid: uid_client
+            );
+            
+            return uid_client;
+        endf
+        
+        function getPrefix(phone)
+            phones = sql(single:true,"SELECT * FROM sr_dialer_prefix where first_digits = substring(?,1,3)", phone);
+            return phones.rows.prefix;
+        endf
+        
+        //end CLIENT MANAGEMENT TOOL
+        
+        /**
+         * Desc: Create a styled table. headers = column names of the query
+         * @args: sql query
+         **/
+        function create_table_sql(query)
+            array = sql(wantheader:true, wantarray:true, query);
+            }}
+            <style>
+                #styled_table {
+                    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+                
+                #styled_table td, #styled_table th {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                }
+                
+                #styled_table tr:nth-child(even){background-color: #f2f2f2;}
+                
+                #styled_table tr:hover {background-color: #ddd;}
+                
+                #styled_table th {
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+                    text-align: left;
+                    background-color: #00517e;
+                    color: white;
+                }
+            </style>
+            \{{
+            "<table id='styled_table'>";
+            for h in array.headers do}}
+                <th>\{{h;}}</th>
+            \{{endfor
+            for (i=0;i<array.nbrows;i+=1) do}}
+                <tr>
+                    \{{for (h=0;h<array.nbcols;h+=1) do}}
+                        <td>\{{array.rows[i][h];}}</td>
+                    \{{endfor}}
+                </tr>
+            \{{endfor
+            "</table>";
+        endf
+            
+            function create_table_array(array)
+            }}
+            <style>
+                #styled_table {
+                    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+                
+                #styled_table td, #styled_table th {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                }
+                
+                #styled_table tr:nth-child(even){background-color: #f2f2f2;}
+                
+                #styled_table tr:hover {background-color: #ddd;}
+                
+                #styled_table th {
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+                    text-align: left;
+                    background-color: #00517e;
+                    color: white;
+                }
+            </style>
+            \{{
+            "<table id='styled_table'>";
+            for h in array.headers do}}
+                <th>\{{h;}}</th>
+            \{{endfor
+            for (i=0;i<array.nbrows;i+=1) do}}
+                <tr>
+                    \{{for (h=0;h<array.nbcols;h+=1) do}}
+                        <td>\{{array.rows[i][h];}}</td>
+                    \{{endfor}}
+                </tr>
+            \{{endfor
+        endf
+        
+        /**
+         * Desc: return city name and uid_city for zip code parameter
+         * @args: zip string
+         **/
+        function zipToCity(zip, lg)
+            if(zip ne "") then
+                return sql(single:true,"SELECT trim(a.zip), 
+        	            a.uid_city, 
+        	            c.name_? as name 
+                    FROM 
+        	            sr_address a 
+                    INNER JOIN sr_city c on a.uid_city = c.uid 
+                    WHERE trim(a.zip) = trim('?')
+                    ORDER BY a.sn_cdate DESC
+                 ", lg, zip);
+            endif
+        endf
+    endp
+}}

@@ -1,0 +1,506 @@
+{{
+    /*
+        @title contractor_get_project_credit
+        Description: This widget is uses to get a credit for a project.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-26
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+
+\{{
+    use extranet_user;
+     
+      projects = sql("
+        SELECT p.*, a.street_no, a.street,
+        (DATEDIFF(now(), accepted_date)) as age
+        FROM sr_project p inner join sr_project_contractor pc
+        on pc.uid_project = p.uid
+        INNER JOIN sr_address a ON a.uid = p.uid_address
+        
+        WHERE p.uid   IN (SELECT uid_project
+                        FROM sr_project_contractor pc
+                        WHERE uid_contractor='?'
+                        AND accepted = 'yes'
+                        AND NOT  exists (  select cr.uid from sr_credit cr  
+                                            where cr.uid_project_contractor = pc.uid 
+                                            and ( cr.accepted = 'yes' )
+                                        ) 
+                    )
+        and pc.uid_contractor = '?'
+        AND pc.accepted = 'yes'
+        order by p.uid  desc
+        ", extranet_user.uid, extranet_user.uid );
+
+
+
+    projects_old = sql("
+        SELECT * 
+        FROM sr_project 
+        WHERE uid   IN (SELECT uid_project
+                        FROM sr_project_contractor pc
+                        WHERE uid_contractor='?'
+                        AND accepted = 'true'
+                        AND NOT  exists (  select cr.uid from sr_credit cr  where cr.uid_project_contractor = pc.uid and ( cr.accepted = 'yes' )
+                    ) )
+        order by uid  desc
+        ", extranet_user.uid );
+    
+    query = "
+        SELECT p.uid, p.description, p.lead_price, p.due_date, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.street_no, a.street
+        FROM sr_project p
+        INNER JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city c ON a.uid_city = c.uid
+        WHERE ABS(DATEDIFF(now(), active_date)) BETWEEN '?' AND '?'
+        AND p.status = 'active'
+        AND  EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project=p.uid AND pc.uid_contractor='?' 
+            AND pc.accepted = 'yes' AND (pc.hidden = 'no'  OR pc.hidden = '')
+        )
+        AND NOT EXISTS (SELECT null FROM sr_credit c WHERE c.uid_project=p.uid AND c.uid_contractor='?' 
+            AND c.accepted = 'yes' 
+        )
+        ORDER BY p.active_date ASC
+        LIMIT 1"
+    ;
+
+
+    project_contractor = sql(single:true,"SELECT uid, uid_project FROM sr_project_contractor WHERE uid_contractor='?' AND uid_project='?'", extranet_user.uid, cgidata.uid_project);
+    
+    //Get credit ratio of the contractor, if above 20%, a warning appears
+    credit_ratio = sql(single:true,"
+    SELECT round(c.credits/count(pc.uid)*100,2) as ratio
+    FROM sr_project_contractor pc
+    CROSS JOIN (
+        SELECT count(c.uid) as credits, pc.uid_contractor
+        FROM sr_credit c
+        INNER JOIN sr_project_contractor pc ON pc.uid = c.uid_project_contractor
+        WHERE c.accepted = 'yes'
+        AND (c.legit_request is null OR c.legit_request = 'no')
+        AND pc.uid_contractor = ?) as c
+        ON c.uid_contractor = pc.uid_contractor
+    WHERE pc.uid_contractor = ?
+    AND pc.accepted_date > 0
+    ", extranet_user.uid, extranet_user.uid);
+}}
+
+<style>
+    #upload_files>div{
+        position:relative;
+    }
+    #upload_files > div > input {
+        margin:3px 0px;
+    }
+    #upload_files > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+
+</style>
+
+<style>
+    .normal-font{
+        font-weight:normal;
+    }
+    
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    
+    .shortenedSelect { 
+        width:230px; 
+    }
+    
+    .shortenedSelect option { 
+        width:220px;  
+    }
+    
+    .msg{
+        color:red;
+        font-weight:bold;
+    }
+    
+</style>
+
+{{if lg.rows.lg eq 'fr' then}}
+\{{
+    if ((datediff(datetime(),"2018-06-23")) <= 0 && (datediff(datetime(),"2018-07-09")) >= 0) then
+    }}
+    <div class="alert alert-warning">
+        Veuillez prendre note que le traitement des demandes de crédit prendront plus de temps que la normale entre le 23 juin au 9 juillet.  La nouvelle personne responsable de votre compte est maintenant Ronaldo Zéphyr.
+    </div>
+    \{{endif}}
+{{endif}}
+
+\{{if credit_ratio.rows.ratio >= 20 then
+    //Get credit ratio of the whole company
+    credit_ratio_global = sql(single:true,"
+    SELECT round(c.credits/count(pc.uid)*100,2) as ratio
+    FROM sr_project_contractor pc
+    CROSS JOIN (
+        SELECT count(c.uid) as credits
+        FROM sr_credit c
+        WHERE c.accepted = 'yes') as c
+    WHERE pc.accepted_date > 0
+    ");
+}}
+<div class="alert alert-warning"> 
+    {{sn_ct("contractor_get_project_credit Attention, vous êtes rendu à un taux de crédit de ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} \{{credit_ratio.rows.ratio}}%</br>
+    {{sn_ct("contractor_get_project_credit La moyenne de tous les entrepreneurs est de ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} \{{credit_ratio_global.rows.ratio}}%</br>
+    {{sn_ct("contractor_get_project_credit Nous nous réservons le droit de faire des vérifications additionnelles sur vos demandes de crédit jusqu'à votre taux de crédit revienne à la normale.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+\{{endif}}
+
+<div id="ajax_credit_success" class="alert alert-success" style="display:none">  
+    {{sn_ct("contractor_get_project_credit Merci! Votre demande sera géré par un administrateur sous peu", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div id="ajax_credit_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_get_project_credit Une erreur est survenu, vérifier que votre carte est valide", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div class="well custom-well">
+    <form action="{{ sn_pages('ajax_get_project_credit', lg.rows.lg, table:'ressources')}}" id="get_project_credit" name="get_project_credit" enctype="multipart/form-data" method="POST">
+        
+        
+        <fieldset class="form-group">
+            <label for="uid_project" class="control-label">
+                {{sn_ct("contractor_get_project_credit Inscrivez le numéro de ID du projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+            </label>
+            
+            <select id="uid_project" name="uid_project" class="form-control  ">
+                <option value="">{{sn_ct("contractor_get_project_credit Choisir le projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                \{{for p in projects.rows do}}
+                    \{{if p.age > 60 then }}
+                    <option value="\{{p.uid}}" age="\{{p.age}}"   style="width:100px; color:#9b9a99">\{{p.uid}} - \{{p.street_no}} \{{p.street}}</option>
+                    \{{else}}
+                    <option value="\{{p.uid}}" age="\{{p.age}}"   style="width:100px">\{{p.uid}} - \{{p.street_no}} \{{p.street}}</option>
+                    \{{endif}}
+                \{{endfor}}
+            </select>
+            <span style="display:none; color:#e08f0d; font-size:14px" class="project60">{{sn_ct("Attention: vous avez séléctionné un projet de plus de 2 mois. Ce type de demande est généralement refusée ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+            <span class="help-block" data-validator-msg="{{sn_ct(edit:false, "contractor_add_credit_card Invalid project")}}" data-validator-error="uid_project"></span>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="reason">
+                {{sn_ct("contractor_add_credit_card Raison", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+            <select name="reason" class="form-control">
+                <option value=""></option>  
+                <option value="1">{{sn_ct(edit:false,"contractor_add_credit_card Je n'ai jamais rejoint le client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>  
+                <option value="2">{{sn_ct(edit:false,"contractor_add_credit_card Le projet à été annulé par le client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>  
+                <option value="3">{{sn_ct(edit:false,"contractor_add_credit_card Le client a trop de soumissions et n'en veut plus d'autre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>  
+                <option value="4">{{sn_ct(edit:false,"contractor_add_credit_card Le contrat a déjà été donné avant que je fasse une soumission", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>  
+                <option value="5">{{sn_ct(edit:false,"contractor_add_credit_card Autre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>  
+            </select>  
+            <span class="help-block" data-validator-msg="{{sn_ct(edit:false, "contractor_add_credit_card Invalid reason")}}" data-validator-error="reason"></span>
+        </fieldset>
+        <span id="alert-msg" class="alert-warning" style="display:none"></span>
+        <div class="checkbox"> 
+            <label>
+                <input type="checkbox" name="no_quote" id="no_quote" value="yes"> {{sn_ct("contractor_add_credit_card Je n'ai pas fait de soumission écrite ou orale au client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+            <br>
+            <span style="display:none" class="msg" name="msg_no_quote" id="msg_no_quote">{{sn_ct(edit:true, " contractor_get_project_credit On ne traite pas les demandes de credits dans le cas ou vous avez deja fourni un prix au client.")}}</span>
+        </div>
+        
+        <div class="checkbox showOnlyForReason1">
+            <label>
+                <input type="checkbox" name="voicemail" id="voicemail" value="yes"> {{sn_ct("contractor_add_credit_card J'ai laissé au moins un message vocal/ le client n'a pas de boîte vocale", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+            <span style="display:none" class="msg" name="msg_voicemail">{{sn_ct(edit:true, "contractor_add_credit_card information obligatoire")}}</span>
+        </div>
+        
+        <div class="checkbox showOnlyForReason1">
+            <label>
+                <input type="checkbox" name="email" id="email" value="yes"> {{sn_ct("contractor_add_credit_card J'ai envoyé au moins un courriel / le client n'a pas d'adresse courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+            <span style="display:none" class="msg" name="msg_email">{{sn_ct(edit:true, "contractor_add_credit_card information obligatoire")}}</span>
+        </div>
+        
+        <div class="checkbox showOnlyForReason1">
+            <label>
+                <input type="checkbox" name="called" id="called" value="yes"> {{sn_ct("contractor_add_credit_card J'ai appelé le client au moins 3 fois à au moins 24 heures d'intervalle", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+            <span style="display:none" class="msg" name="msg_called">{{sn_ct(edit:true, "contractor_add_credit_card information obligatoire")}}</span>
+            <span class="help-block" data-validator-msg="{{sn_ct(edit:false, "contractor_get need 7 days and 3 dates")}}" data-validator-error="called"></span>
+            <span class="msg"  name="called_msg" id="called_msg"  style="display: none;">{{sn_ct(edit:false, "contractor_get need 7 days an 3 dates")}}</span>
+       </div>
+        
+        <script>
+            $('#uid_project').change(function(){
+                var age = $(this).find('option:selected').attr("age");
+                
+                if(age > 60){
+                    $('.project60').show();
+                }else{
+                    $('.project60').hide();
+                }
+            });
+
+            $('#voicemail').on('change', function(){
+                if (this.checked) { 
+                    $('span[name=msg_voicemail]').hide();
+                }
+            });
+            
+            $('#no_quote').on('change', function(){
+                if (!this.checked) { 
+                    $('span[name=msg_no_quote]').show();
+                }else{
+                    $('span[name=msg_no_quote]').hide();
+                }
+            });
+            
+            $('#email').on('change', function(){
+                if (this.checked) { 
+                    $('span[name=msg_email]').hide();
+                }
+            });
+            
+            $('#called').on('change', function(){
+                if (this.checked) { 
+                    $('span[name=msg_called]').hide();
+                    $('.calls_date').show();
+                } else {
+                    $('.calls_date').hide();
+                }
+            });
+            
+            $("select[name=reason]").on("change", function(){
+                    $('span[name=msg_no_quote]').hide();
+                    $('span[name=msg_email]').hide();
+                    $('span[name=msg_called]').hide();
+                    $('span[name=msg_voicemail]').hide();
+                if (this.selectedIndex == 1) {
+                    $('.showOnlyForReason1').show();
+                    $('#called').change();
+                } else {
+                    $('.showOnlyForReason1').hide();
+                } 
+            }).change();
+            
+                       
+           $("select[name=reason]").on("change", function(){
+                    $('span[name=msg_call1_date]').hide();
+                if (this.selectedIndex == 4 || this.selectedIndex == 3 || this.selectedIndex == 2 || this.selectedIndex == 5) {
+                    $('.calls_date2').show();
+                    $('#called').change();
+                } else {
+                    $('.calls_date2').hide();
+                }
+            }).change();
+        </script>
+        
+        
+        <div class="calls_date form-horizontal showOnlyForReason1" style="display:none">
+            <fieldset class="form-group">   
+                <label class="normal-font control-label col-sm-3" for="call1_date">{{sn_ct("contractor_add_credit_card Date du 1er appel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <div class="col-sm-5">
+                    <input class="form-control" type="text" name="call1_date" id="call1_date" value="" placeholder="{{sn_ct(edit:false,"aaaa-mm-jj", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">    
+                </div>
+            <span style="display:none" class="msg" name="msg_call1_date">{{sn_ct(edit:true, " contractor_add_credit_card information obligatoire")}}</span>
+            </fieldset>    
+            <fieldset class="form-group">   
+                <label class="normal-font control-label col-sm-3" for="call2_date">{{sn_ct("contractor_add_credit_card Date du 2er appel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <div class="col-sm-5">
+                    <input class="form-control" type="text" name="call2_date" id="call2_date" value="" placeholder="{{sn_ct(edit:false,"aaaa-mm-jj", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">    
+                </div>
+            <span style="display:none" class="msg" name="msg_call2_date">{{sn_ct(edit:true, " contractor_add_credit_card information obligatoire")}}</span>
+            </fieldset>    
+            <fieldset class="form-group">   
+                <label class="normal-font control-label col-sm-3" for="call3_date">{{sn_ct("contractor_add_credit_card Date du 3er appel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <div class="col-sm-5">
+                    <input class="form-control" type="text" name="call3_date" id="call3_date" value="" placeholder="{{sn_ct(edit:false,"aaaa-mm-jj", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+                    <!--<span class="help-block" data-validator-msg="{{sn_ct(edit:false, "contractor_get need 3 dates")}}" data-validator-error="call3_date"></span>-->
+                    <span class="msg"  name="call3_date_msg" id="call3_date_msg" style="display:none">{{sn_ct(edit:false, "contractor_get need 3 dates")}}</span>
+               </div>
+            <span style="display:none" class="msg" name="msg_call3_date">{{sn_ct(edit:true, " contractor_add_credit_card information obligatoire")}}</span>
+            </fieldset>        
+        </div>
+        
+        <div class="calls_date2 form-horizontal showOnlyForReason4" style="display:none">
+            <fieldset class="form-group">   
+                <label class="normal-font control-label col-sm-3" for="call1_date">{{sn_ct("contractor_add_credit_card Date du 1er appel, courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <div class="col-sm-5">
+                    <input class="form-control" type="text" name="call1_date" id="call1_date_r1" value="" placeholder="{{sn_ct(edit:false,"aaaa-mm-jj", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">    
+                </div>
+            <span style="display:none" class="msg" name="msg_call1_date">{{sn_ct(edit:true, " contractor_add_credit_card information obligatoire")}}</span>
+            </fieldset>    
+            <fieldset class="form-group">   
+                <label class="normal-font control-label col-sm-3" for="call2_date">{{sn_ct("contractor_add_credit_card Date du 2er appel, courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <div class="col-sm-5">
+                    <input class="form-control" type="text" name="call2_date" id="call2_date" value="" placeholder="{{sn_ct(edit:false,"aaaa-mm-jj", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">    
+                </div>
+            <span style="display:none" class="msg" name="msg_call2_date">{{sn_ct(edit:true, " contractor_add_credit_card information obligatoire")}}</span>
+            </fieldset>    
+            <fieldset class="form-group">   
+                <label class="normal-font control-label col-sm-3" for="call3_date">{{sn_ct("contractor_add_credit_card Date du 3er appel, courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <div class="col-sm-5">
+                    <input class="form-control" type="text" name="call3_date" id="call3_date" value="" placeholder="{{sn_ct(edit:false,"aaaa-mm-jj", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">    
+                </div>
+            <span style="display:none" class="msg" name="msg_call3_date">{{sn_ct(edit:true, " contractor_add_credit_card information obligatoire")}}</span>
+            </fieldset>
+        </div>
+        <script>
+            $("input[name=called]").on("change", function(){
+                $("div.calls_date").toggle($("input[name=called]").prop("checked"));  
+            });
+        </script>
+      
+        <p>
+            {{sn_ct("contractor_add_credit_card *Une preuve des appels pourrait vous être demandée. Vous devez aussi avoir attendu au moins 7 jours pour une réponse du client.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}  
+        </p>
+        <p>
+            {{sn_ct("contractor_add_credit_card Toute demande pour un projet qui date de plus de 2 mois sera refusée.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}  
+        </p>
+        <p>
+            {{sn_ct("contractor_add_credit_card Veuillez prévoir un délai d'environ 5 jours ouvrables pour que votre demande soit traitée.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}  
+        </p>
+        <p>
+            {{sn_ct("contractor_client_credit Si votre demande de crédit est acceptée, nous vous ferons un crédit sur votre compte avec nous.  Aucun remboursement sur carte de crédit ne sera effectué.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}  
+        </p>
+        
+        <fieldset class="form-group">   
+            <label for="explanation">{{sn_ct("contractor_add_credit_card Explication si nécéssaire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+            <textarea class="form-control" rows="5" name="explanation" id="explanation"></textarea>
+        </fieldset>  
+        
+        
+        <fieldset style="margin-bottom:50px;" class="form-group"> 
+            <label for="loadfile">
+                {{sn_ct("contractor_get_project_credit Attacher un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+            <br>
+            <button style="display:block;position:absolute;z-index:1;float:right" id='loadfile'  type='button' name='loadfile' class="btn btn-warning"> {{sn_ct("contractor_get_project_credit Charger fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button> <!--</div>-->
+            <input style="background-color:rgba(0,0,0,0);margin-left:160px;max-width:300px;position:absolute;z-index:4" type="text" name="filename" id="filename" class="form-control" readonly/>
+            <input style="opacity:0;position:absolute;z-index:2;float:right" type="file" name="fname" id="fname"><a><i class="fa"></i></a>
+        </fieldset>
+        
+        <input type="submit" class="btn btn-primary" value="{{sn_ct(edit:false,"contractor_add_credit_card Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+        <!--{{sn_ct("contractor_get_project_credit Vous avez des questions sur nos procédures de crédit?  Rendez-vous à la page 15 de notre guide qui explique le fonctionnement.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+    
+                      
+    </form>
+</div>
+
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/project_credit_validator.sn";
+    // validate client side
+    validator.validateJS(form:'get_project_credit');
+}}
+
+
+<script>
+$("select[name=reason]").on('change', function(){
+    var s = $(this).prop('selectedIndex');
+    $('#alert-msg').hide();
+    if(s == 1 || s == 2 || s == 3){
+        $('#alert-msg').show();
+        $('#alert-msg').html('{{sn_ct(edit:false, "important: Votre affirmation sera envoyé au client par email. Révisez bien vos choix avant de continuer")}}');
+    }
+})
+    
+    
+</script>
+
+<script>
+
+    // Bind add_client form to ajaxform plugin to send the form via ajax
+    $('form[name=get_project_credit]').ajaxForm({
+        beforeSubmit:function(){
+             var s = $("select[name=reason]").prop('selectedIndex');
+             var i = 0;
+            
+             if(s == 1){
+                 if(!$('#no_quote').is(":checked")){
+                     $('span[name=msg_no_quote]').show();
+                     i++;
+                 }
+                
+                 if(!$('#email').is(":checked")){
+                     $('span[name=msg_email]').show();
+                     i++;
+                 }
+                
+                 if(!$('#called').is(":checked")){
+                     $('span[name=msg_called]').show();
+                     i++;
+                 }
+                
+                 if(!$('#voicemail').is(":checked")){
+                     $('span[name=msg_voicemail]').show();
+                     i++;
+                 }
+                
+                 if(i > 0){
+                     return false;
+                 }
+                    
+             }else if(s == 2 || s == 3 || s == 4 || s == 5){
+                 if($('.showOnlyForReason4').is(':visible')){
+                     if($('#call1_date_r1').val() == ""){
+                         $('span[name=msg_call1_date]').show();
+                         return false;
+                     }else{
+                          $('span[name=msg_call1_date]').hide();
+                     }
+                 }
+             }
+             
+            if($('#no_quote').is(':checked')){
+                $('span[name=msg_no_quote]').hide();
+            }else{
+                $('span[name=msg_no_quote]').show();
+                return false;
+            }
+        },
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-credit_success")){
+                $("#ajax_credit_success").show();
+                $('#uid_project option[value="'+ $('#uid_project').val() +'"]' ).remove();
+                $('form[name=get_project_credit]').resetForm();
+                
+            }
+            else if (xhr.getResponseHeader("X-credit_error")){
+                $("#ajax_credit_error").show();
+            }
+        }
+    });    
+</script>
+
+<script>
+    $('#fname').change(function(){
+        $('#filename').val($(this).val().split('\\').pop());
+         
+    });
+    
+</script>

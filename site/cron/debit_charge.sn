@@ -1,0 +1,36 @@
+{{%include '/site/package/all.sn';}}
+\{{// Tuesday at 11h30pm
+
+//page 4
+
+configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+void timeout(1800);
+
+// uid_contractor, balance, invoices_total, credits_total, transactions_total
+for contractor sql(contractor::getAllContractorsCurrentBillingTotalsQuery().+" 
+    WHERE c.active = 'yes' 
+    AND c.credit_cards = 'yes'
+    AND IFNULL(c.balance,0) + IFNULL((
+        SELECT sum(i.amount) 
+        FROM sr_invoice i 
+        INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+        WHERE pc.uid_contractor = c.uid
+        AND (i.completed is null OR i.completed != 'yes')
+    ),0) >= '?'
+    AND EXISTS (SELECT null FROM sr_cc cc WHERE cc.uid_contractor = c.uid LIMIT 1)
+    HAVING (balance + invoices_total - credits_total - transactions_total) >= '?'
+    ", configs.rows.min_amount_debit, configs.rows.min_amount_debit) 
+do
+    //
+    subtotal = contractor.rows.invoices_total - contractor.rows.credits_total;
+    taxes = contractor::calculateTaxesByProv(subtotal, contractor.rows.uid_contractor);
+    //taxes = contractor::calculateTaxes(subtotal);
+    amount = contractor.rows.balance + taxes.total - contractor.rows.transactions_total;
+    uid_transaction = contractor::debit_charge(contractor.rows.uid_contractor, amount);
+    void insert(table:'sr_log', fields:{'type':'pivotal cron','uid_project_contractor':contractor.rows.uid_contractor,'uid_project':'', 'email_to': 'contact_email'  ,'description':'uid_transaction= '.+ uid_transaction.+'   amount','value':amount});
+
+    //
+endfor
+
+}}

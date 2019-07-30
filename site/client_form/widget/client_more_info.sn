@@ -1,0 +1,298 @@
+{{
+    /*
+        @title client_form
+        Description: This widget is the form used to register additional and non-obligatory from a client.
+        
+        @author louis.jhonny@sednove.com
+        
+        @version 1.0 2017-04-18
+        @version 1.1 2017-09-26 : send a free quote to contractor.
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    %include "/site/package/all.sn";
+        //session 
+    %include "/extenso/functions/sessions.snc"; 
+}}
+
+\{{
+    cgidata = cgidata();
+    
+    client = sql(single:true,"
+        SELECT  sr_project.uid as puid, firstname, lastname, email, address, sr_address.phone1 as phone, sr_address.phone2 as phone2, sr_project.description as description, sr_project.file1 as file1,
+                sr_project.file2 as file2, sr_project.file3 as file3, sr_project.file4 as file4, sr_project.file5 as file5 
+        FROM sr_client 
+        INNER JOIN sr_address ON sr_address.uid_client = sr_client.uid 
+        INNER JOIN sr_project ON sr_project.uid_client = sr_client.uid 
+        WHERE md5( concat(sr_project.uid, md5('234502')) ) ='?' 
+        AND TIME_TO_SEC(TIMEDIFF(now(), sr_project.sn_cdate)) < 60
+        ORDER BY sr_address.uid DESC"
+        ,cgidata.prj);
+        
+}}
+
+<!-- confirmation header end -->
+<style>
+    #upload_files>div{
+        position:relative;
+    }
+    #upload_files > div > input {
+        margin:3px 0px;
+    }
+    #upload_files > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+</style>
+
+<div class="container" >
+    <div class="row">
+
+        <!-- Second Column -->
+        <div  class="col-md-6">
+            <!--<div id="ajax_success" class="alert alert-success" style="display:none">-->
+            <!--    {{sn_ct("contractor_profile Super! Nous avons enregistré les modifications. Entre temps, vous pouvez fournir les informations additionelles ci-dessous pour accelerer votre demande de soumission. ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+            <!--    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> -->
+            <!--</div>-->
+            <div id="ajax_error" class="alert alert-danger" style="display:none">
+                {{sn_ct("contractor_profile Une erreur est survenu!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+            </div>
+            <h2>
+                {{sn_ct("Veuillez vérifier les informations que vous nous avez envoyées", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}    
+            </h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>{{sn_ct("Votre nom:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.firstname}}&nbsp;\{{client.rows.lastname}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre email:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.email}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre numéro de téléphone:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.phone}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre second numéro de téléphone:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.phone2}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre adresse: ", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.address}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("La description de vos travaux:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.description}}</th>
+                        </tr>
+                        <tr>
+                            <td colspan="2">{{sn_ct("Vous pouvez ajouter des informations additionelles dans la section", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>       
+
+            \{{if client.rows.file1 ne "" then}}
+                <div class="row">
+                    <h4>{{sn_ct(" Fichiers :", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h4>
+                    <div class="list-group">
+                        {{for (i=1;i<6;i++) do}}
+                            \{{if client.rows.file{{i}} ne "" then }}
+                                <a target="_blank" href="\{{client.rows.file{{i}} }}" class="list-group-item">
+                                    \{{if basename(client.rows.file{{i}}) =~:i "\.(png|jpe?g)$" then}}
+                                        <img style="max-width:200px" src="\{{client.rows.file{{i}}}}"> 
+                                    \{{else}}
+                                        <i class="fa fa-file-o" aria-hidden="true" style="font-size:18px"></i> 
+                                    \{{endif}}
+                                    <span> \{{basename(client.rows.file{{i}})}}</span>
+                                </a>
+                            \{{endif}}
+                        {{endfor}}
+                
+                    </div>
+                </div>
+            \{{endif}}
+            
+        </div><!-- end first column-->
+        
+        <!-- Second Column -->
+        <div  class=" col-md-6 ">
+            <div id="ajax_success" class="alert alert-success" style="display:none">
+                {{sn_ct("contractor_profile Super! Nous avons enregistré les modifications. Entre temps, vous pouvez fournir les informations additionelles ci-dessous pour accelerer votre demande de soumission. ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+            </div>
+            <div id="ajax_error" class="alert alert-danger" style="display:none">
+                {{sn_ct("contractor_profile Une erreur est survenu!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+            </div>
+            <div class="well custom-well">
+                <form class="form-horizontal" action="{{pages('confirmation_soumission', lg.rows.lg, table:'pages')}}" id="edit_client" name="edit_client" method="POST">
+                    <input type="hidden" name="project_uid" id="project_uid" value="\{{project.uid}}">
+                    
+                    <fieldset class="form-group">
+                        <label for="budget" class="control-label col-md-4">
+                            {{sn_ct("Votre budget?", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <input class="form-control" placeholder="{{sn_ct(edit:false,'En CAN : ex. 250.45')}}" type="text" name="budget" id="budget" value="">
+                        </div>
+                    </fieldset>
+                    
+                    
+                    <fieldset class="form-group">
+                        <label for="duration" class="control-label col-md-4">
+                            {{sn_ct("Delai d'execution des travaux?", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control" name="duration" id="duration" value="">
+                                <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option>{{sn_ct(edit:true,"Dès que possible (urgent)")}}</option>
+                                <option>{{sn_ct(edit:true,"Moins d'une semaine")}}</option>
+                                <option>{{sn_ct(edit:true,'Une à deux semaines')}}</option>
+                                <option>{{sn_ct(edit:true,'3 à 4 semaines')}}</option>
+                                <option>{{sn_ct(edit:true,'1 à 2 mois')}}</option>
+                                <option>{{sn_ct(edit:true,'3 à 4 mois')}}</option>
+                                <option>{{sn_ct(edit:true,'6 à 12 mois')}}</option>
+                                <option>{{sn_ct(edit:true,'12 mois et plus')}}</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset class="form-group">
+                        <label for="state" class="control-label col-md-4">
+                            {{sn_ct("Stade du projet?", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control" name="state" id="state" value="">
+                                <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option>{{sn_ct(edit:true,"Je recherche un prestataire de manière urgente")}}</option>
+                                <option>{{sn_ct(edit:true,"J'ai déjà un fournisseur ou des offres d'autres fournisseurs et je souhaite comparer les offres")}}</option>
+                                <option>{{sn_ct(edit:true,"J'ai un projet précis pour lequel je recherche des soumissions")}}</option>
+                                <option>{{sn_ct(edit:true,"Je me renseigne par simple curiosité")}}</option>
+                                <option>{{sn_ct(edit:true,"Autre")}}</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset class="form-group">
+                        <label class="control-label col-md-4" for="best_reach">
+                            {{sn_ct("Meilleur moyen pour vous joindre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <table>
+                                <tr>
+                                    <td width="50%">
+                                    <select class="form-control" name="best_reach" id="best_reach" value="">
+                                        <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                        <option>{{sn_ct(edit:true,'Par téléphone')}}</option>
+                                        <option>{{sn_ct(edit:true,'Par email')}}</option>
+                                        <option>{{sn_ct(edit:true,'Par sms/texto')}}</option>
+                                        <option>{{sn_ct(edit:true,'Autre')}}</option>
+                                        </select>
+                                    </td>
+                                    <td width="50%">
+                                    <select class="form-control" name="moment" id="moment" value="">
+                                        <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                        <option>{{sn_ct(edit:true,'En tout temps')}}</option>
+                                        <option>{{sn_ct(edit:true,'Matin')}}</option>
+                                        <option>{{sn_ct(edit:true,'Mi-journée')}}</option>
+                                        <option>{{sn_ct(edit:true,'Le jour')}}</option>
+                                        <option>{{sn_ct(edit:true,'Soir')}}</option>
+                                    </select>
+                                    </td>
+                                </tr>
+                                
+                            </table>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset class="form-group">
+                        <label for="comm" class="control-label col-md-4">
+                            {{sn_ct("Langue de communication", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control" name="comm" id="comm" value="">
+                                <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option value='1'>{{sn_ct(edit:true,'french')}}</option>
+                                <option value='2'>{{sn_ct(edit:true,'english')}}</option>
+                                <option value='3'>{{sn_ct(edit:true,'both')}}</option>
+                            </select>
+                        </div>
+                    </fieldset>
+        
+                    <fieldset class="form-group">
+                        <label for="comments" class="control-label col-md-4">
+                            {{sn_ct("commentaire additionnel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <textarea class="form-control" name="comments" id="comments"></textarea></textarea>    
+                        </div>
+                    </fieldset>
+                    <div class="form-group">
+                        <div class="col-md-offset-4 col-md-8">
+                            <button id="submit_edit_client" name="submit_edit_client" type="submit" class="btn btn-primary">
+                                {{sn_ct(edit:false,"client_form_additional Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                            </button>
+                        </div>
+                    </div>
+        
+                </form>
+            </div>
+        </div><!-- end second column -->
+        </div><!-- end row -->
+</div><!-- end container -->
+
+<script>
+$('#ajax_success').show();
+</script>
+
+<script>
+$(document).ready(function(){
+    $("#edit_client").submit(function(e) {
+        e.preventDefault();    
+    
+            if ($("#budget").val() == "" 
+                && $("#duration").val() == "" 
+                && $("#house_type").val() == ""
+                && $("#best_reach").val() == ""
+                && $("#comments").val() == ""
+                && $("#is_owner").val() == ""){
+            }else{
+                $(this).unbind('submit').submit();
+            }
+        });
+        
+        $('#budget').on('keyup', function(){
+            if($(this).val() == ""){
+                $('#budget_select').hide();
+            }else{
+               $('#budget_select').show(); 
+            }
+            
+        })
+    
+    })
+    
+</script>

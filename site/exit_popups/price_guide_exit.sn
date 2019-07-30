@@ -1,0 +1,239 @@
+<!-- START Exit popup -->
+
+    <!-- Bootstrap styles -->
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+
+    <style>
+        .x-popup {
+            position: relative;
+        }
+        .content {
+            padding: 40px 15px;
+        }
+        .popup {
+            display: none;
+        }
+        .jumbotron {
+            margin-top: 20px;
+        }
+        .footer p {
+            margin-bottom: 40px;
+        }
+        .exit-modal{
+            opacity: 1;
+            background: rgba(0, 0, 0, .5);
+        }
+        
+    </style>
+
+
+  <div class="x-popup">
+        <div class="modal exit-modal fade">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" style="text-align: center; font-weight: bold; font-size: 24px;">{{sn_ct("exit-popup Ne quittez pas tout de suite!",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:true)}}</h4>
+                    </div>
+                    <div class="modal-body">
+                    
+            			<!-- Begin MailChimp Signup Form -->
+            				
+            			<link href="//cdn-images.mailchimp.com/embedcode/classic-10_7.css" rel="stylesheet" type="text/css">
+            			<style type="text/css">
+            					#mc_embed_signup{background:#fff; clear:left; font:14px Helvetica,Arial,sans-serif; }
+            					/* Add your own MailChimp form style overrides in your site stylesheet or in this style block.
+            					We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+            			</style>
+            			
+            			<!--<h4 class="modal-title">{{sn_ct("exit-popup Nous avons un cadeau pour vous.",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:true)}}</h4>-->
+            				
+            			<div id="mc_embed_signup">
+            				<form action="{{sn_ct("exit-popup https://soumissionrenovation.us15.list-manage.com/subscribe/post?u=9d0676d784b64cdaaab70781d&amp;id=dc448258ac",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:false)}}" method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate"
+            					target="_blank" novalidate>
+            					<div id="mc_embed_signup_scroll">
+            						<h4>{{sn_ct("exit-popup Téléchargez gratuitement notre Grand guide de prix des rénovations qui vous aidera à planifier votre prochain projet!",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:true)}}</h4>
+
+            						<div class="mc-field-group">
+            							<label for="mce-EMAIL">{{sn_ct("exit-popup Votre courriel ici",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:true)}} <span class="asterisk">*</span>
+            							</label>
+            							<input type="email" value="" name="EMAIL" class="required email" id="mce-EMAIL">
+            						</div>
+            						
+            						<div class="mc-field-group">
+            							<label for="mce-LNAME">{{sn_ct("exit-popup Votre nom(optionel)",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:true)}} </label>
+            							<input type="text" value="" name="LNAME" class="" id="mce-LNAME">
+            						</div>
+            						
+            						<div id="mce-responses" class="clear">
+            							<div class="response" id="mce-error-response" style="display:none"></div>
+            							<!--<div class="response" id="mce-success-response" style="display:none"></div>-->
+            						</div>
+            						
+            						
+            						<!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+            					
+            						<div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text" name="b_9d0676d784b64cdaaab70781d_dc448258ac" tabindex="-1" value=""></div>
+            					    
+            					    <div class='row'>
+                						<div class="form-group col-xs-6">
+                							<input onclick="sendPriceGuide($('#mce-EMAIL').val(), $('#mce-LNAME').val())" style="width:91%;" type="submit" value="{{sn_ct("exit-popup Je veux le guide",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:false)}}" name="subscribe" id="mc-embedded-subscribe" class="button" >
+                						</div>
+                						
+                						<div class="form-group col-xs-6">
+                							<button  style="width:91%;" type="button" class="button close-exit-modal">{{sn_ct("exit-popup Je n'en ai pas besoin",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid,edit:false)}}</button>
+                						</div>
+            					    </div>
+            					    
+            					    <span id="confirm_msg" style="color:green;font-size:16px;"></span>
+            					</div>
+            				</form>
+            			</div>
+            			<script type='text/javascript' src='//s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js'></script><script
+            			type='text/javascript'>(function($) {window.fnames = new Array(); window.ftypes = new Array();fnames[0]='EMAIL';
+            			ftypes[0]='email';fnames[2]='LNAME';ftypes[2]='text'; /*
+            			* Translated default messages for the $ validation plugin.
+            			* Locale: FR
+            			*/
+            			$.extend($.validator.messages, {
+            			required: "{{sn_ct("exit-popup ce champ est requis",publish:"/extenso/publish/sn_widgets.sn",edit:false)}}",
+            			remote: "{{sn_ct("exit-popup Veuillez remplir ce champ pour continuer.",publish:"/extenso/publish/sn_widgets.sn",edit:false)}}",
+            			email: "{{sn_ct("exit-popup Veuillez entrer une adresse email valide.",publish:"/extenso/publish/sn_widgets.sn",edit:false)}}",
+            			url: "Veuillez entrer une URL valide.",
+            			date: "Veuillez entrer une date valide.",
+            			dateISO: "Veuillez entrer une date valide (ISO).",
+            			number: "Veuillez entrer un nombre valide.",
+            			digits: "Veuillez entrer (seulement) une valeur numérique.",
+            			creditcard: "Veuillez entrer un numéro de carte de crédit valide.",
+            			equalTo: "Veuillez entrer une nouvelle fois la même valeur.",
+            			accept: "Veuillez entrer une valeur avec une extension valide.",
+            			maxlength: $.validator.format("Veuillez ne pas entrer plus de {0} caractères."),
+            			minlength: $.validator.format("Veuillez entrer au moins {0} caractères."),
+            			rangelength: $.validator.format("Veuillez entrer entre {0} et {1} caractères."),
+            			range: $.validator.format("Veuillez entrer une valeur entre {0} et {1}."),
+            			max: $.validator.format("Veuillez entrer une valeur inférieure ou égale à {0}."),
+            			min: $.validator.format("Veuillez entrer une valeur supérieure ou égale à {0}.")
+            			});}(jQuery));var $mcj = jQuery.noConflict(true);</script>
+            			<!--End mc_embed_signup-->                        
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap -->
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+
+    <!-- Exit plugin -->
+    <script type="text/javascript" src="/js/jquery.exit-modal.js"></script>
+
+<script>
+    //Submit exit popup form
+    function sendPriceGuide(email,name){
+        if($('#mce-EMAIL').val() == ""){
+            return false;
+        }else{
+            $.ajax({
+                data: {"clEmail":email,"clName":name},
+                type: "POST",
+                success: function(data, statusText, xhr) {
+                    $("#confirm_msg").html("{{sn_ct(edit:false, "Le guide vous a été envoyé par email. Consultez votre email pour le télécharger",publish:"/extenso/publish/sn_widgets.sn",uids:wigdet.rows.uid)}}")
+                }
+            });
+        }
+        
+    }
+
+</script>
+
+    <script type="text/javascript">
+
+        $(document).ready(function(){
+
+            var timer;
+            var exitModalParams = {
+                numberToShown:                  1,
+                callbackOnModalShow:            function() {
+                    var counter = $('.exit-modal').data('exitModal').showCounter;
+                    $('.exit-modal .modal-body p').text("Exit modal shown "+counter+" times");
+                },
+                callbackOnModalShown:           function() {
+                    timer = setTimeout(function(){
+                        
+                    }, 4000)
+                },
+                callbackOnModalHide:            function() {
+                    clearTimeout(timer);
+                    setCookie("guide_exited", "yes", 0.25);
+                }
+            }
+			
+			
+			if(getCookie("guide_exited") == ""){
+    			$('.exit-modal').exitModal(exitModalParams);
+			}
+			
+                if($('.exit-modal').data('exit-modal')) {
+                    $(".destroyed-state").hide();
+                    $(".initialized-state").show();
+                }			
+
+            $('.destroy-exit-modal').on("click", function(e){
+                e.preventDefault();
+                if($('.exit-modal').data('exit-modal')) {
+                    $(".initialized-state").hide();
+                    $(".destroyed-state").show();
+                }
+                $('.exit-modal').exitModal('hideModal');
+                $('.exit-modal').exitModal('destroy');
+                $(".initialized").hide();
+            });
+
+            $('.init-exit-modal').on('click', function(e){
+                e.preventDefault();
+                $('.exit-modal').exitModal(exitModalParams);
+                if($('.exit-modal').data('exit-modal')) {
+                    $(".destroyed-state").hide();
+                    $(".initialized-state").show();
+                }
+            });
+
+            $('.close-exit-modal').on('click', function(e){
+                e.preventDefault();
+                $('.exit-modal').exitModal('hideModal');
+            });
+            
+            
+        });
+
+    </script>
+    
+    <script>
+        function getCookie(cname) {
+            var name = cname + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var ca = decodedCookie.split(';');
+            for(var i = 0; i <ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+            return "";
+        }
+        
+        function setCookie(cname, cvalue, exdays) {
+            var d = new Date();
+            d.setTime(d.getTime() + (exdays*24*60*60*1000));
+            var expires = "expires="+ d.toUTCString();
+            document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+        }
+        
+    </script>
+
+<!-- END Exit popup -->

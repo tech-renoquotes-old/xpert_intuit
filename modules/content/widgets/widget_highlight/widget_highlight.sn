@@ -1,0 +1,44 @@
+<style type="text/css">
+	.cs .box-element {
+		margin-top: 20px;
+        margin-bottom:20px;
+        padding:20px;
+	}
+    .cs .box-element p {
+		font-size:22px;
+        line-height:30px;
+	}
+    .cs .box-element.box-element-bordered {
+    	background: transparent !important;
+    	border: 2px solid #ccc;
+    }
+</style>
+
+{{
+    use widget;
+    use lg; 
+    content = sql(single:true, "SELECT * FROM ? WHERE uid='?'", widget.rows.table_name, widget.rows.uid_widget_list); 
+}}
+<div class="box-element box-element-bordered">
+	<div class="row">
+		{{ if content.rows{'btn_text_'.+ lg.rows.lg} ne "" then }}
+        	<div class="col-md-8">
+        {{else}}
+        	<div class="col-md-10 col-md-offset-1">
+        {{ endif }}
+			{{ content.rows{"content_" .+ lg.rows.lg};  }}
+		</div>
+        
+        {{ if content.rows{'btn_text_'.+ lg.rows.lg} ne "" then }}
+        <div class="col-md-4">
+             {{ if content.rows{'url_'.+ lg.rows.lg} ne "" then }}
+                    <a href="{{content.rows{'url_'.+ lg.rows.lg};}}" class="btn btn-default btn-lg pull-right" target="_blank">
+                        {{content.rows{'btn_text_'.+ lg.rows.lg};}}
+                    </a>
+                {{ else }}
+                    <span class="btn btn-default btn-lg pull-right">{{content.rows{'btn_text_'.+ lg.rows.lg};}}</span>
+             {{ endif }}
+        </div>
+        {{ endif }}
+	</div>
+</div>

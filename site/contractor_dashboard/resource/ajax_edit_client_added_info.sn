@@ -1,0 +1,157 @@
+{{
+    /*
+        @title ajax_edit_contractor_profile
+        Description: Edit contractor profile via ajax call.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-22
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/profile_validator.sn";
+    
+    cgidata = cgidata();  
+    use extranet_user;
+    
+    if (validator.validate(data:cgidata)) then
+    
+        address = sql(single:true, "SELECT *, (SELECT name_{{lg.rows.lg}} FROM sr_city WHERE uid=sr_address.uid_city) as city_name  FROM sr_address WHERE uid_contractor='?' ORDER BY uid ASC", extranet_user.uid);
+        old_contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid='?'", extranet_user.uid);
+        contractor = update( 
+            uid:extranet_user.uid,
+            tables:"sr_contractor",
+            fields:{
+                "contact_firstname":cgidata.contact_firstname,
+                "contact_lastname":cgidata.contact_lastname,
+                "contact_phone":cgidata.contact_phone,
+                "contact_email":cgidata.contact_email,
+                "contact_title":cgidata.contact_title,
+                "website":cgidata.website, 
+                "fbsite":cgidata.fbsite,
+                "company_phone":cgidata.company_phone,
+                "insurance_company":cgidata.insurance_company,
+                "insurance_number":cgidata.insurance_number,
+                "email_accounting":cgidata.email_accounting,
+                "email":cgidata.email,
+                "email_cc":cgidata.email_cc,
+                "enable_vacation":cgidata.enable_vacation,
+                "company_desc":cgidata.description,
+                "seo":""
+            }
+        );
+       
+        if(cgidata.enable_vacation == 'yes' ) then
+            contractor = update(  
+                uid:extranet_user.uid,
+                tables:"sr_contractor",
+                fields:{
+                    "reactivate_date":cgidata.reactivate_date,
+                    "reactivate_reason":cgidata.reactivate_reason,
+                    "deactivate_date":cgidata.desactivate_date,
+                    "deactivate_reason":cgidata.desactivate_reason
+                }
+            );
+        endif
+
+        
+        if address.nbrows > 0 then
+            territory = update(
+                uid:address.rows.uid,
+                tables:"sr_address",
+                fields:{
+                    "uid_city":cgidata.city,
+                    "street_no":cgidata.street_no,
+                    "street":cgidata.street,
+                    "zip":cgidata.zip,
+                    "province":cgidata.province
+                }
+            );
+        else
+            territory = insert(
+                table:"sr_address",
+                fields:{
+                    "uid_city":cgidata.city,
+                    "street_no":cgidata.street_no,
+                    "street":cgidata.street,
+                    "zip":cgidata.zip,
+                    "province":cgidata.province,
+                    "uid_contractor":extranet_user.uid
+                }
+            );
+        endif
+        
+        headers_out("X-success", "1");
+        
+        
+        // Variables for the email
+        before_info ={
+            "contact_firstname":old_contractor.rows.contact_firstname,
+            "contact_lastname":old_contractor.rows.contact_lastname,
+            "contact_phone":old_contractor.rows.contact_phone,
+            "contact_email":old_contractor.rows.contact_email,
+            "contact_title":old_contractor.rows.contact_title,
+            "website":old_contractor.rows.website,
+            "fbsite":old_contractor.rows.fbsite,
+            "company_phone":old_contractor.rows.company_phone,
+            "insurance_company":old_contractor.rows.insurance_company,
+            "insurance_number":old_contractor.rows.insurance_number,
+            "email_accounting":old_contractor.rows.email_accounting,
+            "email":old_contractor.rows.email,
+            "email_cc":old_contractor.rows.email_cc,
+            "city":address.rows.city_name,
+            "street_no":address.rows.street_no,
+            "street":address.rows.street,
+            "zip":address.rows.zip,
+            "province":address.rows.province,
+            "company_name":old_contractor.rows.company_name,
+            "company_desc":old_contractor.rows.company_desc,
+            "enable_vacation":old_contractor.rows.enable_vacation,
+            "deactivate_date":old_contractor.rows.deactivate_date,
+            "deactivate_reason":old_contractor.rows.deactivate_reason,
+            "reactivate_date":old_contractor.rows.reactivate_date,
+            "reactivate_reason":old_contractor.rows.reactivate_reason
+        };
+ 
+        after_info ={
+            "contact_firstname":cgidata.contact_firstname,
+            "contact_lastname":cgidata.contact_lastname,
+            "contact_phone":cgidata.contact_phone,
+            "contact_email":cgidata.contact_email,
+            "contact_title":cgidata.contact_title,
+            "website":cgidata.website,
+            "fbsite":cgidata.fbsite,
+            "company_phone":cgidata.company_phone,
+            "company_desc":cgidata.description,
+            "insurance_company":cgidata.insurance_company,
+            "insurance_number":cgidata.insurance_number,
+            "email_accounting":cgidata.email_accounting,
+            "email":cgidata.email,
+            "email_cc":cgidata.email_cc,
+            "city": cgidata.city,
+            "street_no":cgidata.street_no,
+            "street":cgidata.street,
+            "zip":cgidata.zip,
+            "province":cgidata.province,
+            "enable_vacation":cgidata.enable_vacation,
+            "deactivate_date":cgidata.desactivate_date,
+            "deactivate_reason":cgidata.desactivate_reason,
+            "reactivate_date":cgidata.reactivate_date,
+            "reactivate_reason":cgidata.reactivate_reason
+
+        };
+
+        // send email
+        automail::notifyAdminModifyContractorProfile(before_info, after_info); 
+        
+    endif
+}}

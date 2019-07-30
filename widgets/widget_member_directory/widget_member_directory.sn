@@ -1,0 +1,196 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+    use lg;
+    use widget;
+}}
+\{{
+    member_form = sql(single:true, "SELECT folder_{{lg.rows.lg}} AS url FROM pages WHERE code='become_member'");
+    cgidata = cgidata();
+    q = esc(filter:"sql",cgidata.q);
+    member_page = sql(single:true, "SELECT folder_{{lg.rows.lg}} AS url FROM pages WHERE code='member_info'");
+     
+    config=config();       
+    select = "member.active='yes'";
+    select_cat = "member.uid_category=member_cat.uid AND member.active='yes'";
+    if config.site ne "staging" then 
+        select .+= " AND member.production='yes'";
+        select_cat .+= " AND member.production='yes'"; 
+    endif        
+    if q ne "" then
+        select .+= " AND member.name LIKE '%" .+ q .+ "%'";
+        select_cat .+= " AND member.name LIKE '%" .+ q .+ "%'";
+    endif
+    
+    companies = sql("SELECT 
+                        member.uid,
+                        member.name,
+                        member.cia_phone,
+                        city.name_{{lg.rows.lg}} AS city,
+                        member.uid_city,
+                        member.uid_category,
+                        member_cat.category_{{lg.rows.lg}} AS category
+                     FROM 
+                        member LEFT JOIN member_cat ON member.uid_category=member_cat.uid
+                               LEFT JOIN city ON member.uid_city=city.uid
+                     WHERE " .+ select .+ "
+                     ORDER BY member.name"); 
+                     
+    cities = sql("SELECT 
+                    city.name_{{lg.rows.lg}} AS city,
+                    city.uid
+                  FROM
+                    member LEFT JOIN city ON member.uid_city=city.uid
+                  WHERE " .+ select .+ "
+                  GROUP BY city.uid
+                  ORDER BY city.name_{{lg.rows.lg}}"); 
+                  
+    categories = sql("SELECT 
+                        member.uid_category AS uid,
+                        member_cat.category_{{lg.rows.lg}} AS category
+                      FROM
+                        member, member_cat
+                      WHERE " .+ select_cat .+ "
+                      GROUP BY member.uid_category
+                      ORDER BY member_cat.category_{{lg.rows.lg}}");                   
+}}
+<section class="slice bg-3 animate-hover-slide">
+    <div class="w-section inverse blog-grid">
+        <div class="container"> 
+            <div class="row">
+                
+                <div class="col-md-3">
+                    
+                    <form role="form" method="get" action="?">
+                        
+                        <label for="search">{{ sn_ct("Search", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</label>                        
+                        <div class="input-group">                            
+                            <input type="search" 
+                                   class="form-control" 
+                                   id="search" 
+                                   name="q" 
+                                   placeholder="{{ sn_ct(edit: false,"Search", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}"
+                                   value="\{{cgidata.q}}" />
+                            <span class="input-group-btn">
+                                <button type="submit" class="btn btn-primary">Go!</button>
+                            </span>
+                        </div>
+                        <br />
+                        
+                        <div class="form-group">
+                            <label for="city">{{ sn_ct("Filter", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</label>
+                            <select id="city" class="filter form-control" onchange="search_filter(this);">
+                                <option selected="selected" value="">{{ sn_ct("City", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</option>
+                                \{{ for city in cities.rows do}}
+                                    <option value="city\{{city.uid}}">\{{city.city}}</option>
+                                \{{ endfor }}
+                            </select>    
+                            <select id="category" class="filter form-control" onchange="search_filter(this);" style="margin-top:10px;">
+                                <option selected="selected" value="">{{ sn_ct("Category", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</option>
+                                \{{ for cat in categories.rows do}}
+                                    <option value="category\{{cat.uid}}">\{{cat.category}}</option>
+                                \{{ endfor }}
+                            </select>                                                        
+                        </div>
+                        <button type="button" class="btn btn-danger" onclick="reset_search()">{{ sn_ct("Reset", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</button>
+                        
+                    </form>
+                    <br /> 
+                    <script type="text/javascript">
+                        function search_filter(){
+                            var filter = "";
+                            $("select.filter").each(function(){
+                                if ($(this).val()){
+                                    filter += "." + $(this).val();
+                                }
+                            });
+                            // console.log(filter);
+                            if(filter){
+                                $("tr.company").hide("fast");
+                                $("tr.company" + filter).show("slow");
+                            } else {
+                                $("tr.company").show("fast");
+                            }
+                        }
+                        
+                        function reset_search(){
+                            location.href=location.href.split("?")[0];
+                        }
+                        
+                        $(function() {
+                            search_filter();
+                        });
+                    </script>
+                    
+                    <div class="become-member-box">
+                        <h3>{{ sn_ct("Become member", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</h3>
+                        <a href="\{{member_form.rows.url}}" class="btn btn-link">
+                            {{ sn_ct(edit:false, "Go to the form", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} 
+                            <i class="fa fa-angle-right fa-lg" style="padding-left: 20px;"></i>
+                        </a>
+                    </div>
+                    
+                    <style type="text/css">
+                        .become-member-box{
+                            background-color: #3676be;
+                            text-align: center;
+                            padding: 25px;
+                            margin-bottom: 25px;
+                        }
+                        .become-member-box h3{
+                            text-transform: uppercase;
+                            color: #fff;
+                            margin: 0 0 15px;
+                            font-weight: normal;
+                        }
+                        .become-member-box .btn.btn-link{
+                            color: #fff;
+                            border: solid 1px #fff;
+                        }
+                    </style>
+                    
+                </div>
+                
+                <div class="col-md-9">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped table-bordered table-condensed">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        {{ sn_ct("Company", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+                                    </th>
+                                    <th>
+                                        {{ sn_ct("City", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+                                    </th>
+                                    <th>
+                                        {{ sn_ct("Phone", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+                                    </th>
+                                    <th>
+                                        {{ sn_ct("Category", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+                                    </th>                                    
+                                </tr>
+                            </thead>
+                            <tbody>
+                                \{{ for company in companies.rows do}}
+                                <tr class="company city\{{company.uid_city}} category\{{company.uid_category}}">
+                                    <td>
+                                        <a href="\{{member_page.rows.url}}?memberid=\{{company.uid}}">\{{company.name}}</a>
+                                    </td>  
+                                    <td>
+                                        \{{company.city}}
+                                    </td>   
+                                    <td>
+                                        \{{company.cia_phone}}
+                                    </td>   
+                                    <td>
+                                        \{{company.category}}
+                                    </td>                                                                                                                                              
+                                </tr>
+                                \{{ endfor }}
+                            </tbody>
+                        </table>
+                    </div>                  
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

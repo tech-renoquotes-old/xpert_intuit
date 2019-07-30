@@ -1,0 +1,42 @@
+{{
+    /*
+        @title 			creditApproved
+        Description		Email for the contractor when a credit is accepted for one of his project. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use contractor;
+    use id_projet;
+    use id_credit;
+    use client;
+    use client_explanation;
+    
+    uid_contractor = contractor.rows.uid_contractor;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+    client_firstname = client.rows.firstname;
+    client_lastname = client.rows.lastname;
+    
+    if(contractor.rows.reason eq 'ContratDonne') then
+    	contractor_explanation = 'Le crontrat a été donné a un autre entrepreneur';
+    elseif(contractor.rows.reason eq 'ProjetAnnule') then
+    	contractor_explanation = 'Le Projet à été annulé';
+    elseif(contractor.rows.reason eq 'JamaisRejoint') then
+    	contractor_explanation = "Il n'a jamais rejoint le client";
+    endif
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

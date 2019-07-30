@@ -1,0 +1,123 @@
+{{
+    // Name:        login
+    //
+    // Description: Display login form and lost password form
+    //
+    // Version:     2014-11-10 16:40:17 leansy@sednove.com Initial Version
+
+    %include "/extenso/functions/sn_ct.snc"; 
+
+    use widget;
+    use lg;
+    
+    // data = sql(single:true,"SELECT * FROM widget_inscriptions");
+    data = sql(single:true,"SELECT * FROM ?", widget.rows.table_name);
+    desc = data.rows["description_" .+ lg.rows.lg];
+    
+    btn = data.rows["btn_text_" .+ lg.rows.lg];
+    if btn eq "" then
+        btn = sn_ct(edit:false,"Subscribe", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"inscriptions");
+    endif
+    
+    error_msg = sn_ct(edit:false,"Subscription error!", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"inscriptions");
+    m2_msg = sn_ct(edit:false,"Already subscribed!", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"inscriptions");
+    close = sn_ct(edit:false,"Close", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid);
+    
+    message = data.rows["message_" .+ lg.rows.lg];
+    if message eq "" then
+        message = sn_ct(edit:false,"You have been subscribed successfully", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"inscriptions");
+    endif    
+}}
+<style type="text/css">
+    .inscriptions-wrap .p10 p{
+        margin: 0 0 0 10px;
+    }
+</style>
+<div class="inscriptions-wrap">
+    <h3>{{data.rows["title_" .+ lg.rows.lg]}}</h3>
+    <div class="alert alert-danger" role="alert" style="display: none;">
+        <button type="button" class="close" onclick="close_alert(this);"><span aria-hidden="true">&times;</span><span class="sr-only">{{close}}</span></button>
+        <table>
+            <tr>
+                <td><i class="fa fa-exclamation-triangle"> </i> </td>
+                <td class="p10"> <p>{{error_msg}}</p> </td> 
+            </tr>
+        </table>          
+    </div> 
+    <div class="alert alert-success inscriptions-alert-success" role="alert" style="display: none;">
+        <button type="button" class="close" onclick="close_alert(this);"><span aria-hidden="true">&times;</span><span class="sr-only">{{close}}</span></button>
+        <table>
+            <tr>
+                <td><i class="fa fa-check"> </i> </td>
+                <td class="p10 m1"> {{message}} </td> 
+                <td class="p10 m2"> <p>{{m2_msg}}</p> </td> 
+            </tr>
+        </table>    
+    </div>         
+    <form role="form" onsubmit="newsletter_subscription(this); return false;">
+        {{ if desc ne "" then }}{{desc}}{{ endif }}
+        <div class="form-group">
+            <label for="inscriptions-email" class="control-label">{{ sn_ct("Email address", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"inscriptions")}}</label>
+            <input type="email" class="form-control" id="inscriptions-email" name="inscriptions_email" placeholder="{{ sn_ct(edit:false,"Email", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"inscriptions")}}">
+        </div>  
+        <input type="hidden" name="op" value="subscribe" />
+        <button type="submit" class="btn btn-default">{{btn}}</button>     
+    </form>
+</div>
+<script type="text/javascript">
+
+    function close_alert(element){
+        var $element = $(element);
+        $element.closest(".alert").hide();
+        $element.closest(".inscriptions-wrap").find("form").show();
+    }
+    
+    function subscription_email_error(element){
+        $(element).closest(".form-group").addClass("has-error");
+    }
+
+    function newsletter_subscription(form){
+        var $form = $(form);
+        var $email_field = $form.find("input[type=email]");
+        $email_field.removeClass("has-error");
+        var subscription_email_pattern = /^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$/;
+        if(subscription_email_pattern.test($email_field.val())){
+            var alert_error = $form.parent().find(".alert-danger");
+            var alert_success = $form.parent().find(".alert-success");
+            alert_error.hide();
+            $.ajax({
+                type: "post",
+                data: $form.serialize(),
+                url: "/modules/inscriptions/ressources/{{lg.rows.lg}}/ajax_inscriptions.snc",
+                dataType: 'JSON',
+                success: function(data)  { 
+                    if(data.error){
+                        if (data.error==1){
+                            alert_error.show();
+                        } else {
+                            subscription_email_error($email_field);
+                        }
+                    } else {
+                        $form.hide();
+                        $form.trigger("reset");
+                        if(data.message==1){
+                            alert_success.find(".m1").show();
+                            alert_success.find(".m2").hide();
+                        } else {
+                            alert_success.find(".m2").show();
+                            alert_success.find(".m1").hide();                            
+                        }
+                        alert_success.show();
+                    }
+                },
+                error : function(data) {//
+                    alert_error.show();
+                }
+            });                 
+        } else {
+            subscription_email_error($email_field);
+        }
+   
+        return false;
+    }
+</script>

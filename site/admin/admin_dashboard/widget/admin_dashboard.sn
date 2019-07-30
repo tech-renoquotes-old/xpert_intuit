@@ -1,0 +1,507 @@
+{{
+
+/*
+	@title		preload
+
+	Preload is executed for each request. This is used to set certain
+	directory with security like extranet or staging.
+
+	This version check for the following directories:
+
+	/staging
+	/staging/extenso
+	/staging/extenso/extranet
+	/html/extranet
+	/html/extenso/extranet
+
+	users are read from the table sn_users and users.
+
+	sn_users is used for extenso.
+	user is for the extranet.
+
+	@author		2016-01-11 09:06:19 laplante@sednove.com
+
+	@version	1.0 2016-01-11 09:08:12 laplante@sednove.com
+
+	@param		cookies
+	@return		user
+	@return		extranet_user
+*/
+
+%include "/extenso/functions/sn_ct.snc";
+%include "/extenso/functions/sn_pages.snc";
+use page;
+use lg;
+
+}}
+
+\{{
+    
+    // user.username = "alexandraE";
+
+
+//   complete = sql(single:true,"select count(*) as today from sr_project where DATE(sn_mdate) = DATE(NOW()) AND status = 'completed'");
+//   complete_week = sql(single:true,"select count(*) as last7days from sr_project where DATE(sn_mdate) >= DATE(NOW()) - INTERVAL 7 DAY AND status = 'completed'");
+    me_active_today = sql(single:true,"select count(*) as count from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'", user.username);
+    team_active_today = sql(single:true,"select count(*) as count from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')"); 
+    team_active_this_week = sql(single:true,"select count(*) as count from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')"); 
+    team_active_last_week = sql(single:true, "SELECT count(*) as count FROM sr_project WHERE yearweek(active_date) = (yearweek(curdate())-1) AND active_date < (DATE_SUB(now(), INTERVAL 7 DAY))");
+    team_active_last_year = sql(single:true, "SELECT count(*) as count FROM sr_project WHERE year(active_date) = (year(curdate())-1) AND week(active_date) = (week(curdate())+1)");
+    
+    // team_new_today = sql(single:true,"select count(*) as count from sr_project where DATE(sn_cdate) = DATE(NOW()) AND status = 'new'");
+    // team_new_week = sql(single:true,"select count(*) as count from sr_project where yearweek(sn_cdate) = yearweek(NOW()) AND status = 'new'");
+    // team_new_last_week = sql(single:true, "SELECT count(*) as count FROM sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND status = 'new'");
+    
+    to_handle = sql("SELECT c.lang, count(*) as count FROM sr_client c 
+        INNER JOIN sr_project p ON p.uid_client = c.uid
+        WHERE p.status = 'new'
+        AND NOT EXISTS(SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND uid_client = p.uid_client)
+        AND p.sn_cdate < NOW() - INTERVAL 3 MINUTE
+        GROUP BY c.lang;
+        ");
+
+    left_to_handle = sql("SELECT c.lang, count(*) as count             
+            FROM sr_client c 
+            INNER JOIN sr_project p ON p.uid_client = c.uid
+            WHERE p.status = 'new'
+            AND EXISTS(SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND sn_cdate < NOW() - INTERVAL 30 HOUR AND uid_client = p.uid_client)
+            AND NOT EXISTS (SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND time_to_sec(timediff(NOW(), sn_cdate)) / 3600 < 30 AND uid_client = p.uid_client ORDER BY sn_cdate)
+            GROUP BY c.lang;
+        ");
+   
+//   active = sql(single:true,"select count(*) as today from sr_project where DATE(sn_mdate) = DATE(NOW()) AND status = 'active'");
+//   active_week = sql(single:true,"select count(*) as last7days from sr_project where DATE(sn_mdate) >= DATE(NOW()) - INTERVAL 7 DAY AND status = 'active'");
+//   new_today = sql(single:true,"select count(*) as today from sr_project where DATE(sn_mdate) = DATE(NOW()) AND status = 'new'");
+//   new_week = sql(single:true,"select count(*) as last7days from sr_project where DATE(sn_mdate) >= DATE(NOW()) - INTERVAL 7 DAY AND status = 'new'");
+}}
+
+
+<style>
+
+    .ref{
+        /* These are technically the same, but use both */
+          overflow-wrap: break-word;
+          word-wrap: break-word;   
+    }
+    
+    .cs .nomargin{
+        margin:0;
+    }
+    .dashboard_group{
+        margin:-7px -7px 13px -7px;
+        clear:both;
+    }
+    .dashboard_group:after{
+        visibility: hidden;
+        display: block;
+        font-size: 0;
+        content: " ";
+        clear: both;
+        height: 0;
+    }
+    .dashboard_group .dashboard_item_container{
+        width:33.3334%;
+        float:left;
+        padding:7px;
+    }
+    .dashboard_group .dashboard_item_ratio{
+        border-radius:5px;
+        border-bottom-right-radius:0;
+        border-bottom-left-radius:0;
+        padding-bottom:42%;
+        width:100%;
+        position:relative;
+        
+        border-bottom:3px #00517e solid;
+        background-repeat:no-repeat;
+        background-position:10px center;
+        background-size:auto 70%;
+    }
+    
+    .dashboard_group .dashboard_item_position{
+        border-radius:5px;
+        border-bottom-right-radius:0;
+        border-bottom-left-radius:0;
+        position:absolute;
+        width:100%;
+        height:100%;
+        top:0;
+        left:0;
+        background-color:#dfdfdf;
+        background-repeat:no-repeat;
+        background-position:10px center;
+        background-size:auto 70%;
+    }
+    
+    .dashboard_group .dashboard_item_ratio:hover{
+        border-bottom:3px #002a41 solid;
+        background-color:#00517e;
+    }
+    .dashboard_group .dashboard_item_ratio:hover a{
+        color:#d9efef;
+    }
+    .dashboard_group .dashboard_item_ratio:hover .dashboard_item_position{
+        background:none!important;
+    }
+    
+    .dashboard_group .dashboard_item_position .dtable{
+        width:100%;
+        height:100%;
+        display:table;
+        float:right;
+    }
+    .dashboard_group .dashboard_item_position .dtable a{
+        display:table-cell;
+        vertical-align:middle;
+        text-align:center;
+        padding:0 15px;
+        text-decoration:none;
+        font-size:14px;
+        font-weight:bold;
+        padding-left:35%;
+    }
+    .pull-right-md{
+        float:right;
+    }
+    .cs .big_text{
+        font-size:24px;
+        color:#737672;
+        margin:5px 0;
+    }
+    .cs .med_text{
+        font-size:18px;
+    }
+    .cs .dashboard_comment{
+        margin-top:30px;
+    }
+    .cs .dashboard_comment h2{
+        margin:0 0 15px 0;
+    }
+    @media(max-width:991px){
+        .pull-right-md{
+            float:none;
+        }
+    }
+    
+    @media (max-width:768px){
+        .dashboard_group .dashboard_item_container{
+            width:50%;
+        }
+        .dashboard_group .dashboard_item_ratio{
+            padding-bottom:20%;
+        }
+        .dashboard_group .dashboard_item_position .dtable{
+            width:100%;
+        }
+        .dashboard_group .dashboard_item_position .dtable a{
+            padding-left:60px;
+        }
+    }
+    @media (max-width:640px){
+        .dashboard_group .dashboard_item_ratio{
+            padding-bottom:0;
+            height:70px;
+        }
+        .dashboard_group .dashboard_item_container{
+            width:100%;
+            float:none;
+        }
+    }
+    
+    .progress {
+        height: 20px;
+        margin-bottom: 20px;
+        overflow: hidden;
+        background-color: #eaeaea;
+        border-radius: 4px;
+        max-width:100%;
+    }
+    .progress-bar {
+        float: left;
+        width: 0;
+        height: 100%;
+        font-size: 12px;
+        line-height: 20px;
+        color: #fff;
+        text-align: center;
+        background-color: #428bca;
+    }
+    .progress-bar-success {
+        background-color: #0AA699;
+        background-image: none;
+        color:#333;
+    }
+    .progress-bar-info {
+        background-color: #40b3e8;
+        background-image: none;
+        color:#333;
+    }
+    .progress-bar-warning {
+        background-color: #FDD01C;
+        background-image: none;
+    }
+    .progress-bar-danger {
+        background-color: #F35958;
+        background-image: none;
+    }
+    
+    .pct{
+        width:auto;
+    }
+    
+    .progress_detail{
+        position:absolute;
+        width:300px;
+        border:1px solid #999999;
+        border-radius: 6px;
+        right:auto;
+        top:-0px;
+        font-size: 13px;
+        min-height:50px;
+        background-color: #eeeeee;
+        padding:5px;
+        z-index:2;
+    }
+    
+    .progress_detail td{
+        font-size: 13px;
+    }
+
+    .progress_detail a:link{
+        color: #427df4;
+        text-decoration:none;
+    }
+    
+    .progress_detail a:visited{
+        color: #427df4;
+        text-decoration:none;
+    }
+
+    
+    .progress_detail a:hover{
+        color: #0c579e;
+        text-decoration:none;
+    }
+    
+    .progress_text{
+        position:absolute;
+        width:auto;
+    }
+    
+</style>
+
+<div class="col-md-12">
+    <table class="table_blog">
+        <th>Langue</th>
+        <th>Nouveaux clients</th>
+        <th>Suivis restants</th>
+        <tr>
+            <td>FR</td>
+            <td>
+                \{{for left in to_handle.rows do
+                    if left.lang eq 'fr' then
+                        left.count;
+                    endif
+                endfor
+                }}
+            </td>
+            <td>
+                \{{for left in left_to_handle.rows do
+                    if left.lang eq 'fr' then
+                        left.count;
+                    endif
+                endfor
+                }}
+            </td>
+        </tr>
+        <tr>
+            <td>EN</td>
+            <td>
+                \{{for left in to_handle.rows do
+                    if left.lang eq 'en' then
+                        left.count;
+                    endif
+                endfor
+                }}
+            </td>
+            <td>
+                \{{for left in left_to_handle.rows do
+                    if left.lang eq 'en' then
+                        left.count;
+                    endif
+                endfor
+                }}
+            </td>
+        </tr>
+    </table>
+</div>
+
+    <div class="col-md-6">
+        <div class="row">
+            <h2>
+                {{sn_ct("admin_dashboard Administration client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </h2>
+            <div class="dashboard_group">
+                <div class="dashboard_item_container" style="width:45%">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/liste_clients_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/liste_clients.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_manage_client',lg.rows.lg)}}">
+                                    {{sn_ct("admin_dashboard Gestion Clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a> 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container" style="width:45%">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/rabais_projet_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/rabais_projet.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_credit_cards',lg.rows.lg)}}">
+                                    {{sn_ct("admin_dashboard Projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard_group">
+                <div class="dashboard_item_container" style="width:45%">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/non_repondu_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/non_repondu.png);">
+                            <div class="dtable">
+                                 <a href="{{pages(table:'pages','projet_similaire',lg.rows.lg)}}">
+                                    {{sn_ct("admin_dashboard Projets similaires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container" style="width:45%">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/client_ref_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/client_ref.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_search_client',lg.rows.lg)}}">
+                                    {{sn_ct("admin_dashboard Recherche clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+        <h2>
+            {{sn_ct("admin_dashboard Sommaire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </h2>
+
+    <div class="col-md-6" style="padding:0">
+        <table class="table table-hover">
+            <tr style="background-color:#00517e;height:40px">
+                <th>
+                    
+                </th>
+                <th>
+                    <span style="color:#fff">{{sn_ct("admin_dashboard Projets activés", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                </th>
+                <!--<th>-->
+                <!--    <span style="color:#fff">{{sn_ct("admin_dashboard Nouveaux projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>-->
+                <!--</th>-->
+            </tr>
+            <tr>
+                <th>
+                    {{sn_ct("admin_dashboard Mes projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </th>
+                <td>
+                   <h2>\{{me_active_today.rows.count}}</h2>
+                </td>
+                <!--<td>-->
+                <!--    <h2>-</h2>-->
+                <!--</td>-->
+            </tr>
+            <tr>
+                <th>
+                    {{sn_ct("admin_dashboard L'équipe", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </th>
+                <td>
+                   <h2>\{{team_active_today.rows.count}}</h2>
+                </td>
+                <!--<td>-->
+                <!--    <h2>\{{team_new_today.rows.count}}</h2>-->
+                <!--</td>-->
+            </tr>
+            <tr>
+                <th>
+                   {{sn_ct("admin_dashboard Cette semaine", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                </th>
+                <td>
+                   <h2>\{{team_active_this_week.rows.count}}</h2>
+                </td>
+                <!--<td>-->
+                <!--    <h2>\{{team_new_week.rows.count}}</h2>-->
+                <!--</td>-->
+            </tr>
+            <tr>
+                <th>
+                   {{sn_ct("admin_dashboard La semaine passée", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                </th>
+                <td>
+                   <h2>\{{team_active_last_week.rows.count}}</h2>
+                </td>
+                <!--<td>-->
+                <!--    <h2>\{{team_new_last_week.rows.count}}</h2>-->
+                <!--</td>-->
+            </tr>
+            <tr>
+                <th>
+                   {{sn_ct("admin_dashboard L'année passée", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                </th>
+                <td>
+                   <h2>\{{team_active_last_year.rows.count}}</h2>
+                </td>
+                <!--<td>-->
+                <!--    <h2>-</h2>-->
+                <!--</td>-->
+            </tr>
+        </table>
+    </div>
+    
+<script>
+    $(document).ready(function(){
+        var w1 = $('.progress').width();
+        var w2 = $(window).width();
+        var w3 = $('.progress_text').width();
+        $('.progress_text').css('left', '35%');
+    });
+</script>
+<script>
+   function show_detail(bar, detail){
+        var position = $(bar).position().top;
+        $(bar).find('#'+ detail).css('top',position);
+        $(bar).find('#'+ detail).show();
+          
+        if(detail == 'profile'){
+            $(bar).find('#'+ detail).css('border', '1px solid #47e895');
+            $(bar).find('#'+ detail).css('background-color', '#b0f4d2');
+        }
+          
+        if(detail == 'project_filter'){
+            $(bar).find('#'+ detail).css('border', '1px solid #42a1d1');
+            $(bar).find('#'+ detail).css('background-color', '#c9effc');
+        }
+   } 
+    				
+    function hide_detail(bar, detail){
+        $(bar).find('#' + detail).hide();
+    }
+
+
+    var nbr_cc = \{{nbr_cc}};
+        //if (typeof(nbr_cc) == "undefined")  {
+       if (nbr_cc != "")  {
+            $("#cc_panel").removeClass("panel-warning");
+            $("#cc_warning").hide();
+         }
+</script>

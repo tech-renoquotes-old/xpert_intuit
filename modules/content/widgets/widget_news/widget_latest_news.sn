@@ -1,0 +1,49 @@
+{{
+	%include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+	use uid;
+	use table;
+	use lg;
+	use widget;
+	dir_nouvelles="/fr/nouvelles/";
+	if lg.rows.lg eq "en"  then
+		dir_nouvelles="/en/news/";
+	endif	
+}}
+\{{	
+	config=config();
+	cgi=cgidata();
+	lg_rows="{{lg.rows.lg}}";
+	production_select= "";
+	if config.site ne "staging" then production_select .+= " and production='oui'"; endif
+
+}}
+<section class="slice bg-5">
+	<div class="w-section inverse">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12">
+					{{codect="Nouvelles recentes" .+widget.rows.uid_widget_list;}}
+					<h3 class="section-title">{{sn_ct(allpages:true, code:codect, edit:true)}}</h3>
+					\{{ /* --------- affichage des 3 dernieres nouvelles recentes ------*/
+						for content sql("select * from actualites where actif='oui' " .+ production_select .+ " ORDER BY adate DESC LIMIT 3;") do
+						adate = datetime(lg:"{{lg.rows.lg}}", date:content.rows.adate,format:"%B %Y");
+						}}
+					<div class="row mb-20">
+						<div class="col-md-8 col-md-offset-2">
+							<p class="nouvelle_date">\{{adate}}</p>
+							<a href="{{dir_nouvelles}}\{{content.rows.seo_{{lg.rows.lg}};}}" class="nouvelle_texte">\{{content.rows.breve_{{lg.rows.lg}}}}</a>
+						</div>
+					</div>
+					\{{endfor}}							
+				</div>
+				<div class="col-md-6 push-right col-md-offset-6 clearfix">
+				{{	pg = sql(single:true,"select * from pages where code = 'nouvelles'");
+					codect="Voir toute les nouvelles" .+widget.rows.uid_widget_list;
+					}}
+					<a class="btn_losange pull-right" href="{{pg.rows{'folder_'.+ lg.rows.lg} .+ pg.rows{'page_'.+ lg.rows.lg};}}">{{sn_ct(allpages:true, code:codect, edit:true)}} <img src="/sn_uploads/btn_losange.png" alt="Roger Tremblay"/></a>
+				</div>
+			</div>
+		</div>
+	</div>    
+</section>	

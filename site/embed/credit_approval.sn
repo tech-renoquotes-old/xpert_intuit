@@ -1,0 +1,19 @@
+FORCE_EMAIL_PROD = true;
+
+// Approval
+if (cgidata.uid ne '' && cgidata.accepted eq 'yes') then
+	p = sql(single:true, "SELECT accepted FROM sr_credit WHERE uid = '?'", cgidata.uid);
+	if (p.rows.accepted ne 'yes') then
+        automail::creditApproved(cgidata.uid);
+	endif
+endif
+
+// Refusal
+if (cgidata.uid ne '' && cgidata.accepted ne 'yes' && cgidata.refusal_reason ne '') then
+	p = sql(single:true, "SELECT accepted FROM sr_credit WHERE uid = '?'", cgidata.uid);
+	if (p.rows.refusal_reason eq '') then
+        automail::creditDenied(cgidata.uid, cgidata.refusal_reason);
+		'<div class="alert alert-danger">La raison du refus a bien été envoyé</div>';
+	endif
+endif
+

@@ -1,0 +1,47 @@
+{{ 
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc"; 
+    %include "/extenso/functions/sn_pages.snc";     
+    use lg;         // Function publish use context lg	
+	use widget;
+	
+	data = sql(single:true,"SELECT * FROM ? where uid='1'", widget.rows.table_name);
+}}
+
+<div class="container-fluid">
+	<div class="row p-relative">
+		<div class="col-sm-4">
+			<table class="table table-no-border mt-50">
+				<tr>
+					<td width="50"><img alt="picto" src="/assets2/images/picto-sednove.png"></td>
+					<td>
+						{{data.rows["address_" .+ lg.rows.lg]}}
+						<br>{{data.rows["city_" .+ lg.rows.lg]}}, {{data.rows["province_" .+ lg.rows.lg]}} {{data.rows.postal_code}}
+					</td>
+				</tr>
+				<tr>
+					<td><img alt="picto" src="/assets2/images/picto-phone.png"></td>
+					<td>
+						<strong>{{sn_ct("contact Tel.", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</strong> {{data.rows.phone}}
+						<br>
+						<strong>{{sn_ct("contact Fax", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</strong> {{data.rows.fax}}
+					</td>
+				</tr>
+				<tr>
+					<td><img alt="picto" src="/assets2/images/picto-envelop.png"></td>
+					<td><a href="mailto:{{data.rows.email}}">{{data.rows.email}}</a></td>
+				</tr>
+				<!--tr>
+					<td></td>
+					<td>
+						Share this ici
+					</td>
+				</tr-->
+			</table>
+		</div>
+		<div class="col-sm-8 hidden-xs">
+			<img alt="alt" src="/assets2/images/carte-accueil.png" style="width:100%;">
+		</div>
+	</div>
+</div>

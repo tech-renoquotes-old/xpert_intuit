@@ -1,0 +1,102 @@
+{{ 
+    //
+    // Name:        footer
+    //
+    // Parameters:  implement footer based on theme
+    //
+    // Version:     1.0 2014-01-18 10:42:03 laplante@sednove.com
+	//				1.1 2015-06-11 17:29:28 laplante@sednove.com Implement theme
+    //
+
+	theme_choice = sql(single:true,"SELECT * FROM sn_theme_color");
+
+	google = sql(single:true, "select google_analytics from seo"); 
+	google.rows.google_analytics;
+	
+	%include "/extenso/functions/sn_pages.snc";
+	
+	use lg;
+}}
+
+<div class="sed-footer no-print">
+    <div class="container">
+        <div class="table-center footer-extranet">
+            <div class="cell-center">
+                {{ // Call for the logo
+                logo_client = sql(single:true,"select * from sn_configs where uid = '1'");
+                
+                }}
+                <a href="{{pages("sr_contractor_dashboard", lg.rows.lg,table:"pages")}}">
+                    <img src="{{logo_client.rows{"logo_" .+lg.rows.lg};}}" alt="Soumission Rénovation" class="logo-2">
+                </a>
+            </div>
+            <div class="cell-center">
+                <div class="desk-text-right">
+                    {{ %include "/includes/call_footer_nav_extranet.sn"; }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    .cs .footer-extranet{
+        min-height:80px;
+    }
+    .cs .desk-text-right{
+        text-align:right;
+    }
+    .cs .footer-extranet .item{
+        display:inline-block;
+        margin:5px 0;
+    }
+    .cs .footer-extranet .item:after{
+        display:inline-block;
+        content:' | ';
+    }
+    .cs .footer-extranet .item:last-child:after{
+        content:none;
+    }
+    @media (max-width:768px){
+        .cs .desk-text-right{
+            text-align:center;
+        }
+        .cs .footer-extranet .cell-center{
+            text-align:center;
+        }
+    }
+</style>
+<script>
+    //Smooth scrolling
+    $(function() {
+        $('a[href*="#"]:not([href="#"]):not(.open-popup-link)').click(function() {
+            if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top
+                    }, 1000);
+                    return false;
+                }
+            }
+        });
+    });
+</script>
+
+{{if lg.rows.lg eq 'fr' then}}
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/5b9c13b3c9abba5796778dbd/default';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+    </script>
+    <!--End of Tawk.to Script-->
+{{else}}
+
+{{endif}}

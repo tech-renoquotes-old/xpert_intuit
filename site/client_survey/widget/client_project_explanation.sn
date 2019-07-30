@@ -1,0 +1,67 @@
+{{
+    /*
+        @title client-project-comment
+        Description: This widget allows a contractor to give feedback about the site.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-03
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+<div id="ajax_success" class="alert alert-success" style="display:none"> 
+    {{sn_ct("client-project-comment Merci pour votre suggestion/commentaire !", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<script>
+    $("a.close").on("click", function(){
+       $(this).parent().hide(); 
+    });
+</script>
+
+<div class="row dashboard_comment">
+    <div class="row">
+        <div>
+            <h2>{{sn_ct("client-project-comment Vous avez une explication à nous faire parvenir?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
+        </div>
+        <div>
+            <p class="med_text">{{sn_ct("client-project-comment N'hésitez pas à nous en faire part!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+        </div>
+    </div>
+    <div class="row">
+        <form action="{{sn_pages('ajax_add_suggestion', lg.rows.lg, table:'ressources')}}" id="add_suggestion" name="add_suggestion" method="POST">
+            <fieldset class="form-group">
+                <textarea class="form-control" id="suggestion" name="suggestion" rows="5"></textarea>    
+                <br/><span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="suggestion"></span>
+            </fieldset>  
+        </form>
+        
+        <button type="submit" form="add_suggestion" class="btn btn-default">{{sn_ct("client-project-comment Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button>
+    </div>
+</div>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_suggestion_validator.sn";
+    // validate client side
+    validator.validateJS(form:'add_suggestion');
+}}
+
+<script>
+    // Bind add_suggestion form to ajaxform plugin to send the form via ajax
+    $('form[name=add_suggestion]').ajaxForm({
+        resetForm:true,
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                $("#ajax_success").show();
+            }
+        }    
+    });   
+</script>

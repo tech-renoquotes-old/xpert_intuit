@@ -1,0 +1,69 @@
+{{
+    table_dest = 'sr_contractor';
+    table_from = 'tbl_entrepreneur';
+
+    select_query_from_src = "
+        SELECT 
+            c.*, 
+            Montant_Souffrance - (
+                                    SELECT SUM(Pro_PrixLead) * 1.14975 
+                                    FROM soumis5_access.`tbl_projet_entrepreneur` 
+                                    WHERE (Valide IS NULL OR Valide = '0') 
+                                    AND (Frais_Admin_Paye IS NULL OR Frais_Admin_Paye = '0') 
+                                    AND ID_Entrepreneur = c.idTBL_Entrepreneur 
+                                    GROUP BY ID_Entrepreneur 
+                                    ORDER BY ID_Entrepreneur 
+                                    LIMIT 1
+                                ) as solde
+        FROM `".+table_from.+"` c";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = false;
+
+    fields = {
+        'uid' : 'idTBL_Entrepreneur',
+        'company_name' : 'Nom_Entreprise',
+        'address' : 'Adresse',
+        'company_phone' : 'Telephone',
+        'website' : 'Site_Web',
+        'contact_gender' : 'Personne_Contacte_Genre',
+        'contact_firstname' : 'Personne_Contacte_Prenom',
+        'contact_lastname' : 'Personne_Contacte_Nom',
+        'contact_phone' : 'Personne_Contacte_Telephone',
+        'contact_email' : 'Personne_Contacte_Courriel',
+        'contact_title' : 'Personne_Contacte_titre',
+        'contact_lg' : "Personne_Contacte_Langue",
+        'rbq' : 'RBQ',
+        'rbq_exp' : 'RBQ_Renouvellement',
+        'ne' : 'NEQ',
+        'note_sr' : 'Note_Residencia',
+        'note_global' : 'Note_Global',
+        'sn_cdate' : 'Date_Inscription',
+        'email_cc' : 'CC_Courriel',
+        'active' : "Actif::IF('?', 'yes', 'no')",
+        'email' : 'Email_Destinataire',
+        'token' : 'Hash',
+        'comments' : 'Commentaire',
+        'hidden' : "Cache_Entrepreneur::IF('?', 'yes', 'no')",
+        'email_accounting' : 'Courriel_Comptabilite',
+        'insurance_company' : 'CompagnieAssurance',
+        'insurance_number' : 'NumeroPoliceAssurance',
+        'insurance_exp' : 'DateEcheanceAssurance',
+        'specialist' : "Specialiste::IF('?', 'yes', 'no')",
+        'balance' : "solde,solde::IF(ABS('?') < 0.1, 0, '?')",
+        'credit_threshold' : 'Threshold',
+        'publichash' : 'hashpublic',
+        'password' : 'hashprive',
+        'sn_salt_password': "Nom_Entreprise::MD5('?')",
+        'sn_hash_password': "'sha512'",
+        'username' : 'id_connexion',
+        'uid_territory' : 'Region',
+        'languages': "'3'",
+        'credit_cards': "Carte_Credit_Dossier::IF('?', 'yes', 'no')",
+        'can_accept_projects': "Actif::IF('?', 'yes', 'no')"
+    };
+    
+    %include 'migration.sn';
+    

@@ -1,0 +1,176 @@
+{{ 
+   /*
+	    @title		function calendar_search
+
+	    this function returns the calendar items that have the specified month/category.
+	    @param month 
+        @param category
+        @author laplante@sednove.com
+    	@version 1.0 2015-06-23 08:19:43 laplante@sednove.com
+   	*/	
+function get_calendar_items(month, category) 
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	use page;
+    config = config();
+    use lg_dyn;
+    use page_dyn;
+    use ressource_dyn;
+	year_month = esc(filter:"sql", month);
+	year_month = split(month,delimiter:"-");
+	month = year_month[1];
+	year=year_month[0];
+	month = esc(filter:"sql", month);
+	year = esc(filter:"sql", year);
+	category = esc(filter:"sql", category);
+	current_date = date();
+	extra_select = "";
+	if month ne "" then
+		if month < 10 then
+			month = "0" .+ month;
+		endif
+	
+	//>	
+		//extra_select .+= " AND (event.date LIKE '" .+ month .+ "-%' OR event.end_date LIKE '" .+ month .+ "-%')";
+		extra_select .+= " AND " .+ month.+ " >= MONTH(sed_event.date) AND ".+ month.+" <= MONTH(sed_event.end_date)AND ".+ year.+" >= YEAR(sed_event.date) AND ".+ year.+" <= YEAR(sed_event.end_date) ";
+	else
+		extra_select .+= " AND (sed_event.date >= '" .+ current_date.iso .+ "' OR (sed_event.end_date >= '" .+ current_date.iso .+ "' AND sed_event.end_date != '' AND sed_event.end_date IS NOT NULL))";
+	endif
+	
+	if category ne "" && category ne "0" then
+		extra_select .+= " AND (";
+		extra_select_sep = "";
+		for cev splitre(value:category,re:',') do
+		 extra_select = extra_select .+ extra_select_sep .+ "FIND_IN_SET('" .+ cev.value .+ "', sed_event.category)";
+		 extra_select_sep = " OR ";
+		endfor
+		extra_select .+= ")";
+	endif
+		
+	for event sql("SELECT sed_event.uid as event_id, end_date, date, seo_fr, title_fr, category ,sed_event.poster_fr as poster
+			FROM sed_event, sed_event_category
+			WHERE sed_event.category IN (sed_event_category.uid) AND sed_event.active = 'yes' 
+			AND (sed_event.end_date >=CURDATE() or sed_event.date>=CURDATE() )   AND sed_event_category.active = 'yes' " .+ extra_select .+ " ORDER BY date") do 
+		
+
+		date_number = datetime(lg:"fr",date: event.rows.date, format:"%d");
+		
+		if event.rows.end_date ne "" then 
+			end_date_number = datetime(lg:"fr",date: event.rows.end_date, format:"%d");
+		else
+			end_date_number = date_number;
+		endif
+		
+		date_month_name = datetime(lg:"fr",date: event.rows.date, format:"%b");
+		date_day_name = datetime(lg:"fr",date: event.rows.date, format:"%A");
+		date_time = datetime(lg:"fr",date: event.rows.date, format:"%Hh%M");
+		
+		if date_number != end_date_number then
+			end_date_month_name = datetime(lg:"fr",date: event.rows.end_date, format:"%b");
+			end_date_day_name = datetime(lg:"fr",date: event.rows.end_date, format:"%A");
+			end_date_time = datetime(lg:"fr",date: event.rows.end_date, format:"%Hh%M");
+		endif
+}}
+		
+		<!-- BEGIN EVENT ITEM ======== -->
+		<div class="evt_cal_event">
+			<a href="/fr/calendar-details/{{ event.rows.seo_fr;}}">
+				<div class="evt_cal_date">
+					<div class="evt_cal_date_number">
+					{{  
+						if date_number eq end_date_number || event.rows.end_date eq "0000-00-00 00:00:00" then
+							date_number;
+						else
+							date_number .+ " - " .+ end_date_number;
+						endif
+					}}
+					</div>
+					<div class="evt_cal_date_month">
+						{{  
+							if date_number eq end_date_number || event.rows.end_date eq "0000-00-00 00:00:00" || date_month_name eq end_date_month_name then
+								date_month_name;
+							else
+								date_month_name .+ " - " .+ end_date_month_name;
+							endif
+						}}
+					</div>
+				</div>
+				<div class="evt_cal_content">
+					<div class="evt_cal_title">
+						{{ event.rows.title_fr; }}
+					</div>
+					<div class="evt_cal_detail">
+						<div class="evt_cal_detail_block" {{ if date_number ne end_date_number && "date" eq "2015-089-31" then }} style="display:none;" {{ endif }} >
+							{{ date_day_name; }} 
+                          	{{ if date_time ne "00h00" then;}}
+                          		<i class="fa fa-chevron-right"></i>  
+                          		{{ date_time;
+                          		endif;
+                          	}}
+						</div>
+						<div class="evt_cal_detail_block">
+							     {{ ct_cat=sql(single:true,"select * from ct where uids='?' and publish ='/extenso/publish/pages.sn' and module ='contacts' and code='Categorie'",page_dyn);
+                                   
+    						    if ct_cat.nbrows == 0 then
+    						        res_cat =sql ("INSERT INTO ct (uids,code,module,publish,text_fr,text_en,format) 
+                                                VALUES ('?','Categorie','contacts','/extenso/publish/pages.sn','Categorie','Category','Texte')",page_dyn);
+                                    ct_cat=sql(single:true,"select * from ct where uids='?' and publish ='/extenso/publish/pages.sn'and module ='contacts' and code='Categorie'",page_dyn);             
+    						    endif
+    						       
+    						        if page_dyn ne '' then}}
+    						    <span {{if config.site eq "staging" then }}class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/fr/edit?sn_modal=t&uid={{ct_cat.rows.uid}}"{{endif}}>
+                                    
+                                    {{ct_cat.rows{"text_".+lg_dyn};}}
+                                    
+                                </span>
+                               {{endif}}
+                                {{ ct_cat=sql(single:true,"select * from ct where uids='?' and publish ='/extenso/publish/ressources.sn' and module ='contacts' and code='Categorie'",ressource_dyn);
+    						        if ct_cat.nbrows == 0 then
+    						        res_cat =sql ("INSERT INTO ct (uids,code,module,publish,text_fr,text_en,format) 
+                                                VALUES ('?','Categorie','contacts','/publish/ressources.sn','Categorie','Category','Texte')",ressource_dyn);
+                                    ct_cat=sql(single:true,"select * from ct where uids='?' and publish ='/extenso/publish/ressources.sn'and module ='contacts' and code='Categorie'",ressource_dyn);             
+    						    endif
+    						        if ressource_dyn ne '' then}}
+    						         
+    						    <span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/fr/edit?sn_modal=t&uid={{ct_cat.rows.uid}}">
+                                    
+                                    {{ct_cat.rows{"text_".+lg_dyn};}}
+                                    
+                                </span>
+                                 {{endif}}
+							<i class="fa fa-chevron-right"></i> 
+							{{ 
+								for cat sql("SELECT * FROM sed_event_category WHERE FIND_IN_SET(sed_event_category.uid, '?')", event.rows.category) do
+									cat.rows.category_name_fr;
+									if sn_nb1 != cat.nbrows then
+										", ";
+									endif
+								endfor
+							}}
+						
+						</div>
+						<div style="float:right;">	<img src="{{event.rows.poster}}?size=75x75&crop" class="img-responsive"/></div>
+					</div>
+				</div>
+				<div class="clearfix"></div>
+			</a>
+		</div>
+	
+			{{ 
+			 
+	    endfor 
+	     count = sql(single:true, "SELECT count(*) as counter FROM sed_event, sed_event_category  WHERE sed_event.category IN (sed_event_category.uid) AND sed_event.active = 'yes' 
+			AND (sed_event.end_date >=CURDATE() or sed_event.date>=CURDATE() )	AND sed_event_category.active = 'yes' " .+ extra_select .+ " ORDER BY date");
+
+		
+	 if count.rows.counter eq 0  then }}  
+			  <div class="alert alert-info"><span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=325">No Results</span></div>
+			  
+	{{
+	     endif
+	
+		
+	
+endf 
+}}

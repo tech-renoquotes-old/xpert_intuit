@@ -1,0 +1,45 @@
+{{
+    /*
+        @title ajax_add_discounted_project
+        Description: Links a project to a contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-23
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    cgidata = cgidata();  
+    connection = connection();
+    
+    use extranet_user;
+    
+    if cgidata.uid_project ne "" then
+        
+        project = sql(single:true,"SELECT lead_price FROM sr_project WHERE uid='?'", cgidata.uid_project);
+/*        
+        new_project_contractor = insert(table:'sr_project_contractor', fields:{
+            'uid_contractor': extranet_user.uid,
+            'uid_project': cgidata.uid_project,
+            'ip': connection.client_ip,
+            'accepted_rebate':'yes'
+        });
+*/        
+
+        project_contractor = sql( "update sr_project_contractor
+            set accepted_rebate='yes',ip = '?'
+            where uid_contractor = '?'
+            and uid_project = '?' 
+            ",connection.client_ip, extranet_user.uid, 
+             cgidata.uid_project
+        );
+    endif
+}}

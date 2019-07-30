@@ -1,0 +1,31 @@
+{{
+    /*
+        @title validator for client_form
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-18
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        project_type: 'required',
+        uid_city: 'required',
+        service1: 'required',
+        subservice: 'required',
+        lead_price: 'required,number',
+        estimate: 'required',
+        phone1:'required,phone',
+        delay_to:'required,date',
+        delay_from:'required,date'
+    );
+    
+    validator.setAntibotDelay(5);
+
+}}
+

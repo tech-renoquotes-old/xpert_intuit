@@ -1,0 +1,33 @@
+{{
+    /*
+        @title 			sr_client_form_email_contractor_confirmation_c07
+        Description		Confirmation of participation of a contractor
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	titre = "Mr";
+    prenomEntrepreneur = "Marc-André";
+    nom = "nom";
+    adresse = "791, ave Saint-Georges";
+    telephoneMaison = "(112) 639-4065";
+    telephoneBureau = "(5141) 639-4065";
+    telephoneCell = "(450) 639-4065";
+    courriel = "etienne@sednove.com";
+    momentContactClient = "Soir";
+    travauxAFaire = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at porttitor sem.  Aliquam erat volutpat. Donec placerat nisl magna, et faucibus arcu condimentum sed.";
+    infoAdd = "Titre de la photo";
+    id = "11345";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

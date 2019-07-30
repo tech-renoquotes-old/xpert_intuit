@@ -1,0 +1,15 @@
+{{
+    /*
+        @title ajax_extranet_logout
+        Description: Logout the extranet user.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-15
+
+    */
+}}
+\{{
+    %include "/extenso/functions/sn_login.snc";
+    sn_logout(login_table:"sr_login"); 
+}}

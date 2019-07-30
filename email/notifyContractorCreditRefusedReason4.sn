@@ -1,0 +1,72 @@
+{{
+    /*
+        @title 			creditRefusalReason
+        Description		Email for the contractor when a credit is refused. 
+
+        @author 		louis.jhonny@gmail.com
+        
+        @version 		1.0 2018-02-02
+
+    */
+
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use contractor;
+    use id_projet;
+    use credit;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if contractor.rows.contact_gender eq "f" then
+    	titre = mme;
+    elseif contractor.rows.contact_gender eq "m" then
+    	titre = mr;
+    endif
+    
+    uid_contractor = contractor.rows.uid;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+    lg_reason = contractor.rows.contact_lg;
+    
+    //credit request info
+    if lg_reason eq 'fr' then
+    	if credit.rows.reason == 1 then
+        	request_reason = "Je n'ai jamais rejoint le client";
+        elseif credit.rows.reason == 2 then
+        	request_reason = "Le projet a été annulé par le client";
+        elseif credit.rows.reason == 3 then
+        	request_reason = "Le client a trop de soumissions et n'en veut plus d'autre";
+        elseif credit.rows.reason == 4 then
+        	request_reason = "Le contrat a déjà été donné avant que je fasse une soumission";
+        elseif credit.rows.reason == 5 then
+        	request_reason = "Autre";
+        endif
+    elseif lg_reason eq 'en' then
+    	if credit.rows.reason == 1 then
+        	request_reason = "I was never able to reach the client";
+        elseif credit.rows.reason == 2 then
+        	request_reason = "The project was cancelled by the client";
+        elseif credit.rows.reason == 3 then
+        	request_reason = "The client got too many quotations and don't need an aditionnal one";
+        elseif credit.rows.reason == 4 then
+        	request_reason = "The contract was given before I had the chance to do a quotation";
+        elseif credit.rows.reason == 5 then
+        	request_reason = "Other";
+        endif
+    endif
+    call1_date = credit.rows.call1_date;
+    call2_date = credit.rows.call2_date;
+    call3_date = credit.rows.call3_date;
+    explanation = credit.rows.explanation;
+    request_date = credit.rows.sn_cdate;
+    accepted_date = contractor.rows.accepted_date;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

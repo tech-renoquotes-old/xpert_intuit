@@ -1,0 +1,4 @@
+{{%include '/site/package/all.sn';}}
+\{{
+    project::connectProjectContractor(31332, 6112);
+}}

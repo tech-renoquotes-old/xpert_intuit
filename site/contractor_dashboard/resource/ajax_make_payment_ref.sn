@@ -1,0 +1,52 @@
+{{
+    /*
+        @title ajax_make_payment_card
+        Description: Make a payment using the new card informations.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;    
+    
+    currency = "CAD";
+    
+    amount = contractor::getCurrentBillingTotal(extranet_user.uid);
+
+    if (amount > 0) then
+        cc = sql(single:true, "SELECT * FROM sr_cc WHERE uid = '?'", cgidata.cc_uid);
+        if (cc.nbrows == 1) then
+    void insert(table:'sr_debug', fields:{'description':'Paiement par cc '.+ extranet_user.uid .+ " cc.uid=".+  cc.uid .+ " ".+  currency ,'text':amount});
+            transaction = pivotal::make_payment_cc_ref(cc.rows.reference, currency, amount, extranet_user.uid);
+            cardInfo = cc.rows.type .+ " ************" .+ cc.rows.last_digits;
+            void insert(table:'sr_debug', fields:{'description':'ajax_make_payment_ref - pivotal::make_payment_cc_ref: '.+extranet_user.uid,'text':'uid_transaction='.+transaction.uid.+" ".+'error_transaction='.+transaction.error.+" ".+'amount='.+amount});
+            
+            if transaction.uid then
+                // Add credit cards privilege (for calculation of the contractor's score)
+                contractor::addCreditCardPrivilege(extranet_user.uid);
+                // Trigger transaction success
+                contractor::trigger_transaction(transaction.uid);
+                headers_out("X-payment_ref_success", "1");
+            else
+                headers_out("X-payment_ref_error", "Payment error");
+                headers_out("X-payment_ref_error_msg", transaction.error);
+                contractor::trigger_payment_failed(extranet_user.uid, cardInfo .+ " (".+transaction.error.+")", amount);
+            endif
+        else
+            headers_out("X-payment_ref_error", "Payment error");
+            headers_out("X-payment_ref_error_msg", "Credit card does not exist");
+            contractor::trigger_payment_failed(extranet_user.uid, "", amount);
+        endif
+    endif
+}}

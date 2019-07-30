@@ -1,0 +1,31 @@
+{{
+
+// Name:		widget_get_select_view(widget)
+//
+// Description:	Return the filename and selected view for a widget
+//
+// version:		1.0 2015-06-23 08:19:43 laplante@sednove.com
+//
+
+function widget_get_select_view(widget)
+	nb_view = sql(single:true,wantarray:true,"select count(*) from sn_widgets_view where widget = '?' and active = 'yes'", widget.uid);
+	if nb_view.rows[0] > 0 then
+		if isdigit(widget.select_view) then // If widget has a view selected
+			code = sql(single:true,"select code from sn_widgets_view where uid = '?'and active = 'yes'", widget.select_view);
+			select_view = widget.select_view;
+		else
+			first_view = sql(single:true, "select uid from sn_widgets_view where widget = '?' and active = 'yes' order by uid limit 1", widget.uid);
+			if widget.widget_global eq "yes" then
+				void sql("UPDATE sn_widgets SET select_view = '?' WHERE uid = '?'", first_view.rows.uid, widget.uid);
+			else
+				void sql("UPDATE sn_widgets_list SET select_view = '?' WHERE uid = '?'", first_view.rows.uid, widget.uid_widget_list);
+			endif
+			code = sql(single:true,"select code from sn_widgets_view where uid = '?'", first_view.rows.uid);  
+			select_view = first_view.rows.uid;
+		endif
+			return {"select_view":select_view,"file":code.rows.code};
+	else
+		return {"select_view":0,"code":null};
+	endif
+endf
+}}

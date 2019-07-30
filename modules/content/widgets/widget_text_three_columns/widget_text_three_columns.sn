@@ -1,0 +1,69 @@
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	textcontent = sql(single:true, "select * from widget_text_three_columns where uid = '?'", widget.rows.uid_widget_list);
+
+}}
+
+<!--- style a enelver lors de la copie d extenso de roger tremblay -->
+<style>
+.brown_box {
+    border: 1px solid #e5dbd2;
+    margin-bottom: 20px;
+    min-height: 250px;
+    padding: 15px 10px;
+}
+.brown_box img {
+    display: block;
+    margin: auto;
+    max-width: 100%;
+    padding-bottom: 20px;
+    text-align: center;
+}
+</style>
+
+<section class="slice">
+	<div class="w-section inverse">
+		<div class="container">
+			<div class="row">
+				{{if textcontent.rows{'description1_'.+ lg.rows.lg} ne "" || textcontent.rows{'titre1_'.+ lg.rows.lg} ne "" then}} 
+					<div class="col-md-4">
+						<div class="brown_box">
+							{{if textcontent.rows.img1 ne "" then}} 
+							<img src="{{textcontent.rows.img1;}}" alt="{{textcontent.rows{'alt1_'.+ lg.rows.lg};}}"/>
+							{{ endif }}
+							<h3 class="section-title">{{textcontent.rows{'titre1_'.+ lg.rows.lg};}}</h3>
+							{{textcontent.rows{'description1_'.+ lg.rows.lg};}}
+						</div>
+					</div>
+				{{ endif }}
+				{{if textcontent.rows{'description2_'.+ lg.rows.lg} ne "" || textcontent.rows{'titre2_'.+ lg.rows.lg} ne "" then}} 
+					<div class="col-md-4">
+						<div class="brown_box">
+							{{if textcontent.rows.img2 ne "" then}} 
+							<img src="{{textcontent.rows.img2;}}" alt="{{textcontent.rows{'alt2_'.+ lg.rows.lg};}}"/>
+							{{ endif }}
+							<h3 class="section-title">{{textcontent.rows{'titre2_'.+ lg.rows.lg};}}</h3>
+							{{textcontent.rows{'description2_'.+ lg.rows.lg};}}
+						</div>
+					</div>
+				{{ endif }}
+				{{if textcontent.rows{'description3_'.+ lg.rows.lg} ne "" || textcontent.rows{'titre3_'.+ lg.rows.lg} ne "" then}} 
+					<div class="col-md-4">
+						<div class="brown_box">
+						{{if textcontent.rows.img3 ne "" then}} 
+						<img src="{{textcontent.rows.img3;}}" alt="{{textcontent.rows{'alt3_'.+ lg.rows.lg};}}"/>
+						{{ endif }}
+							<h3 class="section-title">{{textcontent.rows{'titre3_'.+ lg.rows.lg};}}</h3>
+							{{textcontent.rows{'description3_'.+ lg.rows.lg};}}
+						</div>
+					</div>
+				{{ endif }}
+			</div>
+		</div>
+	</div>
+</section>	

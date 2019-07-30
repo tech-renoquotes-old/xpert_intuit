@@ -1,0 +1,193 @@
+{{
+    /*
+        @title ajax_add_contractor
+        Description: Adds a contractor to the database via ajax call.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-14
+        @version 1.01 2017-03-07  add language default bilingue
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+}}
+\{{
+    //include profile generator tool
+    %include '/class/profile_generator.sn';
+    // include the validator for contractor_form
+    %include "/site/contractor_form/include/validator.sn";
+    
+    use extranet_user;
+    cgidata = cgidata();
+    time = time();
+    id= '';
+    ids = '';
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+    exists = contractor::contractor_exists(cgidata.company_name);
+
+    //directeur de compte
+    contact_language = "{{lg.rows.lg}}";
+    
+    if(contact_language eq 'fr') then
+        acc_manager = 162;
+    else
+        acc_manager = 162;
+    endif
+    
+    
+    // validate server side
+if (validator.validate(data:cgidata)) then
+        //Already    Existing record ?
+
+        // add test of phone or email if no id 
+        if (cgidata.id_tbl_appels_entrepreneurs) then   //Existing
+            // Change Status on tbl_appels_entrepreneurs so that the contractor can stop receiving reminders
+            void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 5 WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id_tbl_appels_entrepreneurs);
+            void insert(table:'sr_log', fields:{'type':'contractor form','uid_project_contractor':id_appels_entrepreneurs,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for id existing ','value':''});
+        else   
+        //search for existing telephone or email
+            tel1 = resub(cgidata.contact_phone,"-| ","$1","g");// remove -  and spaces  
+            tel2 = resub(cgidata.company_phone,"-| ","$1","g");// remove -  and spaces  
+            search_contractor = sql("SELECT t.idtbl_appels_entrepreneurs as id
+                FROM tbl_appels_entrepreneurs t
+                WHERE REPLACE(REPLACE(t.telephone,'-',''),' ','') = '?' 
+                OR REPLACE(REPLACE(t.telephone,'-',''),' ','') = '?' 
+                OR t.courriel = '?'
+                ", tel1, tel2, cgidata.contact_email);
+            if search_contractor.nbrows > 0 then
+                for s in search_contractor.rows do
+                    void sql("UPDATE tbl_appels_entrepreneurs SET statut = 5 WHERE idtbl_appels_entrepreneurs = '?'", s.id);
+                endfor
+            endif
+        endif
+        
+        //Verify for the promo code
+        if cgidata.promo then
+            promo = sql(single:true,"SELECT uid, credit 
+            FROM sr_promo 
+            WHERE code = '?' 
+            AND (date_used is null OR date_used = '') 
+            AND (expiration_date >= date(now()) OR expiration_date is null OR expiration_date = '')
+            ", cgidata.promo);
+        endif
+        if  promo.rows.credit then
+            balance = -1 * promo.rows.credit;
+            //Show alert success
+        else
+            balance = 0;
+        endif
+        
+        services = cgidata.service .+ ": " .+ cgidata.'sname[]';
+        
+        // insert contractor
+        contractor = insert(
+            table:"sr_contractor",
+            fields:{
+                "contact_firstname":cgidata.contact_name,
+                "contact_phone":cgidata.contact_phone,
+                "contact_email":cgidata.contact_email,
+                "contact_title":cgidata.contact_title,
+                "company_name":cgidata.company_name,
+                "company_phone":cgidata.company_phone,
+                "contact_lg":'{{lg.rows.lg}}',
+                "address":cgidata.address,
+                "ne": cgidata.company_number,
+                "rbq":cgidata.rbq,
+                "insurance_company":cgidata.insurance_company,
+                "insurance_number":cgidata.insurance_number,
+                "uid_territory":cgidata.territory,
+                "comments":services,
+                "id_tbl_appels_entrepreneurs": cgidata.id_tbl_appels_entrepreneurs,
+                "can_accept_projects": 'yes',
+                "token": hash(algo:"sha512", time.secs .+ time.usecs .+ random(min:1, max:9999999)),
+                "credit_threshold": configs.rows.initial_credit_threshold,
+                "visible":"yes",
+                "languages":3,
+                "email":cgidata.contact_email,
+                "email_accounting":cgidata.contact_email,
+                "promo_code":cgidata.promo,
+                "show_profile":"yes",
+                "account_manager": acc_manager,
+                "balance":balance
+            }
+        );
+        //update promo table to remove that promo code
+        if promo.rows.credit then
+            void sql("UPDATE sr_promo SET date_used = now(), used_by = ? WHERE uid = ?", contractor.uid, promo.rows.uid);
+        endif
+        
+        //add all project types by default
+        for project_type sql("SELECT * FROM sr_project_type")
+        do
+        void insert(
+            table:"sr_project_type_contractor",
+            fields:{
+                "uid_project_type": project_type.rows.uid,
+                "uid_contractor": contractor.uid
+            }
+        );
+        endfor
+
+            // if google map plugin was used, insert address
+            if cgidata.street_number ne "" && cgidata.locality ne "" && cgidata.route ne "" then
+                territory = insert(
+                    table:"sr_address",
+                    fields:{
+                        "uid_contractor":contractor.uid,
+                        "city":cgidata.locality,
+                        "street_no":cgidata.street_number,
+                        "street":cgidata.route,
+                        "zip":cgidata.postal_code,
+                        "province":cgidata.administrative_area_level_1,
+                        "country":cgidata.country
+                    }
+                );
+            endif
+            
+            // for each territory entered, insert territory
+            for t in explode(",", cgidata.territory) do
+                void insert(
+                    table: "sr_contractor_territory",
+                    fields:{
+                        "uid_territory":t,
+                        "uid_contractor":contractor.uid
+                    }
+                );
+            endfor
+            
+        void sql("UPDATE sr_contractor SET sent_welcome_email = 'no' WHERE uid = '?'", contractor.uid);
+        contractor::activateContractor(contractor.uid);
+        
+        automail::notifyAdminContractorInscription(contractor.uid);
+        void insert(table:'sr_log', fields:{'type':'contractor formTest','uid_project_contractor':id_appels_entrepreneurs,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for id existing ','value':''});    
+    
+        if cgidata.promo ne "" then
+            referral = sql(single:true, "SELECT uid FROM sr_contractor WHERE token = '?'", cgidata.promo);
+            if (referral.nbrows == 1) then
+                void sql("UPDATE sr_contractor SET uid_contractor_referring = '?' WHERE uid = '?'", referral.rows.uid, contractor.uid);
+                automail::contractorReferaContractor(referral.rows.uid, contractor.uid);
+            endif
+        endif
+        
+        //verify if contractor is in interested list, if yes then put him as subscribed
+        interested = sql("SELECT uid FROM sr_contractor_interested WHERE lower(email) = '?'", lc(cgidata.contact_email));
+        if interested.nbrows > 0 then
+            void sql("UPDATE sr_contractor_interested SET status = 'Inscrit', sn_mdate = now() WHERE email = '?'", cgidata.contact_email);
+        endif
+
+    //v1.02 generate a profile for new contracto
+    profil = new Profilgen();
+    profil.generate(contractor.uid);
+
+    headers_out("X-success", 1);
+    
+else
+    headers_out("X-redirect", 1);
+endif
+}}

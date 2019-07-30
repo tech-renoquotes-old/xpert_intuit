@@ -1,0 +1,16 @@
+
+{{
+    cgidata = cgidata();  
+    
+    if cgidata.uid_pc ne "" && cgidata.comment ne "" then
+        res =  update(
+            tables:"sr_project_contractor",
+            uid: cgidata.uid_pc,
+            fields:{
+                "client_comment": cgidata.comment
+            }
+        );
+
+    endif
+    
+}}

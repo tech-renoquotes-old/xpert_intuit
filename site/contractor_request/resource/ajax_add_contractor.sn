@@ -1,0 +1,128 @@
+{{
+    /*
+        @title ajax_add_contractor
+        Description: Adds a contractor to the database via ajax call.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-14
+        @version 1.01 2017-03-07  add language default bilingue
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+}}
+\{{
+    //include profile generator tool
+    %include '/class/profile_generator.sn';
+    // include the validator for contractor_form
+    %include "/site/contractor_request/include/validator.sn";
+    
+    // use extranet_user;
+    cgidata = cgidata();
+    
+    
+    
+    time = time();
+    id= '';
+    ids = '';
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+    exists = contractor::expert_exists(cgidata.contact_email);
+    service = sql(single:true,"SELECT * FROM sr_service WHERE uid = '?'", cgidata.service);
+    
+    //directeur de compte
+    contact_language = "{{lg.rows.lg}}";
+    
+    if(contact_language eq 'fr') then
+        acc_manager = 162;
+    else
+        acc_manager = 162;
+    endif
+    
+    
+    
+    // validate server side
+if (validator.validate(data:cgidata)) then
+    if(!exists) then
+    
+        // insert contractor
+        contractor = insert(
+            table:"sr_contractor",
+            fields:{
+                "contact_firstname":cgidata.contact_name,
+                "contact_phone":cgidata.contact_phone,
+                "contact_email":cgidata.contact_email,
+                "company_name":cgidata.company_name,
+                "contact_lg":'{{lg.rows.lg}}',
+                "uid_territory":cgidata.territory,
+                "comments": cgidata.comments,
+                "can_accept_projects": 'yes',
+                "token": hash(algo:"sha512", time.secs .+ time.usecs .+ random(min:1, max:9999999)),
+                "credit_threshold": configs.rows.initial_credit_threshold,
+                "visible":"yes",
+                "languages":3,
+                "email":cgidata.contact_email,
+                "email_accounting":cgidata.contact_email,
+                "promo_code":cgidata.promo,
+                "show_profile":"yes",
+                "account_manager": acc_manager
+            }
+        );
+        
+        void insert(
+            table:"sr_contractor_service",
+            fields:{
+                "uid_service": service.rows.uid,
+                "uid_contractor": contractor.uid
+            }
+        );
+        
+        //add all project types by default
+        for project_type sql("SELECT * FROM sr_project_type")
+        do
+        void insert(
+            table:"sr_project_type_contractor",
+            fields:{
+                "uid_project_type": project_type.rows.uid,
+                "uid_contractor": contractor.uid
+            }
+        );
+        endfor
+
+        void sql("UPDATE sr_contractor SET sent_welcome_email = 'no' WHERE uid = '?'", contractor.uid);
+        contractor::activateContractor(contractor.uid);
+        
+        automail::notifyAdminContractorInscription(contractor.uid);
+        void insert(table:'sr_log', fields:{'type':'contractor formTest','uid_project_contractor':id_appels_entrepreneurs,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for id existing ','value':''});    
+    
+        if cgidata.promo ne "" then
+            referral = sql(single:true, "SELECT uid FROM sr_contractor WHERE token = '?'", cgidata.promo);
+            if (referral.nbrows == 1) then
+                void sql("UPDATE sr_contractor SET uid_contractor_referring = '?' WHERE uid = '?'", referral.rows.uid, contractor.uid);
+                automail::contractorReferaContractor(referral.rows.uid, contractor.uid);
+            endif
+        endif
+        
+        //verify if contractor is in interested list, if yes then put him as subscribed
+        interested = sql("SELECT uid FROM sr_contractor_interested WHERE lower(email) = '?'", lc(cgidata.contact_email));
+        if interested.nbrows > 0 then
+            void sql("UPDATE sr_contractor_interested SET status = 'Inscrit', sn_mdate = now() WHERE email = '?'", cgidata.contact_email);
+        endif
+
+        //v1.02 generate a profile for new contracto
+        profil = new Profilgen();
+        profil.generate(contractor.uid);
+    
+        headers_out("X-success", 1);
+    else
+        headers_out("X-redirect", 1);
+    endif
+else
+    headers_out("X-redirect", 1);
+endif
+}}

@@ -1,0 +1,18 @@
+\{{
+	%include "/packages/api.sn";
+	
+	cgidata = cgidata();
+	
+	if cgidata.username ne '' then
+		user_salt = sql(single:true, "SELECT sn_salt_password FROM sn_api_user WHERE username = '?'", cgidata.username);
+		if user_salt.nbrows > 0 then
+			api::response(data: {
+				'salt': user_salt.rows.sn_salt_password
+			});
+		else
+			api::response(error: 'Invalid Username');
+		endif
+	else
+		api::response(error: 'Invalid Username');
+	endif
+}}

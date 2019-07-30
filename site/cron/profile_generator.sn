@@ -1,0 +1,38 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+
+}}
+
+\{{
+    
+    /**
+     * Author: Jhonny L. Alcius
+     * Desc : Check every Month at 1:00 AM if contractor profile has been updated, If so, generate updated profile for this contractor.
+     * version : 1.00
+     * 
+     **/
+	 void timeout(600);
+
+    %include '/class/profile_generator.sn';
+	
+
+    //instanciate profil generator class
+    profil = new Profilgen();
+    
+    res = sql("select * from sr_contractor where active = 'yes'");
+    contractors = res.rows;
+
+	// clear all existing seo flag
+ 	//void sql("update sr_contractor set seo = '' where seo <> '' ");
+   
+ 	
+    //Generate the profile for each contractor with a profile recently modified
+    for contractor in contractors do
+        profil.generate(contractor.uid);
+    endfor
+
+}}

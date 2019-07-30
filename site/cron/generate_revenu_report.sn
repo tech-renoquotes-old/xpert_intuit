@@ -1,0 +1,37 @@
+{{
+        xml = "<?xml version='1.0' encoding='UTF-8'?><adwreport>";
+            
+        query = "SELECT A.nom, A.CountOfuid as nb_projects, Round(A.AvgOflead_price, 2) AS prix_moyen, B.SumOflead_price AS revenu, Round(B.SumOflead_price/A.countOfuid*0.65-3,2) AS revenu_moyen, Round(B.CountOfuid/A.CountOfuid,1) AS nb_ent_moyen, campaign_id FROM 
+        (SELECT tbl_campaign_id_adwords.Nom, Count(sr_project.uid) AS CountOfuid, Avg(sr_project.lead_price) AS AvgOflead_price, tbl_campaign_id_adwords.Campaign_id, tbl_campaign_id_adwords.idtbl_campaign_id_adwords
+        FROM srv1.tbl_campaign_id_adwords INNER JOIN srv1.sr_project ON tbl_campaign_id_adwords.Campaign_id = sr_project.adwords_campaign
+        WHERE (sr_project.active_date BETWEEN DATE_SUB(NOW(), INTERVAL 29 DAY) AND DATE_SUB(NOW(), INTERVAL 8 DAY))
+        GROUP BY tbl_campaign_id_adwords.Nom, tbl_campaign_id_adwords.Campaign_id, tbl_campaign_id_adwords.idtbl_campaign_id_adwords) AS A
+        LEFT JOIN
+        (SELECT tbl_campaign_id_adwords.Nom, Count(sr_project_contractor.uid) AS CountOfuid, Sum(sr_project_contractor.lead_price) AS SumOflead_price, tbl_campaign_id_adwords.idtbl_campaign_id_adwords
+        FROM srv1.tbl_campaign_id_adwords INNER JOIN (srv1.sr_project LEFT JOIN srv1.sr_project_contractor ON sr_project.uid = sr_project_contractor.uid_project) ON tbl_campaign_id_adwords.Campaign_id = sr_project.adwords_campaign
+        WHERE (((sr_project.active_date)>= DATE_SUB(NOW(), INTERVAL 29 DAY) AND (sr_project.active_date)<=DATE_SUB(NOW(), INTERVAL 8 DAY)) AND ((sr_project_contractor.accepted)='yes'))
+        GROUP BY tbl_campaign_id_adwords.Nom, tbl_campaign_id_adwords.idtbl_campaign_id_adwords) AS B
+        ON A.idtbl_campaign_id_adwords = B.idtbl_campaign_id_adwords";
+        
+        nlines = 0;
+        
+        // for each language
+        for data sql(query) do
+        
+            xml .+= "<campaign>\n";
+            xml .+= "<name>" .+  data.rows.nom .+ "</name>\n";
+            xml .+= "<id>" .+  data.rows.campaign_id .+ "</id>\n";
+            xml .+= "<nbrProjects>" .+ data.rows.nb_projects .+ "</nbrProjects>\n";
+            xml .+= "<avgPrice>" .+ data.rows.prix_moyen .+ "</avgPrice>\n";
+            xml .+= "<revenu>" .+ data.rows.revenu .+ "</revenu>\n";
+            xml .+= "<avgRevenu>" .+ data.rows.revenu_moyen .+ "</avgRevenu>\n";
+            xml .+= "<nbrAvgEnt>" .+ data.rows.nb_ent_moyen .+ "</nbrAvgEnt>\n";
+            xml .+= "</campaign>\n";
+                
+            nlines++;
+        endfor
+            
+            xml .+= "</adwreport>";
+            write("/html/adwreport.xml", append:false, data:xml);
+    
+}}

@@ -1,0 +1,150 @@
+{{
+    /*
+        @title client_form
+        Description: This widget is the form used to register additional and non-obligatory from a client.
+        
+        @author louis.jhonny@sednove.com
+        
+        @version 1.0 2017-04-18
+        @version 1.1 2017-09-26 : send a free quote to contractor.
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+
+
+<!-- confirmation header -->
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator_simple.sn";
+    
+    cgidata = cgidata();  
+    connection = connection();
+    
+    
+    // validate server side
+    if validator.validate(data:cgidata) then
+    
+        //region = sql(single:true,"SELECT p.name_? as province FROM sr_territory t INNER JOIN sr_province p ON p.uid = t.uid_province WHERE t.uid = '?'", "{{lg.rows.lg}}", cgidata.region);
+        address = cgidata.address;
+        
+        // check if an email has been submitted for this client
+        if(cgidata.email.length() <= 0) then
+            client = insert(
+            table:"sr_client",
+            fields:{
+            "firstname":cgidata.name,
+            "address":address,
+            "lang":"{{lg.rows.lg}}",
+            "languages": '3',
+            "to_qualify": 'yes',
+            'ip': connection.client_ip
+            });
+            
+        else
+        
+        // Check for existing client in the database and merge it. 
+            existing = sql(single:true,"SELECT c.uid FROM sr_client c INNER JOIN sr_address a ON a.uid_client = c.uid 
+                            WHERE c.email = '?' OR (a.phone1 = '?')", cgidata.email, cgidata.phone);
+
+            if (existing.nbrows > 0) then
+                client = existing.rows;
+
+                u = update(tables: "sr_client", fields: {
+                    'address': address,
+                    'email' : cgidata.email,
+                    'to_qualify': 'yes',
+                    'ip': connection.client_ip
+                }, uid: client.uid);
+                
+                headers_out("X-exists", 1);
+            else
+            
+                client = insert(
+                    table:"sr_client",
+                    fields:{
+                        "firstname":cgidata.name,
+                        "email":cgidata.email,
+                        "address":address,
+                        "lang":"{{lg.rows.lg}}",
+                        "languages": '3',
+                        "to_qualify": 'yes',
+                        'ip': connection.client_ip
+                    }
+                );
+            endif
+        endif
+        
+        
+        address = insert(
+            table:"sr_address",
+            fields:{
+                "uid_client":client.uid,
+                "city":cgidata.locality,
+                "street_no":cgidata.street_number,
+                "street":cgidata.route,
+                "zip":cgidata.postal_code,
+                "province":region.rows.province,
+                "phone1": cgidata.phone
+            }
+        );
+        
+        //Cherche les adwors dans les cookies
+        cookies = cookies();
+        cookie_data = unstringnify(cookies.soumissionrenovation);
+        
+        adwords = parse_query_string(cookie_data.adwords); 
+        first_page_visited = cookie_data.url;
+        first_visited = cookies.first_visited;// not necessarely with adword
+        
+        configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+        site= (lg.rows.lg  eq 'en')?'https://renoquotes.com':'https://soumissionrenovation.ca';
+        
+        //v1.02
+        description = cgidata.step1_val .+ ' - ' .+ cgidata.step2_val .+ ' - ' .+ cgidata.step3_val .+ ' - ' .+ cgidata.step4_val .+ ' - ' .+ cgidata.step5_val .+ ' - ' .+ cgidata.step6_val;
+        description = html2text(description);//empêche script de passer
+
+            project = insert(
+                table:"sr_project",
+                fields:{
+                    "uid_client":client.uid, 
+                    "description":description,
+                    "uid_address":address.uid,
+                    "max_quotes": configs.rows.number_of_quotes,
+                    "status": "new",
+                    "adwords_pos": adwords.pos,
+                    "adwords_net": adwords.net,
+                    "adwords_ad": adwords.ad,
+                    "adwords_kw": adwords.kw,
+                    "adwords_url": first_page_visited,
+                    "adwords_region": adwords.region,
+                    "adwords_adgroup": adwords.adgroupid,
+                    "adwords_campaign": adwords.campaignid,
+                    "adwords_cre": adwords.cre,
+                    "due_date": "Flexible",
+                    "first_url": first_visited,
+                    "ip": connection.client_ip
+                }
+            );
+            
+
+        automail::quoteRequestToClient(project.uid);
+        automail::quoteRequestToAdmin(project.uid);
+        
+        headers_out("X-response", project.uid);
+    else
+        headers_out("X-failed");
+        validator.errors;
+        stop();
+        
+    endif
+    
+}}
+
+

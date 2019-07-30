@@ -1,0 +1,37 @@
+sndbi_sql: cfile:snmysql.c, cline:245, project:sncodev2, sql:select * from sed_directmail_config_newsletter', sqlerr=1, errno=1064, error=You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1
+file=db.c, line=334, fmt=db/sql : sql error: %s
+
+db/sql : sql error: 'You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1':'select * from sed_directmail_config_newsletter''
+
+	cfile=db.c, cline=334, errcode=4 
+	line=24,file=/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html, 
+	compile file=;/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html;/usr/local/website/sncode/tmp/-extenso-functions-sn_ct.snc;/usr/local/website/sncode/tmp/-extenso-functions-sn_pages.snc
+	function=, file db.c line 334
+file=smtp.c, line=1383, fmt=%s
+In function email, error while executing template '%s' : '%s'.
+
+db/sql : sql error: 'You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1':'select * from sed_directmail_config_newsletter''
+
+	cfile=db.c, cline=334, errcode=4 
+	line=24,file=/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html, 
+	compile file=;/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html;/usr/local/website/sncode/tmp/-extenso-functions-sn_ct.snc;/usr/local/website/sncode/tmp/-extenso-functions-sn_pages.snc
+	function=
+In function email, error while executing template '/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html' : '(null)'.
+
+	cfile=smtp.c, cline=1383, errcode=14 
+	line=68,file=/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn, 
+	compile file=;/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn
+	function=, file smtp.c line 1383
+retcode = 14
+file=smtp.c, line=1383, fmt=Error sending email: %s
+Start Direct-Mail
+2015-12-14 13:42:44
+Mail from support@sednove.com
+format HTML/TEXT
+text file is /module/sed/directmail/template/demo_marquis.txt
+html file is /module/sed/directmail/template/demo_marquis.html
+Sending to chantal.ste.marie@sednove.com but change to chantal.ste.marie@sednove.com
+code=c-onbMsNf6P47Sp7vOhp2QgpD5eMH-Zt6NR73X0EaUWt0aG6mY85XVtLt4SBBN1lInumDVmWVltKEy8I1kjo5J8lOtYVXccj1QYF9oXF3z7oKlBtq4dnjIHe
+{"errmsg":"Error sending email: db/sql : sql error: 'You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1':'select * from sed_directmail_config_newsletter''\n\n	cfile=db.c, cline=334, errcode=4 \n	line=24,file=/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html, \n	compile file=;/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html;/usr/local/website/sncode/tmp/-extenso-functions-sn_ct.snc;/usr/local/website/sncode/tmp/-extenso-functions-sn_pages.snc\n	function=\nIn function email, error while executing template '/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html' : '(null)'.\n\n	cfile=smtp.c, cline=1383, errcode=17 \n	line=68,file=/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn, \n	compile file=;/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn\n	function=","filename":"/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","errline":24,"cfile":"smtp.c","errcode":17,"filefrom":";/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","line":68,"firsterrmsg":"db/sql : sql error: 'You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1':'select * from sed_directmail_config_newsletter''\n","error":"Error sending email: db/sql : sql error: 'You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1':'select * from sed_directmail_config_newsletter''\n\n	cfile=db.c, cline=334, errcode=4 \n	line=24,file=/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html, \n	compile file=;/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html;/usr/local/website/sncode/tmp/-extenso-functions-sn_ct.snc;/usr/local/website/sncode/tmp/-extenso-functions-sn_pages.snc\n	function=\nIn function email, error while executing template '/usr/local/website/sncodev2/module/sed/directmail/template/demo_marquis.html' : '(null)'.\n","cline":1383,"compileuid":99,"date":"2015-12-14 13:42:44"}2015-12-14 13:42:45
+
+End of job

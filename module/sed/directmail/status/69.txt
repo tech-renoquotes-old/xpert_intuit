@@ -1,0 +1,11 @@
+Start Direct-Mail
+2016-06-03 09:11:32
+Mail from extenso@sednove.ca
+format HTML/TEXT
+text file is /module/sed/directmail/template/test.txt
+html file is /module/sed/directmail/template/test.html
+Sending email
+End of loop sending email
+2016-06-03 09:11:32
+
+End of job

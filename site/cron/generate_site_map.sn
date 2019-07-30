@@ -1,0 +1,157 @@
+{{
+    xml = "<?xml version='1.0' encoding='UTF-8'?><urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>";
+    
+    configs = sql(single:true, "SELECT url_prod FROM sn_configs");
+    url_prod = configs.rows.url_prod;
+    request=request();
+    request.hostname;
+    
+    lgDomains = {
+        'fr': 'https://xpertsource.com',
+        'en': 'https://xpertsource.com'
+    };
+    lgDomainsProfile = {
+        'fr': 'https://xpertsource.com/expert/',
+        'en': 'https://xpertsource.com/expert/'
+    };
+    
+    timeout(30);
+    
+    
+    // for each language
+   for lg sql("SELECT lg FROM sn_languages WHERE active='yes'") do
+        // site pages excluding extranet
+        for p sql("SELECT page_? as page, folder_? as folder, NOW() as time  FROM pages  WHERE active='yes' AND hide_from_sitemap!='yes' OR hide_from_sitemap IS NULL", lg.rows.lg, lg.rows.lg) do
+            if p.rows.folder !~ "extranet" then
+                file = "/html" .+ p.rows.folder .+ p.rows.page .+ ".snc"; 
+                if -e file then
+                    stat = stat(file);
+                    mtime = stat.mtime;
+                else
+                    mtime = p.rows.time;
+                endif
+                xml .+= "<url>";
+                xml .+= "<loc>" .+ lgDomains{lg.rows.lg} .+ p.rows.folder .+ p.rows.page .+ "</loc>";
+                xml .+= "<lastmod>" .+ datetime(date:mtime, format:"%Y-%m-%d") .+ "</lastmod>";
+                xml .+= "<changefreq>daily</changefreq>";
+                xml .+= "</url>";
+            endif
+        endfor
+        
+        // sr _page_seo
+        for ps sql("SELECT url_? as url, sn_mdate FROM sr_page_seo", lg.rows.lg) do
+            xml .+= "<url>";
+            xml .+= "<loc>" .+ lgDomains{lg.rows.lg} .+ ps.rows.url .+ "</loc>";
+            xml .+= "<lastmod>" .+ datetime(date:ps.rows.sn_mdate, format:"%Y-%m-%d") .+ "</lastmod>";
+            xml .+= "<changefreq>daily</changefreq>";
+            xml .+= "</url>";
+        endfor
+        
+        // sr _seo
+        for s sql("SELECT url_? as url, sn_mdate FROM sr_seo", lg.rows.lg) do
+            xml .+= "<url>";
+            xml .+= "<loc>" .+ lgDomains{lg.rows.lg} .+ s.rows.url .+ "</loc>";
+            xml .+= "<lastmod>" .+ datetime(date:s.rows.sn_mdate, format:"%Y-%m-%d")  .+ "</lastmod>";
+            xml .+= "<changefreq>daily</changefreq>";
+            xml .+= "</url>";
+        endfor
+    endfor
+    
+    // blog articles
+    for a sql("SELECT url, language, sn_mdate FROM sed_blog_article WHERE active='yes'") do
+        xml .+= "<url>";
+        xml .+= "<loc>" .+ lgDomains{a.rows.language} .+ a.rows.url .+ "</loc>";
+        xml .+= "<lastmod>" .+ datetime(date:a.rows.sn_mdate, format:"%Y-%m-%d") .+ "</lastmod>";
+        xml .+= "<changefreq>daily</changefreq>";
+        xml .+= "</url>";
+    endfor
+    
+    // blog categories
+    for c sql("SELECT url, language, sn_mdate FROM sed_blog_category") do
+        xml .+= "<url>";
+        xml .+= "<loc>" .+ lgDomains{c.rows.language} .+ c.rows.url .+ "</loc>";
+        xml .+= "<lastmod>" .+ datetime(date:c.rows.sn_mdate, format:"%Y-%m-%d")  .+ "</lastmod>";
+        xml .+= "<changefreq>daily</changefreq>";
+        xml .+= "</url>";
+    endfor
+    
+
+    write("/html/sitemap.xml",append:false, data:xml);
+    //write("/html/fr/sitemap.xml",append:false, data:xml);
+    //write("/html/en/sitemap.xml",append:false, data:xml);
+    
+    xml = "";
+    
+    
+    // Separate script to append previous lines with Contractor profiles. Done this way to improve performance.
+    profiles = sql("SELECT uid, seo, contact_lg, sn_mdate FROM sr_contractor WHERE active = 'yes' AND seo is not null AND show_profile = 'yes'");
+        
+    //loop through all contractor profile and write batch of 1000 into html/sitemap_profil.xml file.    
+    for c in profiles.rows do
+        location = lgDomainsProfile{c.contact_lg} .+ c.seo;
+        lastupdate = datetime(date:c.sn_mdate, format:"%Y-%m-%d");
+
+
+        xml .+= "<url>\n";
+        xml .+= "<loc>" .+  location .+ "</loc>\n";
+        xml .+= "<lastmod>" .+ lastupdate .+ "</lastmod>\n";
+        xml .+= "<changefreq>daily</changefreq>\n";
+        xml .+= "</url>\n";
+        
+        //write only if we reach 1000th record Or we are at very last record.
+        if((nlines % 1000) == 0 && nlines != profiles.nbrows) then
+            write("/html/sitemap.xml", append:true, data:xml);
+            xml = "";
+        endif
+        
+        nlines++;
+    endfor
+    
+    xml = "";
+    
+    // Separate script to append previous lines with service / citi pages. Done this way to improve performance.
+    service_city = sql("SELECT c.sn_mdate as cmdate, s.sn_mdate as smdate, c.seo_name_fr as cseo_name_fr, c.seo_name_en as cseo_name_en, s.seo_name_fr as sseo_name_fr, 
+    s.seo_name_en as sseo_name_en, p.code_prov
+    FROM sr_city c 
+    CROSS JOIN sr_service s 
+    INNER JOIN sr_territory t ON t.uid = c.uid_territory
+    INNER JOIN sr_province p ON p.uid = t.uid_province
+    WHERE s.seo_active = 'yes' 
+    AND c.seo_active = 'yes'
+    AND p.code_prov = 'QC'");
+        
+    //loop through all contractor profile and write batch of 1000 into html/sitemap_profil.xml file.    
+    for s in service_city.rows do
+        location = 'https://xpertsource.com/fr/repertoire/' .+ s.code_prov .+ '/' .+ s.cseo_name_fr .+ '/' .+ s.sseo_name_fr;
+        lastupdate = datetime(date:s.smdate, format:"%Y-%m-%d");
+
+        xml .+= "<url>\n";
+        xml .+= "<loc>" .+  location .+ "</loc>\n";
+        xml .+= "<lastmod>" .+ lastupdate .+ "</lastmod>\n";
+        xml .+= "<changefreq>monthly</changefreq>\n";
+        xml .+= "</url>\n";
+
+
+        location = 'https://xpertsource.com/en/directory/' .+ s.code_prov .+ '/' .+ s.cseo_name_en .+ '/' .+ s.sseo_name_en;
+        lastupdate = datetime(date:s.smdate, format:"%Y-%m-%d");
+
+        xml .+= "<url>\n";
+        xml .+= "<loc>" .+  location .+ "</loc>\n";
+        xml .+= "<lastmod>" .+ lastupdate .+ "</lastmod>\n";
+        xml .+= "<changefreq>monthly</changefreq>\n";
+        xml .+= "</url>\n";
+        
+        //write only if we reach 500th record Or we are at very last record.
+        if((nlines % 500) == 0 && nlines != service_city.nbrows) then
+            write("/html/sitemap.xml", append:true, data:xml);
+            xml = "";
+        endif
+        
+        nlines++;
+    endfor
+    
+    xml .+= "</urlset>";
+    write("/html/sitemap.xml", append:true, data:xml);
+    
+    
+}}

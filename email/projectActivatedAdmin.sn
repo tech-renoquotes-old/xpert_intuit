@@ -1,0 +1,46 @@
+{{
+    /*
+        @title 			projectActivatedAdmin
+        Description		Email to the admin when his account is activated. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-09
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	use project;
+    prenom = project.rows.firstname;
+    nom = project.rows.lastname;
+    titre = project.rows.gender;
+    service = project.rows.name;
+    code_postal = project.rows.zip;
+    province = project.rows.province;
+    ville = project.rows.city;
+    numero_rue = project.rows.street_no;
+    rue = project.rows.street;
+    langue = project.rows.lang;
+    billingue = project.rows.languages;
+    courriel = project.rows.email;
+    telephone_maison = project.rows.phone1;
+    telephone_bureau = project.rows.phone2;
+    telephone_cellulaire = project.rows.phone3;
+    id_projet = project.rows.uid_project;
+    id_client = project.rows.uid_client;
+    service = project.rows.service;
+    description = project.rows.description;
+    date_voulue = project.rows.due_date;
+    prix = project.rows.lead_price;
+    nb_soumission = project.rows.max_quotes;
+    projet_hash = project.rows.token;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

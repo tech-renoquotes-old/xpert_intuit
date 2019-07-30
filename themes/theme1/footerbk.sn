@@ -1,0 +1,249 @@
+{{ 
+	//
+	// Name:		footer
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	//
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	%include "/extenso/functions/sn_widgets.snc"; 
+
+	use lg;
+	use ressource;
+	
+	footer_grid = sql(single:true, "SELECT * FROM sn_grid WHERE footer='yes' AND active='yes'");
+}}
+
+{{ 
+   widget_code = "sed_counter";
+    widget = sql(single:true, "SELECT * FROM sn_widgets WHERE widget_code = '?'", widget_code);
+    
+    if widget.rows.widget_global eq "yes" then
+        include("/" .+ config.site .+ "/widgets/" .+ lg.rows.lg .+ "/" .+ widget.rows.widget_code .+ ".snc");
+    elseif widget.rows.publish eq "yes" then
+        read("/" .+ config.site .+ "/widgets/" .+ lg.rows.lg .+ "/" .+ widget.rows.widget_code .+ ".snc");
+    else
+    	read(widget.rows.code);
+    endif
+}}
+<div class="container-full sed-footer no-print">
+	<div class="container-fluid">            
+		<div class="row">
+			<div id="sn_cs_footer">
+			    {{
+		            /*if footer_grid.nbrows > 0 then
+		                uid_grid = footer_grid.rows.uid;
+		                grid = unstringnify(footer_grid.rows.grid);
+			            %include "/includes/show_grid.sn";
+		            endif*/
+			    }}
+			    {{
+                    use config;
+                    
+                    logo = sql(single:true, "SELECT sn_configs.logo_fr,sn_configs.logo_en FROM sn_configs WHERE uid = 1");
+                    if lg.rows.lg eq 'fr' then
+                        logo_url = logo.rows.logo_fr;
+                    else
+                        logo_url = logo.rows.logo_en;
+                    endif
+                }}
+                <div class="container-fluid footer">
+                    <div class="logo">
+                        <img src="{{logo_url}}" alt="Soumission Rénovation">
+                    </div>
+                    <div class="footer_towns">
+                        {{sn_ct("footer towns", lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}
+                    </div>
+                    <div class="footer_copy">
+                        © {{datetime(format:"%Y");}} {{sn_ct("footer copyright", lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}
+                    </div>
+
+                    <div class="row border-top">
+                        <div class="col-sm-6 dt-pull-right button_container dt-text-right">
+                            <div>
+                                <a class="btn btn-default" href="tel:1 855 239-7836">
+                                    {{sn_ct("footer phone", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}
+                                </a>
+                                <a class="btn btn-primary" href="{{pages("accueil", lg.rows.lg,table:"pages")}}#sr_client_form">
+                                    {{sn_ct("footer quote", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                                <a class="btn btn-primary" href="{{pages("accueil_contractor", lg.rows.lg,table:"pages")}}">
+                                    {{sn_ct("footer entreprise", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                            
+                           
+                        </div>
+                        <div class="col-sm-6 menu mob-center">
+                            {{ %include "/includes/call_footer_nav.sn"; }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 text-center">
+                            <div class="block-mob-center soc_media">
+                                {{sn_ct("footer follow us : ", edit:true, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}{{ %include "/includes/call_social_media_list.sn"; }}
+                            </div>
+                        </div>
+                        <div  class="col-sm-6">
+                             <div class="mt-sm menu_footer_align_right secondary_menu">
+                                {{ %include "/includes/call_secondary_footer_nav.sn"; }}
+                            </div>
+                        </div>
+                        {{/*<div class="col-sm-6 dt-text-right signature">
+                            
+                                if lg.rows.lg eq 'en' then
+                                    'Powered by <a href="http://sednove.ca/en/product/extenso/" target="_blank">Extenso</a> of <a href="http://sednove.ca/en/" target="_blank">Sednove</a>';
+                                else
+                                    'Propulsé par <a href="http://sednove.ca/fr/produit/extenso/" target="_blank">Extenso</a> de <a href="http://sednove.ca/" target="_blank">Sednove</a>';
+                                endif
+                            
+                            
+                        </div>*/}}
+                    </div>
+                    
+                </div><!--end .footer-->
+                <style>
+                    .footer .secondary_menu{
+                        font-size:12px;
+                    }
+                    .footer .row.border-top{
+                        border-top:6px #dfdfdf solid;
+                        padding-top:42px;
+                        margin-top:30px;
+                    }
+                    .footer .logo{
+                        text-align:center;
+                        margin:0 0 30px 0;
+                    }
+                    .footer .logo img{
+                        max-height:120px;
+                        max-width:220px;
+                    }
+                    .footer_towns{
+                        font-weight:bold;
+                        text-align:center;
+                    }
+                    .footer_copy{
+                        font-size:10px;
+                        text-align:center;
+                    }
+                    .footer .menu{
+                        margin:10px 0;
+                    }
+                    
+                    .footer .item{
+                        display:inline-block;
+                        margin-right:15px;
+                        line-height:2;
+                    }
+                    .footer .menu_footer_align_right{
+                        text-align:right;
+                    }
+                    .footer .menu_footer_align_right .item{
+                        display:inline-block;
+                        margin:0 0 0 15px;
+                    }
+                    .footer .soc_media{
+                        font-size:26px;
+                    }
+                    .footer .soc_media a{
+                        text-decoration:none;
+                    }
+                    .footer .signature{
+                        line-height:37px;
+                    }
+                    .button_container .btn{
+                        margin-bottom:7px;
+                    }
+                    .button_container .btn:hover{
+                        text-decoration:none;
+                    }
+                    .button_container .btn i{
+                        font-size:10px;
+                    }
+                    .clearfix:after {
+                     visibility: hidden;
+                     display: block;
+                     font-size: 0;
+                     content: " ";
+                     clear: both;
+                     height: 0;
+                     }
+                     .dt-pull-right{
+                         float:right;
+                     }
+                     .dt-text-right{
+                         text-align:right;
+                     }
+                     .block-mob-center{
+                         text-align:left;
+                     }
+                     .mob-center{
+                         text-align:left;
+                     }
+                     @media (max-width:768px){
+                        .footer .menu_footer_align_right{
+                            text-align:center;
+                        }
+                        .footer .menu_footer_align_right .item{
+                            display:inline;
+                            margin:0 7px;
+                        }
+                         .dt-pull-right{
+                             float:none;
+                         }
+                         .dt-text-right{
+                             text-align:center;
+                         }
+                         .block-mob-center{
+                             display:inline-block;
+                         }
+                         .mob-center{
+                             text-align:center;
+                         }
+                         .soc_media a{
+                             margin:0 4px;
+                         }
+                         .button_container .btn{
+                            margin-bottom:8px;
+                            margin-right:4px;
+                            margin-left:4px;
+                        }
+                        .button_container .btn:hover{
+                            text-decoration:none;
+                        }
+                        .signature{
+                            padding:10px 0 0 0;
+                        }
+                     }
+                     @media (max-width:500px){
+                         .button_container .btn{
+                             display:block;
+                             margin:0 0 7px 0;
+                         }
+                     }
+                </style>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+    //Smooth scrolling
+    $(function() {
+        $('a[href*="#"]:not([href="#"]):not(.open-popup-link)').click(function() {
+            if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top
+                    }, 1000);
+                    return false;
+                }
+            }
+        });
+    });
+</script>

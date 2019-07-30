@@ -1,0 +1,115 @@
+
+
+{{ //   ?test=true&test1=true
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+   //session 
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+    ////////  pour choisir ce qu'on veut voir    taper "goA"      pour la section A
+    //////// stripos(cgidata.code     
+    
+}}
+
+
+
+\{{
+    pc_token='999';  //Project for ADI(4689)
+    uid_project ='17877';
+    uid_contractor='4689'; //ADI
+    lg = 'en';
+    to_email = "sr500-adi@yahoo.com";
+    //to_email = "mjodoin@soumissionrenovation.ca";
+    uid_client= '17619';
+    uid_credit = '5558';
+    uid_project_contractor = '559153';
+    reason = 'english test';
+    cardinfo = '444***';
+    amount   =  123.45;
+    contact_email =  to_email;
+    name  =' test  test2';
+    id_appels_entrepreneurs =  uid_project; 
+    
+    if false then
+        void sql("UPDATE sr_contractor SET contact_lg = 'fr' WHERE sr_contractor = '?'", 4689);
+    endif
+    
+    //  update language pour le contracteur
+   
+    //automail::test_suggestProjectToContractor("17840","4398","sr500-adi@yahoo.com",lg:'en');
+                          //      (uid_project,uid_contractor,to_email:..)      sr500-test@yahoo.com
+        
+            //teste reminder
+           // laplante  automail::contractorProfileReminder1("laplante@sednove.com", "ADI1", "71040", "en");
+            //automail::contractorProfileReminder1("sr500-adi2@yahoo.com", "ADI1", "71040", "en");
+                       //(contact_email, name, id_appels_entrepreneurs, lg)
+            //automail::contractorProfileReminder2("sr500-adi2@yahoo.com", "ADI2", "71039", "en");
+                       //(contact_email, name, id_appels_entrepreneurs, lg)
+            //automail::contractorProfileReminder3("sr500-adi2@yahoo.com", "ADI3", "71038", "en");
+                       //(contact_email, name, id_appels_entrepreneurs, lg)
+            
+    //automail::test2_suggestProjectToContractor(uid_contractor, 18623, lg, to_email); //Test C05
+    //automail::contractorActivation(uid_contractor);   //test C20 
+    // automail::test_creditApproved(uid_contractor, uid_project, lg, to_email, uid_credit: uid_credit); //C28
+    //automail::sendInvoicePdf(uid_contractor, pdf);//C09  transaction
+     automail::paymentFailedToContractor(uid_contractor, cardinfo, amount);//C10
+     automail:: contractorActivation(uid_contractor);//C20  @@
+     
+    // automail::contractorForgotPassword(uid_contractor);//C21
+    // automail::contractorAccountBlocked(uid_contractor);  //C24  @
+    // automail::creditApproved(uid_credit); //C28
+    // automail::creditDenied(uid_credit, reason); //C29
+/*    automail::contractorProfileReminder1(to_email, name, 17877, lg);
+    automail::contractorProfileReminder2(to_email, name, 17877, lg); //C26
+    automail::contractorProfileReminder3(to_email, name, 17877, lg); //C27
+    lg ='fr';
+    automail::contractorProfileReminder1(to_email, name, 17877, lg);
+    automail::contractorProfileReminder2(to_email, name, 17877, lg); //C26
+    automail::contractorProfileReminder3(to_email, name, 17877, lg); //C27
+*/   
+
+   // void insert(table:'sr_debug', fields:{'description':'test_V1','text':tst});
+    //taxes = contractor::calculateTaxesByProv(200, uid_contractor);
+   //"Total avec Taxes=".+taxes.total.+'<br>';
+    //taxes; 
+    //------
+    "<br>Date=".+datetime(date:'2017-01-017',format:"%Y %m %d");
+    
+    
+    //------
+     //contractor::Test_Billing(uid_contractor,lg);
+    //void insert(table:'sr_debug', fields:{'description':'test_Billing','text':'après appel '.+uid_contractor});
+     '-7890-';
+    //automail::sendContractorToClient(uid_project_contractor); //C06
+     
+     
+    // //Client
+    // automail::quoteRequestToClient(uid_project); //C01
+     automail::projectActivatedClient(uid_project); //C03
+    // automail::sendSatisfactionSurveyToClient(uid_project); //C12  @
+    // automail::appologiesToClientNotEnoughQuotes(uid_project);  //C23
+   '-1234-'
+
+    /*  note:
+        //url = sql(single:true, "SELECT url_prod FROM sn_configs");
+    // url for Renoquotes
+    url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
+    url = url.rows.url_prod;
+   	url_link = url .+ "{{ pages('sr_contractor_create_login', lg.rows.lg , table:pages); }}?token=" .+ contractor.rows.token;
+
+*/
+    
+   // time.secs;
+           
+}}
+
+
+
+
+

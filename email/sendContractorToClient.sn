@@ -1,0 +1,105 @@
+<style>
+    .preview{
+        width: auto;
+        height:40px;
+        text-align: center;
+        font-size: 3;
+        background-color: #999999;
+        color: #ffffff;
+    }
+</style>
+
+{{
+    /*
+        @title 			sendContractorToClient
+        Description		Email for the client when a contractor accepts to send a quote to a client. 
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+        @version 		1.1 2016-08-10  madupuis@sednove.com
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	
+	use project_contractor;
+    use gallery; 
+    use service_name;
+    use contractor_profile;
+
+    site = sql(single:true,"select url_prod from sn_configs"); 
+    site = site.rows.url_prod;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if project_contractor.rows.gender eq "f" then
+    	titre = mme;
+    elseif project_contractor.rows.gender eq "m" then
+    	titre = mr;
+    endif
+    
+    uid_client = project_contractor.rows.uid_client;
+    prenom = project_contractor.rows.firstname;
+    nom = project_contractor.rows.lastname;
+    compagnie = project_contractor.rows.company_name;
+    telephone = project_contractor.rows.company_phone;
+    rbq = project_contractor.rows.rbq;
+    siteWeb = project_contractor.rows.website;
+    nomContact = project_contractor.rows.contact_firstname .+ " " .+ project_contractor.rows.contact_lastname;
+    telephoneContact = project_contractor.rows.contact_phone;
+    courrielContact = project_contractor.rows.contact_email;
+    //service = project_contractor.rows.service_name;
+    service = service_name;
+    uid_project = project_contractor.rows.uid_project;
+
+	images = "";
+    for p in gallery.rows do
+    	if sn_nb % 2 == 0 then
+        	images .+= "<tr>";
+        endif
+        images .+= "<td><img alt='" .+ p.title .+ "' src='" .+ site .+ p.photo .+ "' style='width: 250px;'/><br/><br/></td><td>&nbsp;</td>";
+        if sn_nb1 % 2 == 0 then
+        	images .+= "</tr>";
+        endif
+    endfor
+    
+    image_gallery = "<table><tbody>" .+ images .+ "</tbody></table>";
+
+    //generate link to cancel project
+    if("{{lg.rows.lg}}" eq 'fr') then
+        cancel_project_link = 'https://xpertsource.com/fr/annuler-un-projet?cl=' .+ uid_client .+ '&prj=' .+ hash(uid_project);
+    else
+        cancel_project_link = 'https://xpertsource.com/en/cancel-a-project?cl=' .+ uid_client .+ '&prj=' .+ hash(uid_project);
+    endif
+
+    //generate link to contractor profile page if page is public.
+    if (project_contractor.rows.contact_lg eq 'fr') then
+        profile_link = 'https://xpertsource.com/expert/' .+ project_contractor.rows.seo;
+    else
+        profile_link = 'https://xpertsource.com/expert/' .+ project_contractor.rows.seo;
+    endif
+    
+    if(project_contractor.rows.show_profile eq 'yes') then
+        if("{{lg.rows.lg}}" eq 'fr') then
+            profile = "<a class='preview' href='" .+ profile_link .+ "'>Voir un aperçu du profil de l'entrepreneur</a>";
+        else
+            profile = "<a class='preview' href='" .+ profile_link .+ "'>Preview contractor profile</a>";
+        endif
+    endif
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

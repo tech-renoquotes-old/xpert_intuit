@@ -1,0 +1,44 @@
+{{
+    /*
+        @title 			paymentFailedToContractor
+        Description		Sends an email to the contractor when there is an error with his paiement. 
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+        @version		1.1 2016-08-11  madupuis@sednove.com
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use contractor;
+	use cardinfo;
+    use amount;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if contractor.rows.contact_gender eq "f" then
+    	titre = mme;
+    elseif contractor.rows.contact_gender eq "m" then
+    	titre = mr;
+    endif
+    
+    uid_contractor = contractor.rows.uid;
+    nomEntrepreneur =  contractor.rows.contact_lastname;
+    montant = money_format(amount, {{lg.rows.lg}});
+    carte = cardinfo;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

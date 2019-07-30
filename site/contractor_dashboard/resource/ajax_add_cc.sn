@@ -1,0 +1,40 @@
+{{
+    /*
+        @title ajax_add_cc
+        Description: Add a credit card to the contractor account.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-26
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_cc_validator.sn";
+    
+    cgidata = cgidata();
+    use extranet_user;
+    
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+        cc = pivotal::save_credit_card(cgidata.type, cgidata.name, cgidata.card_number, cgidata.exp_year, cgidata.exp_month, cgidata.cvv, extranet_user.uid);
+        if cc.uid then
+            contractor = sql(single:true, "SELECT credit_threshold FROM sr_contractor WHERE uid = '?'", extranet_user.uid);
+            configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+            // Add credit cards privilege (for calculation of the contractor's score)
+            contractor::addCreditCardPrivilege(extranet_user.uid);
+            headers_out("X-save_cc_success", "1");
+        else
+            headers_out("X-save_cc_error", "Payment Error");
+            headers_out("X-save_cc_error_msg", cc.error);
+        endif
+    endif
+}}

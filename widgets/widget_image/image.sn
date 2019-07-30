@@ -1,0 +1,25 @@
+{{
+    use widget;
+    use lg;
+    img = sql(single:true, "select * from widget_image where uid = '?'", widget.rows.uid_widget_list);
+	if img.rows.image ne "" then 
+		image_src = img.rows.image;
+	else
+		image_src = "http://placehold.it/405x246";
+	endif 
+}}
+
+<style type="text/css">
+.wdg-img img{
+  margin-bottom: 5px;
+  max-width: 100%;
+}
+</style>
+
+<div class="row">
+		<div class="col-sm-12 text-center wdg-img">
+			{{ if img.rows{'url_'.+ lg.rows.lg}ne "" then}}<a href="{{img.rows{'url_' .+ lg.rows.lg};}}" target="_blank">{{ endif }}
+				<img class="service-img img-max-100" src="{{image_src}}" alt="{{img.rows{'alt_'.+ lg.rows.lg};}}">
+			{{ if img.rows{'url_'.+ lg.rows.lg} ne "" then }}</a>{{ endif }}
+		</div>
+</div>

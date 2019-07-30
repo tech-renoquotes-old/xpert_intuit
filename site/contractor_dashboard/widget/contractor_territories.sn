@@ -1,0 +1,1011 @@
+{{
+    /*
+        @title contractor_territories
+        Description: This widget displays the territories of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-01
+        @version 1.01 bbduc@yahoo.com   Met la sélectiondans la region principale
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+\{{
+    use extranet_user;
+    cgidata = cgidata();
+
+    all_provinces = sql("SELECT name_{{lg.rows.lg}} as prvname from sr_province ORDER BY prvname");
+    provinces = all_provinces.rows;
+
+    main_territory = sql(single:true,"SELECT t.uid, t.name_{{lg.rows.lg}}  as name, p.name_{{lg.rows.lg}} as prvname FROM sr_territory t 
+            INNER JOIN sr_contractor c ON c.uid_territory=t.uid 
+            INNER JOIN sr_province p ON p.uid = t.uid_province
+            WHERE t.active='yes' AND c.uid='?'", extranet_user.uid);
+    
+    mainID = main_territory.rows.uid;
+    
+    //get and display secondary territories
+    function get_subterritories(cuid, provinces)
+            
+            for prv in provinces do
+                    s_territories .+= "<ul class='allprovince' style='display:none;list-style-position:inside;padding-left:20px' id='" .+ prv.prvname .+ "'>";
+                    s_territories .+= "<h4 style='font-weight:bold'>".+ prv.prvname.+ "</h4>";
+                    category = ""; init = true;
+                    maintxt = "";
+                    for sub_territories sql("SELECT t.uid, p.name_{{lg.rows.lg}} as prvname, t.name_{{lg.rows.lg}}  as name, t.category_{{lg.rows.lg}} as cname
+                         FROM sr_territory t
+                         INNER JOIN sr_contractor_territory ct ON t.uid=ct.uid_territory
+                         INNER JOIN sr_province p on p.uid = t.uid_province
+                         WHERE t.active='yes'
+                         AND ct.uid_contractor='?' ORDER BY p.name_{{lg.rows.lg}}, t.category_{{lg.rows.lg}}, t.name_{{lg.rows.lg}} ASC", cuid)
+                    do
+
+                        
+                        if(prv.prvname eq sub_territories.rows.prvname) then
+                        
+                            if(category ne sub_territories.rows.cname && !init) then
+                                s_territories .+= "</ul></ul>";
+                                init = true;
+                            endif
+                            
+                            if(category ne sub_territories.rows.cname && init) then
+                            
+                                s_territories .+= "<ul style='list-style-type:none;padding-left:20px'><li style=''><h5 style='font-weight:bold;display:inline-block'>".+ sub_territories.rows.cname .+ "</h5><span style='display:inline-block;margin-left:10px'><img onclick='abort_region(\"" .+ sub_territories.rows.cname .+ "\")' width='20px' src='/sn_uploads/icon/icon_minus.png'/></span></li><ul style='list-style-position:inside;padding-left:10px'>"; 
+                                category = sub_territories.rows.cname;
+                                init = false;
+                            endif
+                                s_territories .+= "<li onclick='select_terr(" .+ sub_territories.rows.uid .+ ")' style='padding-left:20px;background-color:\{{main_color}};' id='" .+ sub_territories.rows.uid .+ "' class='subterritories'><span class='service_txt'>".+ sub_territories.rows.name .+ maintxt .+ "</span><img class='rm_srv_btn' onclick='abort_terr(" .+ sub_territories.rows.uid .+ ")' width='18px' src='/sn_uploads/icon/icon_minus.png'/></li>";                    
+                        endif
+                    
+                    endfor
+                    s_territories .+= "</ul></ul></ul>";
+            endfor
+            
+            return s_territories;
+        
+    endf
+    
+    
+    
+    //get and display all territories
+    function get_allterritories(cuid,provinces)
+    
+        for prv in provinces do
+                
+                a_territories .+= "<ul class='allprovince' style='display:none;display:;list-style-position:inside;padding-left:0' id='" .+ prv.prvname .+ "'>";
+                a_territories .+= "<h4 style='font-weight:bold'>".+ prv.prvname.+ "</h4>";
+                category = ""; init = true;
+                
+                for all_territories sql("SELECT t.uid, t.name_{{lg.rows.lg}} as name, t.category_{{lg.rows.lg}} as cname,
+                    p.name_{{lg.rows.lg}} as prvname FROM sr_territory t
+                    INNER JOIN sr_province p ON p.uid = t.uid_province 
+                    WHERE t.active = 'yes' 
+                    ORDER BY p.name_{{lg.rows.lg}}, t.category_{{lg.rows.lg}},  t.name_{{lg.rows.lg}} ASC")
+                do
+                
+                if (!sub_territory_exists(cuid, all_territories.rows.uid)) then
+                    if(prv.prvname eq all_territories.rows.prvname) then
+                        if(category ne all_territories.rows.cname && !init) then
+                            a_territories .+= "</ul></ul>";
+                            init = true;
+                        endif
+                        
+                        if(category ne all_territories.rows.cname && init) then
+                            a_territories .+= "<ul style='list-style-type:none;padding-left:20px'><li style=''><h5 style='font-weight:bold;display:inline-block'>".+ all_territories.rows.cname .+ "</h5><span style='display:inline-block;margin-left:10px'><img onclick='submit_region(\"" .+ all_territories.rows.cname .+ "\")' width='20px' height:'100%' src='/sn_uploads/icon/add_plus.png'/></span></li><ul style='list-style-position:inside;padding-left:10px'>"; 
+                            category = all_territories.rows.cname;
+                            init = false;
+                        endif
+                        
+                    cities = sql("SELECT name_fr FROM sr_city WHERE uid_territory = '?' AND active = 'yes' ORDER BY name_fr LIMIT 20", all_territories.rows.uid);
+                    cities_list = "<b>{{sn_ct(edit:false, 'Voici quelques exemples de villes dans ce territoire')}}:</b><br><br>";
+
+                    for c in cities.rows do
+                        cities_list .+= c.name_fr .+ "<br>";
+                    endfor
+                        
+                    a_territories .+= "<li style='padding-left:20px;background-color:" .+ sl .+ "' id='all_" .+ all_territories.rows.uid .+ "' class='allterritories'><img class='rm_srv_btn' onclick='submit_terr(" .+ all_territories.rows.uid .+ ")' width='18px' src='/sn_uploads/icon/add_plus.png'/><div class='tooltip'><span class='service_txt'>".+ all_territories.rows.name .+ "</span><span class='tooltiptext'>" .+ cities_list .+ "</span></div></li>";
+		          //  a_territories .+= "<li style='padding-left:20px;background-color:" .+ sl .+ "' id='all_" .+ all_territories.rows.uid .+ "' class='allterritories'><img class='rm_srv_btn' onclick='submit_terr(" .+ all_territories.rows.uid .+ ")' width='18px' src='/sn_uploads/icon/add_plus.png'/><span class='service_txt'>".+ all_territories.rows.name .+ "</span></li>";
+                    endif
+                endif
+                
+                endfor
+            a_territories .+= "</ul></ul></ul>";
+        endfor
+        
+        return a_territories;
+    endf
+    
+    // Check if territory exists
+    function sub_territory_exists(cuid, tuid)
+        sub = sql(single:true,"SELECT * from sr_contractor_territory WHERE uid_territory = '?' AND uid_contractor = '?'",tuid,cuid);
+        if(sub.nbrows > 0) then
+            return true;
+        else
+            return false;
+        endif
+    endf
+    
+    
+    //territories for a contractor
+    function get_territories(cuid, tuid)
+        territories = sql("SELECT *
+             FROM sr_territory t
+             INNER JOIN sr_contractor_territory ct ON t.uid=ct.uid_territory
+             WHERE t.active='yes'
+             AND ct.uid_contractor='?'
+             AND t.uid='?'", cuid, tuid);
+                         
+        return territories.nbrows;
+    endf
+    
+    
+    
+    //get and display the main territory
+    function get_mainterritory(cuid)
+        all_provinces = sql("SELECT name_{{lg.rows.lg}} as prvname from sr_province");
+        main_territory = sql(single:true,"SELECT t.uid, t.name_{{lg.rows.lg}}  as name, p.name_{{lg.rows.lg}} as prvname FROM sr_territory t 
+                INNER JOIN sr_contractor c ON c.uid_territory=t.uid 
+                INNER JOIN sr_province p ON p.uid = t.uid_province
+                WHERE t.active='yes' AND c.uid='?'", cuid);
+    
+        m_territory .+= "<h4 style='font-weight'>".+ main_territory.rows.prvname.+ "</h4>";
+        //generate main category
+        m_territory .+= "<ul class='mainprovince'><li id='main_" .+ main_territory.rows.uid .+ "' class='mainterritories'><img class='rm_srv_btn' onclick='abort_terr(" .+ main_territory.rows.uid .+ ")' width='18px' src='/sn_uploads/icon/icon_minus.png'/>".+ main_territory.rows.name .+ "</li></ul>";
+        
+        return m_territory;
+    endf
+    
+    //get min and max for the selected territory
+    if(cgidata.seluid ne "") then
+    
+        min_max = sql(single:true,"SELECT * from sr_contractor_territory ct INNER JOIN sr_territory t ON t.uid = ct.uid_territory WHERE t.uid = '?' AND uid_contractor = '?'",cgidata.seluid, extranet_user.uid);
+        
+        headers_out("X-min", min_max.rows.min_amount);
+        headers_out("X-max", min_max.rows.max_amount);
+        
+        if("{{lg.rows.lg}}" eq 'en') then
+            headers_out("x-current-srv", 'Territory "' .+ min_max.rows.name_en .+ '" is selected');
+        else
+            headers_out("x-current-srv", 'Territoire "' .+ min_max.rows.name_fr .+ '" est selectionné');
+        endif
+    endif
+    
+    
+    //add a whole region at once
+    if(cgidata.submit_region eq true && cgidata.region_name ne "") then
+        
+        headers_out("X-success", "successfully!");
+         
+        ins_region = sql("INSERT INTO sr_contractor_territory(uid_contractor, uid_territory) 
+                        SELECT '?' as contractor, t.uid FROM sr_territory t
+                        WHERE t.category_{{lg.rows.lg}} = '?' 
+                        AND NOT EXISTS(SELECT ct.uid_territory FROM sr_contractor_territory ct 
+                                WHERE ct.uid_territory = t.uid
+                                AND ct.uid_contractor = '?')", extranet_user.uid, cgidata.region_name, extranet_user.uid);
+
+        if(ins_region.affrow > 0) then
+            tr_all = get_allterritories(extranet_user.uid,provinces);
+            tr_sub = get_subterritories(extranet_user.uid, provinces);
+            tr_main = get_mainterritory(extranet_user.uid);
+    
+            headers_out("X-main", tr_main);
+            headers_out("X-sub", tr_sub);
+            headers_out("X-all", tr_all);
+        endif
+    endif
+    
+    //remove whole region at once
+    if(cgidata.submit_region_rm eq true && cgidata.region_name ne "") then
+         
+        del_region = sql("DELETE FROM sr_contractor_territory
+                        WHERE uid_territory IN(
+                        SELECT t.uid FROM sr_territory t
+                        WHERE t.category_{{lg.rows.lg}} = '?')
+                        AND uid_contractor = '?' 
+                        AND uid_territory <> '?'
+                    ", cgidata.region_name, extranet_user.uid, mainID);
+                    
+        headers_out("X-success", "successfully!");
+
+        if(del_region.affrow > 0) then
+            tr_all = get_allterritories(extranet_user.uid,provinces);
+            tr_sub = get_subterritories(extranet_user.uid, provinces);
+            tr_main = get_mainterritory(extranet_user.uid);
+    
+            headers_out("X-main", tr_main);
+            headers_out("X-sub", tr_sub);
+            headers_out("X-all", tr_all);
+        endif
+    endif
+    
+    //add minimum and maximum amount to selected territory
+    if(cgidata.select_territory > 0 && cgidata.select_territory ne "") then
+        
+        if (cgidata.forall eq 'on') then
+            territory_upd = sql("UPDATE sr_contractor_territory SET min_amount = '?', max_amount = '?' WHERE  uid_contractor = '?'", cgidata.amount_min, cgidata.amount_max,  extranet_user.uid);
+        else
+            territory_upd = sql("UPDATE sr_contractor_territory SET min_amount = '?', max_amount = '?' WHERE uid_territory = '?' AND uid_contractor = '?'", cgidata.amount_min, cgidata.amount_max, cgidata.select_territory, extranet_user.uid);
+        endif
+        
+        if(territory_upd.affrow > 0) then
+        
+            if("{{lg.rows.lg}}" eq 'en') then
+                headers_out("X-updated", "territory is updated successfully");
+            else
+                headers_out("X-updated", "Mise-à-jour du territoire réussie");
+            endif
+        endif
+    endif
+    
+    
+    //Change Main territory
+    if(cgidata.req eq 'main' && cgidata.tuid ne "") then
+        void sql("UPDATE sr_contractor SET uid_territory= '?' WHERE uid = '?'", cgidata.tuid, extranet_user.uid);
+        nrows = get_territories(extranet_user.uid, cgidata.tuid);
+        
+        if(nrows == 0) then
+            void sql("INSERT INTO sr_contractor_territory(uid_contractor, uid_territory) VALUES(?,?)", extranet_user.uid, cgidata.tuid);
+        endif
+        
+        tr_all = get_allterritories(extranet_user.uid,provinces);
+        tr_sub = get_subterritories(extranet_user.uid, provinces);
+        tr_main = get_mainterritory(extranet_user.uid);
+
+        headers_out("X-main", tr_main);
+        headers_out("X-sub", tr_sub);
+        headers_out("X-all", tr_all);
+        
+        headers_out("X-success", cgidata.tuid);
+    endif
+    
+    //insert a new territory into subterritory
+    if(cgidata.submit eq true && cgidata.tuid ne "") then
+        
+        
+        if(cgidata.ismain) then
+            void sql("UPDATE sr_contractor SET uid_territory= '?' WHERE uid = '?'", cgidata.tuid, extranet_user.uid);
+            tr_all = get_allterritories(extranet_user.uid,provinces);
+            tr_sub = get_subterritories(extranet_user.uid, provinces);
+            tr_main = get_mainterritory(extranet_user.uid);
+    
+            headers_out("X-main", tr_main);
+            headers_out("X-sub", tr_sub);
+            headers_out("X-all", tr_all);
+        else
+            
+            nrows = get_territories(extranet_user.uid, cgidata.tuid);
+            
+            headers_out("X-success", nrows);
+            
+            if(nrows == 0) then
+                void sql("INSERT INTO sr_contractor_territory(uid_contractor, uid_territory) VALUES(?,?)", extranet_user.uid, cgidata.tuid);
+            endif
+            
+            tr_all = get_allterritories(extranet_user.uid,provinces);
+            tr_sub = get_subterritories(extranet_user.uid, provinces);
+            tr_main = get_mainterritory(extranet_user.uid);
+    
+            headers_out("X-main", tr_main);
+            headers_out("X-sub", tr_sub);
+            headers_out("X-all", tr_all);
+        endif
+    endif
+        
+    //Case when contractor remove a territory from subterritory 
+    if(cgidata.abort) then
+    
+        nrows = get_territories(extranet_user.uid, cgidata.tuid);
+        
+        if(nrows > 0) then
+            void sql("DELETE FROM sr_contractor_territory WHERE uid_contractor = '?' and uid_territory = '?' AND uid_territory <> '?'", extranet_user.uid, cgidata.tuid, mainID);
+        endif
+        
+        headers_out("X-success", cgidata.tuid);
+
+        tr_all = get_allterritories(extranet_user.uid,provinces);
+        tr_sub = get_subterritories(extranet_user.uid, provinces);
+        tr_main = get_mainterritory(extranet_user.uid);
+
+        headers_out("X-main", tr_main);
+        headers_out("X-sub", tr_sub);
+        headers_out("X-all", tr_all);
+    endif
+    
+}}
+<style>
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      opacity:1;
+      z-index: 0 !important;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 250px;
+      background-color: #00517e;
+      color: #fff;
+      text-align: left;
+      padding: 5px;
+      border-radius: 6px;
+      position: absolute;
+      font-size:14px;
+      z-index:10000;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+    }
+    .clonable {
+        display:none!important; 
+    }
+    .region_label{
+        display:inline-block;
+        margin:0px 5px 15px;
+    }
+    .label.label-default{
+        display:inline-block;
+        font-size:90%;
+        padding: .6em;
+    }
+
+  .allterritories:hover{
+        cursor:pointer;
+    	background-color:#dddde4;
+    }
+    
+  .subterritories:hover{
+        cursor:pointer;
+    	background-color:#bce5cc;
+    }
+    
+    .allterritories:hover{
+        cursor:pointer;
+    	background-color:#dddde4;
+    }
+        
+    .subterritories:hover{
+        cursor:pointer;
+    	background-color:#bce5cc;
+    }
+
+    .a_territories{
+    	width: 100%;
+    	max-height: 600px;
+    	float:left;
+    	overflow:scroll;
+    	border: 1px #ebebeb solid;
+    	padding-left:5px;
+    }
+    
+    .s_territories{
+    	width: 100%;
+    	min-height:100px;
+    	max-height: 600px;
+    	float:left;
+    	overflow:scroll;
+    	border: 1px #c7e6cf solid;
+    	padding-left:5px;
+    	margin-bottom:10px;
+    	
+    }
+    
+    .m_territory{
+    	width: 100%;
+    	max-height: 300px;
+    	float:left;
+    	overflow:scroll;
+    	border: 1px #c7e6cf solid;
+    	padding-left:5px;
+    	margin-bottom:10px;
+    }
+    
+    
+    .atitle{
+        border-top-right-radius:10px;
+        border-top-left-radius:10px;
+        padding-left:5px;
+        height:25px;
+        width:100%;
+        float:left;
+        background-color:#dddde4;
+        font-size:18px;
+    }
+    
+    .stitle{
+        border-top-right-radius:10px;
+        border-top-left-radius:10px;
+        padding-left:5px;
+        height:25px;
+        width:100%;
+        float:left;
+        background-color:#bce5cc;
+        font-size:18px;
+    }
+    
+    .mtitle{
+        border-top-right-radius:10px;
+        border-top-left-radius:10px;
+        padding-left:5px;
+        height:25px;
+        width:100%;
+        float:left;
+        background-color:#f1e9c0;
+        font-size:18px;
+    }
+    
+    .rm_srv_btn{
+        float:right;
+    }
+
+    .min_max_amount{
+        width:100%;
+        background-color:#eee;
+        border-radius: 5px;
+        padding:8px;
+        margin-bottom:10px;
+        border:1px #ddd solid;
+    }
+    
+    .min_max_amount table{
+        width:100%;
+    }
+    
+</style>
+
+<div id="ajax_success" class="alert alert-success" style="display:none"> 
+    <span></span>{{sn_ct("contractor_territories Vos région ont bien été modifiées.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div id="ajax_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_territories Une erreur est survenu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+<script>
+    $(".close").on("click", function(){
+       $(this).parent().hide(); 
+    });
+</script>
+
+
+
+
+    <div class="row">
+        <div class="col-md-6   ">
+            <fieldset class="form-group">
+                <label for="main_territory" class="control-label">
+                    {{sn_ct("contractor_territories Régions principale", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </label> 
+                        <select class="form-control  " id="main_territory" name="main_territory" data-validator-name="main_territory">
+                            <option value="">{{sn_ct(edit:false,"contractor_territories Choisir une région", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            {{  last_province = ""; start = true;}}
+                            
+                          \{{ sl=""; 
+                              main_territory1 = sql(single:true,"SELECT uid_territory   FROM  sr_contractor WHERE uid='?'", extranet_user.uid);
+                            "m=";main_territory1.rows;
+            //                    for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name,uid_province   FROM sr_territory WHERE active='yes'   ORDER BY id_province, name_".+lg.rows.lg.+"  ASC") do
+                                for territory sql("SELECT t.uid, t.name_{{lg.rows.lg}} as name, t.uid_province,  p.name_{{lg.rows.lg}} as province  
+                                                       FROM sr_territory t inner join sr_province p
+                                                        ON t.uid_province = p.uid
+                                                        WHERE active='yes'   
+                                                        ORDER BY p.name_{{lg.rows.lg}}, t.name_{{lg.rows.lg}} ASC
+                                                    ")do
+                            territory.rows;                   
+                                                    
+                                    if last_province ne territory.rows.province && !start then
+                                        '</optgroup>';
+                                         start = true;
+                                    endif
+                                    if last_province ne territory.rows.uid_province &&  start then
+                                        '<optgroup label = "'.+ territory.rows.province .+'">';
+                                        start = false;
+                                        last_province = territory.rows.province;
+                                    endif   
+                                   
+                                    
+                            }}
+                           \{{ if (territory.rows.uid eq main_territory1.rows.uid_territory) then sl = 'selected'; endif;}}
+                                        <option value="\{{territory.rows.uid}}"  \{{sl}}>\{{territory.rows.name}}</option>
+                            \{{
+                                sl="";    
+                                endfor
+                                '</optgroup>';
+                            }}
+
+                        </select>
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="territory"></span>    
+             </fieldset>
+            {{sn_ct("contractor_territories Région principale texte", format:'ck', lg:lg.rows.lg,  publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-6   ">
+            
+        </div>
+        <!--<div class="col-md-6">-->
+        <!--    <div class="min_max_amount">-->
+        <!--    <form name='form_min_max' method='post'>-->
+        <!--        <fieldset style="display:inline-block; margin-right:10px" class="form-group">-->
+        <!--            <span class="text-md">{{sn_ct("contractor_territory Montant Minimum", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>&nbsp;-->
+        <!--            <input class="form-control" disabled class="" type="text" id="amount_min" name="amount_min"  value="\{{project_amt.rows.amount_min }}">-->
+                    
+        <!--        </fieldset>-->
+                
+        <!--        <fieldset style="display:inline-block; margin-right:10px" class="form-group">-->
+        <!--            <span  class="text-md ">{{sn_ct("contractor_territory Montant Maximum", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>&nbsp;-->
+        <!--            <input class="form-control" disabled type="text" id="amount_max" name="amount_max"  value="\{{project_amt.rows.amount_max }}" >-->
+        <!--        </fieldset>-->
+                
+        <!--            <button disabled type="submit" id="submit_amount" name="submit_amount" class="btn btn-primary">-->
+        <!--                {{(lg.rows.lg eq 'en')?'Update':'Modifier'}}                -->
+        <!--            </button>-->
+
+        <!--        <fieldset style="display:inline-block; margin-right:10px" class="form-group">-->
+        <!--            <label for="forall">{{sn_ct("contractor_territory Appliquer pour tous les territoires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}&nbsp;</label><input type='checkbox' name="forall" id="forall"/>&nbsp;-->
+        <!--        </fieldset>-->
+                
+        <!--        <input type='text' style='display:none' id='select_territory' name='select_territory'/>-->
+        <!--    </form>-->
+        <!--        <span class="update_res" style="display:none;font-style:italic"><font size="2" color="#105089">{{sn_ct("contractor_territory selectionner un territoire dans la liste ci-dessous pour appliquer un montant minimum et maximum", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</font><span>-->
+        <!--    </div>-->
+        <!--</div>-->
+    </div> <!-- end row  -->
+    
+<hr />
+
+    <div class='row'>
+        <div class='col-sm-6'>
+        <div class='atitle'>{{sn_ct("contractor_territories Tous les territoires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>
+            <div class="a_territories">
+                \{{get_allterritories(extranet_user.uid,provinces)}}
+            </div>
+        </div>
+        
+        <div class='col-sm-6'>
+            <div class='stitle'>{{sn_ct("contractor_territories Territoires secondaires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>
+            <div class="s_territories">
+                \{{get_subterritories(extranet_user.uid, provinces)}}
+                \{{if(get_subterritories(extranet_user.uid, provinces) eq "") then}}
+                     <div style="width:100%;text-align:center;font-size:18px;margin-top:10px">{{sn_ct("contractor_territories Auncun territoire trouvé. Ajouter un térritoire à partir de la liste de gauche.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>   
+                \{{endif}}
+            </div>
+        </div>
+        <span style="display:none" class = "ajax-alert"></span>
+    </div>
+
+
+
+
+
+
+<script>
+    $(document).ready(function(){
+        var collection1 = $('.subprovince');
+        var collection2 = $('.allprovince');
+        var lg = "{{lg.rows.lg}}";
+        display(collection1);
+        display(collection2);
+        
+        var main_val = $('#main_territory').val();
+        display_main(main_val);
+        
+        $('.update_res').show();
+        
+        
+        
+        
+        $('#main_territory').change(function(){
+            lg = "{{lg.rows.lg}}";
+            if(lg == 'fr'){
+                msg = "Etes vous sure de vouloir changer de territoire principale?";
+            }else{
+                msg = "Are you sure you want to change the main territory?"
+            }
+            if(confirm(msg)){
+                submit_main($(this).val());
+            }else{
+                $(this).val(main_val);
+            }
+        });
+        
+       $("#amount_min, #amount_max").keydown(function (e) {
+            // Allow: backspace, delete, tab, escape, enter and .
+            if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
+                 // Allow: Ctrl+A, Command+A
+                (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) || 
+                 // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40)) {
+                     // let it happen, don't do anything
+                     return;
+            }
+            // Ensure that it is a number and stop the keypress
+            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                e.preventDefault();
+            }
+        });
+    
+    });
+</script>
+
+
+<script>
+
+    function display(element){
+        element.each(function() {
+            acc  = 0;
+            $(this).find('li').each(function(){
+                acc += 1;
+                id = $(this).attr('id');
+            });
+            
+            //display only non-empty list
+            if(acc > 0){
+                $(this).show();
+            }
+            
+        });
+        
+    }
+    
+    
+    function display_main(val){
+        lg = "{{lg.rows.lg}}";
+        
+        if(lg == 'fr'){
+            var maintxt = "<font color=#30753b size='2'> -- Territoire Principal</font>";
+        }else{
+            var maintxt = "<font color=#30753b size='2'> -- Main Territory</font>";
+        }
+
+        prev_html = $('#'+ val).find('span').html();
+        next_html = prev_html + maintxt; 
+        $('#'+ val).find('span').html(next_html);
+    }
+    
+    //select territory
+    function select_terr(uid){
+        $('.s_territories .subterritories').css('background-color', '');
+        $('#'+uid).css('background-color', '#9dc49f');
+        $('#select_territory').val(uid);
+        
+        $.ajax({
+            type: 'POST',
+            data: {'seluid':uid}, // An object with the key 'submit' and value 'true;
+            success:function(data, statusText, xhr){
+                $('#amount_min').val(xhr.getResponseHeader('X-min'));
+                $('#amount_max').val(xhr.getResponseHeader('X-max'));
+                $('.update_res').html("<font size=2 color='#105089'>" + xhr.getResponseHeader('X-current-srv').decode() + "<font>");
+                $('.update_res').show();
+                $('#amount_min').prop("disabled", "");
+                $('#amount_max').prop("disabled", "");
+                $('#submit_amount').prop('disabled','');
+            }
+        });
+
+    }
+    
+    //update minimum and maximum amount
+    $('form[name=form_min_max]').ajaxForm({
+        beforeSubmit : function(data, statusText, xhr){
+           var min = parseInt($('#amount_min').val());
+           var max = parseInt($('#amount_max').val());
+        
+            if((max != 0 && max != "") || (min != 0 && min != "")){   
+                if(min > max){
+                    $('.update_res').html('<font color="#af0e10">{{sn_ct("Min cannot be greater than max", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<font>');
+                    return false;
+                }
+            }
+        },  
+        success:function(data, statusText, xhr){
+        
+            if(xhr.getResponseHeader("X-updated")){
+                $('.update_res').html("<font color='#11892d'>" + xhr.getResponseHeader("X-updated").decode() + " &#10004;<font>");
+            }
+        }    
+    }); 
+    
+    function submit_main(uid){
+
+        $.ajax({
+            type: 'POST',
+            data: {'req':'main', 'tuid':uid}, // An object with the key 'submit' and value 'true;
+            success: function (data,statusText,xhr) {
+                if(xhr.getResponseHeader('X-success')){
+                    $('#ajax_success').show();
+                }
+                
+                var tr_main = xhr.getResponseHeader('X-main');
+                var tr_sub = xhr.getResponseHeader('X-sub');
+                var tr_all = xhr.getResponseHeader('X-all');
+                
+                tr_main = tr_main.decode();
+                tr_sub = tr_sub.decode();
+                tr_all = tr_all.decode();
+                
+                $('.s_territories').html(tr_sub);
+                $('.a_territories').html(tr_all);
+                $('.m_territory').html(tr_main);
+                
+                $('.subprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                        id = $(this).attr('id');
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                $('.allprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                display_main($('#main_territory').val());
+                
+            }
+        });
+    }
+    
+    function submit_region(name){
+        $.ajax({
+            type: 'POST',
+            data: {'submit_region':true, 'region_name':name}, // An object with the key 'submit' and value 'true;
+            success: function (data,statusText,xhr){
+                var tr_main = xhr.getResponseHeader('X-main');
+                var tr_sub = xhr.getResponseHeader('X-sub');
+                var tr_all = xhr.getResponseHeader('X-all');
+                
+                tr_main = tr_main.decode();
+                tr_sub = tr_sub.decode();
+                tr_all = tr_all.decode();
+                
+                $('.s_territories').html(tr_sub);
+                $('.a_territories').html(tr_all);
+                $('.m_territory').html(tr_main);
+                
+                $('.subprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                        id = $(this).attr('id');
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                $('.allprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                display_main($('#main_territory').val());
+                
+                
+            }
+        })
+    }
+    
+    function abort_region(name){
+        $.ajax({
+            type: 'POST',
+            data: {'submit_region_rm':true, 'region_name':name}, // An object with the key 'submit' and value 'true;
+            success: function (data,statusText,xhr){
+                var tr_main = xhr.getResponseHeader('X-main');
+                var tr_sub = xhr.getResponseHeader('X-sub');
+                var tr_all = xhr.getResponseHeader('X-all');
+                
+                tr_main = tr_main.decode();
+                tr_sub = tr_sub.decode();
+                tr_all = tr_all.decode();
+                
+                $('.s_territories').html(tr_sub);
+                $('.a_territories').html(tr_all);
+                $('.m_territory').html(tr_main);
+                
+                $('.subprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                        id = $(this).attr('id');
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                $('.allprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                display_main($('#main_territory').val());
+                
+            }
+        })
+    }
+
+    
+    
+    function submit_terr(uid){
+        $.ajax({
+            type: 'POST',
+            data: {'submit':true, 'tuid':uid}, // An object with the key 'submit' and value 'true;
+            success: function (data,statusText,xhr) {
+                
+                var tr_main = xhr.getResponseHeader('X-main');
+                var tr_sub = xhr.getResponseHeader('X-sub');
+                var tr_all = xhr.getResponseHeader('X-all');
+                
+                tr_main = tr_main.decode();
+                tr_sub = tr_sub.decode();
+                tr_all = tr_all.decode();
+                
+                $('.s_territories').html(tr_sub);
+                $('.a_territories').html(tr_all);
+                $('.m_territory').html(tr_main);
+                
+                $('.subprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                        id = $(this).attr('id');
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                $('.allprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                display_main($('#main_territory').val());
+                
+                
+            }
+        });
+    }
+    
+    function abort_terr(uid){
+        $.ajax({
+            type: 'POST',
+            data: {'abort':true, 'tuid':uid}, // An object with the key 'submit' and value 'true;
+            success: function(data,statusText,xhr){
+                var uid = xhr.getResponseHeader("X-success");
+                var territories = $(data).find('.all').html();
+                var tr_main = xhr.getResponseHeader('X-main');
+                var tr_sub = xhr.getResponseHeader('X-sub');
+                var tr_all = xhr.getResponseHeader('X-all');
+                
+                tr_main = tr_main.decode();
+                tr_sub = tr_sub.decode();
+                tr_all = tr_all.decode();
+        
+                $('.s_territories').html(tr_sub);
+                $('.a_territories').html(tr_all);
+                $('.m_territory').html(tr_main);
+                
+                $('.subprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                        id = $(this).attr('id');
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+                $('.allprovince').each(function(){
+                    acc  = 0;
+                    $(this).find('li').each(function(){
+                        acc += 1;
+                    });
+                    
+                    if(acc > 0){
+                        $(this).show();
+                    }
+                });
+                
+               display_main($('#main_territory').val());
+            }
+        });
+    }
+    
+    
+    
+
+        String.prototype.encode = function(encoding) {
+            var result = "";
+         
+            var s = this.replace(/\r\n/g, "\n");
+         
+            for(var index = 0; index < s.length; index++) {
+                var c = s.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                }
+                else if((c > 127) && (c < 2048)) {
+                    result += String.fromCharCode((c >> 6) | 192);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+                else {
+                    result += String.fromCharCode((c >> 12) | 224);
+                    result += String.fromCharCode(((c >> 6) & 63) | 128);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+            }
+         
+            return result;
+        };
+         
+         
+        String.prototype.decode = function(encoding) {
+            var result = "";
+         
+            var index = 0;
+            var c = c1 = c2 = 0;
+         
+            while(index < this.length) {
+                c = this.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                    index++;
+                }
+                else if((c > 191) && (c < 224)) {
+                    c2 = this.charCodeAt(index + 1);
+                    result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                    index += 2;
+                }
+                else {
+                    c2 = this.charCodeAt(index + 1);
+                    c3 = this.charCodeAt(index + 2);
+                    result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                    index += 3;
+                }
+            }
+         
+            return result;
+        };
+    
+</script>

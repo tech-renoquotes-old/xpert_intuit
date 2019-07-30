@@ -1,0 +1,26 @@
+{{
+    /*
+        @title 			notifyAdminContractorAddService
+        Description		Sends an email to the administrator when a contractor adds a serivce
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-04 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+    use contractor_info;
+    entrepreneur = contractor_info.company_name;
+    id_entrepreneur = contractor_info.uid_contractor;
+    services = contractor_info.services;
+    
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

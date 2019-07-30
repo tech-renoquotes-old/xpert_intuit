@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+{{ 
+    //
+    // Name:        contact_test
+    //
+    // Description: test template for email
+    //
+    // Version:     1.0 2015-06-01 ilya@sednove.com Initial Version
+    //
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    use user;       	// From sn_preload
+    use page;			// Loop from the publish
+    use lg;             // Loop from the publish
+}}
+\{{ config_gen=config(); }}
+<html lang="{{lg.rows.lg}}" class="login_html">
+    <head>
+        <meta http-equiv="Content-type" content="text/html;charset=UTF-8"/>
+        <title>{{esc(filter:"html",page.rows{"title_" .+ lg.rows.lg});}}</title>
+		\{{ if config_gen.site eq "staging" then }}
+				<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+				<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+				<script src="/js/{{lg.rows.lg}}/site.js"></script>
+		\{{ endif }}
+    </head>
+    <body>
+	\{{     if config_gen.site eq "staging" then 
+                client_has_bootstrap = true; 
+                if user.lg ne "" then
+                    include("/extenso/html/extranet/" .+ user.lg .+ "/fullpage.snc");
+                else
+                    include("/extenso/html/extranet/fr/fullpage.snc"); 
+                endif
+            endif
+     }}
+	{{ 
+		%include "/includes/header_email.sn";
+		
+        texte_email = str_replace('"','\\"',page.rows{'introduction_' .+ lg.rows.lg});
+		texte_email = str_replace("'","\\'",texte_email);    
+		texte_email=str_replace(["#firstname#","#lastname#"],[user.firstname,user.lastname],texte_email); }}
+		<div\{{ if config_gen.site eq "staging" then }} class="sn_pencil" data-sn_title1="Edit" data-sn_class1="edit" data-sn_link1="/extenso/extranet/email/fr/edit.snc?uid={{page.rows.uid}}&sn_modal=t"\{{ endif }}>
+	{{		texte_email;
+		
+			include(page.rows.content);
+		"</div>";
+		%include "/includes/email_footer.sn";
+	}}
+    </body>
+</html>

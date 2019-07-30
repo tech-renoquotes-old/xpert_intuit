@@ -1,0 +1,4 @@
+if (new_entry) then
+    FORCE_EMAIL_PROD = true;
+    contractor::trigger_transaction(cgidata.uid);
+endif

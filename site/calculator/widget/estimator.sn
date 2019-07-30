@@ -1,0 +1,724 @@
+{{
+    /*
+        @title cost estimator
+        Description: estimate cost for renovation projects with 4 parameters max. support qualitative and quantitative variables.
+        
+        @author louis.jhonny@gmail.com
+        
+        @version 1.0 2018-02-28
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+
+\{{
+    lg = "{{lg.rows.lg}}";
+    page = "{{page.rows.uid}}";
+    categories = sql("SELECT DISTINCT ec.uid, ee.category_order, ec.category_name_? as category from sr_estimator_entries ee INNER JOIN sr_estimator_service es ON es.uid = ee.uid_service_group INNER JOIN sr_estimator_categories ec ON ec.uid = ee.category WHERE es.uid_page_service = '?' GROUP BY ee.category_order ORDER BY category_order", "{{lg.rows.lg}}","{{page.rows.uid}}");
+    //parameters = sql("SELECT ee.uid, ee.parameter_name_{{lg.rows.lg}} as name, ee.category_order, ee.variable_type, ee.min_unit_cost, ee.max_unit_cost, ee.average_unit_cost, ee.units FROM sr_estimator_entries ee INNER JOIN sr_estimator_service es ON es.uid = ee.uid_service_group WHERE es.uid_page_service = '?' ORDER BY name", "{{page.rows.uid}}");
+    params = "SELECT ee.uid, 
+                    ee.parameter_name_{{lg.rows.lg}} as name, 
+                    ee.category_order, 
+                    ee.variable_type, 
+                    ee.min_unit_cost, 
+                    ee.max_unit_cost, 
+                    ee.average_unit_cost, 
+                    ee.units 
+                    FROM sr_estimator_entries ee 
+                    INNER JOIN sr_estimator_service es ON es.uid = ee.uid_service_group 
+                    WHERE es.uid_page_service = '?'
+                    AND ee.category = '?'
+                    ORDER BY order_by"; 
+    
+    other_params = sql("SELECT o.uid, o.specific_param, o.display_text_? as display, o.type, o.cost FROM sr_estimator_options o INNER JOIN sr_estimator_service s ON s.uid = o.uid_service_group AND s.uid_page_service = '?'",lg,page);               
+
+    img = sql(single:true,"SELECT sn_dir_estimator_image, sn_dir_estimator_thumb, service_group_name_? as service, description_? as description FROM sr_estimator_service WHERE uid_page_service ='?'", lg, lg,"{{page.rows.uid}}");
+    
+    title_fr = "Coût moyen";
+    title_en = "Average cost"; 
+    plot_title = (lg eq "fr") ? title_fr : title_en;
+    
+    cgidata = cgidata();
+
+    
+    if(cgidata.length() > 0) then
+        r = sql(single:true,"SELECT * FROM sr_estimator_prices WHERE param1 = '?' AND param2 = '?' AND param3 = '?' ", cgidata.param1, cgidata.param2, cgidata.param3);
+        headers_out("X-debug", r);
+        headers_out("X-min-cost", r.rows.min_cost);
+        headers_out("X-avg-cost", r.rows.average_cost);
+        headers_out("X-max-cost", r.rows.max_cost);
+    endif
+    
+    
+    if(cgidata.p1) then
+        matches = sql("SELECT ep.param1, ep.param2, ep.param3, ep.param4 FROM sr_estimator_prices ep INNER JOIN sr_estimator_service es ON es.uid = ep.service_group WHERE ep.param1 = '?' AND es.uid_page_service = '?' ", cgidata.p1, page);
+        headers_out("X-selected", matches.rows);
+    endif
+    
+}}
+<style>
+
+    .results{
+        width:90%;
+        height:380px;
+        border:1px #999 solid ;
+        border-radius:15px;
+        margin:20px;
+        display:inline-block;
+        color:#fff;
+        padding-left:10px;
+        box-shadow: 5px 5px #000;
+    }
+    
+    .content{
+        width:80%;
+        border-radius:10px;
+        background-color: rgba(0,0,0,0.5);
+        margin-left:auto;
+        margin-right:auto;
+        padding:10px;
+    }
+    span.description{
+        color:#fff;
+    }
+    
+    label {
+      display: inline-block;img
+      width: auto;
+      text-align: left;
+    }
+    
+    .hidden {
+        display: none;
+    }
+    
+    .optionctl{
+        max-width:100px;
+        float:left;
+        word-wrap: break-word;
+    }
+    
+    .other{
+        max-width:100%;
+        padding:5px;
+        border:1px solid #dee1e2;
+        border-radius:5px;
+        text-align:center;
+        background-color:#eeeeee;
+
+    }
+    
+    .loader
+        {
+        position: absolute;
+        z-index: 2;
+        height: 100px;
+        width: 100px;
+        top: 38%;
+        left: 45%;
+        filter: alpha(opacity=20);
+        opacity: 0.2;
+        -moz-opacity: 0.2;
+    }
+    
+    @media screen and (max-width: 997px) {
+        .content{
+            width:95%;
+            max-width:700px;
+            max-height:150px;
+            border-radius:10px;
+            background-color: rgba(0,0,0,0.5);
+            margin-left:auto;
+            margin-right:auto;
+            overflow-y:scroll;
+        }
+    }
+    .anchor{
+        display: block;
+        position: relative;
+        top: -103px;
+        visibility: hidden;
+    }
+
+</style>
+
+<script type="text/javascript"  src="/js/SpryCollapsiblePanel.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/jquery.jqplot.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.barRenderer.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.categoryAxisRenderer.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.canvasTextRenderer.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.canvasAxisLabelRenderer.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.canvasAxisTickRenderer.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.linearAxisRenderer.js"></script>
+<script type="text/javascript"  src="/js/jquery_jqplot/plugins/jqplot.pointLabels.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/js/jquery_jqplot/jquery.jqplot.css" />
+<link href="/css/SpryCollapsiblePanel.css" rel="stylesheet" type="text/css" />
+
+    
+    <span id="calculus" class="anchor"></span>
+    <div  class="CollapsiblePanelTab" tabindex="0" style="height:70px;background-color:#00517e">
+      <div style='position:absolute'><h1 style="margin-left:10px;margin-top:15px;text-overflow:ellipsis;word-wrap:break-work;color:#5896B4;overflow:hidden;display:block;line-height:1em;max-height: 2em;">{{sn_ct("Estimateur de coût - ")}} \{{img.rows.service}}</h1></div>
+      <!--<div style="width:100%"><img align="right" width="100px" src="\{{img.rows.sn_dir_estimator_thumb}}"/></div>-->
+    </div>
+    
+    <div class="CollapsiblePanelContent">
+        <div style="width:100%;background-image: url('\{{img.rows.sn_dir_estimator_image}}');background-position:Top;background-size:100%;background-repeat:no-repeat;padding:20px;max-height:400px">
+            <div class="content">
+                <span class="description" style="font-size:14px;padding-right:20px">\{{img.rows.description}}</span>
+            </div>
+        </div>
+    </div>
+
+<style>
+    .disappear_small
+        {display:none;}
+    @media (max-width: 992px) {
+        .disappear_small
+            {display:initial;}
+        .disappear_big
+            {display:none;}
+    }
+    
+    
+</style>
+
+<div class='row' style="margin-bottom:50px;margin-top:30px;">
+    <div class="col-md-7" style="z-index:1;">
+        <!-- Maximum of 4 parameters is allowed -->
+        <input type="hidden" name="nbrprams" id="nbrprams" value="\{{categories.nbrows}}"/>
+        \{{init1 = 0;init2 = 0;init3 = 0;init4 = 0;}}
+        
+        \{{if(categories.rows[0].category ne "") then}}
+        <div class='col-sm-4' style="padding-right:5px">
+        
+            <table class='table table-bordered'><tr>
+                    <th style="background-color:#eee;height:60px;text-align:center">
+                        <span style="font-size:1.5em">\{{categories.rows[0].category}}</span>
+                    </th>
+                </tr>
+                \{{for p sql(params,page,categories.rows[0].uid) do}}
+                
+                    \{{init1++; checked = (init1 == 1) ? 'checked' : ''}}
+                    
+                    <tr>
+                        <td class="cell1" id="cell_\{{p.rows.uid}}">
+                            \{{if(p.rows.variable_type ne 'other') then}}
+                            <fieldset class="form-group">
+                                <div style="padding:2px" class="optionctl"><input name="param1" id="param_\{{p.rows.uid}}" value='\{{p.rows.uid}}' class="param1" type="radio"  onchange="add_param1(\{{p.rows.uid}})" \{{checked;}}  \{{if(p.nbrows == 1) then}} style="display:none"\{{endif}}/></div>
+                                <div class="optionctl"><label style="font-size:11px;" for="param_\{{p.rows.uid}}">\{{p.rows.name}}</label></div>
+                            </fieldset>
+                            \{{endif}}
+                            \{{if(p.rows.variable_type eq 'quantitative') then}}
+                                <div id='param1_var' class="form-group">
+                                    <input name="unit1" id="unit1" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit1_cost" id="min_unit1_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit1_cost" id="max_unit1_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit1_cost" id="avg_unit1_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input class='user_units' name="param1_val" id="param1_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{elseif(p.rows.variable_type eq 'multiplier') then}}
+                                <div id='param1_var' class="form-group">
+                                    <input name="unit1" id="unit1" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit1_cost" id="min_unit1_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit1_cost" id="max_unit1_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit1_cost" id="avg_unit1_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input class="user_multiplier" name="multiplier_val" id="multiplier_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{endif}}
+                        </td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        </div>
+        \{{endif}}
+        
+        \{{if(categories.rows[1].category ne "") then}}
+        <div class='col-sm-4'  style="padding-right:5px">
+            <table class='table table-bordered'>
+                <tr>
+                    <th style="background-color:#eee;height:60px;text-align:center">
+                       <span style="font-size:1.5em"> \{{categories.rows[1].category}} </span>
+                    </th>
+                </tr>
+                \{{for p sql(params,page,categories.rows[1].uid) do}}
+                
+                    <tr>
+                        <td class="cell2" id="cell_\{{p.rows.uid}}">
+                            \{{if(p.rows.variable_type ne 'other') then}}
+                            <fieldset class="form-group">
+                                <input name="param2" id="param_\{{p.rows.uid}}" value='\{{p.rows.uid}}' class="param2" type="radio"  onchange="add_param2(\{{p.rows.uid}})"  \{{if(p.nbrows == 1) then}} style="display:none" \{{endif}}/>
+                                <label style="font-size:11px" for="param_\{{p.rows.uid}}">\{{p.rows.name}}</label>
+                            </fieldset>
+                            \{{endif}}
+                            \{{if(p.rows.variable_type eq 'quantitative') then}}
+                                <div id='param2_var' class="form-group">
+                                    <input name="unit2" id="unit2" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit2_cost" id="min_unit2_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit2_cost" id="max_unit2_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit2_cost" id="avg_unit2_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input class='user_units' name="param2_val" id="param2_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{elseif(p.rows.variable_type eq 'multiplier') then}}
+                                <div id='param2_var' class="form-group">
+                                    <input name="unit2" id="unit2" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit2_cost" id="min_unit2_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit2_cost" id="max_unit2_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit2_cost" id="avg_unit2_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    
+                                    <input class='user_multiplier' name="multiplier_val" id="multiplier_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                    
+                                </div>
+                            \{{endif}}
+                        </td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        </div>
+        \{{endif}}
+        
+        
+        \{{if(categories.rows[2].category ne "") then}}
+        <div class='col-sm-4'  style="padding-right:5px">    
+            <table class='table table-bordered'>
+                <tr>
+                    <th style="background-color:#eee;height:60px;text-align:center">
+                        <span style="font-size:1.5em">\{{categories.rows[2].category}}</span>
+                    </th>
+                </tr>
+                \{{for p sql(params,page,categories.rows[2].uid) do}}
+                    
+                    \{{init3++; checked = (init3 == 1) ? 'checked' : ''}}
+                    <tr>
+                        <td class="cell3" id="cell_\{{p.rows.uid}}">
+                            \{{if(p.rows.variable_type ne 'other') then}}
+                            <fieldset class="form-group">
+                                <input name="param3" id="param_\{{p.rows.uid}}" value='\{{p.rows.uid}}' class="param3" type="radio" onchange="add_param3(\{{p.rows.uid}})" \{{checked;}} \{{if(p.nbrows == 1) then}} style="display:none"\{{endif}}/>
+                                <label style="font-size:11px" for="param_\{{p.rows.uid}}">\{{p.rows.name;}}</label>
+                            </fieldset>
+                            \{{endif}}
+                            \{{if(p.rows.variable_type eq 'multiplier') then}}
+                                <div id='param3_var' class="form-group">
+                                    <input name="unit3" id="unit3" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit3_cost" id="min_unit3_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit3_cost" id="max_unit3_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit3_cost" id="avg_unit3_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input class='user_multiplier' name="multiplier_val" id="multiplier_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{elseif(p.rows.variable_type eq 'quantitative') then}}
+                                <div id='param3_var' class="form-group">
+                                    <input name="unit3" id="unit3" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit3_cost" id="min_unit3_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit3_cost" id="max_unit3_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit3_cost" id="avg_unit3_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input class='user_units' name="param3_val" id="param3_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{endif}}
+
+                        </td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        </div>
+        \{{endif}}
+        
+        
+        \{{if(categories.rows[3].category ne "") then}}
+        <div class='col-sm-4'  style="padding-right:5px">    
+            <table class='table table-bordered'>
+                <tr>
+                    <th style="background-color:#eee;height:60px;text-align:center">
+                        <span style="font-size:1.5em">\{{categories.rows[3].category}}</span>
+                    </th>
+                </tr>
+                \{{for p sql(params,page,categories.rows[3].uid) do}}
+                
+                    \{{init4++; checked = (init4 == 1) ? 'checked' : ''}}
+                    <tr>
+                        <td class="cell4" id="cell_\{{p.rows.uid}}">
+                            \{{if(p.rows.variable_type ne 'other') then}}
+                            <fieldset class="form-group ">
+                                <input name="param4" id="param_\{{p.rows.uid}}" value='\{{p.row.uid}}' class="param4" type="radio" onchange="add_param4(\{{p.rows.uid}})" \{{checked;}} \{{if(p.nbrows == 1) then}} style="display:none" \{{endif}}/>
+                                <label style="font-size:11px" for="param_\{{p.rows.uid}}">\{{p.rows.name}}</label>
+                            </fieldset>
+                            \{{endif}}
+                            
+                            \{{if(p.rows.variable_type eq 'quantitative') then}}
+                                <div id='param4_var' class="form-group" >
+                                    <input name="unit4" id="unit4" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit4_cost" id="min_unit4_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit4_cost" id="max_unit4_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit4_cost" id="avg_unit4_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input  class='user_units' name="param4_val" id="param4_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{elseif(p.rows.variable_type eq 'multiplier') then}}
+                                <div id='param4_var' class="form-group" >
+                                    <input name="unit4" id="unit4" type="hidden" value="\{{p.rows.units}}"/>
+                                    <input type="hidden" name="min_unit4_cost" id="min_unit4_cost" value="\{{p.rows.min_unit_cost}}"/>
+                                    <input type="hidden" name="max_unit4_cost" id="max_unit4_cost" value="\{{p.rows.max_unit_cost}}"/>
+                                    <input type="hidden" name="avg_unit4_cost" id="avg_unit4_cost" value="\{{p.rows.average_unit_cost}}"/>
+                                    <input class='user_multiplier' name="multiplier_val" id="multiplier_val" type="text" value="\{{p.rows.units}}" style="width:100px" onkeyup = "updatePrice(this)"/>
+                                </div>
+                            \{{endif}}
+
+                        </td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        </div>
+        \{{endif}}
+        <div class="col-sm-12 " \{{if(other_params.nbrows == 0) then}}style="display:none"\{{endif}}>
+            <span style="font-size:1.2em">{{sn_ct("Autres considerations")}}</span>
+            <hr style="margin-top:5px"/>
+            <div class="other">
+                \{{for op in other_params.rows do}} 
+                    <input type="hidden" name="ref_param_\{{op.uid}}" id="ref_param_\{{op.uid}}" value="\{{op.specific_param}}"/>
+                    <input type="hidden" name="other_cost_\{{op.uid}}" id="other_cost_\{{op.uid}}" value="\{{op.cost}}"/>
+                    <span style="display:inline-block;margin-right:10px">
+                        <input type="checkbox" name="other_\{{op.uid}}" id="other_\{{op.uid}}" onchange="add_other_param(\{{op.uid}},\{{op.specific_param}})"/>
+                        <label for="other_\{{op.uid}}" style="margin-left:10px">\{{op.display}}</label>
+                    </span>
+                \{{endfor}}
+            </div>
+        </div>
+    </div>
+    
+    
+        
+    <div class="col-md-5">
+        <div class='results'>
+            <div id="chart1"  class="chart1" style="height: 350px; margin-top: 20px; width: 100%; position: relative;"></div>
+            <div class="loader" style="display:none">
+                <div class="center">
+                    <img alt="" src="/sn_uploads/icon/loading3.gif" />
+                </div>
+            </div>
+            <input type="hidden" name="graph_min" id="graph_min" style="color:#000"/>
+            <input type="hidden" name='graph_max' id="graph_max" style="color:#000"/>
+            <input type="hidden" name='graph_avg' id="graph_avg" style="color:#000"/>
+        </div>
+        <div id="result_total" style=" width:70%;margin-left:auto;margin-right:auto;font-size:25px;color:#333;position:relative;text-align:center">
+            <span style="color:#e5a320;font-weight:bold">{{sn_ct("Prix moyen")}}:  </span> <span style="color:#e5a320;font-weight:bold" id='total'></span>
+            <hr align="right" style="margin:0;border-color:#f4d79c;width:100%;" />
+            <span style="font-size:0.5em;display:block">{{sn_ct("Inclus matériaux et main d'oeuvre")}}</span>
+        </div>
+        <div class="col-sm-12" style="margin:15px; padding:0px;">
+            <span style="font-size:1.2em">{{sn_ct("Besoin de soumissions d'entrepreneurs qualifiés?")}}</span>
+            <a href="#get_3_quotes" target="_self" class="btn btn-primary" style="margin:10px;">{{sn_ct("Recevez 3 soumissions")}}</a>
+        </div>
+    </div>
+    
+    
+</div>
+
+<script>
+    $(document).ready(function(){
+        if($('.description'))
+    })
+</script>
+<script id="plotScript" async>
+function drawPlot(min, max, avg){
+
+  var line1 = [[min*(70/100), 0,  null], [min, 0.1,  "{{sn_ct(edit:false,"min: $")}}" + min], [max, 0.1, "{{sn_ct(edit:false,"max: $")}}"+ max], [avg, 0.8, "{{sn_ct(edit:false,"moyen: $")}}" + avg], [max*(120/100), 0, null],];
+  
+      var plot = $.jqplot('chart1', [line1], {
+        // title: '\{{plot_title}}', 
+        seriesDefaults: {
+          rendererOptions: {smooth: true},
+          showMarker:true, 
+          pointLabels:{ show:true }
+        },
+        axesDefaults: {
+          showTickMarks:true
+        },  
+        axes:{ 
+            xaxis:{ 
+                pad: 0 
+            }, 
+            yaxis:{ 
+                pad: 1.5 
+            }   
+        }
+      });
+      
+      plot.replot();
+}
+</script>
+
+<script>
+
+var nbrprams = $('#nbrprams').val();
+var sel_params = {};
+var selID = $('.param1').val();
+subtotal = 0;
+
+//available parameters
+param1 = $('.param1:radio:checked').val();
+param2 = $('.param2:radio:checked').val();
+param3 = $('.param3:radio:checked').val();
+param4 = $('.param4:radio:checked').val();
+
+
+if(param1 != undefined || param1 != ""){
+    sel_params['param1'] = param1;
+}
+
+if(param2 != undefined || param2 != ""){
+    sel_params['param2'] = param2;
+}
+
+if(param3 != undefined || param3 != ""){
+    sel_params['param3'] = param3;
+}
+
+if(param4 != undefined || param4 != ""){
+    sel_params['param4'] = param4;
+}
+
+
+//on load, estimate cost
+default_param(selID)
+ 
+    
+    /**
+     * 
+     **/
+    function nbrParams(params){
+        var count=0;
+        
+        for (var k in params) {
+            if (params.hasOwnProperty(k)) {
+              ++count;
+            }
+        }
+        return count;
+    }
+    
+    
+    
+    /**
+     * 
+     **/
+    function estimate(params,subtotal){
+        
+        default_price = '';
+        
+        if(subtotal === undefined){
+            subtotal = 0;
+        }
+        
+        $.ajax({
+            type: "POST",
+            data: params,
+            beforeSend: function(){
+                $(".loader").show();
+            },
+            
+            success: function(data, statusText, xhr) {
+                
+                //initialize fixed min, max and avg price for this combination
+                var min_price = xhr.getResponseHeader('X-min-cost');
+                var max_price = xhr.getResponseHeader('X-max-cost');
+                var avg_price = xhr.getResponseHeader('X-avg-cost');
+                
+
+                //alert(xhr.getResponseHeader('X-debug'));
+                //initialize fixed units number for this combination
+                var u1 = parseInt(($('#unit1').val() === undefined || $('#unit1').val() === "") ? 0 : $('#unit1').val());
+                var u2 = parseInt(($('#unit2').val() === undefined || $('#unit2').val() === "") ? 0 : $('#unit2').val());
+                var u3 = parseInt(($('#unit3').val() === undefined || $('#unit3').val() === "") ? 0 : $('#unit3').val());
+                var u4 = parseInt(($('#unit4').val() === undefined || $('#unit4').val() === "") ? 0 : $('#unit4').val());
+                
+                //initialize user units entries and unit cost level for parameter 1 if provided.
+                var p1 = parseInt(($('#param1_val').val() === undefined) ? 0 : $('#param1_val').val());
+                var c1_min =  parseFloat(($('#min_unit1_cost').val() === undefined) ? 0 : $('#min_unit1_cost').val());
+                var c1_max =  parseFloat(($('#max_unit1_cost').val() === undefined) ? 0 : $('#max_unit1_cost').val());
+                var c1_avg =  parseFloat(($('#avg_unit1_cost').val() === undefined) ? 0 : $('#avg_unit1_cost').val());
+                
+                //initialize user units entries and unit cost level for parameter 2 if provided.
+                var p2 = parseInt(($('#param2_val').val() === undefined) ? 0 : $('#param2_val').val());
+                var c2_min =  parseFloat(($('#min_unit2_cost').val() === undefined) ? 0 : $('#min_unit2_cost').val());
+                var c2_max =  parseFloat(($('#max_unit2_cost').val() === undefined) ? 0 : $('#max_unit2_cost').val());
+                var c2_avg =  parseFloat(($('#avg_unit2_cost').val() === undefined) ? 0 : $('#avg_unit2_cost').val());
+                
+                //initialize user units entries and unit cost level for parameter 3 if provided.
+                var p3 = parseInt(($('#param3_val').val() === undefined) ? 0 : $('#param3_val').val());
+                var c3_min =  parseFloat(($('#min_unit3_cost').val() === undefined) ? 0 : $('#min_unit3_cost').val());
+                var c3_max =  parseFloat(($('#max_unit3_cost').val() === undefined) ? 0 : $('#max_unit3_cost').val());
+                var c3_avg =  parseFloat(($('#avg_unit3_cost').val() === undefined) ? 0 : $('#avg_unit3_cost').val());
+                
+                //initialize user units entries and unit cost level for parameter 4 if provided.
+                var p4 = parseInt(($('#param4_val').val() === undefined) ? 0 : $('#param4_val').val());
+                var c4_min =  parseFloat(($('#min_unit4_cost').val() === undefined) ? 0 : $('#min_unit4_cost').val());
+                var c4_max =  parseFloat(($('#max_unit4_cost').val() === undefined) ? 0 : $('#max_unit4_cost').val());
+                var c4_avg =  parseFloat(($('#avg_unit4_cost').val() === undefined) ? 0 : $('#avg_unit4_cost').val());
+                
+                
+                //make sure to always use default u's variables in case of wrong user input or inputs less than fixed units. 
+                p1 = (p1 < u1 || p1 === "") ? u1 : p1;
+                p2 = (p2 < u2 || p2 === "") ? u2 : p2;
+                p3 = (p3 < u3 || p3 === "") ? u3 : p3;
+                p4 = (p4 < u4 || p4 === "") ? u4 : p4;
+                
+                m =( $('#multiplier_val').val() === undefined || $('#multiplier_val').val() === "" || $('#multiplier_val').val() === '0') ? 1 : parseFloat($('#multiplier_val').val());
+                
+                //alert("(" + c1_avg + "*" + "(" + p1 + "-" + u1 + ")" + " +" + c2_avg + "*" + "(" + p2 + "-" + u2 + ")" + " + " + c3_avg + "*" + "(" + p3 + "-" + u3 + ")" + ")" + m);
+                
+                
+                //formula to calculate total of minimum cost
+                var minres =  (parseFloat((c1_min * (p1 - u1)) + (c2_min * (p2 - u2)) + (c3_min * (p3 - u3))) + parseFloat(min_price)) * m;
+                    minres = parseFloat(minres.toFixed(2)) + parseFloat(subtotal);
+                //formula to calculate total of maximum cost
+                var maxres =  (parseFloat((c1_max * (p1 - u1)) + (c2_max * (p2 - u2)) + (c3_max * (p3 - u3))) + parseFloat(max_price)) * m;
+                    maxres = parseFloat(maxres.toFixed(2)) + parseFloat(subtotal);
+                //formula to calculate total of average cost and display average total cost by default.
+                var avgres =  (parseFloat((c1_avg * (p1 - u1)) + (c2_avg * (p2 - u2)) + (c3_avg * (p3 - u3))) + parseFloat(avg_price)) * m;
+                    avgres = parseFloat(avgres.toFixed(2)) + parseFloat(subtotal);
+                    
+                if(minres === "" || isNaN(minres)){
+                    minres = 0;
+                }
+                
+                if(maxres === "" || isNaN(maxres)){
+                    maxres = 0;
+                }
+                
+                if(avgres === "" || isNaN(avgres)){
+                    avgres = 0;
+                }
+                
+                $('#graph_min').val(minres);
+                $('#graph_max').val(maxres);
+                $('#graph_avg').val(avgres);
+                $('#total').html('$'+avgres );
+
+                //callback function to draw the plot dynamically
+                result = drawPlot(minres, maxres, avgres);
+                
+            },
+            complete: function(){
+                $(".loader").hide();
+            }
+        });
+    }
+
+
+    function add_other_param(uid,idparam){
+        if($('#other_' + uid).is(":checked")){
+            subtotal = subtotal + (parseFloat($('#multiplier_val').val()) * parseFloat($('#other_cost_' + uid).val()));
+        }else{
+            subtotal = subtotal - (parseFloat($('#multiplier_val').val()) * parseFloat($('#other_cost_' + uid).val()));
+        }
+        
+        estimate(sel_params,subtotal);
+    }
+    
+    
+    function default_param(id){
+        if(!$('.param2').length){
+            estimate(sel_params);
+        }else{
+            $.ajax({
+                type: "POST",
+                data: {"p1":id},
+                success: function(data, statusText, xhr) {
+                    var nc = 0;
+                    var a = JSON.parse(xhr.getResponseHeader('X-selected'));
+                    $('.cell2').hide();
+
+    
+                     $('.user_units').prop('disabled',true);
+                      $('.user_multiplier').prop('disabled',true);
+                    
+                    for(var i=0; i < a.length; i++) {
+                        
+                        if($('#param_'+a[i].param2).is(":checked")){
+                            nc++;
+                        }
+                        
+                        
+                        if(i == (a.length - 1) && nc == 0){
+                            $('#param_'+a[0].param2).prop('checked',true);
+                            $('#param_'+a[0].param2).trigger('change');
+                        }
+                        
+                        $('#cell_'+a[i].param2).show();
+                        $('.user_units').prop('disabled',false);
+                        $('.user_multiplier').prop('disabled',false);
+    
+                    }
+                }
+            });
+        }
+    }
+    
+
+    function add_param1(id){
+        
+        $('#calculator').val(0);
+        sel_params['param1'] = id;
+        //$('.param2').prop('checked',false);
+        default_param(id);
+        
+        if(nbrParams(sel_params) >= nbrprams){
+            estimate(sel_params, subtotal);
+        }
+    }
+    
+    function add_param2(id){
+        $('#calculator').val(0);
+        sel_params['param2'] = id;
+        
+        if(nbrParams(sel_params) >= nbrprams){
+            estimate(sel_params, subtotal);
+        }
+            
+    }
+
+    function add_param3(id){
+        $('#calculator').val(0);
+        sel_params['param3'] = id;
+        
+        if(nbrParams(sel_params) >= nbrprams){
+            estimate(sel_params,subtotal);
+        }
+    }
+
+    function add_param4(id){
+        $('#calculator').val(0);
+        sel_params['param4'] = id;
+
+        if(nbrParams(sel_params) >= nbrprams){
+            estimate(sel_params,subtotal);
+        }
+    }
+    
+    function updatePrice(element){
+        if(nbrParams(sel_params) >= nbrprams && $(element).val() != ""){
+            estimate(sel_params,subtotal);
+        }
+    }
+    
+    $(".user_units").keypress(function (e) {
+        //if the letter is not digit then display error and don't type anything
+        if (e.which != 8 && e.which != 0 && (e.which < 48 || e.which > 57)){
+            //display error message
+            return false;
+        }
+    });
+    
+    $(".user_multiplier").keypress(function (e) {
+        //if the letter is not digit then display error and don't type anything
+        if (e.which != 8 && e.which != 0 && (e.which < 48 || e.which > 57)){
+            //display error message
+            return false;
+        }
+    });
+
+</script>

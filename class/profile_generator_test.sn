@@ -1,0 +1,209 @@
+{{
+  
+class Profilgen 
+
+    
+
+method Profilgen()
+    this.template_en = "/site/profiles/profile_template_test.sn";
+    this.template_fr = "/site/profiles/profile_modele_test.sn";
+endm
+
+
+    method generate(cuid)
+        //get contractor profil information
+        res = sql(single:true,"select * from sr_contractor where active = 'yes' and uid = ?", cuid);
+        contractor = res.rows;
+     	
+        if(contractor.active eq 'yes') then
+        //get additional information for this contractor.
+            photos = sql("SELECT * FROM sr_gallery WHERE uid_contractor='?' AND active='yes' ORDER BY priority ASC, uid DESC", contractor.uid);    	
+            address = sql(single:true, "SELECT a.street_no, a.street, a.zip, a.province, c.name_? as real_city FROM sr_address a INNER JOIN sr_city c ON a.uid_city = c.uid WHERE uid_contractor = ?", contractor.contact_lg, contractor.uid);
+            contractor_services = sql("SELECT * FROM sr_contractor_service cs INNER JOIN sr_service s ON s.uid = cs.uid_service WHERE cs.uid_contractor = ? GROUP BY name_?", contractor.uid, contractor.contact_lg);
+            profil = sql(single:true, "SELECT * FROM sr_contractor_profil WHERE uid_contractor='?'", contractor.uid);
+            customLicenses = sql("SELECT * FROM sr_additional_license WHERE uid_contractor='?'", contractor.uid);
+            update_profile = sql("UPDATE sr_contractor SET show_profile = 'yes' WHERE show_profile IS NULL and uid = ? ", contractor.uid);
+            contractor_rating = sql("SELECT DATE(accepted_date) as system_date, pc.evaluation_date, pc.uid_project, pc.client_comment, pc.client_satisfaction, ps.name_? as sname, ps.city, ps.firstname FROM sr_project_contractor pc  
+                                    INNER JOIN (select p.uid, s.name_?, (select ct.name_? from sr_address ad INNER JOIN sr_city ct on ad.uid_city = ct.uid where ad.uid = p.uid_address) as city, (select firstname from sr_client where uid = p.uid_client) as firstname from sr_project p INNER JOIN sr_service s on s.uid = p.uid_service) ps 
+                                    WHERE pc.uid_contractor = '?' 
+                                    AND ps.uid = pc.uid_project
+                                    AND pc.client_satisfaction <> ''
+                                    AND pc.comment_verified = 'yes'
+                                    AND NOT isnull(pc.client_satisfaction) ORDER BY client_comment IS NOT NULL DESC, client_comment <> '' DESC, evaluation_date DESC, system_date DESC , client_satisfaction DESC;
+                                    ", contractor.contact_lg, contractor.contact_lg, contractor.contact_lg, contractor.uid);
+            
+            //  some variable information
+            licenses = customLicenses.rows;
+            lic_iterator = 0;
+            current_profil = profil.rows;
+            pics = photos.rows;
+            services = contractor_services.rows;
+            numpic = 0;
+            contractor.streetNo = address.rows.street_no;
+            contractor.street = address.rows.street;
+            contractor.city = address.rows.real_city;
+            contractor.zip = address.rows.zip;
+            contractor.province = address.province;
+            //contractor.services = services;
+            contractor.language = lg;
+            contractor.mylogo = current_profil.company_logo;
+            contractor.mybanner = current_profil.banner_1;
+            default_banner = "";
+            current_page = contractor.seo;
+    		lg = contractor.contact_lg;
+    		
+    		
+    		//Create array of banners to be loaded
+    		banner_img = [];
+    		next = [];
+    		for a dir(order:"desc",sortby:"mtime","/sn_uploads/rotator/") do
+    		    rn = random(min:111,max:999);
+               push(banner_img, {'banner': "/sn_uploads/rotator/" .+ a.file, 'next': rn});
+               push(next, rn);
+            endfor
+            
+            //pull max next weight from banner away
+            max = next[0];
+            for (i=0;i<next.length();i++) do
+                if(next[i] > max) then
+                max = next[i];
+                endif
+            endfor
+            
+            //load the banner with maximum next weight
+            for img in banner_img do
+                if(img.next == max) then
+                    default_banner = img.banner;
+                endif
+            endfor
+            
+            if(contractor.mybanner eq "") then
+                contractor.mybanner = default_banner;
+            endif
+    		
+            //calcul average rate for customer
+            total_rate = 0;
+            contractor.reviews = [];
+            c = 1;
+            f = 0;
+            
+    		for r in contractor_rating.rows do
+    		   total_rate = total_rate + r.client_satisfaction;
+    		   
+    		   //display rating date. If not provided display project_contractor sn_mdate.
+    		   if(r.evaluation_date ne "" && r.evaluation_date ne '0000-00-00') then
+    		       d = r.evaluation_date;
+    		   else
+    		       d = r.system_date;
+    		   endif
+    		   
+    		   push(contractor.reviews,{
+    		    'rating': r.client_satisfaction, 
+    		    'comment': r.client_comment, 
+    		    'service': r.sname, 
+    		    'city': r.city, 
+    		    'firstname': r.firstname, 
+    		    'comment_date': d});
+    		endfor
+    		
+    		if(contractor_rating.nbrows != 0) then
+        		contractor.avgRate = total_rate / contractor_rating.nbrows;
+        	else
+        	    contractor.avgRate = 0;
+    		endif
+            
+            
+            
+    		//Company description length
+    		if(contractor.company_desc.length() > 200) then
+    		    if(lg eq 'fr') then
+        		    new_string = contractor.company_desc.substr(0,200) .+ "<a href='#apropos'>Lire plus</a>";
+    		        contractor.brieve_desc = new_string;
+    		    else
+        		    new_string = contractor.company_desc.substr(0,200) .+ "... <a href='#about'>Read more</a>";
+    		        contractor.brieve_desc = new_string;
+    		    endif
+    		endif
+    		
+    		
+    		
+    		
+    		//Generate bgcolor if there is no logo
+    		if(current_profil.company_logo ne "") then
+                contractor.logoBg = "";
+            else
+        		contractor.logoBg = "#eeeeee";
+    		endif
+    		
+    		
+            //create album element
+            for thePic in pics do
+                contractor.pic[numpic] = thePic.photo;
+                numpic++;
+            endfor
+            
+            for l in licenses do 
+                contractor.licname[lic_iterator]  = l.lic_name;
+                contractor.licnumber[lic_iterator] = l.lic_number;
+                
+                contractor.lics .+= '<tr><th><h5>';
+                contractor.lics .+= contractor.licname[lic_iterator];
+                contractor.lics .+= '</h5></th><td>';
+                contractor.lics .+= contractor.licnumber[lic_iterator];
+                contractor.lics .+= '</td></tr>';
+                lic_iterator = lic_iterator + 1;
+            endfor
+    
+            
+            
+            //load contractor services
+            i = 0;
+            for s in services do 
+                if lg eq "fr" then
+                    contractor.srv[i] = s.name_fr;
+                    i = i + 1;
+                elseif lg eq "en" then
+                    contractor.srv[i] = s.name_en;
+                    i = i + 1;
+                endif
+            endfor
+            
+
+            //contractor website format
+            if(strpos(contractor.website, 'http') == -1) then
+                contractor.weburl = 'http://' .+ contractor.website;
+            else
+                contractor.weburl = contractor.website;
+            endif
+            
+            //Update SEO field with a cleaned company name
+            if current_page ne "" then
+    			//profile has not been updated, since last update skip
+    		else
+                seo = lc(esc(nodouble:true,filter:"filenameinutf8", contractor.company_name));
+                void sql("update sr_contractor set seo = '?' where uid = '?'", seo, contractor.uid);
+                contractor.seo = seo;
+                
+                  if(lg eq 'fr') then
+                    contractor.clink = "/entrepreneur/" .+ contractor.seo .+ ".snc"; 
+                    // generate the profile in french for the contractor
+                    void generate(delcompile: false, compile: true, file: "/html/entrepreneur/" .+ contractor.seo .+ ".snc",template: this.template_fr);
+            	    void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/entrepreneur/" .+ contractor.seo .+ ".snc"});
+                  '<br>';'<a href="'.+ 'http://soumissionrenovation.ca/entrepreneur/' .+ contractor.seo .+ '.snc"' .+ '>' .+ 'http://soumissionrenovation.ca/entrepreneur/' .+ contractor.seo .+ '.snc</a>'; 
+                  elseif(lg eq 'en') then
+                  contractor.clink = "/contractor/" .+ contractor.seo .+ ".snc";
+                    // generate the profile in english for the contractor
+                    void generate(delcompile: false, compile: true, file: "/html/contractor/" .+ contractor.seo .+ ".snc",template: this.template_en);
+                    void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/contractor/" .+ contractor.seo .+ ".snc"});
+                  '<br>';'<a href="'.+ 'http://renoquotes.com/contractor/' .+ contractor.seo .+ '.snc"' .+ '>' .+ 'http://renoquotes.com/contractor/' .+ contractor.seo .+ '.snc</a>';
+                  endif
+                  
+            endif
+    
+        endif
+        
+    endm
+endc
+}}
+    
+    

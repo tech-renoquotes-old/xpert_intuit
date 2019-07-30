@@ -1,0 +1,120 @@
+{{
+    /*
+        @title contractor_accept_project
+        Description: Allow the contractor to accept a project.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+<style>
+    .bold{
+        font-weight:bold;
+    }
+</style>
+\{{
+    cgidata = cgidata();
+    
+    project = sql(single:true,"
+        SELECT p.uid, a.street_no, a.street, a.city, a.province, a.zip, p.description, p.due_date, p.lead_price
+        FROM sr_project_contractor pc
+        INNER JOIN sr_project p ON p.uid=pc.uid_project
+        LEFT JOIN sr_address a ON a.uid=p.uid_address
+        WHERE pc.token='?'
+        ", cgidata.token);
+   
+    if project.nbrows > 0 && cgidata.accepted eq "" then
+}}
+
+    <h2 style="margin:0px 0px 20px;">{{sn_ct("contractor_accept_project Information sur le projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h2>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.uid}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Adresse :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4"> 
+            \{{project.rows.street_no}}&nbsp;\{{project.rows.street}}, \{{project.rows.city}}, \{{project.rows.province}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.zip}}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.description}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.due_date}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.zip}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{money_format(project.rows.lead_price, {{"lg.rows.lg"}} )}}
+        </div>
+    </div>
+    <div style="margin:20px 0px"><hr></div>
+
+    <div class="row">
+        <form action="{{pages('sr_confirmation_accept_project', lg.rows.lg, table:'pages')}}" id="accept_project" name="accept_project" method="POST">
+            <input type="hidden" name="token" value="\{{cgidata.token}}">
+    
+            <div class="col-md-3">
+                <button type="submit" name="accepted" value="halfpriced" class="btn btn-primary">{{sn_ct("contractor_accept_project  Non, mais à moitié prix oui", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" name="accepted" value="no"  class="btn btn-primary">{{sn_ct("contractor_accept_project  Non", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" name="accepted" value="yes" class="btn btn-primary">{{sn_ct("contractor_accept_project  Oui", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>
+            </div>
+        </form>
+    </div>
+
+
+\{{endif}}

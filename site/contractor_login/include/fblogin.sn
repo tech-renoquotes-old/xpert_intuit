@@ -1,0 +1,194 @@
+<script>
+function showStatut(){
+    checkLoginState();
+   // alert(document.getElementById('status').innerHTML );
+   FB.getLoginStatus() ;
+   var getResp = FB.getAuthResponse();
+    //alert(FB.getAuthResponse());
+  FB.api('/me', function(response) {
+     // console.log('Successful login for: ' + response.name);
+    // var accessToken = response.authResponse.accessToken;
+     // console.log('Token='+ accessToken);
+       // fr-extranet-login
+      // console.log("{{p.rows{'folder_' .+ lg.rows.lg}; p.rows{'page_' .+ lg.rows.lg}; }}.snc");
+      // console.log(location);
+     // location = location;
+       
+      //closeSelf();
+      
+     //  window.location = "http://ssr.sednove.ca/extranet/fr/profil-entrepreneur";
+       
+    // window.location =  "/extranet/{{lg.rows.lg}}/index.snc";
+    
+    window.location = "/fr/extranet-login.snc/?action=fb&fb_uid=" + fb_uid; 
+     
+    //   if "{{p.nbrows}}" eq 1 then
+    //                      file = "{{p.rows{'folder_' .+ lg.rows.lg}; p.rows{'page_' .+ lg.rows.lg}; }}.snc";
+    // 				 else
+    // 				     file =  "/extranet/{{lg.rows.lg}}/index.snc";
+    // 				endif
+    });
+}
+
+
+  fb_uid="";
+
+  // This is called with the results from from FB.getLoginStatus().
+  function statusChangeCallback(response) {
+   // console.log('statusChangeCallback');
+    //console.log(response);
+    // The response object is returned with a status field that lets the
+    // app know the current login status of the person.
+    // Full docs on the response object can be found in the documentation
+    // for FB.getLoginStatus().
+    if (response.status === 'connected') {
+      // Logged into your app and Facebook.
+      fb_uid = response.authResponse.userID;
+      accessToken = response.authResponse.accessToken;
+      //console.log("UID="+fb_uid);
+      //console.log("accessToken="+accessToken);
+      var url = '/me?fields=id,name,email';
+        FB.api(url, function (response) {
+           // console.log(response.name);
+           // console.log(response.email);
+            //alert(response.email);
+            fb_email = response.email;
+        });
+       //testAPI();
+    } else if (response.status === 'not_authorized') {
+      // The person is logged into Facebook, but not your app.
+      document.getElementById('status').innerHTML = 'Please log ' +
+        'into this app.';
+    } else {
+      // The person is not logged into Facebook, so we're not sure if
+      // they are logged into this app or not.
+      document.getElementById('status').innerHTML = 'Please log ' +
+        'into Facebook.';
+    }
+  }
+
+  // This function is called when someone finishes with the Login
+  // Button.  See the onlogin handler attached to it in the sample
+  // code below.
+  function checkLoginState() {
+    FB.getLoginStatus(function(response) {
+      statusChangeCallback(response);
+    });
+  }
+  //code=AQDbQS_IUk8tmvbB-oiJnpBMEm7fC6t2cLd_vZ-ktvWh06zDqSFaOCw16MR-i2Dcsh8_TRuEkoAzJQ9Kcwaub9HniZtQDQrg8e8evGAv3837i2gEq3DjonXEirXWGOVCLRaLbohtsfGtYSp3bn5yRWn-m2NlwQDNa9_pQiHCYQG1pqV-C6qNKsG-6r6hcAYVsuDWLw7HpeCTBkOk5qCpRpSdyPHKhGmJObsmeIB8d68c3UEOlpKgMB_TeIEiTJqnj0JTOKducSxMAmTywvFj0M8Q4VYKjUme_SDHp8y8xXDk1d9TE8V3Xp4SoU_ic0olTV0#_=_
+  window.fbAsyncInit = function() {
+  FB.init({
+    appId      : '1804360176488616',
+    cookie     : true,  // enable cookies to allow the server to access 
+                        // the session
+    xfbml      : true,  // parse social plugins on this page
+    version    : 'v2.5' // use graph api version 2.5
+  });
+
+  // Now that we've initialized the JavaScript SDK, we call 
+  // FB.getLoginStatus().  This function gets the state of the
+  // person visiting this page and can return one of three states to
+  // the callback you provide.  They can be:
+  //
+  // 1. Logged into your app ('connected')
+  // 2. Logged into Facebook, but not your app ('not_authorized')
+  // 3. Not logged into Facebook and can't tell if they are logged into
+  //    your app or not.
+  //
+  // These three cases are handled in the callback function.
+
+  FB.getLoginStatus(function(response) {
+    statusChangeCallback(response);
+  });
+
+  };
+  
+  
+//  FB.onLogin(function(response){
+//      console.log();
+//  });
+ 
+  
+//   FB.login(function (response) {
+//         if (response.session) {
+//             var url = '/me?fields=name,email';
+//             FB.api(url, function (response) {
+//                 alert(response.name);
+//                 alert(response.email);
+//             });
+//         }
+//         else {
+//             alert("User did not login successfully");
+//         }
+//     }, { scope: 'email' }); 
+            
+ 
+  
+//   FB.getLoginStatus(function(response) {
+//   if (response.status === 'connected') {
+//     var accessToken = response.authResponse.accessToken;
+//     alert("accessToken="+accessToken);
+//   } 
+// } );
+//------ from fb reference 
+var page_like_or_unlike_callback = function(url, html_element) {
+  //console.log("page_like_or_unlike_callback");
+  //console.log(url);
+  //console.log(html_element);
+}
+
+// In your onload handler
+// FB.Event.subscribe('edge.create', page_like_or_unlike_callback);
+// FB.Event.subscribe('edge.remove', page_like_or_unlike_callback);
+//---------
+
+  // Load the SDK asynchronously
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/en_US/sdk.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+
+  // Here we run a very simple test of the Graph API after login is
+  // successful.  See statusChangeCallback() for when this call is made.
+  function testAPI() {
+    //console.log('Welcome!  Fetching your information.... ');
+    FB.api('/me', function(response) {
+      var url = '/me?fields=name,email';
+     // console.log('Successful login for: ' + response.name);
+     // console.log('Successful login for: ' + response.email);
+      document.getElementById('status').innerHTML =
+        'Thanks for logging in, ' + response.name +  '!';
+        
+    });
+  };
+  
+
+ 
+    //         /* perms changed to scope */
+    // FB.Event.subscribe('auth.login', function(response) {
+    //     // do something with response
+    //   alert("FB Event Suscribe");
+    // });
+
+    // // In your onload method:
+    // FB.Event.subscribe('auth.login', login_event);
+    // FB.Event.subscribe('auth.logout', logout_event);
+    
+    // In your JavaScript code:
+    var login_event = function(response) {
+     // console.log("login_event");
+     // console.log(response.status);
+     // console.log(response);
+    }
+    
+    var logout_event = function(response) {
+     // console.log("logout_event");
+     // console.log(response.status);
+     // console.log(response);
+    }
+
+
+</script>

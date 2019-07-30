@@ -1,0 +1,168 @@
+<style>
+    .white-popup {
+        margin:0 auto;
+        position: relative;
+        width:800px;
+
+    }
+</style>
+
+
+\{{ //To display title, need at least one element of the type
+    open_gallery = false;
+    attached_files = false;
+    attached_audios = false;
+    
+    //To display only 3 photo/video medias
+    nb_current = 0;
+    nb_limit = 3;
+ }}
+    <div class="zoom-gallery mt30 gal_img_container">
+        <div class="row gal_img">
+            <!-- Displayed images in the gallery  -->
+        \{{ for media in medias.rows  do
+                if media.type eq 'photo' then
+                    open_gallery = true;
+                    nb_current++;
+        }}
+                    \{{media.rows.title}}
+                    <div class="gal_img_item\{{(nb_current > 3) ? ' hide' : '' ;}}">
+                        <a class="openGallery mfp media-thumbnail-container\{{if nb_current > nb_limit then}} mfp-hide\{{endif}}" href="\{{media.image}}" title="Credit : \{{media.credit}}" data-source="\{{media.image}}">
+                            <img src="\{{media.image}}?size=250x175&crop" alt="\{{(media.alt_attribute eq '') ? media.title : media.alt_attribute}}" class="s_img-responsive mauto">
+                        </a>
+                    </div>
+            \{{ elseif media.type eq 'video' && media.video_type eq 'youtube' then
+                    open_gallery = true;
+                    nb_current++;
+            }}
+                    <div class="gal_img_item\{{(nb_current > 3) ? ' hide' : '' ;}}">
+                        <a class="openGallery mfp mfp-iframe media-thumbnail-container \{{if nb_current > nb_limit then}} mfp-hide\{{endif}}" href="http://www.youtube.com/watch?v=\{{resub(media.youtube_url,"^(.*[=/])?([\w-]{11})([&\"'].*)?$","$2", "i")}}" title="\{{media.title}}">
+                            <div class="icon_overlay">
+                                <i class="fa fa-play" aria-hidden="true"></i>
+                            </div>
+                            \{{if media.image ne "" then}}
+                                <img src="\{{media.image}}?size=250x175&crop" class="s_img-responsive mauto">
+                            \{{else}}
+                                <img src="\{{blog_config.rows.video_default_image}}?size==250x175&crop" class="s_img-responsive mauto">
+                            \{{endif}}
+                        </a>
+                    </div>
+            \{{ elseif media.type eq 'video' && media.video_type eq 'local' then
+                    open_gallery = true;
+                    nb_current++;
+            }}
+                    <div class="gal_img_item\{{(nb_current > 3) ? ' hide' : '' ;}}">
+                        <div id="popup-video" class="mfp-hide white-popup">
+                           <video width="800" controls>
+                                <source src="\{{media.video_file}}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        <a class="openGallery mfp mfp-inline media-thumbnail-container \{{if nb_current > nb_limit then}} mfp-hide\{{endif}}"  href="#popup-video" title="\{{media.title}}">
+                            <i class="fa {{blog_config.rows.icon_video}}"></i>
+                            \{{if media.image ne "" then}}
+                                <img src="\{{media.image}}?size=250x175&crop" class="s_img-responsive mauto">
+                            \{{else}}
+                                <img src="\{{blog_config.rows.video_default_image}}?size=250x175&crop" class="s_img-responsive mauto">
+                            \{{endif}}
+    	            	</a>
+	            	</div>
+	            \{{elseif media.type eq 'pdf' then}}
+	                \{{attached_files = true;}}
+	            \{{elseif media.type eq 'audio' then}}
+	                \{{attached_audios = true;}}
+                \{{endif}}
+            \{{endfor}}
+            \{{if open_gallery then}}
+                <div class="gal_img_item last">
+                    <div class="aspectratio">
+                        <div class="position">
+                            <div class="dtable">
+                  
+                                    <a href="javascript:void(0)" onclick="$('.zoom-gallery > div > div:nth-child(1)').find('.openGallery').click();" class="btn btn-default btn-block">
+                                        Open Gallery
+                                    </a>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            \{{endif}}
+        </div>
+        
+    </div>
+    
+    \{{if attached_files then}}
+        <div class="mb30 col-sm">
+            <h2 class="text-center">
+                List of related files
+            </h2>
+            \{{for media in medias.rows do}}
+                \{{if media.type eq 'pdf' then}}
+                    <div class="blog_media_link">
+                        <i class="fa fa-file-pdf-o"></i><a href="\{{media.file}}" target="_blank">\{{media.title}}</a>
+                    </div>
+                \{{endif}}
+            \{{endfor}}
+        </div>
+    \{{endif}}
+    
+    \{{if attached_audios then}}
+        <div class="mb30 col-sm">
+            <h2 class="text-center">
+                Related audio files
+            </h2>
+            \{{for media in medias.rows do}}
+                \{{if media.type eq 'audio' then}}
+                    <div class="blog_media_link media_audio">
+                        <div class="row">
+                            <div class="col-sm-2 text-right hide_mob">
+                                <i class="fa fa-music"></i> 
+                            </div>
+                            <div class="col-sm-10">
+                                <div>
+                                    <audio class="" controls style="display:inherit">
+                                        <source src="\{{media.file}}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio> 
+                                </div>
+                                <div class="text-left">
+                                    \{{(media.title ne '') ? media.title : '';}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                \{{endif}}
+            \{{endfor}}
+        </div>
+\{{endif}}
+<style>
+    .cs .blog_media_link .table{
+        display:table;
+        width:100%;
+    }
+    .cs .blog_media_link .dcell{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .cs .blog_media_link{
+        height:auto;
+    }
+    .cs .blog_media_link audio{
+        margin:auto;
+        width:100%;
+    }
+    @media (max-width:768px){
+        .cs .blog_media_link .table{
+            display:block;
+        }
+        .cs .blog_media_link .dcell{
+            display:block;
+            text-align:center;
+        }
+        .cs .blog_media_link .hide_mob{
+            display:none;
+        }
+        
+    }
+</style>

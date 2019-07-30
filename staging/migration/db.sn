@@ -1,0 +1,28 @@
+{{
+    db_from_params = {
+        'dbhost' : "104.193.143.77", 
+        'dbuser' : "soumis5_sednove", 
+        'dbpass' : "1@N8dMc!CEho", 
+        'dbname' : "soumis5_access"
+    };
+    db_dest_params = {
+        'dbhost' : "localhost", 
+        'dbuser' : "srv1", 
+        'dbpass' : "JQnwYNPr", 
+        'dbname' : "srv1"
+    };
+    
+    // Connect to Databases
+    db_from = connect(
+        dbhost : db_from_params.dbhost, 
+        dbuser : db_from_params.dbuser, 
+        dbpass : db_from_params.dbpass, 
+        dbname : db_from_params.dbname
+    );
+    db_dest = connect(
+        dbhost : db_dest_params.dbhost, 
+        dbuser : db_dest_params.dbuser, 
+        dbpass : db_dest_params.dbpass, 
+        dbname : db_dest_params.dbname
+    );
+    

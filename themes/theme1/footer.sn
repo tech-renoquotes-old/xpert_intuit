@@ -1,0 +1,289 @@
+{{ 
+	//
+	// Name:		footer
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	// @version     1.01 2017-02-10     bbduc@yahoo.com   ajout de cookie
+	// @version     1.02 2017-02-10     bbduc@yahoo.com   ajout de first_visited
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	%include "/extenso/functions/sn_widgets.snc"; 
+
+	use lg;
+	use ressource;
+	use page;  //for cookie
+	
+	footer_grid = sql(single:true, "SELECT * FROM sn_grid WHERE footer='yes' AND active='yes'");
+}}
+
+\{{  //Cookie add
+use extranet_user;
+
+// Initialise cookie
+// pour test ?region=mtl&net=g&cre=146204715289&campaignid=250098300&adgroupid=18001996140&pos=1t4&kw=Entrepreneur Général
+//  et regarder dans le projet
+cookies = cookies();
+request = request();
+if cookies.soumissionrenovation == undefined then
+    if (request.args) then     // test si contient cre
+       // if strpos(request.args,"cre") >= 0 then 
+        	date = datetime();
+        	adwords = request.args;
+        	cookie = { 'url' : request.hostname .+ request.uri, 'adwords' : adwords, 'date' : date };
+        	expirytime=datetime(extended:true,op:"+3h",format:"%Sednove2");
+        	cookies(name:"soumissionrenovation",value:cookie,path:"/",expiry:expirytime);
+        //endif
+    endif
+endif
+    // save a cookie with the first site visited
+
+if cookies.first_visited == undefined then
+	expiry=datetime(extended:true,op:"+3h",format:"%Sednove2");
+	cookies(name:"first_visited",value:request.hostname .+ request.uri,path:"/",expiry:expiry);
+endif
+}}
+
+{{ 
+  widget_code = "sed_counter";
+    widget = sql(single:true, "SELECT * FROM sn_widgets WHERE widget_code = '?'", widget_code);
+    
+    if widget.rows.widget_global eq "yes" then
+        include("/" .+ config.site .+ "/widgets/" .+ lg.rows.lg .+ "/" .+ widget.rows.widget_code .+ ".snc");
+    elseif widget.rows.publish eq "yes" then
+        read("/" .+ config.site .+ "/widgets/" .+ lg.rows.lg .+ "/" .+ widget.rows.widget_code .+ ".snc");
+    else
+    	read(widget.rows.code);
+    endif
+}}
+<div class="container-full sed-footer no-print">
+	<div class="container-fluid">            
+		<div class="row">
+			<div id="sn_cs_footer">
+			    {{
+		            /*if footer_grid.nbrows > 0 then
+		                uid_grid = footer_grid.rows.uid;
+		                grid = unstringnify(footer_grid.rows.grid);
+			            %include "/includes/show_grid.sn";
+		            endif*/
+			    }}
+			    {{
+                    use config;
+                    
+                    logo = sql(single:true, "SELECT sn_configs.logo_fr,sn_configs.logo_en FROM sn_configs WHERE uid = 1");
+                    if lg.rows.lg eq 'fr' then
+                        logo_url = logo.rows.logo_fr;
+                    else
+                        logo_url = logo.rows.logo_en;
+                    endif
+                }}
+                <div class="container-fluid footer">
+                    <div class="logo">.
+                        <a href="{{pages('accueil',lg.rows.lg,table:"pages")}}"><img src="{{logo_url}}" alt="XpertSource.com"></a>
+                    </div>
+                    <div class="footer_towns">
+                        {{sn_ct("footer towns", lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}
+                    </div>
+                    <div class="footer_copy">
+                        © {{datetime(format:"%Y");}} {{sn_ct("footer copyright", lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}
+                    </div>
+
+                    <div class="row border-top">
+                        <div class="col-sm-8 dt-pull-right button_container dt-text-right">
+                            <div>
+                                <a class="btn btn-default" href="tel: {{sn_ct("footer phone href", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}">
+                                    {{sn_ct("footer phone", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}
+                                </a>
+                                <a class="btn btn-primary" href="{{pages("accueil", lg.rows.lg,table:"pages")}}#sr_client_form">
+                                    {{sn_ct("footer quote", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                                <a class="btn btn-primary" href="{{pages("accueil_contractor", lg.rows.lg,table:"pages")}}">
+                                    {{sn_ct("footer entreprise", edit:false, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}} <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                            
+                           
+                        </div>
+                        <div class="col-sm-4 menu mob-center">
+                            {{ %include "/includes/call_footer_nav.sn"; }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 text-center">
+                            <div class="block-mob-center soc_media">
+                                {{sn_ct("footer follow us : ", edit:true, lg:lg.rows.lg, publish:"/extenso/publish/ressources.sn", uids:ressource.rows.uid)}}{{ %include "/includes/call_social_media_list.sn"; }}
+                            </div>
+                        </div>
+                        <div  class="col-sm-6">
+                             <div class="mt-sm menu_footer_align_right secondary_menu">
+                                {{ %include "/includes/call_secondary_footer_nav.sn"; }}
+                            </div>
+                            <div class="mt-sm menu_footer_align_right secondary_menu">
+                                {{sn_ct("Sites partenaires")}}: <a href="{{sn_ct(edit:false, "https://soumissionrenovation.ca/fr/")}}" target="_blank">{{sn_ct("SoumissionRenovation.ca")}}</a> <a href="https://b2bquotes.com" target="_blank">B2BQuotes.com</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div><!--end .footer-->
+                <style>
+                    .footer .secondary_menu{
+                        font-size:12px;
+                    }
+                    .footer .row.border-top{
+                        border-top:6px #dfdfdf solid;
+                        padding-top:42px;
+                        margin-top:30px;
+                    }
+                    .footer .logo{
+                        text-align:center;
+                        margin:0 0 30px 0;
+                    }
+                    .footer .logo img{
+                        max-height:120px;
+                        max-width:220px;
+                    }
+                    .footer_towns{
+                        font-weight:bold;
+                        text-align:center;
+                    }
+                    .footer_copy{
+                        font-size:10px;
+                        text-align:center;
+                    }
+                    .footer .menu{
+                        margin:10px 0;
+                    }
+                    
+                    .footer .item{
+                        display:inline-block;
+                        margin-right:15px;
+                        line-height:2;
+                    }
+                    .footer .menu_footer_align_right{
+                        text-align:right;
+                    }
+                    .footer .menu_footer_align_right .item{
+                        display:inline-block;
+                        margin:0 0 0 15px;
+                    }
+                    .footer .soc_media{
+                        font-size:26px;
+                    }
+                    .footer .soc_media a{
+                        text-decoration:none;
+                    }
+                    .footer .signature{
+                        line-height:37px;
+                    }
+                    .button_container .btn{
+                        margin-bottom:7px;
+                    }
+                    .button_container .btn:hover{
+                        text-decoration:none;
+                    }
+                    .button_container .btn i{
+                        font-size:10px;
+                    }
+                    .clearfix:after {
+                     visibility: hidden;
+                     display: block;
+                     font-size: 0;
+                     content: " ";
+                     clear: both;
+                     height: 0;
+                     }
+                     .dt-pull-right{
+                         float:right;
+                     }
+                     .dt-text-right{
+                         text-align:right;
+                     }
+                     .block-mob-center{
+                         text-align:left;
+                     }
+                     .mob-center{
+                         text-align:left;
+                     }
+                     @media (max-width:768px){
+                        .footer .menu_footer_align_right{
+                            text-align:center;
+                        }
+                        .footer .menu_footer_align_right .item{
+                            display:inline;
+                            margin:0 7px;
+                        }
+                         .dt-pull-right{
+                             float:none;
+                         }
+                         .dt-text-right{
+                             text-align:center;
+                         }
+                         .block-mob-center{
+                             display:inline-block;
+                         }
+                         .mob-center{
+                             text-align:center;
+                         }
+                         .soc_media a{
+                             margin:0 4px;
+                         }
+                         .button_container .btn{
+                            margin-bottom:8px;
+                            margin-right:4px;
+                            margin-left:4px;
+                        }
+                        .button_container .btn:hover{
+                            text-decoration:none;
+                        }
+                        .signature{
+                            padding:10px 0 0 0;
+                        }
+                     }
+                     @media (max-width:500px){
+                         .button_container .btn{
+                             display:block;
+                             margin:0 0 7px 0;
+                         }
+                     }
+                </style>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+    //Smooth scrolling
+    $(function() {
+        $('a[href*="#"]:not([href="#"]):not(.open-popup-link)').click(function() {
+            if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top
+                    }, 1000);
+                    return false;
+                }
+            }
+        });
+    });
+</script>
+
+{{if lg.rows.lg eq 'fr' then}}
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/5b9c13b3c9abba5796778dbd/default';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+    </script>
+    <!--End of Tawk.to Script-->
+{{else}}
+
+{{endif}}

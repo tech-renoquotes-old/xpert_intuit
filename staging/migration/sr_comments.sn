@@ -1,0 +1,30 @@
+{{
+    table_dest = 'tbl_commentaires';
+    table_from = 'tbl_commentaires';
+
+    select_query_from_src = "
+        SELECT c.* FROM `".+table_from.+"` c
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'idTBL_Commentaires'            : 'idTBL_Commentaires',
+        'ID_Entrepreneur'               : 'ID_Entrepreneur',
+        'ID_Client'                     : 'ID_Client',
+        'ID_Projet'                     : 'ID_Projet',
+        'ID_Projet_Entrepreneur'        : 'ID_Projet_Entrepreneur',
+        'ID_Utilisateur'                : 'ID_Utilisateur',
+        'Timestamp'                     : 'Timestamp',
+        'Commentaires'                  : 'Commentaires',
+        'ID_Tache'                      : 'ID_Tache',
+        'ID_Entrepreneur_Potentiel'     : 'ID_Entrepreneur_Potentiel',
+        'Entrepreneur_appel_resultat'   : 'Entrepreneur_appel_resultat'
+    };
+    
+    %include 'migration.sn';
+    
+    

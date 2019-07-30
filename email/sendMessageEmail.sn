@@ -1,0 +1,19 @@
+{{
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+//use subject;
+	use message;
+	use title;
+	
+	sujet = title;
+	message = message;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

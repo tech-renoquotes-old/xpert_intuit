@@ -1,0 +1,109 @@
+{{
+    /*
+        @title 			notifyUnpaidBalanceToContractor
+        Description		Sends en email to a contractor as a reminder to his/her balance.
+        @author 		lous.jhonny@gmail.com
+        @version 		1.0 2018-09-24
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+\{{
+    use ctr;
+    use billing;
+    use billing_footer;
+    
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if ctr.contact_gender eq "f" then
+    	titre = mme;
+    elseif ctr.contact_gender eq "m" then
+    	titre = mr;
+    endif
+    
+    prenom = ctr.contact_firstname;
+    nom = ctr.contact_lastname;
+    total = money_format(billing_footer.solde, "{{lg.rows.lg}}");
+}}
+
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+<hr>
+            <table cellpadding="0" cellspacing="0" style="width:550px;border:1px solid #999999">
+                <thead>
+                    <tr style="background-color:#eeeeee;border:1px solid #999999">
+                        <th style="text-align:left">{{sn_ct("notifyBalanceToContractor ID du projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                        <!--<th style="text-align:left">{{sn_ct("notifyBalanceToContractor Adresse", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>-->
+                        <th style="text-align:left">{{sn_ct("notifyBalanceToContractor Prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                \{{for i in billing do}}
+                <tr style="border:1px solid #99999">
+                    <td>\{{i.id}}</td>
+                    {{//V1.01 }}
+                    <!--<td>\{{i.address}}</td>-->
+                    <td>\{{(i.type eq 'transaction' || i.type eq 'balance')? '':money_format(i.amount,"{{lg.rows.lg}}")}}</td>
+                </tr>
+                \{{endfor}}
+                </tbody>
+            </table>
+   
+        
+        <!-- taxes -->
+        <table border="0" cellpadding="1" cellspacing="1" style="width:500px;">
+            <tbody>
+                <tr>
+                    <td>
+                        {{sn_ct("notifyBalanceToContractor Sous-total", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.subtotal, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {{sn_ct("notifyBalanceToContractor TPS", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 749011912 RT0001
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.tps, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {{sn_ct("notifyBalanceToContractor TVQ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 1225876106 TQ0001
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.tvq, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>
+                        {{sn_ct("notifyBalanceToContractor Total", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format((billing_footer.solde > 0)? billing_footer.solde : 0, "{{lg.rows.lg}}")}}
+                        \{{(billing_footer.solde < 0)? "<br>({{sn_ct(edit:false,'notifyBalanceToContractor Votre Balance', publish:'/extenso/publish/pages.sn', uids:page.rows.uid)}}: ".+money_format(billing_footer.solde, "{{lg.rows.lg}}").+')' : '';}}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    \{{// endif }}
+
+<hr>
+        
+{{sn_ct("notifyBalanceToContractor En tout temps, nous vous invitons à nous contacter s'il y a quoi que ce soit relatif à votre facturation",publish:'/extenso/publish/pages.sn', uids:page.rows.uid)}}
+<br><br>
+
+<b>{{sn_ct("notifyBalanceToContractor Merci et bonne journée!",publish:'/extenso/publish/pages.sn', uids:page.rows.uid)}}</b>

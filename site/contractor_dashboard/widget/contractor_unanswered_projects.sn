@@ -1,0 +1,215 @@
+{{
+    /*
+        @title contractor_unanswered_projects
+        Description: This widget displays a list of unanswered projects.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-01
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+        query = "
+            SELECT p.uid, p.uid_service as suid, '?' as s,  c.uid_territory as tuid, '?' as t, p.active_date, p.description, p.lead_price, p.due_date, a.city, c.name_fr, ifnull(pc_count.count, 0) as count, p.shared_budget
+            FROM sr_project p
+            LEFT JOIN sr_address a ON p.uid_address = a.uid
+            LEFT JOIN sr_city c ON a.uid_city = c.uid
+            LEFT JOIN (
+                SELECT pc.uid_project, count(pc.uid) as count
+                FROM sr_project_contractor pc
+                WHERE accepted_date > 0
+                GROUP BY pc.uid_project
+                ) AS pc_count ON pc_count.uid_project = p.uid
+            WHERE p.status = 'active' 
+            AND ABS(DATEDIFF(now(), active_date)) < '?'
+            AND EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project=p.uid AND pc.uid_contractor='?' AND (pc.hidden IS NULL OR pc.hidden = '') AND ( pc.accepted IS NULL OR pc.accepted = '' ) AND (pc.accepted_rebate IS NULL OR pc.accepted_rebate =''))
+            HAVING ((suid = '?' OR s = '') AND (tuid = '?' OR t = ''))
+            ORDER BY p.active_date DESC
+            LIMIT 50
+        ";
+        
+        projects = sql(query, cgidata.services, cgidata.territories, configs.rows.project_halfprice_days, extranet_user.uid, cgidata.services, cgidata.territories);
+        
+}}
+
+    <div class="row" style="margin-bottom:20px">
+        <form action="" method="POST">
+            <div class="col-md-6">
+                <label>{{sn_ct("contractor_unanswered_projects Filtrer par service", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <select name="services" class="form-control" onclick="filterProjects(this)">
+                    <option value="">{{sn_ct("Choisir un service")}}</option>
+                    \{{for service sql("SELECT s.name_long_? as sname, s.uid FROM sr_service s INNER JOIN sr_contractor_service cs ON cs.uid_service = s.uid  WHERE cs.approved = 'yes' AND cs.uid_contractor = '?' GROUP BY sname", "{{lg.rows.lg}}", extranet_user.uid) do}}
+                        <option \{{(cgidata.services eq service.rows.uid)?'selected':''}} value="\{{service.rows.uid}}">\{{service.rows.sname}}</option>
+                    \{{endfor}}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label>{{sn_ct("contractor_unanswered_projects Filtrer par territoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <select name="territories" class="form-control" onclick="filterProjects(this)">
+                    <option value="">{{sn_ct("Choisir un térritoire")}}</option>
+                    \{{for territory sql("SELECT t.name_? as tname, t.uid FROM sr_territory t INNER JOIN sr_contractor_territory ct ON ct.uid_territory = t.uid WHERE ct.uid_contractor = '?' GROUP BY tname", "{{lg.rows.lg}}", extranet_user.uid) do}}
+                        <option \{{(cgidata.territories eq territory.rows.uid)?'selected':''}} value="\{{territory.rows.uid}}">\{{territory.rows.tname}}</option>
+                    \{{endfor}}
+                </select>
+            </div>
+        </form>
+    </div>
+
+\{{
+    
+    if projects.nbrows > 0 then
+}}
+
+    <div class="row no-print mb-sm">
+        <div class="col-sm-offset-9 col-sm-3">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="window.print();">
+                {{sn_ct("contractor_unanswered_projects Imprimer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+        </div>
+    </div>
+    
+    
+    
+    \{{ for p in projects.rows do}}
+    <div id="project-panel" class="panel panel-default">
+        <div class="panel-heading"><h2 class="heading-sm"><b>{{sn_ct("contractor_unanswered_projects ID", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b> \{{p.uid}}</h2></div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-sm-6">
+                    <div>
+                        <b>{{sn_ct("contractor_unanswered_projects Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                    </div>
+                    <p>
+                        \{{ if p.description then  p.description; else "-"; endif}}
+                    </p>
+                </div>
+                <div class="col-sm-6 font-md">
+                    <div class="form-group">
+                        <label>
+                            {{sn_ct("contractor_unanswered_projects Date de qualification", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <div>
+                            \{{ if p.active_date then datetime(date:p.active_date,format:"%Y-%m-%d"); else "-"; endif}}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            {{sn_ct("contractor_unanswered_projects Date voulue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <div>
+                            \{{ if p.due_date then p.due_date; else "-"; endif}}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            {{sn_ct("contractor_unanswered_projects Ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <div>
+                            \{{ if p.name_fr then p.name_fr; else "-"; endif }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            {{sn_ct("contractor_unanswered_projects Prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <div>
+                            \{{money_format(p.lead_price,"{{lg.rows.lg}}")}} {{sn_ct("contractor_unanswered_projects + taxes", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            {{sn_ct("contractor_unanswered_projects Budget du client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <div>
+                            \{{if p.shared_budget then p.shared_budget; else "-"; endif}}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                                {{sn_ct("contractor_discounted_projects Nombre d'entrepreneur(s) déjà référé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}: \{{p.count}}
+                        </label>
+                    </div>
+                    <div class="form-group no-print">
+                        <label>
+                            {{sn_ct("contractor_unanswered_projects Action", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <div>
+                            <div>
+                                <button  class="btn btn-primary btn-block"  type="submit"  onclick="accept_project(this,'\{{p.uid}}')" value="yes" >
+                                     {{sn_ct("contractor_unanswered_projects Achat", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} <i class="fa fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <button  class="btn btn-primary btn-block"   type="submit" onclick="accept_project(this,'\{{p.uid}}')" value="halfpriced"    >
+                                {{sn_ct("contractor_unanswered_projects Moitie", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} <i class="fa fa-chevron-right"></i></button>
+                            </div>
+                            <div class="btn btn-default btn-block" onclick='if (confirm("{{sn_ct(edit:false,"contractor_unanswered_projects Êtes-vous certain de vouloir cacher ce projet ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")) { hide_project(this,"\{{p.uid}}")}'>
+                                {{sn_ct("contractor_unanswered_projects Retirer de la liste", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    \{{endfor}}
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_unanswered_projects Aucun projet non répondu ne correspondant à votre profil", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}
+<script>
+    // removes a project from the list only for this contractor
+    function hide_project(e,uid_project){
+	    $.ajax({
+    		type: "post",
+    		data:{
+    			"uid_project": uid_project
+    		},
+    		url: "{{ sn_pages('ajax_hide_project', lg.rows.lg, table:'ressources')}}",
+    		success:function(data){
+                $(e).parents("#project-panel").hide("swing", function(){ $(this).remove();});
+    		}
+	    });
+    }
+    
+    // links the project to the contractor  use the value from button for halfpriced and accepted
+    function accept_project(e,uid_project){
+	    $.ajax({
+    		type: "post",
+    		data:{
+    			"uid_project": uid_project
+    		},
+    		url: "{{ sn_pages('ajax_add_project', lg.rows.lg, table:'ressources')}}",
+    		success:function(data, status, xhr){
+               var token = xhr.getResponseHeader("X-token");
+                if (token){
+                   $(e).parents("#project-panel").hide("swing", function(){
+                       $(this).remove();
+                       location.replace('{{pages("sr_confirmation_accept_project_extranet", lg.rows.lg, table:"pages")}}?accepted='+$(e).val()+'&token=' + token);
+                   });
+                }
+    		}
+	    });
+    }
+    
+    function filterProjects(sel){
+        $(sel).click(function(){
+            $(this).closest('form').submit();
+        });
+    }
+</script>

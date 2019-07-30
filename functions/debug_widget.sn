@@ -1,0 +1,27 @@
+{{
+    // --------------------------------------------------------------------------
+    // Name:        Function debug_widget
+    //
+    // Description: Display information about the widget
+    //
+    // Version:     1.0 2015-05-31 13:15:47 laplante@sednove.com
+    // --------------------------------------------------------------------------
+
+    function debug_widget(widget) 
+    "No content for widget "; widget.rows.widget_code; " at "; "<br/>";  datetime(); "<br/>"; 
+        for i in widget do
+            if i.key eq "rows" then
+                "<ul>";
+                for j in i.value do
+                    "<strong>";j.key; "</strong>="; j.value; "<br>";
+                endfor
+                "</ul>";
+            else
+                "<strong>";i.key; "</strong>="; i.value; "<br>";
+            endif
+        endfor
+            
+        nb_view = sql(single:true,wantarray:true,"select count(*) from sn_widgets_view where widget = '?'", widget.rows.uid);
+        "nb_view = "; nb_view.rows[0];
+    endf
+}}

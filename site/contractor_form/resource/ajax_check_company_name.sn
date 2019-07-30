@@ -1,0 +1,27 @@
+{{
+    /*
+        @title ajax_add_contractor
+        Description: Adds a contractor to the database via ajax call.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-14
+        @version 1.01 2017-03-07  add language default bilingue
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+}}
+\{{
+    cgidata = cgidata();  
+    
+    exists = sql("SELECT uid FROM sr_contractor WHERE company_name='?'", cgidata.company_name);
+    if exists.nbrows == 0 then
+     "OK"; //for the validator to pass
+    endif
+}}

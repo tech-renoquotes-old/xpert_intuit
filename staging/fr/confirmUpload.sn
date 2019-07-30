@@ -1,0 +1,15 @@
+{{
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/");  
+    connection = connection();
+
+}}
+
+
+<table>
+    
+    <tr>
+        <td>
+           <span>You are here. check your upload</span>
+        </td>
+    </tr>
+</table>

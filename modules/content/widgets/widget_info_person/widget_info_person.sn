@@ -1,0 +1,32 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	textcontent = sql(single:true, "select * from widget_info_person where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+<section class="page_middle_title">
+	<div class="w-section inverse">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-8 col-md-offset-2 mt-30">
+					{{if textcontent.rows.image ne "" && -f textcontent.rows.image then}}
+						<img alt="{{textcontent.rows{'alt_image_'.+ lg.rows.lg};}}"  width="200" class="pull-left margin-r-20" src="{{textcontent.rows.image}}">
+					{{endif}}
+					<div class="h2">{{textcontent.rows.person}}</div>
+					<div class="h5">{{textcontent.rows{'poste_'.+ lg.rows.lg};}}</div>
+					<p class="font18">
+					{{textcontent.rows{'description_'.+ lg.rows.lg};}}
+					</p>
+					<span class="clearfix"></span>					
+				</div>
+				{{if textcontent.rows{'url_linkedin_'.+ lg.rows.lg} ne "" then}}
+				<div class="col-md-8 col-md-offset-2 mt-30">
+					<a href="{{textcontent.rows{'url_linkedin_'.+ lg.rows.lg};}}" target="_blank"><img width="32px" alt="{{textcontent.rows.person}}" src="/assets/images/linked.png"></a>		
+				</div>
+				{{endif}}
+			</div>
+		</div>
+	</div>
+</section>	

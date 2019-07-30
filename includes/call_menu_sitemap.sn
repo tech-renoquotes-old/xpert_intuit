@@ -1,0 +1,54 @@
+{{ 
+    //
+    // Name:        menu_sitemap
+    //
+    // Description: Permet de publier le menu sitemap
+    //  
+    // Parameters:  none so far
+	//				use cgidata 
+	//				use lg
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version
+    // Version : 	2.0 2015-06-01 Etienne Carrier
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    
+    use lg;             // Loop from the publish
+	use ressources;		// call from ressources.sn in /publish
+
+	site_config = sql(single:true,"select * from sn_configs");
+	menu_json = sql(single:true,wantarray:true,"select json from sn_menus where code = 'menu_sitemap'");
+	if menu_json.rows[0] eq '' then
+		menu = [];
+	else
+		menu = unstringnify(menu_json.rows[0]);
+	endif
+
+}}
+<div class="cs_footer_nav">
+
+			{{ 
+			n=0;
+			for item in menu do 
+				menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+				if menu_item.rows.active eq "yes" then
+					if menu_item.rows.type eq "page" then
+						page = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+						if page.nbrows == 1 then
+						}} <a href="{{page.rows{"folder_" .+ lg.rows.lg};
+							if page.rows{"page_" .+ lg.rows.lg} ne "index" then
+								page.rows{"page_" .+ lg.rows.lg};
+							endif }}" class="nav_item">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a> {{
+						endif
+					elseif menu_item.rows.type eq "url" then
+						}} <a target="{{menu_item.rows{"target"};}}" href="{{menu_item.rows{"url_" .+ lg.rows.lg};}}" class="nav_item">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a> {{
+					elseif menu_item.rows.type eq "group" then
+					endif
+				endif 
+			 endfor }}
+
+</div>
+
+

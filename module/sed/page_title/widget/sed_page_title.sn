@@ -1,0 +1,258 @@
+{{
+    /*
+    	@title	sed_page_title
+    	Description:Use to display the map with the parameter selected
+        @author laplante@sednove.com
+    	@version 1.0 2015-06-02 10:00:00 laplante@sednove.com Version initial
+    	@version 1.1 2016-06-15 10:30:00 pascale@sednove.com  Modification to change the name of table + add default information
+    */
+}}
+
+<style type="text/css">
+	.wdg_page_title.mb20{margin-bottom:20px;}
+    .wdg_page_title.mb50{margin-bottom:50px;}
+	.wdg_page_title.mb125{margin-bottom:125px;}
+    .wdg_page_title.mb0{margin-bottom:0px;}
+    
+    .wdg_page_title {
+        padding: 0;
+        background-position: top;
+        background-size: 100% auto;
+        background-repeat: no-repeat;
+    }
+    
+    .wdg_page_title h1{
+        padding: 0;
+        margin: 0;
+        font-size: 2.5em; line-height: 1em; margin:0 0 10px 0;
+    }
+    
+    .wdg_page_title p{
+        padding: 0;
+        margin: 5px 0 0 0;
+        font-size:18px;
+    }
+    
+    .wdg_page_title.large .container,.wdg_page_title.large .container-fluid, .wdg_page_title.large .row{
+        padding-top:125px;
+        padding-bottom:125px;
+    }
+    
+    
+    .wdg_page_title .container,.wdg_page_title .container-fluid, .wdg_page_title .row{
+        padding-top:70px;
+        padding-bottom:70px;
+        position:relative;
+        z-index:1;
+    }
+    .wdg_page_title_overlay{
+        position:absolute;
+        top:0;
+        left:0;
+        height:100%;
+        width:100%;
+        z-index:1;
+    }
+    
+    .wdg_page_title.small .container,.wdg_page_title.small .container-fluid, .wdg_page_title.small .row{
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+   
+    .wdg_page_title.large h1{
+        font-size: 3rem; line-height: 3.5rem; margin:0 0 1rem 0;
+    }
+    
+    .wdg_page_title p{
+        padding: 0;
+        margin: 5px 0 0 0;
+    }
+    
+    .wdg_page_title .center {
+        text-align: center;
+    }
+    
+    .wdg_page_title .right {
+        text-align: right;
+    }
+    
+    .wdg_page_title .left {
+        text-align: left;
+    }
+    
+    @media all and (max-width: 1100px) {
+        .wdg_page_title.large .container,.wdg_page_title.large .container-fluid, .wdg_page_title.large .row{
+            padding-top:100px;
+            padding-bottom:100px;
+        }
+    }
+    
+    @media all and (max-width: 900px) {
+        .wdg_page_title.large .container,.wdg_page_title.large .container-fluid, .wdg_page_title.large .row{
+            padding-top:75px;
+            padding-bottom:75px;
+        }
+    }
+    
+    @media all and (max-width: 768px) {
+        .wdg_page_title.large .container,.wdg_page_title.large .container-fluid, .wdg_page_title.large .row{
+            padding-top:50px;
+            padding-bottom:50px;
+        }
+        
+        .wdg_page_title {
+            background-size: 130% auto;
+        }
+    }
+    
+    @media all and (max-width: 600px) {
+        .wdg_page_title.large .container,.wdg_page_title.large .container-fluid, .wdg_page_title.large .row
+        {
+            padding-top:40px;
+            padding-bottom:40px;
+        }
+        
+        .wdg_page_title {
+            background-size: 150% auto;
+        }
+    }
+    
+    @media all and (max-width: 460px) {
+        .wdg_page_title .container,.wdg_page_title .container-fluid, .wdg_page_title .row{
+            padding-top:40px;
+            padding-bottom:40px;
+        }
+        
+        .wdg_page_title.large .container,.wdg_page_title .container-fluid, .wdg_page_title.large .row{
+            padding-top:40px;
+            padding-bottom:40px;
+        }
+        
+        .wdg_page_title {
+            background-size: 150% auto;
+        }
+        
+        .wdg_page_title h1{
+            font-size: 1.6rem; line-height: 2.1rem; margin:0 0 1rem 0;
+        }
+    }
+    
+    .wdg_page_title .text-reverse,
+    .wdg_page_title .text-reverse p,
+    .wdg_page_title .text-reverse h1,
+    .wdg_page_title .text-reverse h2,
+    .wdg_page_title .text-reverse h3,
+    .wdg_page_title .text-reverse h4,
+    .wdg_page_title .text-reverse h5,
+    .wdg_page_title .text-reverse h6 {
+        color:#fff;
+        text-shadow: 0px 0px 6px rgba(0, 0, 0, 0.6);
+    }
+
+</style>
+
+{{
+	use widget;
+    use lg;
+
+	data = sql(single:true,"SELECT * FROM sed_page_title where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+	 if data.nbrows == 0 then 
+	 // Set default content
+    	fields = {
+    	        "text_align":"center",
+                "height":"regular",
+                "parallax":"no",
+                "background_color":"FFFFFF",
+                "background_image":"/module/sed/page_title/image_default/image_default.jpg",
+                "text_reverse":"no",
+                "space_after":"mb20",
+                "custom_height":"400",
+                "opacity" :"100",
+                "uid_widget":widget.rows.uid_widget_list,
+                "uid":widget.rows.uid_widget_list
+            };
+            
+            for l sql("select * from sn_languages where active = 'yes'") do
+                    fields{"title_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                    fields{"subtitle_" .+ l.rows.lg} = "Subtitle " .+ l.rows.lg;
+            endfor
+	
+    	// Insert default data
+           verif_ctx = sql(single:true,"SELECT uid FROM sed_page_title WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_page_title",fields:fields);
+	        endif
+            data = sql(single:true,"SELECT * FROM sed_page_title where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+    endif
+    
+    if data.rows.text_align eq "" then
+        textAlign = "center";
+    else
+        textAlign = data.rows.text_align ;
+    endif
+    
+    if data.rows.space_after eq "" then
+        space_after = "mb20";
+    else
+        space_after = data.rows.space_after;
+    endif
+
+    if data.rows.height eq "" then
+        height = "regular";
+    else
+        height = data.rows.height;
+    endif
+
+    if data.rows.background_image ne "" then;
+    	background_imagestyle = "OUI";
+        parallaxcode = "";
+        
+        if data.rows.parallax eq "yes" then;}}
+            <script src="/js/parallax.min.js"></script>
+            {{ parallaxcode = 'data-parallax="scroll" data-z-index="0" data-image-src="'.+data.rows.background_image.+'"';
+        else;
+        	background_imagestyle = "background-image:url('".+data.rows.background_image.+"');";
+        endif;
+
+        if data.rows.background_color ne "" then;
+                background_color = "background-color:#".+data.rows.background_color.+";";
+        endif; 
+    endif
+    if (data.rows.opacity) >= 0 && (data.rows.opacity) <= 100  then
+        opacity = data.rows.opacity /100;
+    else
+        opacity = 1;
+    endif
+    if data.rows.height eq 'custom'  && data.rows.custom_height  ne '' then }}
+        <style>
+            #wdg_page_title-{{widget.rows.uid_widget_list}} .container, #wdg_page_title-{{widget.rows.uid_widget_list}} .container-fluid, #wdg_page_title-{{widget.rows.uid_widget_list}} .row{
+                padding-bottom: 0 !important;
+                padding-top: 0 !important;
+                height:{{data.rows.custom_height}}px;
+            }
+            #wdg_page_title-{{widget.rows.uid_widget_list}} .row{
+                display: table;
+                width:100%;
+                height:100%;
+            }
+            #wdg_page_title-{{widget.rows.uid_widget_list}} .row>div{
+                display:table-cell;
+                vertical-align:middle;
+            }
+            
+        </style>
+    {{endif}}
+<!-- ZONE XTENS PLEINE LARGEUR AVANT LE CONTENU -->
+<div class="wdg_page_title {{space_after;}} {{height;}}" {{parallaxcode}}  id="wdg_page_title-{{widget.rows.uid_widget_list}}">
+    <div class="container-fluid content-width{{if data.rows.text_reverse eq "yes" then }} text-reverse{{ endif }}">
+        <div class="wdg_page_title_overlay" style="{{background_color}}"></div>
+        <div class="wdg_page_title_overlay" style="{{background_imagestyle}} opacity:{{opacity}};background-size:cover;background-repeat:no-repeat;"></div>
+        <div class="row">
+            <div class="{{textAlign;}}">
+                <h1>{{data.rows{'title_'.+ lg.rows.lg};}}</h1>
+                <p>{{data.rows{'subtitle_'.+ lg.rows.lg};}}</p>
+            </div>
+        </div>
+        
+    </div>
+</div>

@@ -1,0 +1,22 @@
+{{theme_choice = sql(single:true,"SELECT * FROM sn_theme_color");}}
+{{layout_setup = sql(single:true,"SELECT * FROM sn_theme where uid = '?'", theme_choice.rows.theme_choice)}}
+
+.cs .cs-main-content{
+	padding-bottom:30px;
+	padding-top:30px;
+}
+
+#sn_cs_footer{
+	padding-top:30px;
+	padding-bottom:30px;
+}
+.cs .content-width{
+	margin:0 auto;
+}
+
+
+{{ if layout_setup.rows.wrapper_content_width ne "" then}}
+.widget_area_top{
+  		max-width:{{layout_setup.rows.wrapper_content_width}};
+}
+{{endif}}

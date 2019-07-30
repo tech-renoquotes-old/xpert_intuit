@@ -1,0 +1,67 @@
+{{
+    /*
+        @title contractor_referrals
+        Description: This widget display the list and status of referrals that contractor gave us
+        
+        @author Michel
+        
+        @version 1.0 2017-06-21
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    use widget;
+
+}}
+\{{
+    use extranet_user;
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+    referrals= sql("
+        SELECT company_name, referral_status, sn_cdate
+        FROM sr_contractor
+        WHERE uid_contractor_referring = '?'", extranet_user.uid);
+        
+    if (referrals.nbrows > 0) then
+}}
+
+    <div class="mb-md">
+        {{sn_ct("contractor_referrals Voici la liste des références que vous nous envoyées et leur statut", lg:lg.rows.lg,  publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </div>
+
+\{{ for r in referrals.rows do}}
+        <div id="project-panel" class="panel panel-default">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div>
+                            <b>\{{r.company_name}}</b>
+                        </div>
+                    </div>
+                <div class="col-sm-6 font-md">
+                    <div class="form-group">
+                        <label>
+                            {{sn_ct("contractor_referral Statut", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} \{{r.sn_cdate}}
+                        </label>
+                        <div>
+                            \{{if (r.referral_status eq 'yes') then
+                                "{{sn_ct(edit:false,"contractor_referral Accepted", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}";
+                            else 
+                                "{{sn_ct(edit:false,"contractor_referral Refused", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}";
+                            endif
+                            }}
+                        </div>
+                    </div>   
+                </div>
+            </div>
+        </div>
+    \{{ endfor}}
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_referral Aucune référence ne correspond à votre compte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}

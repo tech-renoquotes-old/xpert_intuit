@@ -1,0 +1,216 @@
+<html>
+    <head>
+    <title>contractor mngt</title>
+    </head>
+<body>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<link href="/css/en/styles.css" rel="stylesheet">
+
+<style>
+    input {
+        width: 200px;
+        height: 40px;
+        background-color: #E2BC74;
+        font-size: 20px;
+    }
+    
+    .help-block {
+        width: 100%;
+        color: #D00023;
+        display:block;
+    }
+
+    .login_box{
+    }
+</style>
+
+{{
+    cgidata = cgidata();
+
+    lang = 'fr';
+    if(cgidata.uid.length() > 0) then
+            
+        contractor = sql(single:true,"SELECT uid, username, company_name, token FROM sr_contractor WHERE uid='?'", cgidata.uid);    
+        token = substr(hash(algo:"sha512", time.secs .+ time.usecs .+ random(min:1, max:9999999)),0,45);
+        
+        gen_token = update(tables:"sr_contractor",uid: contractor.rows.uid,
+                    fields:{
+                        "token": token
+                    }
+                );
+                
+        if(contractor.rows.username ne "") then
+            headers_out("X-username", contractor.rows.username);
+        endif
+        
+        if(gen_token.nbrows == 1) then
+           headers_out("X-generate", token);
+        endif
+    endif
+
+
+
+
+}}
+
+    <div class='container'>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class='login_row'>
+                    <h2>
+                        Please login
+                    </h2>
+                    <form action="" id="login" name="login" method="POST">
+                        <table>
+                            <tr>
+                                <td>
+                                    Username:
+                                </td>
+                                <td>
+                                    <input class="form-control" type="text" name="ssruser" id="ssruser" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Password:
+                                </td>
+                                <td>
+                                    <input class="form-control" type="password" name="ssrpass" id="ssrpass" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    &nbsp;
+                                </td>
+                                <td>
+                                    <button class="btn btn-primary pull-right" type="submit">login</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+
+{{    //validate server side
+    //if (validator.validate(data:cgidata)) then
+    if(cgidata.ssrpass.length() > 0 && cgidata.ssruser.length() > 0) then
+        usr = sql(single:true,"SELECT username, password, sn_salt_password FROM sn_users WHERE username='?'", cgidata.ssruser);
+        if(usr.nbrows > 0) then
+            passwd = md5(cgidata.ssrpass .+ usr.rows.sn_salt_password);
+            if(passwd == usr.rows.password) then
+            headers_out('login-success', 1);
+            endif
+        endif
+    endif
+        
+}}
+
+            <div class='container' >
+        
+                <div class="row">
+                    <div class="col-md-3"></div>
+                    
+                    <div class='link-generation' style="display:none">
+                        <h2>Welcome {{cgidata.ssruser}} to user management interface</h2>
+                        <hr/>
+                        <h4>
+                            Manage username & password
+                        </h4>
+                        <form action="" id="generate_token" name="generate_token" method="POST">
+                            <table>
+                                <tr><td><input class="form-control" type="text" name="usrfind" id="usrfind" /></td><td><button class="btn btn-primary pull-right" type="submit">generate link</button></td></tr>
+                                <tr colspan='2'><td><div class='display_link'></div></td></tr>
+                                <tr>
+                                    &nbsp;
+                                </tr>
+                                <tr>
+                                    <td colspan='2' ></td>
+                                </tr>
+                            </table>
+                            <span  id='glink'></span>
+                        </form>
+                    </div>
+                    
+                </div>
+            </div>
+
+            
+</body>
+</html>
+
+
+<script>
+    // function confirm_password(password2){
+    //     password1 = $("input#password").val();
+    //     if (password1 === password2){
+    //         return true;
+    //     }
+    //     return false;
+    // }
+    
+    $("form[name=generate_token]").submit(function(e) {
+      e.preventDefault();
+      
+      $.ajax({
+        type: "POST",
+        data: {'uid':$('#usrfind').val()},
+        beforeSend: function(){
+            
+        },
+        
+        success: function(data, statusText, xhr) {
+            if(xhr.getResponseHeader('X-generate')){
+                $('.login_box').show();
+                
+                if(xhr.getResponseHeader('X-username')){
+                    var link ='/fr/creation-identifiant-interne' + '?token=' + xhr.getResponseHeader('X-generate') + '&u=true';
+                }else{
+                    var link ='/fr/entrepreneur-creer-identifiant' + '?token=' + xhr.getResponseHeader('X-generate');
+                }
+                
+                $('#glink').html('<a href="' + link + ' " target="_blank">'+link+'</a>');
+            }else{
+                $('.login_box').hide();
+            };
+        },
+        error: function(data) {
+        },
+        complete: function(data) {
+        }
+      });
+    });
+
+    
+    $("form[name=login]").submit(function(e) {
+      e.preventDefault();
+      
+      $.ajax({
+        type: "POST",
+        data: {'ssruser':$('#ssruser').val(),
+               'ssrpass':$('#ssrpass').val()
+              },
+              
+        beforeSend: function(){
+        },
+        
+        success: function(data, statusText, xhr) {
+            if (xhr.getResponseHeader("login-success")){
+                $('.link-generation').show();
+                $('.login_row').hide();
+            }
+        },
+        error: function(data) {
+        },
+        complete: function(data) {
+        }
+      });
+    });
+</script>

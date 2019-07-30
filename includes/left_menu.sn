@@ -1,0 +1,75 @@
+{{
+    use page;
+
+    // Show left menu
+    target_menu_code = "menu_principal";
+    menu = sql(single:true,"SELECT uid,json,code FROM sn_menus WHERE FIND_IN_SET(code, '?')", target_menu_code);
+    
+    // Get the menu_item in the "menu_principal" menu.
+    json = stringnify(menu.rows.json);
+    item_id = 0;
+    for item_menu sql(single:true,"select * from sn_menus_items where table_name='pages' and type='page' and uid_page=?",page.rows.uid) do
+        patt = "\"uid\":\s*\"" .+ item_menu.rows.uid .+ "\"";   
+        if json =~ patt then 
+            item_id = item_menu.rows.uid;
+        endif
+    endfor
+    
+    // Get the submenu in the "menu_principal" menu.
+    json = unstringnify(menu.rows.json);
+    if item_id > 0 then
+        stop = false;
+        for item in json do 
+            if item.children != undefined then
+                children = stringnify(item.children);
+                if children =~ patt then 
+                    stop = true;
+                    }}
+                    <div class="widget">
+                        <ul class="categories">
+                            {{
+                                children_json = unstringnify(item.children); 
+                                for child in children_json do
+                                    menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", child.id);
+                                    if child.value.type eq "page" then
+                                        menu_page = sql(single:true,"select * from ? where uid = '?'", child.value.table_name, child.value.uid_page);
+                                        if menu_page.nbrows == 1 then
+                                            active='';
+                                            if page.rows.uid==child.value.uid_page then 
+                                                active='active';
+                                            endif;
+                                            }}                                            
+                                            <li class="{{active}}">
+                                                <a tabindex="-1" href="{{
+                                                        menu_page.rows{"folder_" .+ lg.rows.lg};
+                                                        if menu_page.rows{"page_" .+ lg.rows.lg} ne "index" then
+                                                            menu_page.rows{"page_" .+ lg.rows.lg};
+                                                        endif
+                                                    }}">
+                                                        {{menu_item.rows{"name_" .+ lg.rows.lg};}}
+                                                 </a>
+                                             </li> 
+                                             {{
+                                        endif   
+                                    elseif child.value.type eq "url" then
+                                        }} 
+                                        <li>
+                                            <a tabindex="-1" target="{{child.value{"target"};}}" href="{{child.value{"url_" .+ lg.rows.lg};}}">
+                                                {{menu_item.rows{"name_" .+ lg.rows.lg};}}
+                                            </a>
+                                        </li>
+                                        {{                                                        
+                                    endif                                                     
+                                endfor
+                            }}
+                        </ul>
+                    </div> 
+                    {{                                       
+                endif
+            endif
+            if stop then
+                break;
+            endif
+        endfor
+    endif
+}}            

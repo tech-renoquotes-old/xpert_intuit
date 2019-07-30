@@ -1,0 +1,289 @@
+{{
+    package api;
+
+		%define DELETE_REQUEST			'DELETE';	
+		%define POST_REQUEST 			'POST';
+		%define GET_REQUEST				'GET';
+		%define PUT_REQUEST 			'PUT';
+		
+		%define DESTROY 				'destroy';
+		%define UPDATE					'update';
+		%define SHOW					'show';
+		%define INDEX					'index';
+		%define STORE 					'store';
+		
+		%define TOKEN_ALLOWED_CHARS		"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+		%define TOKEN_EXPIRES_AFTER		'1h';
+		%define TOKEN_LENGTH			16;
+
+        /*
+         * This function checks if the user has the permission to process the request
+         *
+         * @author thomas
+         * @param string
+         * @param string
+		 * @param context
+         * @return bool false
+		 *
+         */
+        function can_process_request(package_name, action_name, api_user)
+		
+            // loading the package permissions file
+			permissions = unstringnify(read("/ressources/api/" .+ package_name .+ "/" .+ package_name .+"_permission.json"));
+			if api_user.roles ne "" then
+				user_role = api_user.roles;
+			else
+				user_role = "no_role";
+			endif
+			if length(permissions{user_role}) == 0 then
+				user_role = "no_role";
+			endif
+			
+			// checking if user has permission
+			for (i = 0; i < length(permissions{user_role}); i++) do
+				if permissions{user_role}[i] eq action_name || permissions{user_role}[i] eq '*' then
+					return true;
+				endif
+			endfor
+
+			return false;
+        endf
+		
+		/*
+         * This function returns a unique token valid for a short amount of time
+         * 
+         * @author jg
+		 * @param int
+		 * @param string
+         * @return string
+		 *
+         */
+		function generate_token(api_key, uid_user, ip_addr)
+			max = length(TOKEN_ALLOWED_CHARS);
+			expiration = datetime(op: '+' .+ TOKEN_EXPIRES_AFTER);
+			token = "";
+			for (i=0;i<TOKEN_LENGTH;++i) do
+				token .+= TOKEN_ALLOWED_CHARS[random(min:0, max:max)];
+			endfor
+			token = md5(token .+ expiration);
+			result = sql("INSERT INTO sn_api_token (value, expire, uid_user, api_key, ip) VALUES ('?', '?', '?', '?', '?')", token, expiration, uid_user, api_key, ip_addr);
+			return token;
+		endf
+		
+        /*
+         * This function resolves useful request data from different sources
+         * 
+         * @author jg
+         * @return array
+		 *
+         */
+        function get_context()
+			
+			use request;
+			use config;
+            
+			SUPPORTED_LG = {
+				'en' : "yes",
+				'fr': "yes"
+			};
+			
+			connection = connection();
+			request_arguments = api::get_request_args();
+			
+			context = {
+				'lg': 'en',
+				'site': config.site,
+				'package_name': '',
+				'action_name': '',
+				'resource_id': '',
+				'ip': connection.client_ip,
+				'api_token': request_arguments.api_token,
+				'api_key': request_arguments.api_key,
+				'api_user' : ''
+			};
+			
+			// loading api user
+			if context.api_token ne '' then
+				validated_token = sql("CALL validate_api_token('?','?')", context.api_token, context.ip);
+				if validated_token[0].nbrows > 0 then
+					if validated_token[0].rows[0].uid ne '' then
+						context.api_user = validated_token[0].rows[0];
+					else
+						context.api_user = { "user_role": "no_role" };
+					endif
+				endif
+			endif
+			
+			// loading the package and action name
+            segments = split(trim(request.uri, charlist:'/'), delimiter:'/');
+			
+            package_segment = 1;
+            if SUPPORTED_LG[segments[package_segment]] eq "yes" then
+                context.lg = segments[package_segment];
+                package_segment += 1;
+            endif
+			
+            if segments[package_segment] eq 'release' then
+                package_segment += 1;
+            endif
+			
+            if segments[package_segment] ne '' then
+                context.package_name = segments[package_segment];
+            endif
+			
+            if segments[package_segment+1] ne '' then
+                context.resource_id = segments[package_segment+1];
+            endif
+
+            // resolving action name
+			if context.resource_id ne '' then
+				if isdigit(context.resource_id) then
+					// there is a resource_id
+					if request.method eq POST_REQUEST then
+						if esc(filter:"uppercase", request_arguments._method) eq DELETE_REQUEST then
+							context.action_name = DESTROY;
+						else
+							context.action_name = UPDATE;
+						endif
+					elseif request.method eq GET_REQUEST then
+						context.action_name = SHOW;
+					elseif request.method eq DELETE_REQUEST then
+						context.action_name = DESTROY;
+					elseif request.method eq PUT_REQUEST then
+						context.action_name = UPDATE;
+					endif
+				else 
+					//This is for custom actions
+					context.action_name = context.resource_id;
+				endif
+            elseif context.resource_id eq "" then
+                // no resource_id
+                if request.method eq POST_REQUEST then
+                    context.action_name = STORE;
+                else
+                    context.action_name = INDEX;
+                endif
+            endif
+			
+            return context;
+        endf
+
+        /*
+         * This function checks if the key is valid
+         *
+         * @author jg
+         * @return bool false
+         * @param key string
+         */
+        function is_valid_key(key, ip_addr)
+            use request;
+            query = sql(single:true, 'SELECT domain FROM sn_api_key WHERE api_key = "?"', key);
+            // check if the api_key exists
+            if query.nbrows > 0 then
+                // check if the referrer's hostname (or ip) is allowed for this key
+                for domain_or_ip split(query.rows.domain, ' ') do
+                    allowed_domain_or_ip = trim(domain_or_ip);
+                    if request.hostname eq allowed_domain_or_ip || ip_addr eq allowed_domain_or_ip then
+                        return true;
+                    endif
+                endfor
+            endif
+            return false;
+        endf
+
+        /*
+         * This function sends the output generated by the controller to the browser
+         *
+         * @author jg
+         * @return string
+         * @param data array
+         * @param format string 'json'
+         * @param error int 0
+         * @param error_msg string
+         * @param http_response_code int HTTP_OK
+         *
+         */
+        function response(;)
+			
+			%include "/includes/extenso.sn";
+			
+			// supported formats
+			SUPPORTED_FORMATS = {
+				'json': true,
+				'html': true
+			};
+			
+            // param: format
+            if format == undefined || SUPPORTED_FORMATS{format} == undefined then
+				if view != undefined then
+					format = 'html';
+				else
+					format = 'json';
+				endif
+            endif
+			
+			// param: data
+            if data == undefined then
+                data = {};
+            endif
+			
+			// param: http_status_code
+            if http_status_code == undefined then
+				if error != undefined then
+					http_status_code = HTTP_BAD_REQUEST;
+				else
+					http_status_code = HTTP_OK;
+				endif
+            endif
+			
+            if format eq 'json' then
+                // serve output as json
+                headers_out("Pragma", "no-cache");
+                headers_out("Cache-Control", "no-cache");
+                headers_out("Cache-Control", "no-store");
+                output = {
+                    'data': data,
+                    'http_status_code': http_status_code
+                };
+                if error != undefined then
+                    output.error = error;
+                endif
+                stringnify(output);
+			elseif view != undefined && valid(view) then
+				// serve output as html
+				include(view);
+            else
+                // serve output as raw text
+                if data != undefined then
+                    data;
+                endif
+            endif
+        endf
+		
+		
+		/*
+		 * This function will parse the GET parameters and extract all the parameters and store them into an array.
+		 *
+         * @author thomas
+         * @return array
+         */
+		function get_request_args()
+			use request;
+			params = {};
+			for set split(request.args, delimiter:"&") do
+				key = "";
+				value = "";
+				for vals split(set, delimiter:"=") do
+					if sn_nb == 0 then
+						key = vals;
+					elseif sn_nb == 1 then
+						value = vals;
+					endif
+				endfor
+				params{key} = value;
+			endfor
+			return params;
+		endf
+		
+    endp
+}}

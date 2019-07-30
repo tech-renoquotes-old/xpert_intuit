@@ -1,0 +1,27 @@
+{{
+    table_dest = 'sed_blog_category';
+    table_from = 'wp_terms';
+
+    select_query_from_src = "
+        SELECT 
+        	term_id as category_id, 
+            name, 
+            slug
+        FROM wp_terms
+        WHERE term_id IN (SELECT term_id FROM wp_term_taxonomy WHERE taxonomy = 'category')
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid' : "category_id",
+        'name' : "name",
+        'url' : "slug::CONCAT('/','?')",
+        'language' : "'fr'"
+    };
+    
+    %include 'migration.sn';
+    

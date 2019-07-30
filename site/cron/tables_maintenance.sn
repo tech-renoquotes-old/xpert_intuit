@@ -1,0 +1,44 @@
+{{
+
+/**
+*@author louis.jhonny@gmail.com
+*@created 2017-06-15
+* 
+*Description: run every month to delete unwanted upload from contractor profile.
+* 
+**/
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+
+
+}}
+
+\{{
+	//Delete older than 30 days
+	a=sql("DELETE FROM sr_debug WHERE sn_mdate + INTERVAL 30 DAY < NOW()");
+
+	//Delete older than 30 days
+	b=sql("DELETE FROM sr_log WHERE sn_mdate + INTERVAL 30 DAY < NOW()");
+
+	//Delete older than 30 days without lead_price
+	c=sql("DELETE FROM sr_project_contractor WHERE sn_mdate + INTERVAL 30 DAY < NOW() AND isnull(lead_price)");
+
+    
+    if a then
+        void insert(table:'sr_debug', fields:{'description':'sr_debug Maintenance' ,'text':'rows deleted: '.+ a.affrows});
+    endif
+    
+    
+    if b then
+        void insert(table:'sr_debug', fields:{'description':'sr_log Maintenance' ,'text':'rows deleted: '.+ b.affrows});
+    endif
+    
+    
+    if c then
+        void insert(table:'sr_debug', fields:{'description':'sr_project_contractor Maintenance' ,'text':'rows deleted: '.+ c.affrows});
+    endif
+}}

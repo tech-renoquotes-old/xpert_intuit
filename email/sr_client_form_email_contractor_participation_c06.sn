@@ -1,0 +1,35 @@
+{{
+    /*
+        @title 			sr_client_form_email_contractor_participation_c06
+        Description		Participation of a contractor
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	titre = "Mr";
+    prenom = "Marc-André";
+    compagnie = "Sednove";
+    telephone = "(438) 456-7890";
+    rbqLicence = "112639405-65";
+    siteWeb = "www.sednove.com";
+    nomContact = "Etienne Carrier";
+    NumeroTel = "(450) 671-9307";
+    courriel = "etienne@sednove.com";
+    photo1 = "Titre de la photo";
+    photo2 = "Titre de la photo";
+    photo3 = "Titre de la photo";
+    photo4 = "Titre de la photo";
+    photo5 = "Titre de la photo";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

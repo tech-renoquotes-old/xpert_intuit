@@ -1,0 +1,23 @@
+<!-- BLOC ==================
+	 CLIENT NAME -->
+	 
+{{
+    use site_config;
+    use theme_config;
+}}
+
+<tr style="background-color:#F1F1F1;">
+	<td>
+	   <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-top:35px solid #F1F1F1;border-bottom:35px solid #F1F1F1;">
+			<tr>
+				<td width="35">&nbsp;</td>
+				<td width="530">
+					<h2 style="color:#{{theme_config.rows.heading_color}};font-size:20px;line-height:26px;font-family:{{theme_config.rows.heading_font}};margin-bottom:10px;">
+					    {{site_config.rows.client_name}}
+					</h2>
+				</td>
+				<td width="35">&nbsp;</td>
+			</tr>
+		</table>
+	</td>
+</tr>

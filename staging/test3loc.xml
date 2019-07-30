@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_articles.xml</loc>
+ <lastmod>2017-02-05</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_forum_post.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_pros.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_photolink.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_services.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_articlelink.xml</loc>
+ <lastmod>2017-01-28</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_forumlink.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_categorylink.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_local_contractors.xml</loc>
+ <lastmod>2017-02-20</lastmod>
+</sitemap>
+<sitemap>
+ <loc>https://trustedpros.ca/sitemap_content.xml</loc>
+</sitemap>
+
+</sitemapindex>

@@ -1,0 +1,20 @@
+{{
+    use widget;
+    use uid;
+    use table;
+    use lg;
+}}
+\{{ 
+    config=config();
+    cgidata=cgidata();
+    // Widget team: La variable team_seo est définie dans la fonction extenso sn_rewrite,
+    //              si team_seo est vide on affiche la liste des chambres sinon on affiche 
+    //              les detailles de la chambre
+    if cgidata.team_seo != undefined && cgidata.team_seo ne "" then
+        widnl = sql(single:true, "select * from ressources where code = 'widget_team_details'");
+        include("/".+config.site.+widnl.rows{'url_{{lg.rows.lg}}'}.+widnl.rows{'file_{{lg.rows.lg}}'});
+    else
+        widnl = sql(single:true, "select * from ressources where code = 'widget_team_list'");
+        include("/".+config.site.+widnl.rows{'url_{{lg.rows.lg}}'}.+widnl.rows{'file_{{lg.rows.lg}}'});
+    endif
+}}

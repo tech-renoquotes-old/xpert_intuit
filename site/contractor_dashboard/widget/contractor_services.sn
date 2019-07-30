@@ -1,0 +1,800 @@
+<script src="//code.jquery.com/ui/1.9.1/jquery-ui.js"></script>
+
+{{
+    /*
+        @title contractor_services
+        Description: This widget displays the services of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-29
+        @mod    bbduc@yahoo.com  add project type and by Amount
+        @version 1.10 bbduc@yahoo.com   new list for add and remove
+        @version 1.11 bbduc@yahoo.com   traductions
+        
+        @modified by louis.jhonny@gmail.com
+        @version 1.12 2017-06-14 Improve contractor services UX
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+     
+    use page;
+    use lg;
+}}
+
+\{{
+    
+    cgidata = cgidata();
+    use extranet_user;
+
+   services_all = sql("
+        SELECT distinct category_? as category, uid, name_long_{{lg.rows.lg}} as service_name
+        FROM    sr_service
+        WHERE active='yes'
+        GROUP BY category 
+        ORDER BY category
+        ", "{{lg.rows.lg}}");
+  
+   services_available = sql("
+        SELECT distinct category_? as category, uid, name_long_{{lg.rows.lg}} as service_name
+        FROM    sr_service
+        WHERE NOT EXISTS (SELECT null FROM sr_contractor_service cs WHERE cs.uid_contractor='?' AND sr_service.uid = cs.uid_service)
+        AND active='yes'
+        ORDER BY category
+    ", "{{lg.rows.lg}}",extranet_user.uid);
+
+
+   services_approved = sql("
+        SELECT distinct category_? as category, uid, name_long_{{lg.rows.lg}} as service_name
+        FROM sr_service
+        WHERE EXISTS (SELECT null FROM sr_contractor_service cs WHERE cs.uid_contractor='?' AND sr_service.uid = cs.uid_service)
+        AND active='yes'
+        GROUP BY category 
+        ORDER BY category
+    ", "{{lg.rows.lg}}",extranet_user.uid);
+    
+    //generate approved services
+    for main in services_all.rows do
+        approve = sql("SELECT *, name_long_{{lg.rows.lg}} as service_name FROM sr_contractor_service cs 
+                       JOIN sr_service s ON cs.uid_service = s.uid WHERE s.category_? = '?' 
+                       AND cs.uid_contractor = ? 
+                       AND cs.approved = 'yes' ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+        
+        if(approve.nbrows > 0) then
+        appr .+= "<h5>".+ main.category .+ "</h5>";
+        endif
+        
+        appr .+= "<ul class='pendings'>";
+        for s in approve.rows do
+            appr .+= "<li id='pd_" .+ s.uid .+ "' class='subservices'><img class='rm_srv_btn' onclick='abort_srv(" .+ s.uid .+ ")' width='18px' src='/sn_uploads/icon/icon_minus.png'/><span class='service_txt'>".+ s.service_name .+ "</span></li>";
+        endfor
+        appr .+= "</ul>";
+    endfor
+
+    //generate Pending services
+    for main in services_all.rows do
+        pendings = sql("SELECT *, name_long_{{lg.rows.lg}} as service_name FROM sr_contractor_service cs JOIN sr_service s ON cs.uid_service = s.uid WHERE s.category_? = '?' AND cs.uid_contractor = ? AND cs.approved = 'no' ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+        
+        if(pendings.nbrows > 0) then
+        pd .+= "<h5>".+ main.category .+ "</h5>";
+        endif
+        
+        pd .+= "<ul class='pendings'>";
+        for sub in pendings.rows do
+            pd .+= "<li id='pd_" .+ sub.uid .+ "' class='subservices'><img class='rm_srv_btn' onclick='abort_srv(" .+ sub.uid .+ ")' width='16px' src='/sn_uploads/icon/icon_minus.png'/><span class='service_txt'>".+ sub.service_name .+ "</span></li>";
+        endfor
+        pd .+= "</ul>";
+    endfor
+    
+    //generate available services
+    for main in services_all.rows do
+        all = sql("SELECT service, uid, name_long_{{lg.rows.lg}} as service_name FROM sr_service 
+                     WHERE category_? = '?' 
+                     AND active = 'yes'
+                     AND uid NOT IN (SELECT uid_service FROM sr_contractor_service  WHERE uid_service = sr_service.uid AND uid_contractor = '?') 
+                     ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+        
+        if(all.nbrows > 0) then           
+        html .+= "<h5>".+ main.category .+ "</h5>";
+        endif
+        
+        html .+= "<ul class='services'>";
+        for sub  in all.rows do
+            html .+= "<li id='srv_" .+ sub.uid .+ "' class='subservices'><img class='add_srv_btn' onclick='submit_srv(" .+ sub.uid .+ ")' width='18px' src='/sn_uploads/icon/add_plus.png'/><span class='service_txt'>".+ sub.service_name .+ "</span></li>";
+        endfor
+        html .+= "</ul>";
+    endfor
+        
+        //Case when a contractor click on + from contractor_services page to add a service to the waiting list
+        if(cgidata.submit eq true && cgidata.suid ne "") then
+            cservice = sql(single:true,"SELECT * FROM sr_contractor_service cs JOIN sr_service s ON cs.uid_service = s.uid WHERE cs.uid_contractor = '?' AND cs.uid_service = '?'", extranet_user.uid,cgidata.uid);
+            cs = cservices.rows;
+
+            if(cservice.nbrows == 0) then
+
+                void sql("INSERT INTO sr_contractor_service(uid_contractor, uid_service, approved, sn_cdate) VALUES(?,?,'no', now())", extranet_user.uid, cgidata.suid);
+                for main in services_all.rows do
+                    pendings = sql("SELECT *, name_long_{{lg.rows.lg}} as service_name FROM sr_contractor_service cs JOIN sr_service s ON cs.uid_service = s.uid WHERE s.category_? = '?' AND cs.uid_contractor = ? AND cs.approved = 'no' ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+                    if(pendings.nbrows > 0) then
+                    pdupd .+= "<h5>".+ main.category .+ "</h5>";
+                    endif
+                    
+                    pdupd .+= "<ul class='pendings'>";
+                    for sub in pendings.rows do
+                        pdupd .+= "<li id='pd_" .+ sub.uid .+ "' class='subservices'><img class='rm_srv_btn' onclick='abort_srv(" .+ sub.uid .+ ")' width='16px' src='/sn_uploads/icon/icon_minus.png'/><span class='service_txt'>".+ sub.service_name .+ "</span></li>";
+                    endfor
+                    pdupd .+= "</ul>";
+                endfor
+                
+                for main in services_all.rows do
+                    all = sql("SELECT service, uid, name_long_{{lg.rows.lg}} as service_name FROM sr_service 
+                                 WHERE category_? = '?' 
+                                 AND uid NOT IN (SELECT uid_service FROM sr_contractor_service  WHERE uid_service = sr_service.uid AND uid_contractor = '?') 
+                                 ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+                    
+                    if(all.nbrows > 0) then           
+                    html2 .+= "<h5>".+ main.category .+ "</h5>";
+                    endif
+                    
+                    html2 .+= "<ul class='services'>";
+                    for sub  in all.rows do
+                        html2 .+= "<li id='srv_" .+ sub.uid .+ "' class='subservices'><img class='add_srv_btn' onclick='submit_srv(" .+ sub.uid .+ ")' width='18px' src='/sn_uploads/icon/add_plus.png'/><span class='service_txt'>".+ sub.service_name .+ "</span></li>";
+                    endfor
+                    html2 .+= "</ul>";
+                endfor
+                
+                headers_out("X-pending", pdupd);
+                headers_out("X-approve", appr);
+                headers_out("X-all", html2);
+            else
+                headers_out("X-error", 1);
+            endif
+        endif
+        
+        //Case when contractor remove a service either from waiting service list or approved service list list.
+        if(cgidata.abort) then
+            cservice = sql(single:true,"SELECT * FROM sr_contractor_service cs JOIN sr_service s ON cs.uid_service = s.uid WHERE cs.uid_contractor = '?' AND cs.uid_service = '?'", extranet_user.uid,cgidata.uid);
+            cs = cservices.rows;
+
+            if(cservice.nbrows > 0) then
+                void sql("DELETE FROM sr_contractor_service WHERE uid_contractor = ? and uid_service = ?", extranet_user.uid, cgidata.uid);
+                for main in services_all.rows do
+                    pendings = sql("SELECT *, name_long_{{lg.rows.lg}} as service_name FROM sr_contractor_service cs JOIN sr_service s ON cs.uid_service = s.uid WHERE s.category_? = '?' AND cs.uid_contractor = ? AND cs.approved = 'no' ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+                    if(pendings.nbrows > 0) then
+                    pdupd .+= "<h5>".+ main.category .+ "</h5>";
+                    endif
+                    
+                    pdupd .+= "<ul class='pendings'>";
+                    for sub in pendings.rows do
+                        pdupd .+= "<li id='pd_" .+ sub.uid .+ "' class='subservices'><img class='rm_srv_btn' onclick='abort_srv(" .+ sub.uid .+ ")' width='18px' src='/sn_uploads/icon/icon_minus.png'/><span class='service_txt'>".+ sub.service .+ "</span></li>";
+                    endfor
+                    pdupd .+= "</ul>";
+                endfor
+                
+                for main in services_all.rows do
+                    approve = sql("SELECT *, name_long_{{lg.rows.lg}} as service_name FROM sr_contractor_service cs JOIN sr_service s ON cs.uid_service = s.uid WHERE s.category_? = '?' AND cs.uid_contractor = ? AND cs.approved = 'yes' ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+                    if(approve.nbrows > 0) then
+                    apv .+= "<h5>".+ main.category .+ "</h5>";
+                    endif
+                    
+                    apv .+= "<ul class='pendings'>";
+                    for s in approve.rows do
+                        apv .+= "<li id='pd_" .+ s.uid .+ "' class='subservices'><img class='rm_srv_btn' onclick='abort_srv(" .+ s.uid .+ ")' width='18px' src='/sn_uploads/icon/icon_minus.png'/><span class='service_txt'>".+ s.service_name .+ "</span></li>";
+                    endfor
+                    apv .+= "</ul>";
+                endfor
+                
+                for main in services_all.rows do
+                    all = sql("SELECT service, uid, name_long_{{lg.rows.lg}} as service_name FROM sr_service 
+                                 WHERE category_? = '?' 
+                                 AND uid NOT IN (SELECT uid_service FROM sr_contractor_service  WHERE uid_service = sr_service.uid AND uid_contractor = '?') 
+                                 ORDER BY service_name", "{{lg.rows.lg}}", main.category, extranet_user.uid);
+                    
+                    if(all.nbrows > 0) then           
+                    html2 .+= "<h5>".+ main.category .+ "</h5>";
+                    endif
+                    
+                    html2 .+= "<ul class='services'>";
+                    for sub  in all.rows do
+                        html2 .+= "<li id='srv_" .+ sub.uid .+ "' class='subservices'><img class='add_srv_btn' onclick='submit_srv(" .+ sub.uid .+ ")' width='18px' src='/sn_uploads/icon/add_plus.png'/><span class='service_txt'>".+ sub.service_name .+ "</span></li>";
+                    endfor
+                    html2 .+= "</ul>";
+                endfor
+
+
+                headers_out("X-pending", pdupd);
+                headers_out("X-approve", apv);
+                headers_out("X-all", html2);
+
+            else
+                headers_out("X-error", 1);
+            endif
+        endif
+
+
+}}
+
+<style>
+    .service{
+        margin:15px 0px;
+        padding:15px;
+        background-color: #EBEBEB;
+    }
+    .example{
+        background-color: #FFFFFF;
+        border-radius: 10px;
+        border-bottom-right-radius:0;
+        border-bottom-left-radius:0;
+        padding:15px;
+    }
+    .cs .h-inline-block{
+        display:inline-block;
+    }
+    .cs .text-md{
+        font-size:18px;
+    }
+    
+.all_services{
+	width: 100%;
+	max-height: 600px;
+	float:left;
+	overflow:scroll;
+	border: 1px #ebebeb solid;
+	padding-left:5px;
+}
+
+.all{
+	width: 100%;
+	display:none;
+}
+
+.pendinglst{
+	width: 100%;
+}
+
+
+
+.approved_services{
+	width: 100%;
+	max-height: 300px;
+	float:left;
+	overflow:scroll;
+	border: 1px #c7e6cf solid;
+	padding-left:5px;
+}
+
+.pendingservices{
+	width: 100%;
+	max-height: 300px;
+	float:left;
+	overflow:scroll;
+	margin-bottom:25px;
+	vertical-align: middle;
+	border: 1px #f1e9c0 solid;
+	padding-left:5px;
+}
+
+.stitle{
+    border-top-right-radius:10px;
+    border-top-left-radius:10px;
+    padding-left:5px;
+    height:25px;
+    width:100%;
+    float:left;
+    background-color:#dddde4;
+    font-size:18px;
+}
+
+.ptitle{
+    border-top-right-radius:10px;
+    border-top-left-radius:10px;
+    padding-left:5px;
+    height:25px;
+    width:100%;
+    float:left;
+    background-color:#f1e9c0;
+    font-size:18px;
+}
+
+.atitle{
+    border-top-right-radius:10px;
+    border-top-left-radius:10px;
+    padding-left:5px;
+    height:25px;
+    width:100%;
+    float:left;
+    background-color:#c7e6cf;
+    font-size:18px;
+}
+
+    .service_group{
+    	width:100%;
+    	height:auto;
+    }
+    
+    .subservices{
+    	max-width:100%;
+    	height:auto;
+    }
+    
+    .subservices img{
+    	float: right;
+    }
+    
+    .subservices span{
+    	width:100%;
+    }
+
+    
+    
+
+    li.selected {
+    	background-color:#FC3;
+    }
+    
+    .psubservices{
+    	width:100%;
+    	max-width:200px;
+    	height:auto;
+    }
+    
+    .psubservices span{
+    	padding-right:10px;
+    }
+    
+    
+  .all_services  .subservices:hover{
+    	background-color:#ebebeb;
+    }
+    
+  .pendingservices  .subservices:hover{
+    	background-color:#f1e9c0;
+    }
+    
+    .add_service{
+        color: "blue";
+        font-size:20px;
+        text-align:'center';
+        float:right;
+    }
+    
+    .add_service a:link{
+        color: #66b5ff;
+        text-decoration:none;
+        
+    }
+    
+    .add_service a:visited{
+        color: #0033cc;
+    }
+    
+    .add_service a:hover{
+        color: #999;
+    }
+    
+    .service_action{
+        text-align:left;
+    }
+    
+    .service_txt{
+        text-align:left;
+    }
+
+    .services{
+        width:100%;
+    }
+
+ 
+</style>
+
+<div class='all'>
+\{{html}}
+</div>
+
+
+<div id="ajax_add_service_success" class="alert alert-info" style="display:none"> 
+    {{sn_ct("contractor_services Un administrateur devrait confirmer vos nouveaux services sous peu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_services Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<!--<div id="ajax_add_proj_type_amt" class="alert alert-info" style="display:none"> -->
+<!--    {{sn_ct("contractor_services Type de projets et estimations mis-a-jour ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>-->
+<!--    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_services Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>-->
+    <!--<a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>-->
+<!--    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close"></a>-->
+    <!--onclick="this.parentElement.style.display='none'"-->
+<!--</div>-->
+
+<!--<div id="ajax_error" class="alert alert-danger" style="display:none">-->
+<!--    {{sn_ct("contractor_services Il vous faut au moins un type de projet!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+<!--    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> -->
+<!--</div>-->
+
+\{{
+    contractor_project_type = sql("
+        SELECT  uid,
+                name_{{lg.rows.lg}} as project_type_name
+        FROM    sr_project_type
+        WHERE EXISTS (SELECT null FROM sr_project_type_contractor cp WHERE cp.uid_contractor='?' AND sr_project_type.uid = cp.uid_project_type)
+        AND active='yes'
+        ORDER BY project_type_name
+    ", extranet_user.uid);
+ 
+ 
+      project_type = sql("
+        SELECT  uid,
+                name_{{lg.rows.lg}} as project_type_name
+        FROM    sr_project_type
+        WHERE  active='yes'
+        ORDER BY order_type, project_type_name
+    ");
+   
+      project_amt = sql(single:true,"
+        SELECT  uid,
+                amount_min,
+                amount_max
+        FROM    sr_contractor
+        WHERE uid='?'
+    ", extranet_user.uid);
+    
+}}
+
+
+    <!--<H2>{{sn_ct("contractor_project_type Estimation du projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</H2>-->
+    <form action="{{ sn_pages('ajax_add_proj_type_amt', lg.rows.lg, table:'ressources')}}" id="add_proj_type_amt" name="add_proj_type_amt" method="POST">
+           <!--Min max amount  -->
+        
+           <!--<div class="service  well">-->
+           <!--     <div class=" ">-->
+           <!--             <label >-->
+           <!--               <h3 class="text-md h-inline-block nomargin">   {{sn_ct("contractor_project_type Montant Minimum", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h3>-->
+           <!--             </label >-->
+           <!--             <input class="" type="text" id="amount_min" name="amount_min"  value="\{{project_amt.rows.amount_min }}">-->
+                   
+           <!--             <label >  -->
+           <!--                 <h3 class="text-md h-inline-block nomargin">{{sn_ct("contractor_project_type Montant Maximum", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h3>-->
+           <!--             </label>-->
+           <!--             <input class="" type="text" id="amount_max" name="amount_max"  value="\{{project_amt.rows.amount_max }}" >-->
+           <!--     </div>-->
+           <!-- </div>-->
+        
+           <!--<H2>{{sn_ct("contractor_project_type Type de projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</H2>-->
+        <!--Project type  -->
+
+    <!--<input  class="btn btn-primary mb-sm " id="ptype_btn" style= "width:330px  " type="submit"   value="{{sn_ct(edit:false,"contractor_project_type Enregistrer les types de projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">-->
+ <!--</form>-->
+<script>
+     
+    $(document).ready(function(){
+       $("#amount_min, #amount_max").keydown(function (e) {
+            // Allow: backspace, delete, tab, escape, enter and .
+            if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
+                 // Allow: Ctrl+A, Command+A
+                (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) || 
+                 // Allow: home, end, left, right, down, up
+                (e.keyCode >= 35 && e.keyCode <= 40)) {
+                     // let it happen, don't do anything
+                     return;
+            }
+            // Ensure that it is a number and stop the keypress
+            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                e.preventDefault();
+            }
+        });
+        
+        
+        //display service list
+        $.ajax({
+            type: 'POST',
+            data: {'display':true}, // An object with the key 'submit' and value 'true;
+            success: function (data) {
+                var service = $(data).find('.all').html();
+                $('.all_services').html(service);
+                $('.pendingservices').html("\{{pd}}");
+                $('.approved_services').html("\{{appr}}");
+            }
+        });
+        
+        
+        $('#ptype_btn').click(function(){
+            //check at list one project type is selected
+            var $items = $('.project_type_chk');
+            var itr;
+            var nbr_chk = 0;
+            var min_amount = parseFloat($('#amount_min').val());
+            var max_amount = parseFloat($('#amount_max').val());
+            var language = "{{lg.rows.lg}}";
+            
+            if(min_amount > max_amount){
+                
+               if(language == 'fr'){
+                   alert('Le montant minimum doit être supérieur au montant maximum');
+                   return false;
+               }else{
+                   alert('The minimum amount shall be lower than the maximum');
+                   return false;
+               }
+               
+            }
+            
+            for(itr=0; itr<$items.length; itr++){
+                if($('#project_type_'+itr).is(':checked')){
+                    nbr_chk++;
+                }
+            }
+            
+            if(nbr_chk == 0){
+                $('#ajax_error').show();
+                $('#ajax_add_proj_type_amt').hide();
+                return false;
+            }else{
+                
+            }
+        });
+    })
+
+        // Bind add_proj_type_amt form to ajaxform plugin to send the form via ajax
+        $('form[name=add_proj_type_amt]').ajaxForm({
+            success:function(data, statusText, xhr){
+                if (xhr.getResponseHeader("X-success")){
+                    $('#ajax_error').hide();
+                    $('#ajax_add_proj_type_amt').show();
+                    //location = '#ajax_add_proj_type_amt';
+                }
+                else if (xhr.getResponseHeader("X-error")){
+    
+                }
+            }    
+        });     
+</script>
+ 
+{{//     LISTS}}
+ <div  class='container'>
+    <h2>{{sn_ct("contractor_services Mes services", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
+    <a name="my_service"></a> 
+    <hr>
+        <div class='row'>
+            <div class='col-sm-6'>
+            <div class='stitle'>{{sn_ct("Disponibles", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>
+                <div class="all_services">
+                    
+                </div>
+            </div>
+            
+            <div class='col-sm-6'>
+                 <div class='ptitle'>{{sn_ct("en attente d'appropation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>
+                <div class="pendingservices">
+                </div>
+                <hr>
+                <div class='atitle'>{{sn_ct("Approuvés", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>
+                <div class="approved_services">
+                </div>
+            </div>
+    
+        </div>
+        
+</div>
+
+
+
+
+    
+<script>
+
+
+    //optgrp="<-- Liste des services à ajouter -->";
+    optgrp ="{{sn_ct(edit:false, "contractor_services <-- Liste des services à ajouter -->", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"
+    $("#service_uid").append('<optgroup  label="'+ optgrp +'"></optgroup>');
+    //optgrprem="<-- Liste des services enlevés -->";
+    optgrprem ="{{sn_ct(edit:false, "contractor_services <-- Liste des services enlevés -->", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"
+    $("#services_add_uid").append('<optgroup  label="'+ optgrprem +'"></optgroup>');
+  
+    
+    function addOption_list(){
+       for(i=document.delete_services.services_add_uid.options.length-1;i>=0;i--)	{
+            var services_add_uid=document.delete_services.services_add_uid;
+            if(document.delete_services.services_add_uid[i].selected){
+                addOption(document.delete_services.service_uid, document.delete_services.services_add_uid[i].text, document.delete_services.services_add_uid[i].value);
+                removeOption(services_add_uid,i);
+                // $(".add_submit").attr("disabled", false);
+            }
+        }
+    };
+  //ajoute et tri par option
+   // var options = [];
+	var option = document.createElement('option'); 
+   // $("#btn1").click(function(){
+   function addOption_list2(){
+        var options = [];
+        $("#services_add_uid option").each(function(){
+        	if ($(this).is(':checked')){
+                option.text = $(this).text();
+                option.value  = $(this).val();
+                options.push(option.outerHTML);
+                $(this).remove();
+                //alert($(this).text());
+            }
+        });
+      	options.sort();
+        console.log(options.join('\n'));
+   	    $("#service_uid optgroup[label='" + optgrp + "']").append(options.join('\n'));
+  	    $("#service_uid optgroup[label='" + optgrp + "'] > option").css("background-color", "yellow");
+  	    $("#service_uid optgroup[label='" + optgrp + "'] > option").prop('selected', true);
+    };
+
+   function addOption_list3(){
+        var options = [];
+        $("#service_uid option").each(function(){
+        	if ($(this).is(':checked')){
+                option.text = $(this).text();
+                option.value  = $(this).val();
+                options.push(option.outerHTML);
+                $(this).remove();
+            }
+        });
+      	options.sort();
+        console.log(options.join('\n'));
+   	    $("#services_add_uid optgroup[label='" + optgrprem + "']").append(options.join('\n'));
+  	    $("#services_add_uid optgroup[label='" + optgrprem + "'] > option").css("background-color", "yellow");
+  	    $("#services_add_uid optgroup[label='" + optgrprem + "'] > option").prop('selected', true);
+    };
+    
+    function submit_services(){
+        if (confirm("{{sn_ct(edit:false,"contractor_services Êtes-vous certain de vouloir mettre à jour ces services ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){ 
+       	    $("#services_add_uid optgroup[label='" + optgrp + "'] > option").prop('selected', true);
+      	    $("#service_uid optgroup[label='" + optgrp + "'] > option").prop('selected', true);
+            $("form[name=add_remove_services]").submit(); 
+        };
+    }
+    
+    function submit_srv(uid){
+        $.ajax({
+            type: 'POST',
+            data: {'submit':true, 'suid':uid}, // An object with the key 'submit' and value 'true;
+            success: function (data,statusText,xhr) {
+                var service = $(data).find('.all').html();
+                var pd = xhr.getResponseHeader('X-pending');
+                var appr = xhr.getResponseHeader('X-approve');
+                var srv = xhr.getResponseHeader('X-all');
+                
+                srv = srv.decode();
+                pd = pd.decode();
+                appr = appr.decode();
+                
+                $('.pendingservices').html("");
+                $('.pendingservices').html(pd);
+                $('.all_services').html(srv);
+                $('.approved_services').html(appr);
+            }
+        });
+    }
+    
+    function abort_srv(uid){
+
+        $.ajax({
+            type: 'POST',
+            data: {'abort':true, 'uid':uid}, // An object with the key 'submit' and value 'true;
+            success: function (data,statusText,xhr) {
+                var uid = xhr.getResponseHeader("X-success");
+                //$('#pd_' + uid).remove();
+
+                var service = $(data).find('.all').html();
+                var pd = xhr.getResponseHeader('X-pending');
+                var appr = xhr.getResponseHeader('X-approve');
+                var srv = xhr.getResponseHeader('X-all');
+                srv = srv.decode();
+                pd = pd.decode();
+                appr = appr.decode();
+
+                $('.pendingservices').html("");
+                $('.pendingservices').html(pd);
+                $('.all_services').html(srv);
+                $('.approved_services').html(appr);
+            }
+        });
+    }
+    
+    
+    
+
+        String.prototype.encode = function(encoding) {
+            var result = "";
+         
+            var s = this.replace(/\r\n/g, "\n");
+         
+            for(var index = 0; index < s.length; index++) {
+                var c = s.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                }
+                else if((c > 127) && (c < 2048)) {
+                    result += String.fromCharCode((c >> 6) | 192);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+                else {
+                    result += String.fromCharCode((c >> 12) | 224);
+                    result += String.fromCharCode(((c >> 6) & 63) | 128);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+            }
+         
+            return result;
+        };
+         
+         
+        String.prototype.decode = function(encoding) {
+            var result = "";
+         
+            var index = 0;
+            var c = c1 = c2 = 0;
+         
+            while(index < this.length) {
+                c = this.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                    index++;
+                }
+                else if((c > 191) && (c < 224)) {
+                    c2 = this.charCodeAt(index + 1);
+                    result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                    index += 2;
+                }
+                else {
+                    c2 = this.charCodeAt(index + 1);
+                    c3 = this.charCodeAt(index + 2);
+                    result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                    index += 3;
+                }
+            }
+         
+            return result;
+        };
+    
+    // Bind add_remove_services form to ajaxform plugin to send the form via ajax
+    $('form[name=add_remove_services]').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-add_remove_service_success")){
+                //alert("succes");
+                $('#ajax_add_service_success').show();
+                location = '#ajax_add_service_success';
+                //alert("{{sn_ct("contractor_services Un administrateur devrait confirmer vos nouveaux services sous peu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}");
+                //location.reload(false);
+            }
+            else if (xhr.getResponseHeader("X-add_remove_service_error")){
+            }
+        }    
+    });  
+</script>
+
+<script>
+$(function() {
+
+        $( ".pendings" ).sortable({
+            revert: true,
+		});
+		
+		$("services").draggable({
+            connectToSortable: ".pendings",
+            helper: "clone",
+            revert: "invalid",
+			start: function() {
+			    
+				var el1 = $(this).attr('id');
+				var el2 = $('ul');
+				
+				if(el2.children(el1).attr('id') == el1){
+					return false;
+				}
+			}
+		});
+		
+		
+        $( "ul, li" ).disableSelection();
+        
+});
+</script>

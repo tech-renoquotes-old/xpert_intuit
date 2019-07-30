@@ -1,0 +1,72 @@
+<style>
+.accordion {margin-top:30px;}
+.accordion.panel-default {border:0; box-shadow:none;}
+.accordion .panel-heading {position:relative;  border:0; padding:14px 0; background-color:#f5f5f5; cursor:pointer;}
+.accordion .panel-heading h4 {margin:0; padding:0 20px;}
+.accordion .panel-heading i {position:absolute; right:20px; top:14px; font-size: 12px; color:#3289c7;}
+.accordion .panel-body {margin:0 auto; max-width:650px;}
+.accordion.panel-default > .panel-heading + .panel-collapse > .panel-body {border-top: 0;}
+.accordion .panel-collapse {display:none;}
+.accordion .collapse {visibility:visible;}
+</style>
+
+<div class="widget">
+	<div id="accordion" class="panel-group">	
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	listeid="";
+	condlist="";
+	for content sql("select * from widget_accordeon where actif='yes' and uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list) do
+}}
+		<div class="accordion panel panel-default">
+
+				<div class="panel-heading panel-heading{{sn_nb1}}">
+					<h4 class="panel-title">{{content.rows{'titre_'.+lg.rows.lg} }} <i class="glyphicon glyphicon-plus"></i></h4>
+				</div>
+
+			<div style="height: auto;" class="panel-collapse collapse" id="collapse_{{content.rows.uid}}">
+				<div class="panel-body">
+					<p>
+						{{content.rows{'description_'.+lg.rows.lg}; }}
+					</p>
+				</div>
+			</div>
+		</div>
+
+{{
+	listeid= "#collapse_".+content.rows.uid .+condlist.+listeid;
+	condlist=",";
+	endfor
+	//*/
+}}		
+	</div>
+
+<!-- JS -->
+<script type="text/javascript">
+  $(document).ready(function($) {
+  
+  	// Close the last accordion tab when the document is ready - Patch for the parallax plugin
+	setTimeout(function(){
+	  $(".panel-collapse").slideUp('fast');
+	  $('.glyphicon-minus').removeClass('glyphicon-minus').addClass('glyphicon-plus');
+	}, 400);
+	
+    $('#accordion').find('.panel-heading').click(function(){
+      //Expand or collapse this panel
+      if($(this).find('.glyphicon').hasClass('glyphicon-plus')){
+           $('.glyphicon').removeClass('glyphicon-minus');
+          $('.glyphicon').addClass('glyphicon-plus');
+         }      
+   	  $(this).find('.glyphicon').toggleClass('glyphicon-plus glyphicon-minus');
+      $(this).next('.panel-collapse').slideToggle('fast');
+
+      //Hide the other panels
+      $(".panel-collapse").not($(this).next()).slideUp('fast');
+    });
+  });
+</script>
+</div>

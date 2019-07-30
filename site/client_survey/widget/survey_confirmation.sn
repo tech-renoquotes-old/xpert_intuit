@@ -1,0 +1,195 @@
+{{
+    /*
+        @title survey_confirmation
+        Description: This widget is a confirmation after the client submits a survey.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-11
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    //03-04-2017: nettoyage non fait après modification
+    cgidata = cgidata();
+    project = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE token = '?'", cgidata.token);
+    
+    // pc = project_contractor uid, n = client note, p = project uid
+    if project.nbrows > 0 && cgidata.n ne "" then
+        project_contractor = sql(single:true,"SELECT * FROM sr_project_contractor WHERE token='?'", cgidata.token);
+        // if note is not 1,2,3,4 or 5 then null
+        note = (cgidata.n  =~ "^[1-5]$") ? cgidata.n : null;
+        
+        if project_contractor.nbrows > 0 then
+            if note then // if note is a number
+                void update(
+                    tables:"sr_project_contractor",
+                    uid: project_contractor.rows.uid,
+                    fields: {
+                        "client_satisfaction":note
+                    }
+                );
+            else // if note is null, put null in db
+                void sql("UPDATE sr_project_contractor SET client_satisfaction=NULL WHERE uid='?'", project_contractor.rows.uid);
+            endif
+        endif
+    endif
+
+    
+}}
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<style>
+    .title {
+        font-weight:bold;
+        font-size:20px;
+        margin-bottom:30px;
+    }
+    .font-md{
+        font-size:20px;
+    }
+    .font-lg{
+        font-size:60px;
+    }
+    table.vote  tr  td{
+        padding-right:20px;
+        padding-top:10px;
+        padding-bottom:10px;
+    }
+    table.vote  tr{
+        padding:10px 0px;
+    }
+    
+    .btn_sondage{
+        width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;height:80px;
+    }
+
+    
+</style>
+
+\{{ if project_contractor.nbrows > 0 then}}
+    <div class="title">
+        {{sn_ct("survey_confirmation Merci pour votre participation! Votre réponse a été enregistrée.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </div>
+    
+    <div id="ajax_success" class="alert alert-success" style="display:none;"> 
+        {{sn_ct("survey_confirmation Merci! Nous avons reçu votre commentaire.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+    </div>
+    
+    <script>
+        note_sr = "0";
+        function setNote_sr(v){
+            $("#note_sr").val(v);
+        };
+        function get_note_sr(){
+            return note_sr;
+        };
+        $(".close").on("click", function(){
+            $(this).parents(".alert").hide(); 
+        });
+    </script>
+    
+    \{{ if note then }}
+    
+        <div class="font-md">
+            {{sn_ct("survey_confirmation Aimeriez-vous décrire votre expérience avec cet entrepreneur?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </div>
+        <form action="{{ sn_pages('ajax_add_client_comment', lg.rows.lg, table:'ressources')}}" id="add_client_comment" name="add_client_comment" method="POST">
+            <fieldset class="form-group">
+                <textarea class="form-control" id="comment" name="comment" rows="3" ></textarea>
+                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="comment"></span>
+            </fieldset>
+ 
+       
+ 
+            
+            <div style="clear:both; margin-bottom:50px;"></div>
+            <div class="font-md">
+                {{sn_ct("survey_confirmation En tant que client Soumission Rénovations, nous souhaitons connaître votre degré de satisfaction suite à l'utilisation de notre service.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </div>
+             <table class="vote " role="group" cellpadding="0" cellspacing="5" width="100%">
+                <tr>
+                    <td width="20%">
+                        <a class="well btn btn-secondary btn_sondage" onclick="setNote_sr(1);" data-toggle="tab" href="#" aria-expanded="true" value="1">
+                             <span class="fa fa-star ">
+                        </a>
+                    </td>
+                    <td width="20%">
+                        <a  style="text-decoration:none;"
+                            class="well btn btn-secondary btn_sondage  " onclick="setNote_sr(2);" data-toggle="tab" href="#" aria-expanded="false" value="2">
+                                <span class="fa fa-star "><span class="fa fa-star  ">
+                        </a>
+                        
+                    </td>
+                    <td width="20%">
+                        <a class="well btn btn-secondary btn_sondage" onclick="setNote_sr(3);" data-toggle="tab" href="#" aria-expanded="false" value="3">
+                             <span class="fa fa-star "><span class="fa fa-star "><span class="fa fa-star ">
+                        </a>
+                    </td>
+                    <td width="20%">     
+                        <a class="well btn btn-secondary btn_sondage" onclick="setNote_sr(4);" data-toggle="tab" href="#" aria-expanded="false" value="4">
+                             <span class="fa fa-star "><span class="fa fa-star "><span class="fa fa-star"><span class="fa fa-star">
+                        </a>
+                    </td>
+                    <td width="20%">
+                        <a  style="text-decoration:none;"
+                            class="well btn btn-secondary btn_sondage" onclick="setNote_sr(5);" data-toggle="tab" href="#" aria-expanded="false" value="5">
+                                 <span class="fa fa-star "><span class="fa fa-star "><span class="fa fa-star "><span class="fa fa-star"><span class="fa fa-star"> 
+                        </a>
+                    </td>
+                </tr>
+            </table>
+            <table cellpadding="0" cellspacing="0" width="100%">
+                <tr   >
+                    <td>
+                        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je ne recommande pas",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span>
+                    </td>
+                    <td style="text-align:right;">
+                        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je recommande fortement",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span>
+                    </td>
+                </tr>
+            </table>
+            <br><br>
+            
+            <div class="font-md">
+                {{sn_ct("survey_confirmationcommentaire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </div>
+            <fieldset class="form-group">
+                <textarea class="form-control" id="comment_sr" name="comment_sr" rows="3" ></textarea>
+                <!--<span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="comment_sr"></span>-->
+            </fieldset>
+           
+            <input id="note_sr" name="note_sr" type="hidden" value="">
+            <input id="uid_pc" name="uid_pc" type="hidden" value="\{{project_contractor.rows.uid}}">
+            <input id="uid_project" name="uid_project" type="hidden" value="\{{project_contractor.rows.uid_project}}">
+            <input   type="submit" class="btn btn-primary pull-right" value='{{sn_ct(edit:false,"survey_confirmation Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}'>
+        </form>
+
+        <script>
+            // Bind add_client_comment form to ajaxform plugin to send the form via ajax
+            $('form[name=add_client_comment]').ajaxForm({
+                resetForm:true, // to reset the form once it is sent
+                success:function(data){
+                    $("#ajax_success").show();
+                    console.log(data);
+                }
+            });  
+        </script>  
+
+    \{{ endif }}
+    <br/>
+    <div class="font-md">
+        {{sn_ct("survey_confirmation Merci !", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br/>
+        {{sn_ct("survey_confirmation L'équipe de Soumission Rénovation.ca", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </div>
+\{{else}}
+    <div class="alert alert-info">
+        {{sn_ct("survey_confirmation Le code de projet spécifié n'est pas valide", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br/>
+    </div>
+\{{endif}}

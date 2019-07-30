@@ -1,0 +1,122 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a pulldown menu from a table
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+	%include "/module/sed/package/sed_util.sn";
+	
+    function get_field_name(field,lg,table_name)
+    
+	// --------------------------------------------------------------------------
+	/* 
+		@title		function get_field_name
+	
+		return a list of field_name with the language append if the field is multi lingual
+
+		@param		field : string list if field commas separated
+
+		@param		lg : string language to used if the field is multi lingual
+
+		@param		table_name : string name if the table where this field is used.
+
+		@return		string : commas separated list if field with the language set
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+        field_list="";
+        foreign_table = sql(wantarray:true,single:true,"select uid from sn_tables where table_name = '?'", table_name);
+        uid = foreign_table.rows[0];
+
+        for field split(field) do
+            foreign_field = sql(wantarray:true,single:true, "select field_multilg from sn_fields where uid_sn_tables = '?' and field_name = '?'", uid, field);
+            multilg = foreign_field.rows[0];
+
+            if multilg eq "yes" then
+                fn = field .+ "_" .+ lg;
+            else
+                fn =  field;
+            endif
+
+            if field_list eq "" then
+                field_list = fn;
+            else
+                field_list .+= "," .+ fn;
+            endif
+        endfor
+        return field_list;
+    endf
+	
+	use field;
+	use lg;
+	use field_title;
+	use field_name;
+	use declaration;
+	
+	// Get information about this field
+	table = field.rows.fts_pulldown_menu_table;
+	table_field_value = field.rows.fts_pulldown_menu_value;
+	table_field_name = field.rows.fts_pulldown_menu_field_name;
+	table_add_field = field.rows.fts_pulldown_additionnal_field;
+	
+	add_value =  splitre(value:field.rows.addvalues,re:"\s*,\s*");
+    add_value_length = add_value.length();
+
+	add_option =  splitre(value:field.rows{"addoptions_" .+ lg.rows.lg},re:"\s*,\s*");
+    add_option_length = add_option.length();
+    
+    sortby = field.rows.fts_sortby;
+    selectby = field.rows.fts_selectby;
+
+	if add_option_length != add_value_length then
+	    error("The length of add option and add value are different in size in field " .+ field.rows.field_name .+ add_option_length .+ add_value_length);
+	endif
+	
+	fieldlg = get_field_name(table_field_name, lg.rows.lg, table);
+	addfield = get_field_name(table_add_field, lg.rows.lg, table);
+
+}}
+<div class="form-group">
+    <label for="{{ field_name }}" class="control-label">{{ field_title }}
+        {{
+            if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+                }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+            endif
+        }}
+    </label>
+    
+    <select name="{{ field_name }}" id="{{ field_name }}" class="form-control" {{ if field.onChange ne "" then 'onChange="'; parse(state:0,field.onChange);; '"'; endif }} {{ declaration }} >
+		<option value="">{{sed_util::ct(edit:false,"Please select an option", lg)}}</option> 
+		
+		{{ // Add options }}
+        {{ for (f=0; f<add_option_length; ++f) do }}
+            <option value="{{ add_value[f] }}">{{ add_option[f] }}</option>
+        {{ endfor }}
+
+		\{{ // Normal options
+			sql = "select {{ table_field_value }}, {{fieldlg; if addfield ne "" then ","; addfield; endif }} from {{ 
+				table; 
+				if selectby ne "" then 
+					" WHERE "; parse(state:0,"{{ use lg }}" .+ selectby); 
+				endif 
+				if sortby ne "" then 
+					" ORDER BY "; parse(state:0,"{{ use lg }}" .+ sortby); 
+				endif 
+				}}";
+			for sel sql(sql) do 
+				}} <option value="\{{ sel.rows.{{ table_field_value }} }}"> 
+						\{{ sel.rows.{{fieldlg}}; }}
+					{{ for af split(addfield) do }}
+						\{{ " "; sel.rows.{{af}}; }}
+					{{ endfor }}
+				</option>
+			\{{ endfor }}
+    </select>
+</div>

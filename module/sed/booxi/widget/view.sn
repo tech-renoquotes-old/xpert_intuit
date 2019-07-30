@@ -1,0 +1,27 @@
+{{
+    use lg;
+}}
+
+<script type="text/javascript">
+    (function(d){ 
+        var ss, js, id = 'booxi-js-api'; 
+        if(d.getElementById(id)){return;} 
+        js = d.createElement('script'); js.id = id; js.async = true; 
+        js.src = 'https://www.booxi.com/api/bxe_core.js'; 
+        d.getElementsByTagName('head')[0].appendChild(js); 
+        ss = d.createElement('link'); ss.type = 'text/css'; ss.rel = 'stylesheet'; 
+        ss.href = 'https://www.booxi.com/api/style.css'; 
+        d.getElementsByTagName('head')[0].appendChild(ss);
+    }(document));
+    
+    window.bxApiInit =  
+    function() {
+        bxe_core.init({ 
+            bxLang: 'eng', 
+            bxExtWin: 'false', 
+            });
+    };
+</script>
+
+<div id="bx-viewport"></div>
+<div class="bx_book_btn" data-lang="{{ if lg.rows.lg eq "en" then "eng"; else "fra"; endif}}" data-key="nimportequoi"></div>

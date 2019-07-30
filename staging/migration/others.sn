@@ -1,0 +1,19 @@
+{{
+    otherTables = [
+        'tbl_utilisateurs',
+        'tbl_commentaires',
+        'tbl_campaign_id_adwords',
+        'tbl_appels_entrepreneurs_statut',
+        'tbl_appels_entrepreneurs'
+    ];
+    
+    "\n\nCreating/Importing other tables...\n";flush();
+    
+    for tableName in otherTables do
+        void sql(db: db_dest, "DROP TABLE IF EXISTS `".+tableName.+"`");
+        void exec("dump.sh", '-h'.+db_from_params.dbhost, '-u'.+db_from_params.dbuser, '-p'.+db_from_params.dbpass, db_from_params.dbname, tableName);
+        void exec("import.sh", '-h'.+db_dest_params.dbhost, '-u'.+db_dest_params.dbuser, '-p'.+db_dest_params.dbpass, db_dest_params.dbname);
+        remove("tmp.sql");
+    endfor
+
+    "Finished!\n\n";flush();

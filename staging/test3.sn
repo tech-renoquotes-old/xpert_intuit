@@ -1,0 +1,86 @@
+{{
+ // %include "/package/mailtest.sn";
+}}
+
+
+{{
+    description = "J'aime les  patates";
+    resub(description,"(\n(\s*)\n)+","\n");
+    " moi, aussi\n\r";
+    //ttt =  sql("select * from sr_client limit 1");
+
+    // active_date =datetime(date:'2016-11-22');
+    //ttt= sql("select now() as maintenant, ABS(DATEDIFF(now(), '2016-11-22')) as diff from sr_client limit 1");
+    //ttt;
+    
+  
+    
+    email="h.theriault1@vidétron.ca ";
+    emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+    res = (resub(email,emailRegex,""))?'faux':'OK';
+    
+    email_to = (resub(email,emailRegex,""))? 'email defaut': email;
+    email_to;
+    //void insert(table:'sr_log', fields:{'uid_project':222,'email_to': email_to  ,'description':'email test','value':''});
+    "<br>";
+    n = 1;
+    "Liste des clients:<br>";
+    for  project sql("SELECT c.email as c_email, p.uid , c.uid as c_uid
+            FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client
+            WHERE DATEDIFF(now(), active_date) > 35
+            AND DATEDIFF(now(), active_date) < 45
+            AND status IN ('active','completed','inactive-incomplete') 
+           /* AND (satisfaction_survey_sent IS NULL OR satisfaction_survey_sent != 'yes')*/
+            order by p.uid desc
+            ") do
+            
+            
+        //    res = (resub(trim2(client.rows.email),emailRegex,""))?'ver:'.+ client.rows.email:'';
+           // res = (resub(trim2(project.rows.email),emailRegex,"S1")eq '')?'z':'ver:'.+ project.rows.email;
+            res = (resub(trim2(project.rows.c_email),emailRegex,"$1"));
+//            res2 = (resub(trim2(client.rows.email),emailRegex,""))?'ver:'.+ client.rows.email:'';
+          //  res;
+//            email_to = (res)?'':client.rows.email;
+
+            //resub(project.rows.email,emailRegex,"");
+            //UPDATE les bonne adresses
+            //if   ( res eq 'z'&& project.rows.c_email ne '' )    then 
+            if res ne '' && project.rows.c_email ne '' then
+                   "<br>".+ n++ .+ "-Prj:".+project.rows.uid.+"-Client:".+project.rows.c_uid.+ "-"  .+ project.rows.c_email;
+                   //void sql ("Update sr_project set satisfaction_survey_sent = 'no' where uid ='?'", project.rows.uid);
+            endif
+    endfor
+    
+    "<br>";
+    n = 1;
+    "Liste des contacts à corriger<br>";         
+    for  project sql("SELECT c.contact_email as email, c.company_name, c.uid 
+            FROM sr_contractor c
+            WHERE active ='yes'
+            ORDER BY uid desc
+            ") do
+            res= resub(trim2(project.rows.email),emailRegex,"");
+            if   (   res ne '') then 
+                    "<br>".+ n++ .+ "-".+project.rows.uid.+ "-"  .+ project.rows.email;
+            endif
+    endfor
+    
+    "<br>";
+    n = 1;
+    "Liste des contracteurs (courriels) à corriger<br>";         
+    for  project sql("SELECT c.email as email, c.company_name, c.uid 
+            FROM sr_contractor c
+            WHERE active ='yes'
+            ORDER BY uid desc
+            ") do
+    
+            if   ( resub(trim2(project.rows.email),emailRegex,"") ne '')    then 
+                    "<br>".+ n++ .+ "-".+project.rows.uid.+ "-"  .+ project.rows.email;
+            endif
+    endfor
+   
+    //automail::sendSatisfactionSurveyToClient(17887);
+   
+    
+    
+    }}

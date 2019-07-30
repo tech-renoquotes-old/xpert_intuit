@@ -1,0 +1,37 @@
+{{%include '/site/package/all.sn'}}
+
+\{{
+//NOTE IMPORTANTE POUR JHONNY: S'ASSURER QUE QUAND ON VA METTRE CE CRON EN PRODUCTION, IL FAUDRA S'ASSURER DE NE PAS ENVOYER LES SONDAGES DU 5 JOURS À CEUX QUE ÇA FAIT PLUS DE 7 JOURS
+//ET MÊME CHOSE POUR LE LE SONDAGE DE 30 JOURS, S'ASSURER QU'ON NE L'ENVOIE PAS À CEUX QUE ÇA FAIT PLUS DE 40 JOURS
+
+    survey = sql("SELECT * FROM xpert_survey WHERE isOPen = 'yes' AND uid = 1");
+    for s in survey.rows do
+    
+    project = sql("
+                  SELECT p.*
+    				FROM sr_project p
+    				WHERE DATEDIFF(now(), p.completion_date) >= ?
+    				AND DATEDIFF(now(), p.completion_date) <= ? + 3
+    				AND p.status IN('completed','inactive-incomplete')
+					AND (p.employee is null OR p.employee = 'no' OR p.employee = '')
+    				AND NOT EXISTS(select * from xpert_project_survey WHERE uid_project = p.uid AND uid_survey = '?')
+              ", s.cedule,s.cedule,s.uid);
+              
+        for p in project.rows do
+          time = time();
+          
+		  token = p.token;
+    
+          leads = sql("select * from sr_project_contractor where uid_project = '?'", p.uid);
+            if(leads.nbrows > 0) then
+                void update(tables: 'sr_project', fields: {
+                  'satisfaction_survey_sent': 'yes'
+                }, uid: p.uid);
+                
+                if(s.uid == 1) then
+                    automail::sendSurveyToClientAfterSevenDays(token, p.uid, s.resource_id);
+                endif
+            endif
+        endfor
+    endfor
+}}

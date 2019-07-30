@@ -1,0 +1,142 @@
+{{
+    /*
+    	@title	sed_cta_scaled_background
+    	Description:Use to display the image , text and button
+        @author laplante@sednove.com
+    	@version 1.0 2015-06-02 10:00:00 Version initial
+    	
+    */
+	use widget;
+    use lg;	
+    use uid;
+	use table;
+	use page;
+	feature = sql(single:true,"SELECT * FROM sed_cta_scaled_background where uid_widget='?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+	if feature.nbrows  == 0 then
+	// Set default content
+        	fields = {
+                    "type":"btn-default",
+                    "format":"btn-rg",
+                    "alignment":"btn_centered",
+                    "target":"_blank",
+                    "type_url":"externe",
+                    "uid" : widget.rows.uid_widget_list,
+                    "image":"/module/sed/cta_scaled_background/image_default/image_default.jpg",
+                    "height":"regular",
+                    "height_customize":"800",
+                    "uid_widget":widget.rows.uid_widget_list
+                };
+                
+                
+            for l sql("select * from sn_languages where active = 'yes'") do
+                        fields{"title_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                        fields{"subtitle_" .+ l.rows.lg} = "Subtitle " .+ l.rows.lg;
+                        fields{"button_text_" .+ l.rows.lg} = "Button text " .+ l.rows.lg;
+                        fields{"alt_" .+ l.rows.lg} = "Alt " .+ l.rows.lg;
+                        fields{"url_externe_" .+ l.rows.lg} = "http://sednove.com/".+ l.rows.lg ;
+            endfor
+	
+    
+    	   verif_ctx = sql(single:true,"SELECT uid FROM sed_cta_scaled_background WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_cta_scaled_background",fields:fields);
+	        endif
+        feature = sql(single:true,"SELECT * FROM sed_cta_scaled_background where uid_widget='?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+    endif
+	
+    type = "";
+    if feature.rows.type ne "" then
+        type = feature.rows.type;
+    else
+        type = "btn-default";
+    endif
+
+    format = "";
+    format = feature.rows.format;
+  
+    alignment = "";
+    alignment = feature.rows.alignment;
+  
+    target = "";
+    target = feature.rows.target;
+  
+    url = "";
+  
+    if feature.rows.image ne "" then
+        src = feature.rows.image;
+    else
+        src = "/module/sed/cta_scaled_background/image_default/image_default.jpg?size=1200X1500&crop";
+    endif 
+ 
+    if feature.rows.type_url eq "externe" then; 
+        url = feature.rows{'url_externe_'.+ lg.rows.lg}; 
+    else
+        pagelink = sql(single:true,"select * from pages where uid = '?'", feature.rows.url_interne);
+        
+        if pagelink.nbrows == 1 then
+            url = pagelink.rows{"folder_" .+ lg.rows.lg}.+pagelink.rows{"page_" .+ lg.rows.lg};
+    	endif
+    endif
+    titre = esc(filter: "sql",feature.rows{'title_' .+ lg.rows.lg});
+    soustitre = esc(filter: "sql",feature.rows{'subtitle_'.+ lg.rows.lg});
+    bouton_text = esc(filter: "sql",feature.rows{'button_text_'.+ lg.rows.lg});
+    alt_image = esc(filter: "sql",feature.rows{'alt_'.+ lg.rows.lg});
+}}
+  \{{ 
+    use css_linked;
+    if css_linked eq '' then
+    }}
+     <style> 
+        {{%include "/module/sed/cta_scaled_background/css/feature_scaled_background.css"}}
+    </style>
+        
+    \{{
+        css_linked = true;
+     endif
+    }}
+
+<div class="wdg-featured">
+  	<div style="background:url('{{ src }}?size=1200X1500&crop') center no-repeat;" class="wdg-featured-background"></div>
+
+  	<div class="height-width-100 position-absolute">
+	  	<table class="text-center font-white height-width-100">
+  			<tbody>
+  				<tr>
+  					<td>
+			  			<div class="featured_title">
+							{{titre}}
+						</div>
+
+						<div class="featured_text">
+							{{soustitre}}
+						</div>
+					    {{if url ne '' then}}
+						<div class="featured_btn {{alignment}}">
+							<a href="{{url}}" class="btn {{type}} {{format}}" target="{{target}}">{{bouton_text}}</a>
+						</div>
+						{{endif}}
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	{{if feature.rows.height eq 'small' then}}
+	<img src="{{src}}?maxh=200&crop" alt="{{alt_image}}" class="img-responsive"> 
+	{{endif}}
+	{{if feature.rows.height eq 'regular' then}}
+	<img src="{{src}}?maxh=350&crop" alt="{{alt_image}}" class="img-responsive"> 
+	{{endif}}
+	{{if feature.rows.height eq 'large' then}}
+	<img src="{{src}}?maxh=600&crop" alt="{{alt_image}}" class="img-responsive"> 
+	{{endif}}
+	{{if feature.rows.height eq 'custom'  && feature.rows. height_customize  ne ''  then}}
+	<img src="{{src}}?maxh={{feature.rows.height_customize }}&crop" alt="{{alt_image}}" class="img-responsive"> 
+	{{endif}}
+ </div>
+
+
+
+
+
+
+

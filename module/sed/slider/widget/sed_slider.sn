@@ -1,0 +1,224 @@
+{{
+    /*
+    	@title	sed_slider
+    	Description:Use to display image,text and  link in slider
+        @author gamila@sednove.com
+    	@version 1.0 2016-06-23 10:00:00 Version initial
+    	@version 1.1 2016-06-30 10:00:00 pascale@sednove.com add a sed_slider_config to configurate bullet color, arrows, side color  
+    */
+    
+}}
+
+\{{ slider_config = sql(single:true,"select * from sed_slider_config where uid_widget = '{{use widget; widget.rows.uid_widget_list}}'");
+
+if slider_config.rows.uid eq '' then
+    rs = sql("INSERT INTO sed_slider_config (uid_widget) 
+                            VALUES ('?')",{{use widget; widget.rows.uid_widget_list}} );
+endif
+
+if slider_config.rows.bullet_color eq '' then
+    bullet_color = "007dc0";
+else
+    bullet_color = slider_config.rows.bullet_color;
+endif
+
+
+nb_slider = sql(single:true,"select * from sed_slider where uid_widget = '{{use widget; widget.rows.uid_widget_list}}' and actif='oui' ");
+
+if slider_config.rows.background_color ne '' then
+    background_color = slider_config.rows.background_color;
+else
+    background_color = "f3f3f3";    
+endif
+
+}}
+
+
+<style type="text/css" media="screen">
+    /* slider-a ; ie9+ ; Paul Tanase */
+    .slider-a {background-color:#\{{background_color;}};overflow-x:hidden;}
+    .slider-a .viewport {position:relative;max-width:1230px;margin:0 auto;min-height:250px;}
+    .slider-a .viewport > div:first-child {padding-top:36.5853%;}
+    .slider-a .viewport > .viewport2 {position:absolute;z-index:1;left:0;top:0;bottom:0;right:0;min-height:250px;}
+    .slider-a .viewport > .see {position:absolute;z-index:2;top:50%;margin-top:-53px;outline:none;}
+    .slider-a .viewport > .see.prev {left:20px;}
+    .slider-a .viewport > .see.next {right:20px;}
+    .slider-a .viewport > .see>img {display:block;}
+    .slider-a .viewport > .control {position:absolute;z-index:2;bottom:10px;width:100%;text-align:center;}
+    .slider-a .viewport > .control>a {display:inline-block;-moz-border-radius:10px;-webkit-border-radius:10px;border-radius:10px;background:#ffffff;width:8px;height:8px;margin:8px;vertical-align:middle;}
+    .slider-a .viewport > .control>a.on {background:#\{{bullet_color;}};}
+    .slider-a .slide {position:absolute;z-index:1;display:none;width:100%;height:100%;top:0;left:0;overflow:hidden;}
+    .slider-a .slide > div {width:100%;height:100%;background-position:center;background-size:cover;background-repeat:no-repeat;}
+    .slider-a .slide .text {display:none;width:100%;height:100%;padding:8% 12%;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;box-sizing:border-box;text-align:center;}
+    .slider-a .slide .text h2 {color:#454545;font-size:24px;line-height:100%;margin:0 0 20px 0; text-align:center;}
+    .slider-a .slide .text h1 {color:#454545;font-size:55px;line-height:110%;margin:0;text-align:center;}
+    
+    @media only screen and (max-width:1080px){
+        .slider-a .slide .text h1 {font-size:45px;}
+    }
+    
+    @media only screen and (max-width:880px){
+        .slider-a .slide .text h1 {font-size:35px;}
+    }
+    
+    @media only screen and (max-width:680px){
+        .slider-a .slide .text h1 {font-size:30px;}
+        .slider-a .viewport > .see {display:none;}
+    }
+    
+    @media only screen and (max-width:580px){
+        .slider-a .slide .text h1 {font-size:25px;}
+    }
+    
+    .slider-a .slide .text.model2 {padding:3% 10%;background-position:center;background-repeat:no-repeat;}
+    .slider-a .slide .text.model2>div {max-width:430px;margin:0 auto;padding:20px;}
+    .slider-a .slide .text.model2 img {display:block;max-width:100%;margin:0 auto 20px auto;}
+    .slider-a .slide .text.model2 h1 {font-size:35px;margin-bottom:10px;text-align:center;}
+    .slider-a .slide .text.model2 h2 {margin-bottom:25px}
+    @media only screen and (max-width:1100px){
+        /*.slider-a .slide .text.model2  h2 {display:none;}*/
+    }
+    
+    @media only screen and (max-width:1000px){
+        .slider-a .slide .text.model2 h1 {font-size:32px;margin-bottom:20px;}
+        .slider-a .slide .text.model2 h2 {font-size:26px;}
+    }
+    
+    @media only screen and (max-width:850px){
+        .slider-a .slide .text.model2 h1 {font-size:28px;margin-bottom:15px;}
+        .slider-a .slide .text.model2 h2 {font-size:22px;}
+    }
+    
+    @media only screen and (max-width:760px){
+        .slider-a .slide .text.model2 {padding:2% 10%;}
+        .slider-a .slide .text.model2 h1 {font-size:24px;}
+        .slider-a .slide .text.model2 h2 {font-size:18px;}
+    }
+    
+    @media only screen and (max-width:600px){
+        .slider-a .slide .text.model2 h1 {font-size:20px;line-height:120%;}
+        .slider-a .slide .text.model2 h2 {font-size:16px;}
+    }
+    
+    .slider-a .slide:nth-child(2) {left:100%;display:block;}
+    .slider-a .slide:nth-child(3) {left:200%;display:block;}
+    .slider-a .slide.before-last {left:-200%;display:block;}
+    
+    .slider-a .slide:last-child {left:-100%;display:block;}
+    .slider-a .slide:first-child {left:0;display:block;}
+    
+    @-webkit-keyframes fadein {
+        0% {opacity:0;}
+        100% {opacity:1;}
+    }
+    
+    @keyframes fadein {
+        0% {opacity:0;}
+        100% {opacity:1;}
+    }
+    
+    .slider-a .slide:first-child .text {display:block;opacity:1;animation:fadein;-webkit-animation:fadein;animation-duration:0.5s;-webkit-animation-duration:0.5s;}
+    .slide-content{max-width:430px;padding:0 20px;display: table;height:100%;}
+    .slide-content div{display: table-cell; vertical-align: middle;}
+</style>
+
+
+{{
+
+	%include "/extenso/functions/sn_ct.snc";
+	use uid;
+	use table;
+	use lg;
+	use widget; 
+}}
+
+<div class="slider-a" data-px-per-sec="2000" data-delay="5000">
+	<div class="viewport">
+		<div></div>
+		
+		<div class="viewport2">
+			\{{ production_select= "";
+			
+			if config.site ne "staging" then production_select .+= " and production='oui'"; endif
+    			content = sql(single:true,"select * from sed_slider where uid_widget = '{{use widget; widget.rows.uid_widget_list}}' and actif='oui' ".+ production_select .+ " ORDER BY sn_custom");
+    			
+    			if content.rows.uid eq '' then
+    			    type_slide = 'text';
+        			texte_fr   ='Sednove';
+                    texte_en   = 'Sednove' ;
+                    texte2_fr  ='soustitre';
+                    texte2_en  ='title';
+                    rs= sql("INSERT INTO sed_slider (actif,type_slide,texte_fr,texte_en,texte2_fr,texte2_en,uid_widget) 
+                            VALUES ('oui','?','?','?','?','?','?')",type_slide,texte_fr,texte_en,texte2_fr,texte2_en,{{widget.rows.uid_widget_list}} );
+                    
+    			endif
+    			
+    			for s sql("select * from sed_slider where uid_widget = '{{use widget; widget.rows.uid_widget_list}}' and actif='oui' ".+ production_select .+ " ORDER BY sn_custom") do }}
+    			
+    				<div class="slide">
+    				    
+    					\{{ if s.rows.image ne "" && -e s.rows.image then
+    							src = s.rows.image;
+    						else
+    							src = "/module/sed/slider/image_default/image_default.jpg";
+    						endif 
+    					}}
+    					<div style="background-image:url(\{{src}}?maxw=1230&maxh450);">
+    					    
+    						\{{ if s.rows.type_slide eq "link" then }}  <!-- If we choose a link -->
+    							\{{ if s.rows.overlay eq "circle" then 
+    							        style="background-image:url(/sn_uploads/cercle.png);"; 
+    							    endif }}
+    							<div class="text model2" style="\{{style}}">
+    								\{{ if s.rows.logo ne "" && -e s.rows.logo then }}<img src="\{{s.rows.logo}}?maxw=150">\{{ endif }}
+    								    <div>
+        									<h2><span style="color:#\{{s.rows.text_color}}">\{{s.rows.texte_{{lg.rows.lg}};}}</span></h2>
+        									<h1><span style="color:#\{{s.rows.text_color2}}">\{{s.rows.texte2_{{lg.rows.lg}};}}</span></h1>
+        									\{{ url="";
+        										if s.rows.type_url eq "interne" then
+        											p = sql(single:true,"select * from pages where uid = '?'", s.rows.url_interne);
+        											if p.nbrows == 1 then
+        												target = "_self";
+        												url = p.rows.folder_{{lg.rows.lg}} .+ p.rows.page_{{lg.rows.lg}} .+ ".snc";
+        											endif
+        										else
+        											target = "_blank";
+        											url = esc(filter:"html",s.rows.url_externe_{{lg.rows.lg}});
+        										endif 
+        									
+        									if url ne "" then }}
+        										<a target="\{{target}}" href="\{{url}}"  class="btn btn-primary"">
+        											\{{ if s.rows.lien_texte_{{lg.rows.lg}} ne "" then 
+        												esc(filter:"html",s.rows.lien_texte_{{lg.rows.lg}});
+        											else }}
+        												{{sn_ct("Lien", edit:"false", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+        											\{{ endif }}
+        										</a>
+        									\{{ endif }}
+        								</div>
+        							</div>
+    						\{{ else }} <!-- If we don't choose a link -->
+    							<div class="text">
+    								<h2><span style="color:#\{{s.rows.text_color}}">\{{esc(filter:"html",s.rows.texte_{{lg.rows.lg}});}}</span></h2>
+    								<h1><span style="color:#\{{s.rows.text_color2}}">\{{esc(filter:"html",s.rows.texte2_{{lg.rows.lg}});}}</span></h1>
+    							</div>
+    						\{{ endif }}
+    					</div>
+    				</div>
+    			\{{ endfor }}
+		</div>
+	</div>
+</div><!-- /.slider-a -->
+
+
+<script type="text/javascript" src="/js/slider-a.js"></script>
+<script type="text/javascript" src="/js/touch.js"></script>
+
+<script>		
+	$(function(){
+		$('.slider-a').slider_a({
+		    imgPrev: "\{{slider_config.rows.left_arrow_img}}",
+		    imgNext: "\{{slider_config.rows.right_arrow_img}}"
+		});
+	});
+</script>

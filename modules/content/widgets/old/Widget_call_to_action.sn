@@ -1,0 +1,33 @@
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	textcontent = sql(single:true, "select * from widget_text where uid_widget = '?'", widget.rows.uid_widget_list);
+	if textcontent.rows.type_url eq "interne" then
+			page = sql(single:true,"select * from pages where uid = '?'", textcontent.rows.url_interne);
+			if page.nbrows == 1 then
+				target = "_self";
+				url = page.rows{"folder_" .+ lg.rows.lg} .+ page.rows{"page_" .+ lg.rows.lg} .+ ".snc";
+			endif
+		else
+			target = "_blank";
+			url = textcontent.rows{"url_externe_" .+ lg.rows.lg};
+		endif
+}}
+<section class="slice bg-2 p-15">
+	<div class="cta-wr">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-5 col-md-offset-2">
+					<span class="mission">{{textcontent.rows{"content_" .+ lg.rows.lg};}}</span>
+				</div>
+				<div class="col-md-3 clearfix mt-20">
+					<a class="btn_losange pull-right" target="{{target}}" href="{{url}}">{{textcontent.rows{"title_" .+ lg.rows.lg};}} <img src="/sn_uploads/btn_losange.png" alt="Roger Tremblay"/></a>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>

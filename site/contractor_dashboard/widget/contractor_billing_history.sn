@@ -1,0 +1,42 @@
+{{
+    /*
+        @title contractor_billing_history
+        Description: List all contractor's bill and allow to view the pdf.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include '/site/package/all.sn';
+    
+    use page;
+    use lg;
+}}
+\{{
+    use extranet_user;
+    
+    pdf = sql("SELECT * FROM sr_billing_pdf WHERE uid_contractor='?' ORDER BY sn_cdate DESC", extranet_user.uid);
+    contractor = sql(single:true, "SELECT sn_cdate FROM sr_contractor WHERE uid='?'", extranet_user.uid);
+}}
+<h2>
+    {{sn_ct("contractor_billing_history Voici les factures que vous avez payé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}&nbsp;
+</h2>
+\{{for p in pdf.rows do}}
+\{{file = explode("/",p.pdf)}}
+
+    <div class="well">
+        <h4>
+            <b>{{sn_ct("contractor_billing_history Numéro de la facture :", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}&nbsp;</b>
+            <i class="fa fa-file-pdf-o" aria-hidden="true"></i> <a href="{{sn_pages('get_pdf', lg.rows.lg, table:'ressources')}}?p=\{{p.uid}}" target="_BLANK">\{{file.last()}}</a>
+            <p>Date: \{{contractor::contractorTime(extranet_user.uid,p.sn_cdate)}}</p>
+        </h4>
+    </div>
+\{{otherwise}}
+    <div class="alert alert-info">
+        {{sn_ct("contractor_billing_history Vous n'avez présentement aucune facture", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+    </div>
+\{{endfor}}

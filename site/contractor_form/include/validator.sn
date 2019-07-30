@@ -1,0 +1,43 @@
+{{
+    /*
+        @title validator for contractor_form
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-15
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        contact_name: 'required',
+        contact_email: 'required,email',
+        contact_phone: 'phone',
+        contact_title: 'required',
+        company_name: 'required',
+        address: 'required',
+        company_phone: 'phone',
+        //company_number: 'number',
+        // rbq: 'required',
+        // company_number: 'required',
+        // insurance_company: 'required',
+        // insurance_number: 'required',
+        // province: 'required',
+        territory: 'required',
+        service: 'required',
+        terms: 'required,func:chk_terms'
+        
+    );
+    validator.setAntibotDelay(4);
+}}
+<script>
+    function chk_terms(){
+        return ($('#terms').prop("checked") );
+    }
+    
+</script>
+

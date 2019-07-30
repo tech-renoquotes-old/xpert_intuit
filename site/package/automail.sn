@@ -1,0 +1,2683 @@
+{{      //	@version 1.1 2017-01-05 bbduc@yahoo.com  courriel from modifié pour anglais
+        //  @version 1.11 2017-02-14 bbduc@yahoo.com courriel C05 le "adwords_url" là où c'est écrit "Première page visitée"
+        //  @version 1.12 2017-02-21 bbduc@yahoo.com courriel courriel pour les cellulaires
+        //  @version 1.13 2017-03-22 bbduc@yahoo.com cc courriel pour C05
+        //  @version 1.14 2017-03-28 bbduc@yahoo.com Courriel pour admin  (titre, message)
+        //  @version 1.15 2017-07-07 louis.jhonny@gmail.com Modify suggestProjectToContractor(token) to include secondary or primary service.
+        //  @version 1.16 2018-11-06 mjodoin@soumissionrenovation.ca Added email tracking
+        
+        /*To add the email tracking, you need to
+            1. Use the group feature to use the client or contractor tracking (eg: group: 'contractors')
+            2. Create a tracking token in your function
+                Example: 
+                    time = time();
+                    token_tracking = hash(algo:"sha512", contractor.rows.email .+ project_contractor.rows.uid_contractor .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+            3. Send the parameters in the sendemail function.  Possibile parameters:
+                Contractor:
+                    uid_contractor
+                    uid_project
+                    token_tracking
+                    tracking: 'yes'
+                Client:
+                    uid_client
+                    token_tracking
+                    tracking: 'yes'
+                By default, the emailcode + subject will be saved in the DB
+            4. Add the pixel in the actual email, here's the code 
+            for contractors
+                    use token_tracking;
+                    "<img alt='' p='' src='https://soumissionrenovation.ca/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+            for clients
+                	use token_tracking;
+                	"<img alt='' p='' src='https://soumissionrenovation.ca/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+            5. You can find the result in tables: sr_log_email_client - sr_log_email_contractor
+       */
+    
+    %include '/extenso/functions/sn_ct.snc';
+    %include '/extenso/functions/sn_pages.snc';
+    use lg;
+}}
+\{{
+// %include '/extenso/functions/sn_ct.snc';
+
+package automail;
+    
+    function sendEmail(email;...)
+        if (lg eq '') then
+            lg = "{{lg.rows.lg}}"; 
+            if (lg eq '') then
+                lg = 'fr';
+            endif
+        endif
+        if (type(email) eq 'string') then
+        // void insert(table:'sr_debug', fields:{'description':'email_code=','text':'email'});
+           email = automail::getEmail(email, group, lg);
+        endif
+        if (subject eq '') then
+            subject = email.subject;
+        endif
+        if to == undefined then
+		    to = '';
+	    endif
+        if from == undefined then
+		    from = '';
+	    endif
+        if (parseSubject ne '') then
+            subject = parse(state:0, data:"{".+ "{".+parseSubject.+"}}" .+ subject);
+            //void insert(table:'sr_debug', fields:{'description':'parse subject=','text':subject});
+        endif
+        if (email.active) then
+            email_to = (email.debug_mode || to eq '') ? email.to : to;
+            email_to = email_to.resub(" ","","g");
+            email_from = (from eq '') ? email.from : from;
+        //V1.13
+        if (cc ne '') then
+            //void insert(table:'sr_debug', fields:{'description':'getEmail,cc='.+cc,'text':'lg='.+lg});
+            email_to .+= ','.+cc;
+        endif
+        
+        if(bcc ne '') then
+            email_bcc = bcc;
+        else
+            email_bcc = "";
+        endif
+        
+        if(group eq 'contractors') then
+        endif
+        
+        
+        void insert(table:'sr_log', fields:{'uid_project_contractor':'','uid_project':'', 'email_to':email_to  ,'email_from':email.from,'description':'subject',
+                                                'value':subject,'type':'sendEmail'});
+                                                
+        if (tracking eq 'yes') then      
+            if (group eq 'contractors') then
+                void insert(table:'sr_log_email_contractor', fields:{'uid_contractor':uid_contractor,'uid_project':uid_project,'subject':subject,'email_type':email_code_tracking,'token':token_tracking});
+            elseif (group eq 'clients') then
+                void insert(table:'sr_log_email_client', fields:{'uid_client':uid_client,'subject':subject,'email_type':email_code_tracking,'token':token_tracking});
+            elseif (subject eq 'customEmailToClient' || subject eq 'customEmailToWaitingClient') then
+                void insert(table:'sr_log_email_client', fields:{'uid_client':uid_client,'subject':subject,'email_type':email_code_tracking,'token':token_tracking});
+            endif
+        endif
+            
+            if attachfile ne "" then
+                if (attachfilect eq '') then
+                    attachfilect = 'application/pdf';
+                endif
+                void email(
+                    from: email_from,
+                    to: email_to,
+                    subject: subject,
+                    bcc: email_bcc,
+                    ct:"text/html",
+                    charset: "utf-8",
+                    file: email.file,
+                    encoding:"base64",
+                    ct: attachfilect,
+                    attachfile: attachfile,
+                    domain: 'xpertsource.com'
+                );
+            else
+                void email(
+                    from: email_from,
+                    to: email_to,
+                    subject: subject,
+                    bcc: email_bcc,
+                    ct:"text/html",
+                    charset: "utf-8",
+                    file: email.file,
+                    encoding:"base64",
+                    domain: 'xpertsource.com'
+                ); 
+                
+                
+            endif
+        endif
+    endf
+    
+    //new version to get email with a from group (previous feature are still supported)
+    function getEmail(email_code, group, lg)
+        //void insert(table:'sr_debug', fields:{'description':'getEmail,email_code='.+email_code,'text':'lg='.+lg});
+        
+        config = config();  
+        // get default infos
+        //V1.1  configs = sql(single:true, "SELECT default_admin_email,default_from_address,email_test_mode,email_test FROM sn_configs WHERE uid=1 LIMIT 1");
+
+        configs = sql(single:true, "SELECT default_admin_email,default_from_".+lg.+" as default_from_address , default_contractor_from_".+lg.+" as contractor_email_group, default_client_from_".+lg.+" as client_email_group, email_test_mode,email_test FROM sn_configs WHERE uid=1 LIMIT 1");
+        default_admin_email = configs.rows.default_admin_email;
+        
+        //split originating emails
+        if(group eq 'contractors') then
+            default_from_address = configs.rows.contractor_email_group;
+        elseif(group eq 'clients') then
+            default_from_address = configs.rows.client_email_group;
+        else
+            default_from_address = configs.rows.default_from_address;
+        endif
+        //  SELECT email_to, email_from, subject_fr as subject, active FROM email WHERE code='contractorProfileReminder1'
+        // get email specific infos, use default if no specific
+        //email = sql(single:true,"SELECT email_to, email_from, subject_? as subject, active FROM email WHERE code='?'", lg, email_code);
+        email = sql(single:true,"SELECT email_to, IFNULL(email_from, '') as email_from, subject_? as subject, active FROM email WHERE code='?'", lg, email_code);
+        email_from = (email.rows.email_from ne '') ? email.rows.email_from : default_from_address;
+        email_to = (email.rows.email_to ne '') ? email.rows.email_to : default_admin_email;
+        subject = email.rows.subject;
+        
+        use FORCE_EMAIL_PROD;
+        debug_mode = (configs.rows.email_test_mode eq 'all' || (configs.rows.email_test_mode eq 'dev' && (config.site eq 'staging' || FORCE_EMAIL_PROD)));
+       
+        
+        if (debug_mode) then
+            email_to = configs.rows.email_test;
+        endif
+        file = "/" .+ config.site .+ "/email/".+lg.+"/" .+ email_code .+ ".snc";
+        //void insert(table:'sr_debug', fields:{'description':'getEmail,email_from='.+email_from,'text':'email_to='.+email_to.+ '  debug_mode='.+debug_mode});
+
+        // return context containing the infos
+        return {
+            "from":email_from, 
+            "to":email_to, 
+            "subject":subject, 
+            "file":file, 
+            "active":(email.rows.active eq 'yes'),
+            "debug_mode": debug_mode
+        };
+    endf
+    
+    
+    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    
+    // C01
+    /*
+        string uid_project - the uid of the project that has been activated
+    */
+    function quoteRequestToClient(uid_project)
+    
+        project = sql(single:true,"
+            SELECT c.firstname, c.lastname, c.lang, c.email, c.uid
+            FROM sr_project p
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+        
+        project_number = sql(single:true,"
+        SELECT count(uid) as count
+        FROM sr_project");
+        
+        // variables for the email body
+        client_info = {
+            "uid": project.rows.uid,
+            "puid": uid_project,
+            "name":project.rows.firstname,
+            "language":project.rows.lang
+        };
+        
+        //create traking token
+        time = time();
+        token_tracking = hash(algo:"sha512", project.rows.email .+ project.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        void insert(table:'sr_debug', fields:{'description':'quoteRequestToClient,idproject='.+uid_project,'text':'email='.+project.rows.email});
+        automail::sendEmail(
+            "quoteRequestToClient",
+            group: 'clients',
+            to: project.rows.email,
+            lg: project.rows.lang,
+            uid_client: project.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    // C02
+    /*
+        string uid_project - the uid of the project that has been activated
+    */
+    
+    function quoteRequestToAdmin(uid_project)
+    
+        // V1.11 ajout uid_project, adwords_url
+        project = sql(single:true,"
+            SELECT  c.firstname, c.lastname, p.uid_client, a.zip, a.province, a.city, c.address,
+                    a.street_no, a.street, c.lang, c.languages, c.email, a.phone1, p.description, c.gender, 
+                    p.adwords_url, p.uid, p.first_url
+            FROM sr_project p
+            LEFT JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+
+        // variables for the email body
+        client_info = {
+            "uid": project.rows.uid_client,
+            "name":project.rows.firstname,
+            "phone":project.rows.phone1,
+            "email":project.rows.email,
+            "address": project.rows.address,
+            "postal_code": project.rows.zip,
+            "description": project.rows.description,
+            "gender":project.rows.gender,
+            "adwords_url":project.rows.adwords_url,
+            "uid_project":uid_project,
+            "first_url":project.rows.first_url
+        };
+        
+        url = "---"; // a voir
+        void insert(table:'sr_debug', fields:{'description':'C02 quoteRequestToAdmin uid='.+' ','text':uid_project.+ '  first_url='.+project.rows.first_url});
+
+        // par defaut   info@soumissionrenovation.ca
+        // dans courriel  clients@soumissionrenovation.ca
+        automail::sendEmail("quoteRequestToAdmin");
+    endf 
+    
+    // C03
+    /*
+        string uid_project - the uid of the project that has been activated
+    */
+    function projectActivatedClient(uid_project)
+        
+        project_lg = sql(single:true,"
+            SELECT c.lang 
+            FROM sr_project p
+            LEFT JOIN sr_client c ON c.uid=p.uid_client
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+        lg = project_lg.rows.lang;
+        
+        project = sql(single:true,"
+            SELECT c.firstname, c.lastname, c.gender, s.name_? as name, c.email, article_next_? as article_next, c.uid, p.uid as puid, a.street_no, a.street, a.zip, ci.name_? as city_name, a.phone1, a.phone2, minute(p.active_date) as minute
+            FROM sr_project p
+            LEFT JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_service s ON s.uid=p.uid_service
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city ci ON ci.uid=a.uid_city
+            WHERE p.uid = '?'"
+            , lg, lg, lg, uid_project
+        );
+        //project.rows.puid = uid_project;
+        
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", project.rows.email .+ project.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "projectActivatedClient",
+            group: 'clients',
+            to: project.rows.email,
+            lg: lg,
+            uid_client: project.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );       
+    endf
+    
+    // C04
+    /*
+        string uid_project - the uid of the project that has been activated
+    */ 
+    
+    function projectActivatedAdmin(uid_project)
+    
+        project_lg = sql(single:true,"
+            SELECT c.lang
+            FROM sr_project p
+            LEFT JOIN sr_client c ON c.uid=p.uid_client
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+        lg = project_lg.rows.lang;
+        
+        project = sql(single:true,"
+            SELECT  c.firstname, c.lastname, c.gender, p.uid_client, a.zip, a.province, a.city,
+                    a.street_no, a.street, c.lang, c.languages, c.email, a.phone1, a.phone2, a.phone3,
+                    p.uid as uid_project, s.name_? as service, p.description, p.due_date, p.lead_price, p.max_quotes, p.token
+            FROM sr_project p
+            LEFT JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_service s ON s.uid=p.uid_service
+            WHERE p.uid = '?'"
+            , lg, uid_project
+        );
+        
+        // variable for the email subject
+        id_projet = uid_project;
+        
+        automail::sendEmail(
+            "projectActivatedAdmin",
+            parseSubject: "use id_projet;",
+            lg: lg
+        );
+    endf
+    
+    // C05
+    /*
+        string uid_project - the uid of the project sent to the contractor
+        string uid_contractor - uid of the contractor
+    */
+    function suggestProjectToContractor(token)
+        project_contractor = sql(single:true,"SELECT uid_project, uid_contractor, uid FROM sr_project_contractor WHERE token='?'", token);
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", project_contractor.rows.uid_contractor);
+        
+        //initialize for email filter
+         accent = ['À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'ß', 'à', 'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'Ā', 'ā', 'Ă', 'ă', 'Ą', 'ą', 'Ć', 'ć', 'Ĉ', 'ĉ', 'Ċ', 'ċ', 'Č', 'č', 'Ď', 'ď', 'Đ', 'đ', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'ę', 'Ě', 'ě', 'Ĝ', 'ĝ', 'Ğ', 'ğ', 'Ġ', 'ġ', 'Ģ', 'ģ', 'Ĥ', 'ĥ', 'Ħ', 'ħ', 'Ĩ', 'ĩ', 'Ī', 'ī', 'Ĭ', 'ĭ', 'Į', 'į', 'İ', 'ı', 'Ĳ', 'ĳ', 'Ĵ', 'ĵ', 'Ķ', 'ķ', 'Ĺ', 'ĺ', 'Ļ', 'ļ', 'Ľ', 'ľ', 'Ŀ', 'ŀ', 'Ł', 'ł', 'Ń', 'ń', 'Ņ', 'ņ', 'Ň', 'ň', 'ŉ', 'Ō', 'ō', 'Ŏ', 'ŏ', 'Ő', 'ő', 'Œ', 'œ', 'Ŕ', 'ŕ', 'Ŗ', 'ŗ', 'Ř', 'ř', 'Ś', 'ś', 'Ŝ', 'ŝ', 'Ş', 'ş', 'Š', 'š', 'Ţ', 'ţ', 'Ť', 'ť', 'Ŧ', 'ŧ', 'Ũ', 'ũ', 'Ū', 'ū', 'Ŭ', 'ŭ', 'Ů', 'ů', 'Ű', 'ű', 'Ų', 'ų', 'Ŵ', 'ŵ', 'Ŷ', 'ŷ', 'Ÿ', 'Ź', 'ź', 'Ż', 'ż', 'Ž', 'ž', 'ſ', 'ƒ', 'Ơ', 'ơ', 'Ư', 'ư', 'Ǎ', 'ǎ', 'Ǐ', 'ǐ', 'Ǒ', 'ǒ', 'Ǔ', 'ǔ', 'Ǖ', 'ǖ', 'Ǘ', 'ǘ', 'Ǚ', 'ǚ', 'Ǜ', 'ǜ', 'Ǻ', 'ǻ', 'Ǽ', 'ǽ', 'Ǿ', 'ǿ', 'Ά', 'ά', 'Έ', 'έ', 'Ό', 'ό', 'Ώ', 'ώ', 'Ί', 'ί', 'ϊ', 'ΐ', 'Ύ', 'ύ', 'ϋ', 'ΰ', 'Ή', 'ή'];
+         noaccent = ['A', 'A', 'A', 'A', 'A', 'A', 'AE', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y', 's', 'a', 'a', 'a', 'a', 'a', 'a', 'ae', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'a', 'A', 'a', 'A', 'a', 'C', 'c', 'C', 'c', 'C', 'c', 'C', 'c', 'D', 'd', 'D', 'd', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'G', 'g', 'G', 'g', 'G', 'g', 'G', 'g', 'H', 'h', 'H', 'h', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'IJ', 'ij', 'J', 'j', 'K', 'k', 'L', 'l', 'L', 'l', 'L', 'l', 'L', 'l', 'l', 'l', 'N', 'n', 'N', 'n', 'N', 'n', 'n', 'O', 'o', 'O', 'o', 'O', 'o', 'OE', 'oe', 'R', 'r', 'R', 'r', 'R', 'r', 'S', 's', 'S', 's', 'S', 's', 'S', 's', 'T', 't', 'T', 't', 'T', 't', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'W', 'w', 'Y', 'y', 'Y', 'Z', 'z', 'Z', 'z', 'Z', 'z', 's', 'f', 'O', 'o', 'U', 'u', 'A', 'a', 'I', 'i', 'O', 'o', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'A', 'a', 'AE', 'ae', 'O', 'o', 'Α', 'α', 'Ε', 'ε', 'Ο', 'ο', 'Ω', 'ω', 'Ι', 'ι', 'ι', 'ι', 'Υ', 'υ', 'υ', 'υ', 'Η', 'η'];
+
+        
+        lg = contractor.rows.contact_lg;  
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        project = sql(single:true, "
+                SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip ,a.province, p.shared_budget
+                FROM sr_project p 
+                LEFT JOIN sr_address a ON p.uid_address=a.uid 
+                LEFT JOIN sr_city c ON c.uid=a.uid_city 
+                WHERE p.uid = '?'", lg, project_contractor.rows.uid_project);
+        
+        //which service to use? primary or secondary
+        secondary = sql("SELECT c.* FROM sr_contractor c WHERE   c.active = 'yes' AND c.uid = '?'
+                    AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid AND approved = 'yes')
+                ", project_contractor.rows.uid_contractor,project.rows.uid_secondary_service);
+
+        primary = sql("SELECT c.* FROM sr_contractor c WHERE   c.active = 'yes' AND c.uid = '?'
+                    AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid AND approved = 'yes')
+                ", project_contractor.rows.uid_contractor,project.rows.uid_service);
+                
+                
+        if(primary.nbrows >= 1 && secondary.nbrows >= 1) then
+            suid = project.rows.uid_service;
+        elseif(primary.nbrows >= 1 && secondary.nbrows == 0) then
+            suid = project.rows.uid_service;
+        elseif(primary.nbrows == 0 && secondary.nbrows >= 1) then
+            suid = project.rows.uid_secondary_service;
+        endif
+
+        service = sql(single:true, "SELECT * FROM sr_service WHERE uid = '?'", suid);
+        service = service.rows{'name_'.+lg};  
+        
+        // for the email subject
+        id_projet = project.rows.uid;
+        subject_city = project.rows.city;
+        
+        isFiltered = automail::filter_contractor_subject(project_contractor.rows.uid_contractor, "/site/emailFilter/suggestProjectEmailsFilter.csv");
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.email .+ project_contractor.rows.uid_contractor .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        if isFiltered then
+            service = str_replace(accent, noaccent, service);
+            subject_city = str_replace(accent, noaccent, subject_city);
+        
+            automail::sendEmail(
+                "suggestProjectToContractorFiltered",
+                group: 'contractors',
+                to: contractor.rows.email,
+                cc: contractor.rows.email_cc,
+                parseSubject: "use id_projet; use service; use subject_city;",
+                lg: lg,
+                uid_contractor: project_contractor.rows.uid_contractor,
+                uid_project: id_projet,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+            void insert(table:'sr_log', fields:{'uid_contractor':project_contractor.rows.uid_contractor,'email_to': contractor.rows.email  ,'description':'email suggestFilteredProjectToContractor---','value':contractor.rows.email});
+        else
+        
+            automail::sendEmail(
+                "suggestProjectToContractor",
+                group: 'contractors',
+                to: contractor.rows.email,
+                cc: contractor.rows.email_cc,
+                parseSubject: "use id_projet; use service; use subject_city;",
+                lg: lg,
+                uid_contractor: project_contractor.rows.uid_contractor,
+                uid_project: id_projet,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+            void insert(table:'sr_log', fields:{'uid_contractor':project_contractor.rows.uid_contractor,'email_to': contractor.rows.email  ,'description':'email suggestProjectToContractor---','value':contractor.rows.email});
+        endif
+        
+    endf 
+    
+    
+    function suggestFreeProjectToContractor(token)
+        project_contractor = sql(single:true,"SELECT uid_project, uid_contractor, uid FROM sr_project_contractor WHERE token='?'", token);
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", project_contractor.rows.uid_contractor);
+        
+        //initialize for email filter
+         accent = ['À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'ß', 'à', 'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'Ā', 'ā', 'Ă', 'ă', 'Ą', 'ą', 'Ć', 'ć', 'Ĉ', 'ĉ', 'Ċ', 'ċ', 'Č', 'č', 'Ď', 'ď', 'Đ', 'đ', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'ę', 'Ě', 'ě', 'Ĝ', 'ĝ', 'Ğ', 'ğ', 'Ġ', 'ġ', 'Ģ', 'ģ', 'Ĥ', 'ĥ', 'Ħ', 'ħ', 'Ĩ', 'ĩ', 'Ī', 'ī', 'Ĭ', 'ĭ', 'Į', 'į', 'İ', 'ı', 'Ĳ', 'ĳ', 'Ĵ', 'ĵ', 'Ķ', 'ķ', 'Ĺ', 'ĺ', 'Ļ', 'ļ', 'Ľ', 'ľ', 'Ŀ', 'ŀ', 'Ł', 'ł', 'Ń', 'ń', 'Ņ', 'ņ', 'Ň', 'ň', 'ŉ', 'Ō', 'ō', 'Ŏ', 'ŏ', 'Ő', 'ő', 'Œ', 'œ', 'Ŕ', 'ŕ', 'Ŗ', 'ŗ', 'Ř', 'ř', 'Ś', 'ś', 'Ŝ', 'ŝ', 'Ş', 'ş', 'Š', 'š', 'Ţ', 'ţ', 'Ť', 'ť', 'Ŧ', 'ŧ', 'Ũ', 'ũ', 'Ū', 'ū', 'Ŭ', 'ŭ', 'Ů', 'ů', 'Ű', 'ű', 'Ų', 'ų', 'Ŵ', 'ŵ', 'Ŷ', 'ŷ', 'Ÿ', 'Ź', 'ź', 'Ż', 'ż', 'Ž', 'ž', 'ſ', 'ƒ', 'Ơ', 'ơ', 'Ư', 'ư', 'Ǎ', 'ǎ', 'Ǐ', 'ǐ', 'Ǒ', 'ǒ', 'Ǔ', 'ǔ', 'Ǖ', 'ǖ', 'Ǘ', 'ǘ', 'Ǚ', 'ǚ', 'Ǜ', 'ǜ', 'Ǻ', 'ǻ', 'Ǽ', 'ǽ', 'Ǿ', 'ǿ', 'Ά', 'ά', 'Έ', 'έ', 'Ό', 'ό', 'Ώ', 'ώ', 'Ί', 'ί', 'ϊ', 'ΐ', 'Ύ', 'ύ', 'ϋ', 'ΰ', 'Ή', 'ή'];
+         noaccent = ['A', 'A', 'A', 'A', 'A', 'A', 'AE', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y', 's', 'a', 'a', 'a', 'a', 'a', 'a', 'ae', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'a', 'A', 'a', 'A', 'a', 'C', 'c', 'C', 'c', 'C', 'c', 'C', 'c', 'D', 'd', 'D', 'd', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'G', 'g', 'G', 'g', 'G', 'g', 'G', 'g', 'H', 'h', 'H', 'h', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'IJ', 'ij', 'J', 'j', 'K', 'k', 'L', 'l', 'L', 'l', 'L', 'l', 'L', 'l', 'l', 'l', 'N', 'n', 'N', 'n', 'N', 'n', 'n', 'O', 'o', 'O', 'o', 'O', 'o', 'OE', 'oe', 'R', 'r', 'R', 'r', 'R', 'r', 'S', 's', 'S', 's', 'S', 's', 'S', 's', 'T', 't', 'T', 't', 'T', 't', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'W', 'w', 'Y', 'y', 'Y', 'Z', 'z', 'Z', 'z', 'Z', 'z', 's', 'f', 'O', 'o', 'U', 'u', 'A', 'a', 'I', 'i', 'O', 'o', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'A', 'a', 'AE', 'ae', 'O', 'o', 'Α', 'α', 'Ε', 'ε', 'Ο', 'ο', 'Ω', 'ω', 'Ι', 'ι', 'ι', 'ι', 'Υ', 'υ', 'υ', 'υ', 'Η', 'η'];
+
+        
+        lg = contractor.rows.contact_lg;  
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        project = sql(single:true, "
+                SELECT p.*, cl.gender as cgender, cl.firstname as fname, cl.lastname as lname, a.phone1, a.phone2, a.phone3, cl.when_to_call, cl.email, cl.address, IFNULL(c.name_?, a.city) as city, a.zip ,a.province
+                FROM sr_project p
+                INNER JOIN sr_client cl ON cl.uid = p.uid_client
+                LEFT JOIN sr_address a ON p.uid_address=a.uid 
+                LEFT JOIN sr_city c ON c.uid=a.uid_city 
+                WHERE p.uid = '?'", lg, project_contractor.rows.uid_project);
+        
+        //which service to use? primary or secondary
+        secondary = sql("SELECT c.* FROM sr_contractor c WHERE   c.active = 'yes' AND c.uid = '?'
+                    AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid AND approved = 'yes')
+                ", project_contractor.rows.uid_contractor,project.rows.uid_secondary_service);
+
+        primary = sql("SELECT c.* FROM sr_contractor c WHERE   c.active = 'yes' AND c.uid = '?'
+                    AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid AND approved = 'yes')
+                ", project_contractor.rows.uid_contractor,project.rows.uid_service);
+                
+                
+        if(primary.nbrows >= 1 && secondary.nbrows >= 1) then
+            suid = project.rows.uid_service;
+        elseif(primary.nbrows >= 1 && secondary.nbrows == 0) then
+            suid = project.rows.uid_service;
+        elseif(primary.nbrows == 0 && secondary.nbrows >= 1) then
+            suid = project.rows.uid_secondary_service;
+        endif
+
+        
+        //service = sql(single:true, "SELECT * FROM sr_service s LEFT JOIN sr_contractor_service cs on s.uid = cs.uid WHERE cs.uid = '?' OR cs.uid = '?'", project.rows.uid_service, project.rows.uid_secondary_service);        
+        service = sql(single:true, "SELECT * FROM sr_service WHERE uid = '?'", suid);
+        service = service.rows{'name_'.+lg};  
+        
+        // for the email subject
+        id_projet = project.rows.uid;
+        subject_city = project.rows.city;
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.email .+ project_contractor.rows.uid_contractor .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        //void insert(table:'sr_debug', fields:{'description':'testC05,cc='.+contractor.rows.email_cc,'text':'token='.+token.+' uid_contractor='.+project_contractor.rows.uid_contractor});
+        
+            automail::sendEmail(
+                "suggestEmployeeToContractor",
+                group: 'contractors',
+                to: contractor.rows.email,
+                cc: contractor.rows.email_cc,
+                parseSubject: "use id_projet; use service; use subject_city;",
+                lg: lg,
+                uid_contractor: project_contractor.rows.uid_contractor,
+                uid_project: id_projet,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+            void insert(table:'sr_log', fields:{'uid_contractor':project_contractor.rows.uid_contractor,'email_to': contractor.rows.email  ,'description':'email suggestProjectToContractor---','value':contractor.rows.email});
+
+    endf  
+    
+    // C05-Test
+    /*
+        string uid_project - the uid of the project sent to the contractor
+        string uid_contractor - uid of the contractor
+    */
+  function test_suggestProjectToContractor(uid_project,uid_contractor,to_email;...)
+       
+      //  project_contractor = sql(single:true,"SELECT uid_project, uid_contractor, uid FROM sr_project_contractor WHERE token='?'", token);
+      contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+        
+        
+        if (lg eq '') then
+            lg = contractor.rows.contact_lg;
+        endif
+        
+        project = sql(single:true, "
+                SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip 
+                FROM sr_project p 
+                LEFT JOIN sr_address a ON p.uid_address=a.uid 
+                LEFT JOIN sr_city c ON c.uid=a.uid_city 
+                WHERE p.uid = '?'", lg, uid_project);
+        
+        service = sql(single:true, "SELECT * FROM sr_service WHERE uid = '?'", project.rows.uid_service);
+        service = service.rows{'name_'.+lg};
+        
+        // for the email subject
+        id_projet = project.rows.uid;
+        
+        automail::sendEmail(
+            "suggestProjectToContractor",
+            group: 'contractors',
+            to: to_email,
+            parseSubject: "use id_projet; use service;",
+            lg: lg
+        );  
+        
+    endf    
+
+    // C06
+    /*
+        string uid_project_contractor
+    */
+    function sendContractorToClient(uid_project_contractor)
+        project_contractor = sql(single:true, "
+            SELECT  ct.company_name, ct.company_phone, ct.rbq, ct.website, ct.contact_firstname, ct.contact_gender,
+                    ct.contact_lastname, ct.contact_phone, ct.contact_email, ct.contact_lg, ct.show_profile, ct.seo,
+                    c.gender, c.lastname, c.firstname, c.email, c.lang, ct.uid,
+                    s.name_fr, s.name_en, p.uid_client, pc.uid_project
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor ct ON ct.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            WHERE pc.uid = '?'"
+        , uid_project_contractor);
+
+        lg = project_contractor.rows.lang;
+
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        service_name = project_contractor.rows.name_fr;
+        
+        if (lg eq 'en') then
+            service_name = project_contractor.rows.name_en;
+        endif
+
+        gallery = sql("SELECT * FROM sr_gallery WHERE active='yes' AND uid_contractor='?' ORDER BY sn_cdate DESC LIMIT 5", project_contractor.rows.uid);
+        
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", project_contractor.rows.email .+ project_contractor.uid_client .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "sendContractorToClient",
+            group: 'clients',
+            to: project_contractor.rows.email, 
+            parseSubject: "use service_name;",
+            lg: lg,
+            uid_client: project_contractor.uid_client,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        ); 
+    endf
+    
+    
+    // C07
+    /*
+        string uid_project_contractor
+    */
+    function notifyContractorWinProject(uid_project_contractor)
+        project_contractor = sql(single:true, "
+            SELECT  ct.contact_title, ct.contact_firstname, ct.contact_lastname, ct.email as ct_email, c.firstname, c.lastname, c.gender, 
+                    a.street_no, a.street, a.city, city.name_fr as city_fr, city.name_en as city_en, a.zip, a.phone1, a.phone2, a.phone3, 
+                    ct.contact_gender, ct.uid, pc.uid_project, ct.token,
+                    c.email, c.when_to_call, p.description, p.additional_info, pc.uid_contractor,
+                    ct.contact_lg,
+                    ct.email_cc
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor ct ON ct.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city city ON city.uid=a.uid_city
+            WHERE pc.uid = '?'"
+        , uid_project_contractor);
+        
+        
+        lg = project_contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        if (project_contractor.rows{'city_'.+lg}) then
+            project_contractor.rows.city = project_contractor.rows{'city_'.+lg};
+        endif
+        
+        //initialize for email filter
+         accent = ['À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'ß', 'à', 'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'Ā', 'ā', 'Ă', 'ă', 'Ą', 'ą', 'Ć', 'ć', 'Ĉ', 'ĉ', 'Ċ', 'ċ', 'Č', 'č', 'Ď', 'ď', 'Đ', 'đ', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'ę', 'Ě', 'ě', 'Ĝ', 'ĝ', 'Ğ', 'ğ', 'Ġ', 'ġ', 'Ģ', 'ģ', 'Ĥ', 'ĥ', 'Ħ', 'ħ', 'Ĩ', 'ĩ', 'Ī', 'ī', 'Ĭ', 'ĭ', 'Į', 'į', 'İ', 'ı', 'Ĳ', 'ĳ', 'Ĵ', 'ĵ', 'Ķ', 'ķ', 'Ĺ', 'ĺ', 'Ļ', 'ļ', 'Ľ', 'ľ', 'Ŀ', 'ŀ', 'Ł', 'ł', 'Ń', 'ń', 'Ņ', 'ņ', 'Ň', 'ň', 'ŉ', 'Ō', 'ō', 'Ŏ', 'ŏ', 'Ő', 'ő', 'Œ', 'œ', 'Ŕ', 'ŕ', 'Ŗ', 'ŗ', 'Ř', 'ř', 'Ś', 'ś', 'Ŝ', 'ŝ', 'Ş', 'ş', 'Š', 'š', 'Ţ', 'ţ', 'Ť', 'ť', 'Ŧ', 'ŧ', 'Ũ', 'ũ', 'Ū', 'ū', 'Ŭ', 'ŭ', 'Ů', 'ů', 'Ű', 'ű', 'Ų', 'ų', 'Ŵ', 'ŵ', 'Ŷ', 'ŷ', 'Ÿ', 'Ź', 'ź', 'Ż', 'ż', 'Ž', 'ž', 'ſ', 'ƒ', 'Ơ', 'ơ', 'Ư', 'ư', 'Ǎ', 'ǎ', 'Ǐ', 'ǐ', 'Ǒ', 'ǒ', 'Ǔ', 'ǔ', 'Ǖ', 'ǖ', 'Ǘ', 'ǘ', 'Ǚ', 'ǚ', 'Ǜ', 'ǜ', 'Ǻ', 'ǻ', 'Ǽ', 'ǽ', 'Ǿ', 'ǿ', 'Ά', 'ά', 'Έ', 'έ', 'Ό', 'ό', 'Ώ', 'ώ', 'Ί', 'ί', 'ϊ', 'ΐ', 'Ύ', 'ύ', 'ϋ', 'ΰ', 'Ή', 'ή'];
+         noaccent = ['A', 'A', 'A', 'A', 'A', 'A', 'AE', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y', 's', 'a', 'a', 'a', 'a', 'a', 'a', 'ae', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'a', 'A', 'a', 'A', 'a', 'C', 'c', 'C', 'c', 'C', 'c', 'C', 'c', 'D', 'd', 'D', 'd', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'G', 'g', 'G', 'g', 'G', 'g', 'G', 'g', 'H', 'h', 'H', 'h', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'IJ', 'ij', 'J', 'j', 'K', 'k', 'L', 'l', 'L', 'l', 'L', 'l', 'L', 'l', 'l', 'l', 'N', 'n', 'N', 'n', 'N', 'n', 'n', 'O', 'o', 'O', 'o', 'O', 'o', 'OE', 'oe', 'R', 'r', 'R', 'r', 'R', 'r', 'S', 's', 'S', 's', 'S', 's', 'S', 's', 'T', 't', 'T', 't', 'T', 't', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'W', 'w', 'Y', 'y', 'Y', 'Z', 'z', 'Z', 'z', 'Z', 'z', 's', 'f', 'O', 'o', 'U', 'u', 'A', 'a', 'I', 'i', 'O', 'o', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'A', 'a', 'AE', 'ae', 'O', 'o', 'Α', 'α', 'Ε', 'ε', 'Ο', 'ο', 'Ω', 'ω', 'Ι', 'ι', 'ι', 'ι', 'Υ', 'υ', 'υ', 'υ', 'Η', 'η'];
+        
+        // variable for the email subject
+        id_projet = project_contractor.rows.uid_project;
+        budget = sql(single:true, "SELECT shared_budget FROM sr_project where uid = '?'",id_projet);
+        shared_budget = budget.rows.shared_budget;
+        //Michel 14/12/2017 I have removed the filter subject text because it added the id project twice in the subject.  I solved the issue of the filter by not having problematic signs
+        
+        //filter subject text
+        // isFiltered = automail::filter_contractor_subject(project_contractor.rows.uid_contractor, "/site/emailFilter/notifyContractorWinProjectFilter.csv");
+        
+
+        // if isFiltered then
+        //     subject_text = (lg eq 'fr')? "Soumissionrenovation.ca : Informations du client pour le projet " .+  id_projet : "RenoQuotes.com : Client's information for the project " .+ id_projet;
+        //     subject_text = str_replace(accent, noaccent, subject_text);
+        // else
+        //     subject_text = (lg eq 'fr')? "Soumissionrenovation.ca - Informations du client pour le projet " .+  id_projet : "RenoQuotes.com - Client's information for the project " .+ id_projet;
+        // endif
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", project_contractor.rows.ct_email .+ uid_project_contractor .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "notifyContractorWinProject",
+            group: 'contractors',
+            to: project_contractor.rows.ct_email, 
+            cc: project_contractor.rows.email_cc,
+            parseSubject: "use id_projet;",
+            lg:lg,
+            uid_contractor: project_contractor.rows.uid,
+            uid_project: id_projet,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    
+   // C07A  for testing
+    /*
+        string uid_project_contractor
+    */
+    function test_notifyContractorWinProject(uid_project_contractor;...)    //email_to)
+        project_contractor = sql(single:true, "
+            SELECT  ct.contact_title, ct.contact_firstname, ct.contact_lastname, ct.email as ct_email, c.firstname, c.lastname, c.gender, 
+                    a.street_no, a.street, a.city, city.name_fr as city_fr, city.name_en as city_en, a.zip, a.phone1, a.phone2, a.phone3, 
+                    ct.contact_gender,
+                    c.email, c.when_to_call, p.description, p.additional_info, p.uid,
+                    ct.contact_lg
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor ct ON ct.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city city ON city.uid=a.uid_city
+            WHERE pc.uid = '?'"
+        , uid_project_contractor);
+        
+        //lg = project_contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        if (project_contractor.rows{'city_'.+lg}) then
+            project_contractor.rows.city = project_contractor.rows{'city_'.+lg};
+        endif
+        
+        // variable for the email subject
+        id_projet = project_contractor.rows.uid;
+        if (email_to eq '') then
+            email_to = project_contractor.rows.ct_email;
+        endif
+        if (cc_email eq '') then
+            cc_email = '';
+        endif
+
+        void insert(table:'sr_log', fields:{'uid_project_contractor':uid_project_contractor,'uid_project':id_projet, 'email_to': project_contractor.rows.ct_email  ,'description':'email test_notifyContractorWinProject','value':''});
+        automail::sendEmail(
+            "notifyContractorWinProject",
+            to: email_to, 
+            parseSubject: "use id_projet;",
+            lg:lg,
+            uid_project_contractor:uid_project_contractor,
+            uid_project:id_projet,
+            cc:cc_email
+        );
+        
+    endf
+    
+    
+    // C08
+    /*
+        string uid_project_contractor
+    */
+    function notifyAdminContractorAcceptQuoteProject(uid_project_contractor)
+    
+        project_contractor = sql(single:true, "
+            SELECT  ct.contact_title, ct.contact_firstname, ct.contact_lastname, c.firstname, c.lastname, c.gender,
+                    a.street_no, a.street, a.city, city.name_fr as city_fr, city.name_en as city_en, a.phone1, a.phone2, a.phone3, 
+                    ct.contact_gender,
+                    c.email, c.when_to_call, p.description, p.additional_info, p.uid,
+                    ct.company_name, ct.company_phone, ct.rbq, ct.website, ct.contact_phone, ct.contact_email, 
+                    ct.contact_lg
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor ct ON ct.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city city ON city.uid=a.uid_city
+            WHERE pc.uid = '?'"
+        , uid_project_contractor);
+        
+        lg = project_contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        if (project_contractor.rows{'city_'.+lg}) then
+            project_contractor.rows.city = project_contractor.rows{'city_'.+lg};
+        endif
+        
+        // variables for the subject
+        compagnie = project_contractor.rows.company_name;
+        id_projet = project_contractor.rows.uid;
+        
+        automail::sendEmail(
+            "notifyAdminContractorAcceptQuoteProject",
+            parseSubject: "use id_projet; use compagnie;"
+        );
+        
+    endf    
+        
+    // C09
+    /*
+        string uid_contractor - the uid of the contractor
+        string pdf -  the path of the file (pdf) to join to the email
+    */
+    function sendInvoicePdf(uid_contractor, pdf)
+    
+        contractor = sql(single:true,"SELECT * FROM sr_contractor WHERE uid='?'", uid_contractor);
+        url = sql(single:true, "SELECT url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+        
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+     
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.email_accounting .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+     
+        pdf_file = "/pdf/" .+ pdf;
+        pdf_file;
+        automail::sendEmail(
+            "sendInvoicePdf",
+            group: 'contractors',
+            to: contractor.rows.email_accounting, 
+            attachfile: pdf_file,
+            lg:lg,
+            uid_contractor: uid_contractor,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    
+    //TEST function
+    function test_sendInvoicePdf(uid_contractor, pdf;...)
+    
+        contractor = sql(single:true,"SELECT * FROM sr_contractor WHERE uid='?'", uid_contractor);
+        url = sql(single:true, "SELECT url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+        
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        if to == undefined then
+		    to = contractor.rows.email_accounting;
+	    endif
+
+     
+        pdf_file = "/pdf/" .+ pdf;
+        
+        automail::sendEmail(
+            "sendInvoicePdf",
+            to: to, 
+            attachfile: pdf_file,
+            lg:lg
+        );
+    endf
+    
+    
+    
+    function sendUnreachableNoticeToClient(uid_project_contractor)
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, c.contact_lg, s.name_fr, s.name_en, pc.uid, pc.uid_project, pc.token, cr.reason, cr.no_quote
+            FROM sr_project_contractor pc
+            INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.accepted = 'yes'
+            AND pc.uid = '?' 
+            ", uid_project_contractor
+        );  
+        
+        if (contractor.nbrows > 0) then
+            //Il faut prendre le token de sr_project_contractor et non de sr_project
+            client = sql(single:true,"SELECT c.email, c.lang, p.token, c.gender, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",contractor.rows.uid_project);
+            lg = client.rows.lang;
+            gender = client.rows.gender;
+        
+            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            //void insert(table:'sr_log', fields:{'uid_contractor':contractors.rows.uid,'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient--avant1','value':client.rows.email});
+            //void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient--res','value':res});
+            
+            client.rows.email;
+            
+            if( res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+                email_to = res;
+
+                    //create tracking token
+                    time = time();
+                    token_tracking = hash(algo:"sha512", client.rows.email .+ project_contractor.rows.uid_project .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+                    void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
+                    automail::sendEmail(
+                        "sendUnreachableNoticeToClient",
+                        group: 'contractors',
+                        to: client.rows.email, 
+                        lg:lg,
+                        uid_project: contractor.rows.uid_project,
+                        token_tracking: token_tracking,
+                        tracking: 'yes'
+                    );
+            endif
+        endif
+    endf
+    
+    /**
+     * @desc: Send credit survey to client and credit contractor depending on their feedback
+     * @args: integer uid_project
+     * 
+     **/
+    function sendCreditSurveyToClient(uid_credit)
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, c.contact_lg, s.name_fr, s.name_en, cr.uid, pc.uid_project, pc.token, cr.reason, cr.no_quote
+            FROM sr_project_contractor pc
+            INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.accepted = 'yes'
+            AND cr.uid = '?' 
+            ", uid_credit
+        );  
+        
+        if (contractor.nbrows > 0) then
+            //Il faut prendre le token de sr_project_contractor et non de sr_project
+            client = sql(single:true,"SELECT c.email, c.lang, p.token, c.gender, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",contractor.rows.uid_project);
+            lg = client.rows.lang;
+            gender = client.rows.gender;
+        
+            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            //void insert(table:'sr_log', fields:{'uid_contractor':contractors.rows.uid,'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient--avant1','value':client.rows.email});
+            //void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient--res','value':res});
+            
+            company = contractor.rows.company_name;
+            
+            if( res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+                email_to = res;
+
+                    //create tracking token
+                    time = time();
+                    token_tracking = hash(algo:"sha512", client.rows.email .+ contractor.rows.uid_project .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+                    void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
+                    automail::sendEmail(
+                        "sendCreditSurveyToClient",
+                        group: 'contractors',
+                        parseSubject: "use company;",
+                        to: client.rows.email, 
+                        lg:lg,
+                        uid_contractor: contractor.rows.cuid,
+                        uid_project: contractor.rows.uid_project,
+                        token_tracking: token_tracking,
+                        tracking: 'yes'
+                    );
+            endif
+        endif
+    endf
+    
+    
+    function  notifyContractorCreditRefusedReason1(uid_credit)
+        credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", uid_credit);
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.contact_email, c.company_name, c.contact_lg, c.contact_gender, s.name_fr, s.name_en, cr.uid, pc.uid_project, pc.token, cr.reason, pc.accepted_date
+            FROM sr_project_contractor pc
+            INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.accepted = 'yes'
+            AND cr.uid = '?' 
+            ", uid_credit
+        );  
+        
+        contractor;
+        
+        id_projet = contractor.rows.uid_project;
+        lg = contractor.rows.contact_lg;
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        if (contractor.nbrows > 0) then
+                automail::sendEmail(
+                    "notifyContractorCreditRefusedReason1",
+                    group: 'contractors',
+                    parseSubject: "use id_projet;",
+                    to: contractor.rows.contact_email, 
+                    lg:lg,
+                    uid_contractor: contractor.rows.cuid,
+                    uid_project: id_projet,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
+                );
+        
+        void insert(table:'sr_log', fields:{'type':'credit request','uid_project_contractor':credit.rows.uid_project_contractor,'uid_project':'credit.rows.uid_project', 'email_to': 'contact_email'  ,'description':"Refusé; vue qu'un prix n'à pas été donné et le projet est annulé/donné "});
+
+        endif
+        
+        
+    endf
+
+    function  notifyContractorCreditRefusedReason3(uid_credit)
+        credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", uid_credit);
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.contact_email, c.company_name, c.contact_lg, c.contact_gender, s.name_fr, s.name_en, cr.uid, pc.uid_project, pc.token, cr.reason, pc.accepted_date
+            FROM sr_project_contractor pc
+            INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.accepted = 'yes'
+            AND cr.uid = '?' 
+            ", uid_credit
+        );  
+        
+        id_projet = contractor.rows.uid_project;
+        lg = contractor.rows.contact_lg;
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        if (contractor.nbrows > 0) then
+                automail::sendEmail(
+                    "notifyContractorCreditRefusedReason3",
+                    group: 'contractors',
+                    parseSubject: "use id_projet;",
+                    to: contractor.rows.contact_email, 
+                    lg:lg,
+                    uid_contractor: contractor.rows.cuid,
+                    uid_project: id_projet,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
+                );
+        void insert(table:'sr_log', fields:{'type':'credit request','uid_project_contractor':credit.rows.uid_project_contractor,'uid_project':'credit.rows.uid_project', 'email_to': 'contact_email'  ,'description':"Refusé; vue qu'un prix à été donné et le projet est toujours disponible "});
+        endif
+    endf
+    
+    function  notifyContractorCreditRefusedReason4(uid_credit)
+        credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", uid_credit);
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.contact_email, c.company_name, c.contact_lg, c.contact_gender, s.name_fr, s.name_en, cr.uid, pc.uid_project, pc.token, cr.reason, pc.accepted_date
+            FROM sr_project_contractor pc
+            INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.accepted = 'yes'
+            AND cr.uid = '?' 
+            ", uid_credit
+        );  
+        
+        id_projet = contractor.rows.uid_project;
+        lg = contractor.rows.contact_lg;
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        if (contractor.nbrows > 0) then
+                automail::sendEmail(
+                    "notifyContractorCreditRefusedReason4",
+                    group: 'contractors',
+                    parseSubject: "use id_projet;",
+                    to: contractor.rows.contact_email, 
+                    lg:lg,
+                    uid_contractor: contractor.rows.cuid,
+                    uid_project: id_projet,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
+                );
+        void insert(table:'sr_log', fields:{'type':'credit request','uid_project_contractor':credit.rows.uid_project_contractor,'uid_project':'credit.rows.uid_project', 'email_to': 'contact_email'  ,'description':"Refusé; vue qu'un prix à été donné et le projet est toujours disponible "});
+        endif
+    endf
+    
+    
+    function sendCreditReasonExplanationToAdmin(uid_credit, explanation)
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, c.contact_lg, s.name_fr, s.name_en, cr.uid, pc.uid_contractor, pc.uid_project, pc.token, cr.reason
+            FROM sr_project_contractor pc
+            INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.accepted = 'yes'
+            AND cr.uid = '?' 
+            ", uid_credit
+        );  
+        
+        client_explanation = explanation;
+        id_projet = contractor.rows.uid_project;
+        id_credit = contractor.rows.uid;
+        lg = contractor.rows.contact_lg;
+
+        
+        if (contractor.nbrows > 0) then
+            //Il faut prendre le token de sr_project_contractor et non de sr_project
+            client = sql(single:true,"SELECT c.email, c.firstname, c.lastname, c.lang, p.token, c.gender, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",contractor.rows.uid_project);
+            lg = 'fr';
+            gender = client.rows.gender;
+        
+            automail::sendEmail(
+                "sendCreditReasonExplanationToAdmin",
+                parseSubject: "use id_projet; use id_credit;",
+                to: 'deb@xpertsource.com', 
+                cc: 'louis.jhonny@gmail.com',
+                lg:lg
+            );
+        endif
+    endf
+
+    
+    // C10
+    /*
+        string uid_contractor - the uid of the owner of the card
+        string uid_cc - the uid of the credit card that failed
+    */
+    function paymentFailedToContractor(uid_contractor, cardinfo, amount)
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid='?'", uid_contractor);
+        
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "paymentFailedToContractor",
+            group: 'contractors',
+            to: contractor.rows.contact_email, 
+            cc: contractor.rows.email_accounting, 
+            lg:lg,
+            uid_contractor: uid_contractor,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    
+    // C11
+    /*
+        string uid_contractor - the uid of the owner of the card
+        string uid_cc - the uid of the credit card that failed
+    */
+    function paymentFailedToAdmin(uid_contractor, cardinfo, amount)
+        contractor = sql(single:true, "SELECT contact_firstname, contact_lastname, contact_email, contact_title FROM sr_contractor WHERE uid='?'", uid_contractor);
+        
+        automail::sendEmail(
+            "paymentFailedToAdmin",
+            lg:'fr'
+        );
+    endf
+    
+    // C12
+    /*
+        string uid_project - the uid of the project   //!!
+    */
+    function sendSatisfactionSurveyToClient(uid_project)
+        
+        client = sql(single:true,"SELECT c.email, c.lang, p.token, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",uid_project);
+        lg = client.rows.lang;
+        
+        service = sql(single:true,"
+            SELECT s.name_? as service
+            FROM sr_service s
+            INNER JOIN sr_project p ON p.uid_service = s.uid
+            WHERE p.uid = '?'
+            ", lg, uid_project
+        );
+        
+        contractors = sql("
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.token, c.contact_lg, seo
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            WHERE accepted = 'yes'
+            AND uid_project = '?' 
+            ", uid_project
+        );  
+
+        if (contractors.nbrows > 0) then
+            //Il faut prendre le token de sr_project_contractor et non de sr_project
+            token = client.rows.token;
+            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            //void insert(table:'sr_log', fields:{'uid_contractor':contractors.rows.uid,'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient--avant1','value':client.rows.email});
+            //void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient--res','value':res});
+            if   ( res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+                email_to = res;
+                void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
+                
+                //create tracking token
+                time = time();
+                token_tracking = hash(algo:"sha512", client.rows.email .+ client.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+                
+                automail::sendEmail(
+                    "sendSatisfactionSurveyToClient",
+                    group: 'clients',
+                    to: client.rows.email, 
+                    lg:lg,
+                    uid_client: client.rows.uid,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
+                );
+            endif
+        endif
+    endf
+    
+   // C13
+   /*
+        context contractor 
+   */
+    function notifyAdminContractorRequestInformation(contractor)
+        automail::sendEmail(
+            "notifyAdminContractorRequestInformation"
+        );
+    endf
+
+    // C14
+    /*
+        string uid_contractor - the uid of the contractor
+    */
+    function notifyAdminContractorInscription(uid_contractor)
+        lg = 'fr';
+        contractor = sql(single:true, "
+            SELECT  c.uid, c.contact_firstname, c.contact_lastname, c.contact_phone, c.contact_email, 
+                    c.contact_title, c.company_name, c.address, c.company_phone, c.rbq, c.ne, c.insurance_number, c.insurance_company, c.comments
+            FROM sr_contractor c
+            LEFT JOIN sr_contractor_service cs ON c.uid=cs.uid_contractor
+            WHERE c.uid='?'
+        ", uid_contractor);
+        
+        territories = sql(single:true,"
+            SELECT GROUP_CONCAT(t.name_".+lg.+" SEPARATOR ', ' ) as territories FROM sr_contractor_territory ct
+            INNER JOIN sr_territory t ON t.uid=ct.uid_territory 
+            WHERE ct.uid_contractor='?' AND t.active='yes'", uid_contractor);
+            
+        automail::sendEmail(
+            "notifyAdminContractorInscription"
+        );
+            
+    endf
+    
+    // C15 
+    /*
+        context before_info - a context containing the information of the contractor and his address before the update
+        context after_info - a context containing the information of the contractor and his address after the update
+    */
+    function notifyAdminModifyContractorProfile(before_info, after_info) 
+    
+        // get the city name from uid
+         lg = 'fr';
+        after_city_name = sql(single:true,"SELECT name_".+ lg .+" as name FROM sr_city WHERE uid='?'", after_info.city);
+      //  after_city_name = sql(single:true,"SELECT name_".+lg.rows.lg.+" as name FROM sr_city WHERE uid='?'", after_info.city);
+        after_info.city = after_city_name.rows.name;
+        
+        // for subject
+        entreprise = before_info.company_name;
+        
+        automail::sendEmail(
+            "notifyAdminModifyContractorProfile",
+            parseSubject: "use entreprise;"
+        );
+    endf
+    
+    
+    // C16
+    /*
+        string uid_contractor - the uid of the contractor
+        string uid_project - the uid of the project which the contractor wants a credit
+    */
+    function notifyAdminContractorCreditProject(uid_contractor, uid_project) 
+    
+        credit = sql(single:true,
+            "SELECT * FROM sr_credit WHERE uid_project_contractor=(SELECT uid FROM sr_project_contractor WHERE uid_contractor='?' AND uid_project='?')"
+            , uid_contractor, uid_project
+        );
+        
+        contractor_info = {
+            "uid_contractor": uid_contractor,
+            "uid_project": uid_project,
+            "reason":credit.rows.reason,
+            "no_quote": credit.rows.no_quote,
+            "called": credit.rows.called,
+            "voicemail": credit.rows.voicemail,
+            "email": credit.rows.email,
+            "call1_date":credit.rows.call1_date,
+            "call2_date":credit.rows.call2_date,
+            "call3_date":credit.rows.call3_date,
+            "explanation":credit.rows.explanation
+        };
+
+        automail::sendEmail(
+            "notifyAdminContractorCreditProject"
+        );
+        
+    endf    
+    
+    
+    // C17
+    /*
+        uid_contractor - the uid of the contractor
+    */
+    function notifyAdminContractorChangeTerritory(uid_contractor) 
+
+        // Variables for the email
+        lg = 'fr';
+        contractor = sql(single:true,"SELECT company_name FROM sr_contractor WHERE uid='?'", uid_contractor);
+        contractor_territories = sql(single:true,"
+            SELECT GROUP_CONCAT(t.name_".+lg.+" SEPARATOR ', ') as name
+            FROM sr_territory t
+            INNER JOIN sr_contractor_territory ct ON t.uid=ct.uid_territory
+            WHERE t.active='yes'
+            AND ct.uid_contractor='?'
+            ", uid_contractor
+        );
+        
+        // infos to be passed to the email
+        contractor_info = {
+            "company_name": contractor.rows.company_name,
+            "uid_contractor": uid_contractor,
+            "territories": contractor_territories.rows.name
+        };
+        
+        automail::sendEmail(
+            "notifyAdminContractorChangeTerritory"
+        );
+        
+    endf
+  
+ 
+  
+    
+    // C18
+    /*
+        string uid_contractor - the uid of the contractor
+        array[] services_uid - an array containing the uids of the services added
+    */
+    function notifyAdminContractorAddService(uid_contractor, services_uid) 
+    
+        // Variables for the email
+        contractor = sql(single:true,"SELECT company_name FROM sr_contractor WHERE uid='?'", uid_contractor);
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        service_names = sql(single:true,"SELECT GROUP_CONCAT(service SEPARATOR ', ') as name FROM sr_service WHERE active='yes' AND find_in_set(uid,'?')", implode(",",services_uid));
+        
+        // infos to be passed to the email
+        contractor_info = {
+            "company_name": contractor.rows.company_name,
+            "uid_contractor": uid_contractor,
+            "services": service_names.rows.name
+        };
+        
+        automail::sendEmail(
+            "notifyAdminContractorAddService"
+        );
+        
+    endf
+    
+
+    
+    // C19
+    /*
+        string uid_contractor - the uid of the contractor
+        string suggestion - the suggestion/comment of the contractor
+    */
+    function contractorSuggestionToAdmin(uid_contractor, suggestion) 
+    
+        // Variables for the email
+        contractor = sql(single:true,"SELECT company_name, contact_phone, contact_email, contact_gender, contact_firstname, contact_lastname FROM sr_contractor WHERE uid='?'", uid_contractor);
+    
+        // infos to be passed to the email body
+        contractor_info = {
+            "company_name": contractor.rows.company_name,
+            "uid_contractor": uid_contractor,
+            "gender": contractor.rows.contact_gender,
+            "first_name": contractor.rows.contact_firstname,
+            "last_name": contractor.rows.contact_lastname,
+            "telephone": contractor.rows.contact_phone,
+            "email_contractor": contractor.rows.contact_email,
+            "suggestion": suggestion
+        };    
+        
+        // infos to be passed to the email subject for webmaster use
+        entreprise = contractor.rows.company_name;
+        id_entrepreneur = uid_contractor;
+    
+        automail::sendEmail(
+            "contractorSuggestionToAdmin",
+            to:'pro@xpertsource.com',
+            parseSubject: "use entreprise; use id_entrepreneur;"
+        );
+        
+    endf
+    
+    function clientSuggestionToAdmin(uid_contractor, client_email, suggestion) 
+    
+        // Variables for the email
+        contractor = sql(single:true,"SELECT company_name, contact_phone, contact_email, contact_gender, contact_firstname, contact_lastname FROM sr_contractor WHERE uid='?'", uid_contractor);
+    
+        // infos to be passed to the email body
+        contractor_info = {
+            "company_name": contractor.rows.company_name,
+            "uid_contractor": uid_contractor,
+            "gender": contractor.rows.contact_gender,
+            "first_name": contractor.rows.contact_firstname,
+            "last_name": contractor.rows.contact_lastname,
+            "telephone": contractor.rows.contact_phone,
+            "email_contractor": contractor.rows.contact_email,
+            "suggestion": suggestion
+        };    
+        
+        // infos to be passed to the email subject for webmaster use
+        entreprise = contractor.rows.company_name;
+        id_entrepreneur = uid_contractor;
+    
+        automail::sendEmail(
+            "clientSuggestionToAdmin",
+            to:'deb@xpertsource.com',
+            parseSubject: "use entreprise; use id_entrepreneur;"
+        );
+        
+    endf
+    
+    
+    // C20
+    /*
+        string uid_contractor - the uid of the contractor
+        note sql in email modified  for renoquotes
+    */
+    function contractorActivation(uid_contractor)
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractorActivation",
+            group: 'contractors',
+            to: contractor.rows.contact_email,
+            lg: lg,
+            uid_contractor: uid_contractor,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    // C21
+    /*
+        string uid_contractor - the uid of the contractor
+    */
+    function contractorForgotPassword(uid_contractor)
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "contractorForgotPassword",
+            group: 'contractors',
+            to: contractor.rows.contact_email, 
+            lg: lg,
+            uid_contractor: uid_contractor,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    
+    // C22
+    /*
+        string uid_project - the uid of the project
+    */
+    function notifyAdminErrorScript(uid_project)
+        lg = 'fr';
+        project = sql(single:true, "
+            SELECT  c.uid as client_uid, c.firstname, c.lastname, c.gender, a.street_no, a.street, a.city, a.zip, 
+                    c.lang, c.languages, a.phone1, a.phone2, a.phone3, p.uid as project_uid, s.name_".+lg.+" as service, p.description, p.due_date,
+                    p.status, p.comments, p.token, p.max_quotes, a.uid_city
+            FROM sr_project p
+            INNER JOIN sr_client c ON p.uid_client=c.uid
+            LEFT JOIN sr_address a ON p.uid_address=a.uid
+            LEFT JOIN sr_service s ON p.uid_service=s.uid
+            WHERE p.uid='?'
+        ", uid_project);
+        
+        territory = sql(single:true, "SELECT t.name_".+lg.+" as name FROM sr_territory t WHERE t.uid=(SELECT uid_territory FROM sr_city c WHERE c.uid='?')", project.rows.uid_city);
+   
+        automail::sendEmail(
+            "notifyAdminErrorScript"
+        );
+        
+    endf
+    
+    // C23
+    /*
+        string uid_project - the uid of the project
+    */
+    function appologiesToClientNotEnoughQuotes(uid_project)
+        project = sql(single:true, "
+            SELECT  p.uid, c.email, c.gender, c.firstname, c.lastname, c.lang, p.uid_service, p.uid_client
+            FROM sr_project p
+            INNER JOIN sr_client c ON p.uid_client=c.uid
+            WHERE p.uid='?'
+        ", uid_project);
+        
+        lg = project.rows.lang;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        service = sql(single:true, "SELECT name_? as name FROM sr_service WHERE uid='?'", lg, project.rows.uid_service);
+        
+        // for email subject
+        service = service.rows.name;
+        
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", project.rows.email .+ project.rows.uid_client .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "appologiesToClientNotEnoughQuotes",
+            group: 'clients',
+            to: project.rows.email, 
+            lg: lg,
+            parseSubject: "use service;",
+            uid_client: project.rows.uid_client,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    // C24
+    /*
+        string uid_contractor - the uid of the contractor
+    */
+    function contractorAccountBlocked(uid_contractor)
+        
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid='?'", uid_contractor);
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "contractorAccountBlocked",
+            group: 'contractors',
+            to: contractor.rows.contact_email,
+            cc: contractor.rows.email_accounting,
+            lg: lg,
+            uid_contractor: uid_contractor,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    
+    // C25
+    /*
+        string email - email of the contractor
+        string name - name of the contractor
+        string id_appels_entrepreneurs - id of the contractor in tbl_appels_entrepreneurs
+    */        
+     function contractorProfileReminder1(contact_email, name, id_appels_entrepreneurs, lg)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+       // url_link = url .+ "{{ pages('sr_contractor_form', lg , table:pages); }}";
+        //url_link = url .+ "{{ pages('sr_contractor_create_login', lg.rows.lg , table:pages); }}";
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+            //email_from = "jabile@renoquotes.com";
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+            //email_from = "jabile@soumissionrenovation.ca";
+        endif
+       
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then
+            contact_email = res;
+            automail::sendEmail(
+                "contractorProfileReminder1",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_'.+lg,'value':name});
+        endif
+    endf
+    
+    function contractorProfileReminder1B(contact_email, name, id_appels_entrepreneurs, lg)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form";
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";
+        endif
+       
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        //if   ( res ne '' && contact_email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            //void insert(table:'sr_log', fields:{'type':'email  OK','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_OK'.+lg,'value':name});
+            automail::sendEmail(
+                "contractorProfileReminder1B",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_'.+lg,'value':name});
+        endif
+    endf
+   
+    // C25C
+    //envoie courriel sur le cellulaire
+    function contractorProfileReminder_cell(contact_email, name, id_appels_entrepreneurs, lg)
+         url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+        endif
+        void insert(table:'sr_log', fields:{'type':'email  test18','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_'.+lg,'value':name});
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            automail::sendEmail(
+                "contractorProfileReminder_cell",
+                to: contact_email,
+                lg: lg
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_'.+lg,'value':name});
+        endif
+    endf
+    
+    //envoie courriel sur le cellulaire  pour des test
+    function contractorProfileReminder_cell2(contact_email, name, id_appels_entrepreneurs, lg)
+         url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+       // url_link = url .+ "{{ pages('sr_contractor_form', lg , table:pages); }}";
+        //url_link = url .+ "{{ pages('sr_contractor_create_login', lg.rows.lg , table:pages); }}";
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+        endif
+        void insert(table:'sr_log', fields:{'type':'email2  test18','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_'.+lg,'value':name});
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            //void insert(table:'sr_log', fields:{'type':'email  OK','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_OK'.+lg,'value':name});
+            automail::sendEmail(
+                "contractorProfileReminder_cell2",
+                to: contact_email,
+                lg: lg
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'emaile test  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_'.+lg,'value':name});
+        endif
+    endf
+
+    // C26
+    /*
+        string email - email of the contractor
+        string name - name of the contractor
+        string id_appels_entrepreneurs - id of the contractor in tbl_appels_entrepreneurs
+    */  
+     function contractorProfileReminder2(contact_email, name, id_appels_entrepreneurs, lg)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+       // url_link = url .+ "{{ pages('sr_contractor_form', lg , table:pages); }}";
+        //url_link = url .+ "{{ pages('sr_contractor_create_login', lg.rows.lg , table:pages); }}";
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+            //email_from = "jabile@renoquotes.com";
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+            //email_from = "jabile@soumissionrenovation.ca";
+        endif
+       
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            automail::sendEmail(
+                "contractorProfileReminder2",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder2_'.+lg,'value':name});
+        endif
+    endf
+    
+    function contractorProfileReminder2B(contact_email, name, id_appels_entrepreneurs, lg)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+       // url_link = url .+ "{{ pages('sr_contractor_form', lg , table:pages); }}";
+        //url_link = url .+ "{{ pages('sr_contractor_create_login', lg.rows.lg , table:pages); }}";
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+        endif
+       
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            automail::sendEmail(
+                "contractorProfileReminder2B",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder2_'.+lg,'value':name});
+        endif
+    endf
+
+
+    
+    // C27
+    /*
+        string email - email of the contractor
+        string name - name of the contractor
+        string id_appels_entrepreneurs - id of the contractor in tbl_appels_entrepreneurs  //!!!
+    */  
+    function contractorProfileReminder3(contact_email, name, id_appels_entrepreneurs, lg)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+
+        lg  = lc(lg);
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+        endif
+       
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            automail::sendEmail(
+                "contractorProfileReminder3",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder3_'.+lg,'value':name});
+        endif
+    endf
+    
+    function contractorProfileReminder3B(contact_email, name, id_appels_entrepreneurs, lg)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+
+        lg  = lc(lg);
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+        endif
+       
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            automail::sendEmail(
+                "contractorProfileReminder3B",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder3_'.+lg,'value':name});
+        endif
+    endf
+    
+    function contractorProfileReminder4(contact_email, name, id_appels_entrepreneurs, lg, month)
+    
+        url = sql(single:true, "SELECT url_prod_alt_".+ lg .+" as url_prod FROM sn_configs");
+        url = url.rows.url_prod;
+
+        lg  = lc(lg);
+        if (lg eq 'en')then
+            url_link = "https://xpertsource.com/en/contractor-form"; //en
+        else
+            url_link = "https://xpertsource.com/fr/formulaire-entrepreneur";//fr
+        endif
+       
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ id_appels_entrepreneurs .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+       
+        emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        res = (resub(trim2(contact_email),emailRegex,"$1"));
+        if   ( res ne '' && contact_email ne '' && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+            contact_email = res;
+            //void insert(table:'sr_log', fields:{'type':'email  OK','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder1_OK'.+lg,'value':name});
+            automail::sendEmail(
+                "contractorProfileReminder4",
+                group: 'contractors',
+                to: contact_email,
+                lg: lg,
+                uid_contractor: id_appels_entrepreneurs,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        else
+            void insert(table:'sr_log', fields:{'type':'email  error','uid_project_contractor':id_appels_entrepreneurs,'uid_project':id_projet, 'email_to': contact_email  ,'description':'email contractorProfileReminder4_'.+lg,'value':name});
+        endif
+    endf
+
+    // C28
+    function creditApproved(uid_credit)
+        credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", uid_credit);
+        contractor = sql(single:true, "
+            SELECT pc.uid_project, c.contact_firstname, c.contact_lastname, c.contact_email, c.contact_gender, c.contact_lg, c.uid
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.uid='?'
+            ", credit.rows.uid_project_contractor);
+            
+        id_projet = contractor.rows.uid_project;
+        
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "creditApproved",
+            group: 'contractors',
+            parseSubject: "use id_projet;",
+            to: contractor.rows.contact_email,
+            lg: lg,
+            uid_contractor: contractor.rows.uid,
+            uid_project: id_projet,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    // C29
+    function creditDenied(uid_credit, reason)
+        
+        credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", uid_credit);
+        contractor = sql(single:true, "
+            SELECT pc.uid_project, c.contact_firstname, c.contact_lastname, c.contact_email, c.contact_gender, contact_lg, c.uid, pc.accepted_date
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE pc.uid='?'
+            ", credit.rows.uid_project_contractor);
+        
+        id_projet = contractor.rows.uid_project;
+        
+        lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+
+        //create the token for tracking
+        time = time();
+        token_tracking = hash(algo:"sha512", contractor.rows.contact_email .+ id_projet .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "creditDenied",
+            group: 'contractors',
+            parseSubject: "use id_projet;",
+            to: contractor.rows.contact_email,
+            lg: lg,
+            uid_contractor: contractor.rows.uid,
+            uid_project: id_projet,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+        // 
+    /*
+        uid_contractor - the uid of the contractor
+    */
+    function notifyAdminClientSatisfactionSite(uid_project) 
+
+        // Variables for the email
+        lg = 'fr';
+        project = sql(single:true,"SELECT * FROM sr_project WHERE uid='?'", uid_project);
+
+        // infos to be passed to the email
+        project_info = {
+            "uid_project": uid_project,
+            "client_satisfaction": project.rows.client_satisfaction,
+            "comment_satisfaction": project.rows.comment_satisfaction
+        };
+
+        void automail::sendEmail(
+            "notifyAdminClientSatisfactionSite"
+        );
+        
+    endf
+
+
+    function sendMessageAdminEmail(message, title,typeMessage)
+        lg = 'fr';
+        message = message;
+        title=title;
+        type = typeMessage;
+
+        automail::sendEmail(
+            "sendMessageEmail",
+             parseSubject: "use type;",
+             lg:lg
+        );
+    endf
+    
+    
+    function sendMessageToDev(message, title, typeMessage)
+        lg = 'fr';
+        message = message;
+        title=title;
+        type = typeMessage;
+
+        automail::sendEmail(
+            "sendMessageToDev",
+             parseSubject: "use type;",
+             lg:lg
+        );
+    endf
+
+    
+
+    function sendContactEmail()
+        automail::sendEmail("sed_contact_form_email");
+    endf
+    
+    function sendContactEmailNewsletter()
+        automail::sendEmail("sed_contact_form_email_newsletter");
+    endf
+
+//----------------------- fonctions de tests  --------------------
+
+    function test2_suggestProjectToContractor(uid_contractor, uid_project, lg, email_to)
+      //  project_contractor = sql(single:true,"SELECT uid_project, uid_contractor, uid FROM sr_project_contractor WHERE token='?'", token);
+        contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+        
+      //  lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        project = sql(single:true, "
+                SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip ,a.province
+                FROM sr_project p 
+                LEFT JOIN sr_address a ON p.uid_address=a.uid 
+                LEFT JOIN sr_city c ON c.uid=a.uid_city 
+                WHERE p.uid = '?'", lg, uid_project);
+        
+        service = sql(single:true, "SELECT * FROM sr_service WHERE uid = '?'", project.rows.uid_service);
+        service = service.rows{'name_'.+lg};
+        
+        // for the email subject
+        id_projet = project.rows.uid;
+        void insert(table:'sr_debug', fields:{'description':'suggestPtoC,email_from='.+' ','text':'email_to='.+email_to.+ '  lg='.+lg});
+
+        automail::sendEmail(
+            "suggestProjectToContractor",
+            group: 'contractors',
+            to: email_to,
+            parseSubject: "use id_projet; use service;",
+            lg: lg
+        );  
+    endf 
+    
+    
+    function test_creditApproved(uid_contractor, uid_project, lg, to_email; uid_credit )
+        credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", uid_credit);
+        contractor = sql(single:true, "
+            SELECT  c.contact_firstname, c.contact_lastname, c.contact_email, c.contact_gender, c.contact_lg
+            FROM  sr_contractor c 
+            WHERE c.uid='?'
+            ", uid_contractor);
+            
+        id_projet = uid_project;
+        
+        //lg = contractor.rows.contact_lg;
+        if (lg eq '') then
+            lg = 'fr';
+        endif
+        
+        automail::sendEmail(
+            "creditApproved",
+            parseSubject: "use id_projet;",
+            to: contractor.rows.contact_email,
+            lg: lg
+        );
+        
+    endf
+
+
+
+
+
+
+    function test_sendEmail(email;...)  
+        if (lg eq '') then
+            lg = "{{lg.rows.lg}}";
+            if (lg eq '') then
+                lg = 'fr';
+            endif
+        endif
+        if (type(email) eq 'string') then
+           email = automail::getEmail(email, lg);
+        endif
+        if (subject eq '') then
+            subject = email.subject;
+        endif
+        if (parseSubject ne '') then
+            subject = parse(state:0, data:"{".+ "{".+parseSubject.+"}}" .+ subject);
+            // void insert(table:'sr_debug', fields:{'description':'parseSubject='.+subject,'text':''});
+        endif
+        if (email.active) then
+            email_to = (email.debug_mode || to eq '') ? email.to : to;
+            if attachfile ne "" then
+                if (attachfilect eq '') then
+                    attachfilect = 'application/pdf';
+                endif
+                void email(
+                    from: email.from,
+                    to: email_to,
+                    subject: subject,
+                    ct:"text/html",
+                    charset: "utf-8",
+                    file: email.file,
+                    encoding:"base64",
+                    ct: attachfilect,
+                    attachfile: attachfile,
+                    domain: 'xpertsource.com'
+                );
+            else
+                void email(
+                    from: email.from,
+                    to: email_to,
+                    subject: subject,
+                    ct:"text/html",
+                    charset: "utf-8",
+                    file: email.file,
+                    encoding:"base64",
+                    domain: 'xpertsource.com'
+                );           
+            endif
+        endif
+    endf
+
+
+    function contractorReferaContractor(referrer_uid, referral_uid)
+        
+        referrer = sql(single:true, "SELECT contact_gender, contact_lastname, contact_email, contact_lg, uid FROM sr_contractor WHERE uid = '?'", referrer_uid);
+        referral = sql(single:true, "SELECT company_name FROM sr_contractor WHERE uid = '?'", referral_uid);
+        
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", referrer.rows.contact_email .+ referrer_uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "contractorReferaContractor",
+            group: 'contractors',
+            to: referrer.rows.contact_email,
+            lg: referrer.rows.contact_lg,
+            uid_contractor: referrer_uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        ); 
+            
+    endf
+    
+    function sendClientReviewToContractor(project_contractor_uid, language)
+     accent = ['À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'ß', 'à', 'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ø', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'Ā', 'ā', 'Ă', 'ă', 'Ą', 'ą', 'Ć', 'ć', 'Ĉ', 'ĉ', 'Ċ', 'ċ', 'Č', 'č', 'Ď', 'ď', 'Đ', 'đ', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'ę', 'Ě', 'ě', 'Ĝ', 'ĝ', 'Ğ', 'ğ', 'Ġ', 'ġ', 'Ģ', 'ģ', 'Ĥ', 'ĥ', 'Ħ', 'ħ', 'Ĩ', 'ĩ', 'Ī', 'ī', 'Ĭ', 'ĭ', 'Į', 'į', 'İ', 'ı', 'Ĳ', 'ĳ', 'Ĵ', 'ĵ', 'Ķ', 'ķ', 'Ĺ', 'ĺ', 'Ļ', 'ļ', 'Ľ', 'ľ', 'Ŀ', 'ŀ', 'Ł', 'ł', 'Ń', 'ń', 'Ņ', 'ņ', 'Ň', 'ň', 'ŉ', 'Ō', 'ō', 'Ŏ', 'ŏ', 'Ő', 'ő', 'Œ', 'œ', 'Ŕ', 'ŕ', 'Ŗ', 'ŗ', 'Ř', 'ř', 'Ś', 'ś', 'Ŝ', 'ŝ', 'Ş', 'ş', 'Š', 'š', 'Ţ', 'ţ', 'Ť', 'ť', 'Ŧ', 'ŧ', 'Ũ', 'ũ', 'Ū', 'ū', 'Ŭ', 'ŭ', 'Ů', 'ů', 'Ű', 'ű', 'Ų', 'ų', 'Ŵ', 'ŵ', 'Ŷ', 'ŷ', 'Ÿ', 'Ź', 'ź', 'Ż', 'ż', 'Ž', 'ž', 'ſ', 'ƒ', 'Ơ', 'ơ', 'Ư', 'ư', 'Ǎ', 'ǎ', 'Ǐ', 'ǐ', 'Ǒ', 'ǒ', 'Ǔ', 'ǔ', 'Ǖ', 'ǖ', 'Ǘ', 'ǘ', 'Ǚ', 'ǚ', 'Ǜ', 'ǜ', 'Ǻ', 'ǻ', 'Ǽ', 'ǽ', 'Ǿ', 'ǿ', 'Ά', 'ά', 'Έ', 'έ', 'Ό', 'ό', 'Ώ', 'ώ', 'Ί', 'ί', 'ϊ', 'ΐ', 'Ύ', 'ύ', 'ϋ', 'ΰ', 'Ή', 'ή'];
+     noaccent = ['A', 'A', 'A', 'A', 'A', 'A', 'AE', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y', 's', 'a', 'a', 'a', 'a', 'a', 'a', 'ae', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'a', 'A', 'a', 'A', 'a', 'C', 'c', 'C', 'c', 'C', 'c', 'C', 'c', 'D', 'd', 'D', 'd', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'E', 'e', 'G', 'g', 'G', 'g', 'G', 'g', 'G', 'g', 'H', 'h', 'H', 'h', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'I', 'i', 'IJ', 'ij', 'J', 'j', 'K', 'k', 'L', 'l', 'L', 'l', 'L', 'l', 'L', 'l', 'l', 'l', 'N', 'n', 'N', 'n', 'N', 'n', 'n', 'O', 'o', 'O', 'o', 'O', 'o', 'OE', 'oe', 'R', 'r', 'R', 'r', 'R', 'r', 'S', 's', 'S', 's', 'S', 's', 'S', 's', 'T', 't', 'T', 't', 'T', 't', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'W', 'w', 'Y', 'y', 'Y', 'Z', 'z', 'Z', 'z', 'Z', 'z', 's', 'f', 'O', 'o', 'U', 'u', 'A', 'a', 'I', 'i', 'O', 'o', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'U', 'u', 'A', 'a', 'AE', 'ae', 'O', 'o', 'Α', 'α', 'Ε', 'ε', 'Ο', 'ο', 'Ω', 'ω', 'Ι', 'ι', 'ι', 'ι', 'Υ', 'υ', 'υ', 'υ', 'Η', 'η'];
+    
+    query = "SELECT pc.uid, 
+                    DATE(accepted_date) as system_date, 
+                    pc.evaluation_date, 
+                    pc.uid_project, 
+                    pc.uid_contractor,
+                    pc.client_comment, 
+                    pc.client_satisfaction, 
+                    pc.contractor_reply, 
+                    pc.reply_date, 
+                    pc.comment_verified,
+                    (select contact_email from sr_contractor where uid = pc.uid_contractor) as emailto,
+                    (select name_? from sr_service where uid = p.uid_service) as sname, 
+                    (select ct.name_? from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
+                    (select firstname from sr_client where uid = p.uid_client) as firstname 
+                    FROM sr_project_contractor pc INNER JOIN sr_project p on p.uid = pc.uid_project 
+                    WHERE pc.uid = '?' ";
+                    
+        review = sql(single:true, query, language, language, project_contractor_uid);
+        comment = review.rows.client_comment;
+        contact_email = review.rows.emailto;
+        client_firstname = review.rows.firstname;
+        client_service = review.rows.sname;
+        city_name = review.rows.city;
+        uid_project = review.rows.uid_project;
+
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ uid_project .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "sendClientReviewToContractor",
+            group: 'contractors',
+            to: contact_email,
+            parseSubject: "use uid_project;",
+            lg: language,
+            uid_contractor: review.rows.uid_contractor,
+            uid_project: uid_project,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        ); 
+    endf
+    
+    
+    /*
+    *@description : valider un 
+    *
+    */
+    function filter_contractor_subject(uid, csvpath)
+        str = read(csvpath);
+        
+        out = str_getcsv(str);
+        witness = false;
+            
+        for s in out do
+            if(s[1] == uid) then
+                witness = true;
+            endif
+        endfor
+          
+        return witness;
+    endf
+
+    
+    /*
+    * @Description : utiliser l'api de neverbounce pour valider les adresses emails.
+    * @args email: l'adresse email a verifier, access: le token neverbound qui donne accès au service de verification.
+    * @return les valeurs de retour sont "vrai" si neverbound retourne 0 ou 4 et "faux" s'il retourne 1 à 3
+    *
+    */
+    function validateEmail(email)
+        access = sql(single:true,"select * from sr_neverbounce where status = 'success'");
+        
+        //POST information to Neverbounce with access token and email.
+        res = curl(url: 'https://api.neverbounce.com/v3/single', 
+                        header: 'Content-Type: application/x-www-form-urlencoded',
+                        data:"access_token=" .+ access.rows.token .+ "&email=" .+ email
+                        );
+                        
+        res = unstringnify(res.body);
+    
+        if(res.success == false) then
+            r = res.error_msg;
+            description = 'Neverbounce(-1): access error while processing ' .+ email;
+            msg = res.error_msg;
+        else
+            if(res.result == 0 || res.result == 4) then
+                r =  0;
+            else
+                description = 'Neverbounce(' .+ res.result .+ '): email validation error for ' .+ email;
+                //error codes
+                if(res.result == 1) then
+                    msg = 'The email "' .+ email .+ '" is invalid';
+                elseif(res.result == 2) then
+                    msg = 'The email "' .+ email .+ '" is a temporary or disposal address';
+                elseif(res.result == 3) then
+                    msg = 'The email "' .+ email .+ '" is a domain-wide setting';
+                endif
+                r = res.result;
+            endif
+            
+        endif 
+            
+            
+        void insert(table:'sr_debug', fields:{'description':description,'text':msg});    
+        return r;
+    endf
+    
+    
+    /*
+    * @Description : Se connecter a neverbounce pour generer un token (le token est sauvegarder dans la base de données)
+    * @args username: l'utilisateur que vous avez creé sur le site de neverbounce
+    * @args password: le password du compte neverbounce que vous avez creé
+    *
+    */
+    function connect_neverbounce(username, password)
+        res = curl(url: 'https://api.neverbounce.com/v3/access_token',
+                        username: username,
+                        password: password,
+                        header: 'Content-Type: application/x-www-form-urlencoded',
+                        data:"grant_type=client_credentials"
+                        );
+        init = sql(single:true,"select * from sr_neverbounce where status = 'success'");
+        
+        res = unstringnify(res.body);
+        token = res.access_token;
+        nowdate = datetime(format:'%Y-%m-%d %H:%M:%S');
+        
+        if(token ne "") then
+            if(init.nbrows > 0) then
+                void sql("update sr_neverbounce set token = '?', gendate = '?' where status='success'", token, nowdate);
+            else
+                void insert(table:'sr_neverbounce', fields:{'token':token, 'gendate':nowdate, 'status':'success'});
+            endif
+        else
+            void insert(table:'sr_neverbounce', fields:{'token':token, 'gendate':nowdate, 'status':'failure'}, status:'success', msg:res.body);
+        endif
+    endf
+    
+    
+    function test_email_from(lg)
+        email_from = (lg eq 'fr')?'pro@xpertsource.com':'pro@xpertsource.com';
+        
+        email_from;
+        
+        automail::sendEmail(
+            "contractorProfileReminder1",
+            from: 'pro@xpertsource.com',
+            to: 'louis.jhonny@gmail.com',
+            parseSubject: "use uid_project;",
+            lg: language
+        );
+    endf
+    
+    function askWorkplanToClient(uid_project)
+        project = sql(single:true,"
+            SELECT c.firstname, c.lastname, c.lang, c.email, p.uid, p.uid_client
+            FROM sr_project p
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+        
+        lg = project.rows.lang;
+        
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", project.rows.email .+ project.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+        automail::sendEmail(
+            "askWorkplanToClient",
+            to: project.rows.email,
+            group: 'clients',
+            bcc: 'clients@soumissionrenovation.ca',
+            parseSubject: "use uid_project;",
+            lg: lg,
+            uid_client: project.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+        
+    endf
+    
+    
+    function customEmailToWaitingClient(from, uid_project, message, choices)
+        project = sql(single:true,"
+            SELECT c.firstname, c.lastname, c.lang, c.email, p.uid, p.uid_client
+            FROM sr_project p
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+        
+        all = sql("SELECT * FROM sr_project where uid_client = '?' AND status = 'new'",project.rows.uid_client);
+        savedcall = sql(single:true,"SELECT * FROM sr_followup WHERE msg_uid = 1 AND uid_project = '?' ORDER by sn_cdate DESC", uid_project);
+        savedmsg = sql(single:true,"SELECT * FROM gc_email_history WHERE uid_project = '?'", uid_project);
+        
+        choices.msg = message;
+        fullmsg = stringnify(choices);
+        oldmsg = savedmsg.rows.message;
+        
+        fullmsg = unstringnify(fullmsg);
+        oldmsg = unstringnify(oldmsg);
+        
+        if(oldmsg.chx0) then
+            deletectx(fullmsg, 'chx0');
+        endif
+        if(oldmsg.chx1) then
+            deletectx(fullmsg, 'chx1');
+        endif
+        if(oldmsg.chx2) then
+            deletectx(fullmsg, 'chx2');
+        endif
+        if(oldmsg.chx3) then
+            deletectx(fullmsg, 'chx3');
+        endif
+        if(oldmsg.chx4) then
+            deletectx(fullmsg, 'chx4');
+        endif
+        if(oldmsg.chx5) then
+            deletectx(fullmsg, 'chx5');
+        endif
+        if(oldmsg.chx6) then
+            deletectx(fullmsg, 'chx6');
+        endif
+        if(oldmsg.chx7) then
+            deletectx(fullmsg, 'chx7');
+        endif
+        if(oldmsg.msg eq fullmsg.msg) then
+            deletectx(fullmsg, 'msg');
+        endif
+        
+        lg = project.rows.lang;
+        e_from = substr(from, strpos(from,'<') + 1, strpos(from,'>') - 1);
+        if(e_from ne "" && project.rows.email ne "") then
+        
+            //create tracking token
+            time = time();
+            token_tracking = hash(algo:"sha512", project.rows.email .+ project.rows.uid_client .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+            automail::sendEmail(
+                "customEmailToWaitingClient",
+                from: from,
+                to: project.rows.email,
+                bcc: from,
+                lg: lg,
+                uid_client: project.rows.uid_client,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        endif
+    endf
+    
+    function customEmailToClient(from, uid_project, message, choices)
+        
+        project = sql(single:true,"
+            SELECT c.firstname, c.lastname, c.lang, c.email, p.uid, p.uid_client
+            FROM sr_project p
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            WHERE p.uid = '?'"
+            , uid_project
+        );
+        
+        all = sql("SELECT * FROM sr_project where uid_client = '?' AND status = 'new'",project.rows.uid_client);
+        choices.msg = message;
+        fullmsg = stringnify(choices);
+        
+        //save new email message
+        for p in all.rows do
+            void insert(
+                table:"gc_email_history",
+                fields:{'message':fullmsg,'uid_project':p.uid}
+            );
+        endfor
+
+        lg = project.rows.lang;
+        e_from = substr(from, strpos(from,'<') + 1, strpos(from,'>') - 1);
+        if(e_from ne "" && project.rows.email ne "") then
+        
+            //create tracking token
+            time = time();
+            token_tracking = hash(algo:"sha512", project.rows.email .+ project.rows.uid_client .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+        
+            automail::sendEmail(
+                "customEmailToClient",
+                from: from,
+                to: project.rows.email,
+                bcc: from,
+                lg: lg,
+                uid_client: project.rows.uid_client,
+                token_tracking: token_tracking,
+                tracking: 'yes'
+            );
+        endif
+    endf
+    
+    function contractor_tip1(contact_email, contact_lg)
+        manager = sql(single:true, "SELECT u.firstname, u.lastname, u.phone, u.email, u.photo
+            FROM sn_users u
+            INNER JOIN sr_contractor c ON u.uid = c.account_manager
+            WHERE c.contact_email = '?'
+            ", contact_email);
+
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ manager.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractor_tip1",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg,
+            uid_contractor: manager.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    function contractor_tip2(contact_email, contact_lg)
+        manager = sql(single:true, "SELECT u.firstname, u.lastname, u.phone, u.email, u.photo
+            FROM sn_users u
+            INNER JOIN sr_contractor c ON u.uid = c.account_manager
+            WHERE c.contact_email = '?'
+            ", contact_email);
+            
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ manager.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractor_tip2",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg,
+            uid_contractor: manager.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    function contractor_tip3(contact_email, contact_lg)
+        manager = sql(single:true, "SELECT u.firstname, u.lastname, u.phone, u.email, u.photo
+            FROM sn_users u
+            INNER JOIN sr_contractor c ON u.uid = c.account_manager
+            WHERE c.contact_email = '?'
+            ", contact_email);
+            
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ manager.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractor_tip3",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg,
+            uid_contractor: manager.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    function contractor_tip4(contact_email, contact_lg)
+        manager = sql(single:true, "SELECT u.firstname, u.lastname, u.phone, u.email, u.photo
+            FROM sn_users u
+            INNER JOIN sr_contractor c ON u.uid = c.account_manager
+            WHERE c.contact_email = '?'
+            ", contact_email);
+            
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ manager.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractor_tip4",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg,
+            uid_contractor: manager.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    function contractor_tip5(contact_email, contact_lg)
+        manager = sql(single:true, "SELECT u.firstname, u.lastname, u.phone, u.email, u.photo
+            FROM sn_users u
+            INNER JOIN sr_contractor c ON u.uid = c.account_manager
+            WHERE c.contact_email = '?'
+            ", contact_email);
+            
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ manager.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractor_tip5",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg,
+            uid_contractor: manager.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    function contractor_tip6(contact_email, contact_lg)
+        manager = sql(single:true, "SELECT u.firstname, u.lastname, u.phone, u.email, u.photo
+            FROM sn_users u
+            INNER JOIN sr_contractor c ON u.uid = c.account_manager
+            WHERE c.contact_email = '?'
+            ", contact_email);
+            
+        //create tracking token
+        time = time();
+        token_tracking = hash(algo:"sha512", contact_email .+ manager.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+
+        automail::sendEmail(
+            "contractor_tip6",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg,
+            uid_contractor: manager.rows.uid,
+            token_tracking: token_tracking,
+            tracking: 'yes'
+        );
+    endf
+    
+    function contractor_follow_up(contact_email, contact_lg)
+        automail::sendEmail(
+            "contractor_follow_up",
+            group: 'contractors',
+            to: contact_email,
+            lg: contact_lg
+        );
+    endf
+    
+    function NotifyAdminClientWantsMoreService(uid, service)
+    
+        client = uid;
+        service = service;
+    
+        automail::sendEmail(
+            "NotifyAdminClientWantsMoreService",
+            to: 'deb@xpertsource.com',
+            lg: contact_lg
+        );
+    endf
+    
+    
+    //Survey module
+    function sendSurveyToClientAfterSevenDays(token, uid_project, resource_id)
+        
+        contractors = sql("
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.uid_contractor, pc.token
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE accepted = 'yes'
+            AND uid_project = '?' 
+            ", uid_project
+        );
+        
+
+        if (contractors.nbrows > 0) then
+            client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'", uid_project);
+            lg = client.rows.lang;
+            resource = sql(single:true, "SELECT file_? as fname, url_? as url FROM ressources WHERE uid = '?'", lg, lg, resource_id);
+            survey_url = resource.rows.url .+ resource.rows.fname;
+            
+            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            
+            //get information about the project
+            project = sql(single:true, "
+                SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip 
+                FROM sr_project p 
+                LEFT JOIN sr_address a ON p.uid_address=a.uid 
+                LEFT JOIN sr_city c ON c.uid=a.uid_city 
+                WHERE p.token = '?'", lg, token);
+
+            //get the service used for the project
+            svc = sql(single:true, "SELECT s.name_? as svcname FROM sr_service s WHERE s.uid = '?'", lg, project.rows.uid_service);
+
+            service = svc.rows.svcname;
+
+            if (res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0) then //adresse valide
+                email_to = res;
+                void insert(table:'sr_log', fields:{'uid_project':uid_project .+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
+                email_to;
+                automail::sendEmail(
+                    "sendSurveyToClientAfterSevenDays",
+                    to: email_to,
+                    lg:lg
+                );
+            endif
+        endif
+    endf 
+    
+    //expert send survey to client from his/her profile
+    function expertSendSurveyToClient(token, resource_id, uid_contractor)
+        //get information about the project
+        
+        client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.token='?'", token);
+        lg = client.rows.lang;
+        
+        project = sql(single:true, "
+            SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip 
+            FROM sr_project p 
+            LEFT JOIN sr_address a ON p.uid_address=a.uid 
+            LEFT JOIN sr_city c ON c.uid=a.uid_city 
+            WHERE p.token = '?'", lg, token);        
+        
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, c.uid, pc.token
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            WHERE accepted = 'yes'
+            AND pc.uid_project = '?'
+            AND c.uid = '?'
+            ", project.rows.uid, uid_contractor
+        );
+
+        if (contractor.nbrows > 0) then
+            resource = sql(single:true, "SELECT file_? as fname, url_? as url FROM ressources WHERE uid = '?'", lg, lg, resource_id);
+            survey_url = resource.rows.url .+ resource.rows.fname;
+            
+            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            company = contractor.rows.company_name;
+
+            //get the service used for the project
+            svc = sql(single:true, "SELECT s.name_? as svcname FROM sr_service s WHERE s.uid = '?'", lg, project.rows.uid_service);
+
+            service = svc.rows.svcname;
+
+            if (res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0) then //adresse valide
+                email_to = res;
+                void insert(table:'sr_log', fields:{'uid_project':uid_project .+'-1','email_to': email_to  ,'description':'email expertSendSurveyToClient---','value':client.rows.email});
+                
+                automail::sendEmail(
+                    "expertSendSurveyToClient",
+                    to: email_to,
+                    parseSubject: "use company;",
+                    lg:lg
+                );
+            endif
+        endif
+    endf      
+endp
+
+}}

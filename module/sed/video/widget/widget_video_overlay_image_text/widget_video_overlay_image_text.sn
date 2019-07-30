@@ -1,0 +1,131 @@
+{{
+	/**
+	 * Videos with overlayed image and text 
+	 *
+	 * @author     Tasso Massouras <tmassouras@globalia.ca>
+	 * @since      2015-11-19
+	 */
+	use widget;
+	use lg;
+}}
+
+<style>
+  \{{%include "/module/sed/video/widget/css/widget_video_overlay_image_text.css";}}
+</style>
+
+\{{
+
+banner_info = sql(single:true, "SELECT * FROM ? WHERE uid_widget = '?' AND active = 'oui'", 'sed_video_overlay_image_text', {{widget.rows.uid_widget_list}});
+
+ if(banner_info.rows.image_en eq  "") then
+    img = banner_info.rows.image_fr;
+    else
+    img = banner_info.rows.image_{{lg.rows.lg}};
+  endif
+
+ if(banner_info.rows.still_image_en eq  "") then
+    stillImg = banner_info.rows.still_image_fr;
+    else
+    stillImg = banner_info.rows.still_image_{{lg.rows.lg}};
+  endif
+}}
+
+<div class="container-placeholder-video">
+      <div class="placeholder-video">
+         <video id="myVideo" preload="auto">
+         	<source id="mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      <div class="container-info">
+      	<div class="logo"><img src="\{{img}}"></div>
+      	<div class="heading-text"><h1>\{{banner_info.rows.title_{{lg.rows.lg}}}}</h1></div>
+      	<div class="text">\{{banner_info.rows.text_{{lg.rows.lg}}}}</div>
+      </div>
+
+      <div class="scroll-down"><img src="/module/sed/video/image/circle_scroll.png"></div>
+  
+  </div>
+
+<a name="anchor-subscribe"></a>
+  
+<script type='text/javascript'>
+	
+	var VideoPlayer = function()
+	{
+		this.countVideo = 0;
+  		this.video = document.getElementById('myVideo');
+  		this.mp4 = document.getElementById('mp4');
+        this.arrayVideo =[
+    
+          \{{
+          for vdo sql( "SELECT video_en, video_fr FROM ? WHERE uid_widget = '?' AND active = 'oui'", 'sed_video_overlay_image_text', {{widget.rows.uid_widget_list}}) do;
+
+             if vdo.rows.video_en eq "" then
+                  fieldVdo = vdo.rows.video_fr;
+              else
+                  fieldVdo = vdo.rows.video_{{lg.rows.lg}};
+              endif
+          }}
+              "\{{fieldVdo}}",
+          \{{endfor}}  
+
+   ];
+ 
+     this.lenVideo = this.arrayVideo.length;
+	};
+    
+    
+    
+    VideoPlayer.prototype.initVideo = function()
+	{
+		vp.countVideo = 0;
+     	 vp.loadVideo(vp.arrayVideo[0]); 
+	}
+    
+    
+    VideoPlayer.prototype.loadVideo = function(vdo)
+	{
+		   	this.mp4.src = vdo; 
+      		this.video.load();
+            this.video.play();
+        	this.countVideo++;
+	}
+    
+     VideoPlayer.prototype.myHandler = function()
+     {	
+      	  	if(vp.countVideo < vp.lenVideo){
+              	vp.loadVideo(vp.arrayVideo[vp.countVideo]);
+          	}else{
+              	vp.initVideo()
+          	}  
+  		}
+    
+    
+	var vp = new VideoPlayer();
+  	vp.initVideo();
+   
+    document.getElementById('myVideo').addEventListener('ended',vp.myHandler,false);
+
+
+</script>
+        
+<style>         
+  @media (max-width:768px){
+      .placeholder-video{
+       
+        background-image: url('\{{stillImg}}');
+        background-size:cover;
+        width: 100%;
+      }
+  }
+
+  @media only screen and (min-device-width : 768px) and (max-device-width : 1024px) { 
+      .placeholder-video{
+          background-image: url('\{{stillImg}}');
+         background-size:cover;
+          width: 100%;
+     
+      }
+  }
+</style>  

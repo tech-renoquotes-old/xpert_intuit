@@ -1,0 +1,272 @@
+{{  
+	// --------------------------------------------------------------------------
+	// Name:        How does it work
+	//
+	// Description: Displays how our service works in 3 steps
+	//
+	// Version:      1.0 2018-01-09 15:20 Michel Jodoin
+	// --------------------------------------------------------------------------
+
+	%include "/extenso/functions/sn_ct.snc"; 
+
+	use lg;
+	use widget;
+}}
+
+<style> 
+#inner {
+	margin: 0 auto; 
+}
+.widget-image-text-ck {margin:0 0 30px 0;}
+.widget-image-text-ck > .box {text-align:center;padding-top:20px;}
+.widget-image-text-ck > .box img {display:block; margin:0 auto;}
+.widget-image-text-ck > .box h4 {margin:16px 0 4px 0;}
+
+@media screen and (max-width :640px) {
+	.widget-image-text-ck > .box:nth-child(2n+1) {clear:left;}
+}
+@media screen and (max-width :991px) {
+	.widget-image-text-ck > .box:nth-child(2n+1) {clear:none;}
+	.widget-image-text-ck > .box:nth-child(3n+1) {clear:left;}
+	.widget-image-text-ck > .box:last-child{
+		float:none;
+		margin:auto;
+		clear:both;
+	}
+}
+
+.img-circle {
+	border-radius: 50%;
+}
+.btn_centered {
+	text-align: center;
+}
+
+.btn_right {
+	text-align: right;
+}
+
+.btn_left {
+	text-align: left;
+}
+
+.widget-image-text-ck h5{
+	font-size:26px;
+	margin:10px 0;
+	font-size:x-large;
+}
+.widget-image-text-ck p{
+	margin:15px 0 5px 0;
+}
+.widget-image-text-ck .wdg_image{
+	min-height:150px;
+	display:table;
+	width:100%;
+}
+.widget-image-text-ck .wdg_image_container{
+	display:table-cell;
+	vertical-align:middle;
+}
+.wdg_spotlight_container{
+	position:relative;
+}
+.wdg_spotlight_container .mask{
+	background-size:cover;background-repeat:no-repeat;background-position:center;
+	position:absolute;
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+}
+.wdg_spotlight_container .single_box{
+	max-width:600px;
+	margin:auto;
+	float:none;
+}
+.wdg_spotlight_container .wdg_title{
+	text-align:center;
+	position:relative;
+	top:0;
+}
+.wdg_spotlight_container .wdg_title h5{
+	font-size:26px;
+	margin:10px 0;
+	font-size:x-large;
+}
+.wdg_spotlight_container .wdg_title>*{
+	margin:10px 0;
+}
+@media (max-width:768px){
+	.wdg_spotlight_container{
+		/*this remove the user padding in mobile*/
+		padding:0!important;
+	}
+	.wdg_spotlight_container .wdg_title{
+		top:0px;
+	}
+}
+.videoWrapper {
+	position: relative;
+	padding-bottom: 56.25%; /* 16:9 */
+	padding-top: 15px;
+	height: 0;
+}
+.videoWrapper iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	max-width: 600px;
+	max-height: 336px;
+}
+</style>
+
+<style type="text/css" media="screen">
+/* ==============================================================
+RESPONSIVE VIDEO WIDGET
+============================================================== */
+
+.wdg_video {
+    width: 100%;
+    height: auto;
+}
+.wdg_video .video-responsive-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    padding-top: 30px;
+    height: 0;
+    overflow: hidden;
+}
+.wdg_video .video-responsive-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+.wdg_video .wdg_transcript {
+    margin: 0 0 15px 0;
+    padding: 10px 15px 20px 15px;
+    font-style: italic;
+    border-bottom: 2px solid #c3c3c3;
+    background-color: #e7e7e7;
+    color: #000000;
+}
+.wdg_video .btn_transcript {
+    font-size: 0.8em;
+    text-align: right;
+    text-decoration: underline;
+    font-style: italic;
+}
+.wdg_video .btn_close_transcript {
+    font-size: 0.8em;
+    text-align: right;
+    text-decoration: underline;
+    font-style: italic;
+    margin-bottom: 10px;
+}
+
+</style>
+
+<div class="wdg_spotlight_container" style="background-color:#c7328b;padding:30px 0;">
+	<div class="mask" style="background-image:url(/sn_uploads/shutterstock_14717437-1024x682.jpg?maxw=1200&maxh=900);">
+	</div>
+	<div class="mask" style="background-color:#000;opacity:.7;">
+	</div>
+
+	<div class="container" style="background-color:#c7328b; max-width:100%; width:100%;">
+		<div class="col-xs-12 col-sm-12 col-md-6">
+			<div class="wdg_title">
+				<h5 style="color:#ffffff;">
+					{{sn_ct("as_seen_in_media COMMENT ÇA FONCTIONNE?", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}
+				</h5>
+			</div>
+
+			<div style="clear:both;"></div>
+
+
+			<div class="row widget-image-text-ck">
+
+				<div class="col-xs-12 col-sm-4 col-md-4 box">
+					<div class="wdg_image">
+						<div class="wdg_image_container">
+							<img class="img-responsive" src="/sn_uploads/step_1_6.png" alt="ICÔNE ÉTAPE 1">
+						</div>
+					</div>
+
+					<style>
+						#color-AED1DB, #color-AED1DB p{
+							color:#AED1DB;
+						}
+					</style>
+					<div id="color-AED1DB">
+						<p><span style="font-size:18px;">—</span></p>
+
+						<p><span style="font-size:18px;">{{sn_ct("as_seen_in_media Vous nous décrivez votre projet", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span></p>
+					</div>
+
+				</div><!-- /.box -->
+
+				<div class="col-xs-12 col-sm-4 col-md-4 box">
+					<div class="wdg_image">
+						<div class="wdg_image_container">
+							<img class="img-responsive" src="/sn_uploads/step_2_4.png" alt="ICÔNE ÉTAPE 2">
+						</div>
+					</div>
+
+					<style>
+						#color-AED1DB, #color-AED1DB p{
+							color:#AED1DB;
+						}
+					</style>
+					<div id="color-AED1DB"><p><span style="font-size:18px;">—</span></p>
+
+						<p><span style="font-size:18px;">{{sn_ct("as_seen_in_media Nous vous trouvons 3 entrepreneurs qualifiés en 48 heures", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span></p>
+					</div>
+
+				</div><!-- /.box -->
+
+				<div class="col-xs-12 col-sm-4 col-md-4 box" style="float:left; clear:inherit;">
+					<div class="wdg_image">
+						<div class="wdg_image_container">
+							<img class="img-responsive" src="/sn_uploads/step_3_4.png" alt="ICÔNE ÉTAPE 3">
+						</div>
+					</div>
+
+					<style>
+						#color-AED1DB, #color-AED1DB p{
+							color:#AED1DB;
+						}
+					</style>
+					<div id="color-AED1DB">
+						<p><span style="font-size: 18px;">—</span></p>
+
+						<p><span style="font-size: 18px;">{{sn_ct("as_seen_in_media Vous comparez les différentes estimations et sauvez du temps et de l'argent", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span></p>
+					</div>
+
+				</div><!-- /.box -->
+
+			</div>
+		</div>
+
+			<div class="col-xs-12 col-sm-12 col-md-4 col-md-offset-1 box">
+				<div class="wdg_title">
+					<h5 style="color:#ffffff;">
+						{{sn_ct("as_seen_in_media Témoignage de nos clients", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}
+					</h5>
+				</div>
+
+			<div style="clear:both;"></div>
+				<div class="video-responsive-container">
+
+					<iframe style="margin: auto; display:block;" width="560" height="349" src="//youtube.com/embed/{{sn_ct(edit:false, "bhInu14wD54")}}?rel=0&showinfo=0" frameborder="0" allowfullscreen> </iframe>
+
+				</div>
+
+			</div><!-- /.box -->
+
+		</div><!-- /.widget-image-text-ck -->
+
+</div>
+<div class="clearfix"></div>

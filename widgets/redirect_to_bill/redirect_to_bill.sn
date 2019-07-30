@@ -1,0 +1,142 @@
+<style>
+@keyframes gjPulse {
+  0% {
+    width: 90px;
+    height: 90px;
+  }
+  25% {
+    width: 105px;
+    height: 105px;
+  }
+  50% {
+    width: 130px;
+    height: 130px;
+  }
+  75% {
+    width: 110px;
+    height: 110px;
+  }
+  100% {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+.counter_frame{
+    height: 150px;
+    margin: auto;
+    width : auto;
+}
+
+#gj-counter-box {
+  margin: auto;
+  position: relative;
+  bottom: 0;
+  right: 0;
+  opacity: 0.2;
+  width: 90px;
+  height: 90px;
+  background-color: rgb(183, 0, 0);
+  border-radius: 50%;
+  border: 6px solid white;
+  visibility: none;
+  display: none;
+  animation: gjPulse 1s linear infinite;
+}
+
+#gj-counter-box:hover {
+  opacity: 1;
+  cursor: pointer;
+}
+
+#gj-counter-num {
+  position: relative;
+  text-align: center;
+  margin: 0px;
+  padding: 0px;
+  top: 50%;
+  transform: translate(0%, -50%);
+  color: white;
+}
+</style>
+
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    use page;
+    use lg; 
+    
+    language = lg.rows.lg;
+}}
+
+\{{
+    cgidata = cgidata();
+    
+    if cgidata.need_activation then
+    contractor_needs_activation = "&need_activation";
+    endif
+    
+    if language eq 'fr' then
+        topage = "/extranet/fr/facture-courante-entrepreneur?accepted=yes&token=" .+ cgidata.token .+ contractor_needs_activation;
+    else
+        topage = "/extranet/en/contractor-current-bill?accepted=yes&token=" .+ cgidata.token .+ contractor_needs_activation;
+    endif
+}}
+
+    <input type='hidden' id='new_url' value="{{pages('sr_contractor_current_bill',lg.rows.lg,table:'pages')}}?accepted=yes&token=\{{cgidata.token; contractor_needs_activation;}}"/>
+    <div id="ajax_error" class="alert alert-danger" style="display:none">
+        {{sn_ct(edit:true,"Vous ne pouvez pas acceptez de nouveaux projets puisque votre compte est au dessus de sa limite. Vous serez redirigé vers votre la page de connexion pour vous connecter et voir votre facture courante", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+    </div>
+    <div class="container">
+        <div class=counter_frame>
+          <div id="gj-counter-box">
+            <h1 id="gj-counter-num"></h1>
+          </div>
+        </div>
+     
+    </div>
+
+
+<script>
+
+//FUNCTION CODE
+function gjCountAndRedirect(seconds, url) {
+
+  $('#gj-counter-num').text(seconds);
+
+  $('#gj-counter-box').show();
+
+  var interval = setInterval(function() {
+
+    seconds = seconds - 1;
+
+    $('#gj-counter-num').text(seconds);
+
+    if (seconds == 0) {
+
+      clearInterval(interval);
+      window.location = url;
+      $('#gj-counter-box').hide();
+
+    }
+
+  }, 1000);
+
+  $('#gj-counter-box').click(function() {
+    clearInterval(interval);
+    window.location = url;
+
+  });
+}
+
+// USE EXAMPLE
+$(document).ready(function() {
+  $('#ajax_error').show();
+  var url = "\{{topage}}";
+
+  //call
+  gjCountAndRedirect(10, url);
+});
+</script>

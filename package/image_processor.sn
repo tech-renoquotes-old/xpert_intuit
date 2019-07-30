@@ -1,0 +1,38 @@
+{{
+package sed_image_processor
+    
+    function generateFromUrl(url)
+        if (url !~ '^/\w') then
+            // Invalid file url
+            return "";
+        endif
+        snfilepath = "/staging".+resub(url, "^([^\?]+)(\?(.*))?$", "$1");
+        if (!-e snfilepath) then
+            // File does not exist
+            return "";
+        endif
+        querystring = resub(url, "^([^\?]+)(\?(.*))?$", "$3");
+        include('/staging/imageprocessor.sn');
+    endf
+    
+    function generateFromPath(snfilepath, querystring)
+        include('/staging/imageprocessor.sn');
+    endf
+    
+    /*
+     * This function will output the url and generate the cached image if it does not already exists
+     * Practical for use inside a src attribute of an image, in a static context so that the image is generated upon publishing of the page. 
+     * @param url is the same url you would pass to the src attribute, including the query string with imageprocessor parameters.
+     */
+    function src(url)
+        if (url !~ '^/\w') then
+            // Invalid file url
+            return "https://placeholdit.imgix.net/~text?txtsize=19&txt=INVALID+IMAGE+URL&w=200&h=200";
+        endif
+        if (url =~ "\?") && (!-e "/staging".+resub(url, "\?", "&")) then
+            sed_image_processor::generateFromUrl(url .+ '&savefile');
+        endif
+        return url;
+    endf
+    
+endp

@@ -1,0 +1,113 @@
+{{
+    // Pivotal account
+    terminalID = "33002";
+	secret = "SandboxSecret002";
+	
+	// Transaction info
+	orderID = 19328477;
+	currency = "CAD";
+	amount = 123.45;
+	datetime = "2016-07-07";
+	
+	// URLs
+	receiptpageUrl = "http://olivier.sednove.ca/pivotal/test.sn";
+	validationUrl = "";
+	
+	// processed info
+	formattedAmount = floor(amount * 100);
+	day = datetime(date: datetime, format: "%d"); day = (int) day;
+	month = datetime(date: datetime, format: "%m"); month = (int) month;
+	formattedDatetime = datetime(date: datetime, format: day.+"-".+month.+"-%Y:%H:%M:%S:000");
+	hash = md5(terminalID.+orderID.+formattedAmount.+formattedDatetime.+receiptpageUrl.+validationUrl.+secret);
+	
+	
+	// Test credit card : 4444 3333 2222 1111
+	
+}}
+<form action="https://testpayments.globalone.me/merchant/paymentpage" method="post">
+    
+    <input type="submit" value="Submit!">
+    
+    
+    <!-- Required Fields -->
+    <input type="hidden" name="TERMINALID" value="{{terminalID}}"> {{/* A TerminalID provided by GlobalOne. */}} 
+    <input type="hidden" name="ORDERID" value="{{orderID}}"> {{/* A unique identifier for the order created by the merchant. (Max 12 Characters). */}} 
+    <input type="hidden" name="CURRENCY" value="{{currency}}"> {{/* A 3-character currency code of the transaction. ISO 4217 Currency Code */}} 
+    <input type="hidden" name="AMOUNT" value="{{formattedAmount}}"> {{/* The amount of the transaction as a 2 digit decimal or an Integer value for JPY amounts. */}} 
+    <input type="hidden" name="DATETIME" value="{{formattedDatetime}}"> {{/* DD-MM-YYYY:HH:MM:SS:SSS */}} 
+    <input type="hidden" name="HASH" value="{{hash}}"> {{/* MD5(TERMINALID+ORDERID+AMOUNT+DATETIME+RECEIPTPAGEURL+VALIDATIONURL+SECRET) */}} 
+    
+    <!-- May include extra fields that will be sent back to the receiptpageurl and validationurl -->
+    
+    <!-- Fields Below are optional -->
+    
+    <!--<input type="hidden" name="CARDHOLDERNAME" value=""> {{/* This will pre-populate the Cardholder Name field on the payment page. This will be editable on the payment page. */}} -->
+    <!--<input type="hidden" name="AUTOREADY" value=""> {{/* Y or N. Automatically set the transaction to Ready in the batch. If not present the terminal default will be used. */}} -->
+    <!--<input type="hidden" name="DESCRIPTION" value=""> {{/* A description of the transaction. */}} -->
+    <!--<input type="hidden" name="EMAIL" value=""> {{/* An email address to send a confirmation email to. Normally this is cardholder email address. */}} -->
+    <input type="hidden" name="RECEIPTPAGEURL" value="{{receiptpageUrl}}"> {{/* This is the URL of the page on your site that will display the result of the transaction. If sent this will override the terminal setting in the SelfCare System. */}} 
+    <input type="hidden" name="VALIDATIONURL" value="{{validationUrl}}"> {{/* This will overwrite the default Background Validation URL and will display an error if this feature is not enabled and sent. **Highly recommended see section 4.5**** */}} 
+    <!--<input type="hidden" name="TERMINALTYPE" value=""> {{/* 1 or 2 (default). Defines whether the transaction is to be processed as Mail Order/Telephone Order (1) or eCommerce (2 or not sent). Mail Order transactions can have a separate Payment Page Layout. */}} -->
+    
+    <!--<input type="hidden" name="TRANSACTIONTYPE" value="">-->
+                                                                {{/* Normal Mail Order/Telephone Order trans (Mail Order for First Data Latvia)
+                                                                        5 = 3DS fully authenticated trans
+                                                                        6 = 3DS attempted trans
+                                                                        7 = Normal eCommerce trans
+                                                                        9 = Telephone Order (First Data Latvia only)
+                                                                */}}
+    
+    <!--<input type="hidden" name="ADDRESS1" value=""> {{/* Will pre-populate the ADDRESS1 field on the Hosted Payment Page if there is also a valid POSTCODE sent and AVS is enabled for the terminal. Handling of display is managed by the GlobalOne and can be to display read only, display editable or to hide them on form. */}} -->
+    <!--<input type="hidden" name="ADDRESS2" value="">-->
+    <!--<input type="hidden" name="POSTCODE" value=""> {{/* Required for MaxMind MinFraud fraud scoring. */}} -->
+    <!--<input type="hidden" name="CITY" value=""> {{/* Required for MaxMind MinFraud fraud scoring. */}} -->
+    <!--<input type="hidden" name="REGION" value=""> {{/* Required for MaxMind MinFraud fraud scoring. */}} -->
+    <!--<input type="hidden" name="COUNTRY" value=""> {{/* ISO 3166-1-alpha-2 code. Required for MaxMind MinFraud fraud scoring. */}} -->
+    <!--<input type="hidden" name="PHONE" value=""> {{/* Customer phone number, to be stored against transaction. International format and numeric. */}} -->
+    
+    <!-- Must use this when using an iFrame -->
+    <!--<input type="hidden" name="INIFRAME" value="Y">-->
+    
+</form>
+
+
+{{/* 
+ReceiptPageUrl : 
+    ORDERID             The original order ID of the transaction.
+    APPROVALCODE        Six digit AuthCode.
+    RESPONSECODE        A or D or R(Approved or Declined or Referral).
+    RESPONSETEXT        The text of the authorization.
+    DATETIME            The time of the transaction created by the bank. Format: YYYY-MM-DDTHH:MM:SS.
+    AVSRESPONSE         The result of the AVS check. See Appendix A for more information.
+    CVVRESPONSE         The result of the CVV check. See Appendix A for more information.
+    UNIQUEREF           Generated reference that should be stored for tracking and remote XML refunding.
+    EMAIL               If sent we will return this value.
+    PHONE               If sent we will return this value.
+    COUNTRY             If sent we will return this value.
+    CARDNUMBER          The card number (obfuscated) that was used for the transaction.
+    HASH                MD5(TERMINALID+UNIQUEREF+AMOUNT+DATETIME+RESPONSECODE+RESPONSETEXT+SECRET)
+    custom fields       Any other fields sent in the request; will be treated as a custom field. It will be returned to the Receipt and Validation URLs also. Note that this is subject to the max length of a HTTP GET request which we would conservatively recommend considering to be 2000 characters.
+*/
+/*
+Background Validation : 
+    TERMINALID          Terminal id
+    UNIQUEREF           Generated reference that should be stored for tracking and remote XML refunding.
+    ORDERID             Order ID supplied by merchant in request.
+    RESPONSECODE        A, D or R (Approved, Declined or Referral).
+    RESPONSETEXT        Text describing transaction state. This will be populated with an error message if there was an issue during processing.
+    APPROVALCODE        Transaction approval code if transaction was authorized otherwise empty.
+    EMAIL               Cardholder e-mail.
+    DATETIME            Format: YYYY-MM-DDTHH:MM:SS.
+    AVSRESPONSE         AVS response, available only when AVS is enabled for the terminal. See Appendix A
+    CVVRESPONSE         CVV response, available only when CVV is enabled for the terminal. See Appendix A
+    HASH                MD5(TERMINALID+UNIQUEREF+AMOUNT+DATETIME+RESPONSECODE+RESPONSETEXT+SECRET)
+    custom params       Configured Terminal Custom Parameters.
+    
+MUST RETURN "OK" in the body
+*/
+}}
+
+
+
+
+

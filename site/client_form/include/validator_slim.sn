@@ -1,0 +1,41 @@
+{{
+    /*
+        @title validator for client_form
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-18
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        name: 'required',
+        email: 'required,email',
+        phone: 'required,phone,minlen:10',
+        phone2: 'phone,minlen:10',
+        ext1: 'number',
+        ext2: 'number',
+        address: 'required',
+        upld: 'number,func:sizeAllow_slim',
+        myfilename: 'func:validAllFiles_slim',
+        description: 'required'
+    );
+    
+    validator.setAntibotDelay(5);
+
+}}
+
+<script>
+    function sizeAllow_slim(uploaded_size){
+        return (uploaded_size < 64000000);
+    }
+    
+    function validAllFiles_slim(myfilename){
+         return myfilename == "";
+    }
+</script>

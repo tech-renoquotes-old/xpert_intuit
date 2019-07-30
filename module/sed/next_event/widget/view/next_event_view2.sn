@@ -1,0 +1,131 @@
+{{ 
+    /*
+	    @title		 next_event_view2
+
+	    use to dispaly the template of next event
+	
+    	@author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47 laplante@sednove.com
+    	
+	*/
+}}
+
+<!-- WIDGET PROCHAIN ÉVÉNEMENT -->
+<style type="text/css">
+.cs .wdg_next_event {
+    background-color: #D2D2D2;
+    color: #282828;
+}
+
+.cs .wdg_next_event a {
+    color: #282828;
+    text-decoration: none;
+}
+
+.cs .wdg_next_event a:hover .evt_title {
+    text-decoration: underline;
+}
+
+.cs .wdg_next_event:after {
+    clear: both;
+}
+
+.cs .wdg_next_event h2 {
+    font-size: 22px;
+    color: #000000;
+    margin-top: 0;
+    letter-spacing: 0;
+    padding: 15px 15px 0 15px;
+}
+
+.cs .wdg_next_event .event {
+    display: block;
+    position: relative;
+    padding: 5px 0;
+    padding: 15px;
+}
+
+.cs .wdg_next_event .event:hover {
+    background-color: #F4F4F4;
+}
+
+.cs .wdg_next_event .evt_title {
+    font-size: 16px;
+    color: #000000;
+}
+
+.cs .wdg_next_event a.event .evt_description {
+    color: #737373;
+    text-decoration: none!important;
+}
+
+.cs .wdg_next_event a:hover .evt_description,
+.cs .wdg_next_event a:visited .evt_description,
+.cs .wdg_next_event a:link .evt_description {
+    text-decoration: none!important;
+}
+
+.cs .wdg_next_event .evt_action {
+    padding: 15px;
+}
+.cs .wdg_next_event .wdg_next_event_date{
+	float:left;
+    width:20%;
+    text-align:center;
+}
+.cs .wdg_next_event .wdg_next_event_date .evt_cal_date_number{
+	font-size:16px;
+    font-weight: bold;
+}
+.cs .wdg_next_event .wdg_next_event_date .evt_cal_date_month{
+	font-size:13px;
+    text-transform: uppercase;
+}
+
+.cs .wdg_next_event .wdg_next_event_content{
+	float:left;
+    width:80%;
+}
+
+</style>
+{{
+	use widget;
+	use lg;
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc"; 
+	parameters = sql(single:true, "select * from sed_event_parameters where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+<div class="row"> 
+    <div class="col-md-12"> 
+        <div class="wdg_next_event">
+			\{{ for events sql("SELECT * FROM sed_event WHERE active='yes' LIMIT ?", "{{ parameters.rows.latest_events;}}") do 
+            	
+                date_number = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%d");
+				date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%b");
+				date_day_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%A");
+				date_time = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%Hh%M");
+            
+            }}
+            \{{ events.rows.seo_{{lg.rows.lg}};}}
+				<a href="/{{lg.rows.lg}}/calendar-details/\{{ events.rows.seo_{{lg.rows.lg}};}}" class="event">
+                    <div class="wdg_next_event_date">
+                        <div class="evt_cal_date_number">\{{ date_number; }}</div>
+                        <div class="evt_cal_date_month">\{{ date_month_name; }}</div>
+                    </div>
+                    
+                    <div class="wdg_next_event_content">
+                        <div class="evt_title">
+                            \{{ events.rows.title_{{lg.rows.lg}}; }} 
+                        </div>
+                        <div class="evt_description">\{{ events.rows.brief_{{lg.rows.lg}}; }}</div>
+                        
+                    </div>
+                    <div class="clearfix"></div>
+				</a>
+			\{{ endfor }}
+            <div class="evt_action">
+                <a href="{{ pages('calendar', lg.rows.lg); }}" class="btn btn-default btn-block">{{ sn_ct("Afficher la liste complete")}} </a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,365 @@
+{{
+     /*
+    	@title	sed_testimony
+    	Description: Display text in rotation akin to a slider
+        @author Richard Desrochers <richard@sednove.com>
+    	@version 1.0 2016-07-18 15:00:00 Version initial
+    	
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+
+	use widget;
+	use lg;
+   
+   wdg_config = sql(single:true,"SELECT * FROM widget_sed_testimony_config");
+}}
+
+
+<div style="max-width:580px; margin:auto;">
+    <strong>
+        <p style="font-size:x-large; margin:auto; padding-top:10px; text-align:center;">
+            {{sn_ct("testimonies Voyez ce qu'en pensent nos clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </p>
+    </strong>
+<div class="wdg_testimony_container"{{(wdg_config.rows.text_color) ? ' style="color:#'.+wdg_config.rows.text_color.+'"' : '';}}>
+    <div class="wdg_testimony {{lg.rows.lg}}" id="{{'wdg-'.+widget.rows.uid_widget_list}}">
+        <div class="js_slider {{if wdg_config.rows.transition ne '' then wdg_config.rows.transition; else 'perspective'; endif}}">
+            <div class="slide-container">
+                
+                {{
+                    class_first = ' in';
+                    for i sql(single:true,"SELECT * FROM widget_sed_testimony WHERE active=1") do
+                }}
+                <div class="item slide_hover{{class_first;class_first='';}}">
+                    <div class="item-center">
+                        <div class="text">
+                            {{(lg.rows.lg eq 'en') ? i.rows.text_en : i.rows.text_fr;}}
+                        </div>
+                        <div class="name">
+                            {{(lg.rows.lg eq 'en') ? i.rows.name_en : i.rows.name_fr;}}
+                        </div>
+                        <div class="source">
+                            Source : {{(lg.rows.lg eq 'en') ? i.rows.source_en : i.rows.source_fr;}}
+                        </div>
+                    </div>
+                </div>
+                
+                {{endfor}}
+                    
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+<script>
+    if($('#wdg-{{widget.rows.uid_widget_list}}').find('.item').length>1){
+        //adding navigation
+        //also getting the max height
+        span_to_add='';
+        var i_max_height=0;//variable that contains the index of the item that is the tallest
+        for(i=0;i<$('#wdg-{{widget.rows.uid_widget_list}}').find('.item').length;i++){
+            span_to_add += '<span{{(wdg_config.rows.nav_image ne '') ? ' style="background-color:transparent;background-image:url('.+wdg_config.rows.nav_image.+'?maxw=15&&maxh=15);background-repeat:no-repeat;border-radius:0;border:none;background-size:100% auto;background-position:center;"' : '' ;}}></span>';
+            
+            i_max_height = $('#wdg-{{widget.rows.uid_widget_list}}').find('.item:eq('+i_max_height+')').outerHeight()<=$('#wdg-{{widget.rows.uid_widget_list}}').find('.item:eq('+i+')').outerHeight() ? i : i_max_height;
+        }
+        //filling a div with the tallest content
+        $('#wdg-{{widget.rows.uid_widget_list}} .slide-container').append('<div class="dimension_handler">'+$('#wdg-{{widget.rows.uid_widget_list}}').find('.item:eq('+i_max_height+')').html()+'</div>'); 
+        //add the navigation
+        $('#wdg-{{widget.rows.uid_widget_list}} .js_slider').prepend('<div class="slide_nav{{(wdg_config.rows.nav_position ne '') ? ' '.+wdg_config.rows.nav_position : '' ;(wdg_config.rows.nav_size ne '') ? ' '.+wdg_config.rows.nav_size : '' ;(wdg_config.rows.nav_shape ne '') ? ' '.+wdg_config.rows.nav_shape : '' ;}}"><div>'+span_to_add+'</div></div>');
+
+        $('#wdg-{{widget.rows.uid_widget_list}}').find('.slide_nav>div>span:eq('+$('#wdg-{{widget.rows.uid_widget_list}}').find('.item').index($('#wdg-{{widget.rows.uid_widget_list}} .item.in'))+')').addClass('in');
+        
+        $('#wdg-{{widget.rows.uid_widget_list}}').find('.slide_nav>div>span').on('click',function(){
+            clearInterval(slide_interval_{{widget.rows.uid_widget_list}});
+            slide_item_{{widget.rows.uid_widget_list}}('='+$(this).index());
+            slide_start_{{widget.rows.uid_widget_list}}();
+        });
+        //-->
+        //Init the slide after delay
+        var slide_interval_{{widget.rows.uid_widget_list}};
+        slide_start_{{widget.rows.uid_widget_list}}();
+        
+        //Function to start the loops
+        function slide_start_{{widget.rows.uid_widget_list}}(){
+            clearInterval(slide_interval_{{widget.rows.uid_widget_list}});
+            slide_interval_{{widget.rows.uid_widget_list}} = setInterval(function(){slide_item_{{widget.rows.uid_widget_list}}('+1');}, {{(wdg_config.rows.interval_ms ne '' && wdg_config.rows.interval_ms ne 0) ? wdg_config.rows.interval_ms : 3000;}});
+        }
+        
+        //If hover the content, the looping will stop then restart on mouseout
+        $('#wdg-{{widget.rows.uid_widget_list}}').find('.slide_hover').hover(
+          function() {
+            clearInterval(slide_interval_{{widget.rows.uid_widget_list}});
+          }, function() {
+            clearInterval(slide_interval_{{widget.rows.uid_widget_list}});
+            slide_start_{{widget.rows.uid_widget_list}}();
+          }
+        );
+        
+        //Function that selects the slide to slide to, val='+1'->slide forward; val='-1'-> slide backward; val='=2' -> select the third slide (if exist otherwise it goes to first)
+        function slide_item_{{widget.rows.uid_widget_list}}(val){
+            var all_element = $('#wdg-{{widget.rows.uid_widget_list}}').find('.item');
+            var current_index  = all_element.index($('#wdg-{{widget.rows.uid_widget_list}} .item.in'));
+            var length = all_element.length;
+            var selected_index;
+            if(val.charAt(0)=='='){
+                selected_index = parseInt(val.substr(1));
+            }
+            else{
+                selected_index = current_index+parseInt(val);
+            }
+             if(selected_index>=length){
+              selected_index = 0;
+            }
+            else if(selected_index<0){
+              selected_index = length-1;
+            }
+            //console.log(selected_index);
+            all_element.removeClass('in');
+            $('#wdg-{{widget.rows.uid_widget_list}}').find('.item:eq('+selected_index+')').addClass('in');
+            
+            $('#wdg-{{widget.rows.uid_widget_list}}').find('.slide_nav>div>span').removeClass('in');
+            $('#wdg-{{widget.rows.uid_widget_list}}').find('.slide_nav>div>span:eq('+selected_index+')').addClass('in');
+        }
+    }
+    else{
+        //remove the pos absolute
+        $('#wdg-{{widget.rows.uid_widget_list}}').find('.item').css('position','relative');
+        $('#wdg-{{widget.rows.uid_widget_list}}').find('.item-center').css('position','relative');
+        $('#wdg-{{widget.rows.uid_widget_list}}').find('.item-center').css('transform','none');
+    }
+</script>
+<style>
+/*Slide text display*/
+.cs .js_slider .text{
+    line-height:1.5;
+}
+.cs .js_slider .name{
+    padding:15px 0 0 15px;
+    position:relative;
+}
+.cs .js_slider .name:before{
+    content:'-';
+    position:absolute;
+    left:0;
+}
+.cs .js_slider .source{
+    padding:0 0 0 15px;
+    font-size:70%;
+}
+/*-----------*/
+.cs .wdg_testimony_container{
+    padding:15px 0;
+}
+.cs .wdg_testimony{
+    position:relative;
+    border:1px #c8c8c8 solid;
+    border-top-right-radius:8px;
+    border-top-left-radius:8px;
+    padding:30px 10px;
+    margin:auto;
+}
+.cs .wdg_testimony:before{
+    position:absolute;
+    background:#FFF;
+    width:120px;
+    height:30px;
+    font-size:30px;
+    top:-15px;
+    left:50%;
+    transform: translateX(-50%);
+    display:block;
+    content: "\f100";
+    font-family: FontAwesome;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-align:center;
+}
+.cs .wdg_testimony:after{
+    position:absolute;
+    background:#FFF;
+    width:120px;
+    height:30px;
+    font-size:30px;
+    bottom:-15px;
+    left:50%;
+    transform: translateX(-50%);
+    display:block;
+    content: "\f101";
+    font-family: FontAwesome;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-align:center;
+}
+.cs .en.wdg_testimony:before{
+    content: "\f10d";
+}
+.cs .en.wdg_testimony:after{
+    content: "\f10e";
+}
+
+.cs .js_slider{
+   
+}
+.cs .wdg_testimony .slide_nav{
+    position:absolute;
+    bottom:18px;
+    left:0;
+    z-index:1;
+    width:100%;
+    text-align:center;
+}
+{{nav_color = (wdg_config.rows.nav_color ne '') ? wdg_config.rows.nav_color : '000';}}
+.cs .wdg_testimony .slide_nav>div>span{
+    display:inline-block;
+    margin:2px 10px;
+    background:#{{nav_color}};
+    border-radius:50%;
+    height:10px;
+    width:10px;
+    opacity:0.5;
+    cursor:pointer;
+    -webkit-transition: all .3s; /* Safari */
+    transition: all .3s;
+}
+.cs .wdg_testimony .slide_nav.square>div>span{
+    border-radius:0;
+}
+.cs .wdg_testimony .slide_nav.circle>div>span{
+    border-color:#{{nav_color}};
+    border-width:1px;
+    border-style:solid;
+    background:none;
+}
+.cs .wdg_testimony .slide_nav.circle>div>span:hover{
+    opacity:1;
+}
+.cs .wdg_testimony .slide_nav.circle>div>span.in{
+    border:none;
+    background:#{{nav_color}};
+}
+
+.cs .wdg_testimony .slide_nav.medium>div>span{
+    height:12px;
+    width:12px;
+}
+.cs .wdg_testimony .slide_nav.large>div>span{
+    height:15px;
+    width:15px;
+}
+.cs .wdg_testimony .slide_nav.top{
+    bottom:initial;
+    top:18px;
+}
+.cs .wdg_testimony .slide_nav.left{
+    bottom:initial;
+    left:0px;
+    width:35px;
+    top:50%;
+    transform: translateY(-50%);
+}
+.cs .wdg_testimony .slide_nav.left>div{
+    display:table-cell;
+    vertical-align:middle;
+}
+.cs .wdg_testimony .slide_nav.left.right{
+    right:0px;
+    left:initial;
+}
+.cs .wdg_testimony .slide_nav>div>span.in{
+    opacity:0.95;
+}
+.cs .slide-container{
+    position:relative;
+}
+.cs .dimension_handler{
+    visibility:hidden;
+}
+.cs .wdg_testimony .item{
+    display:none;
+    position:absolute;
+    top:0;
+    left:0;
+    height:100%;
+    width:100%;
+}
+.cs .wdg_testimony .item.in{
+    display:block;
+}
+.cs .wdg_testimony .item .item-center{
+    position:absolute;
+    top:50%;
+    transform: translateY(-50%);
+    width:100%;
+}
+
+
+/*Animations*/
+.cs .opacity_move_up .slide_hover{
+    animation-name: opacity_move_up;
+    animation-duration: .3s;
+    transition-timing-function:cubic-bezier(0.3, 0, 0.2, 1);
+}
+@keyframes opacity_move_up {
+    0% {opacity:0;top:50px;}
+    100% {opacity:1;top:0px;}
+}
+.cs .opacity_move_down .slide_hover{
+    animation-name: opacity_move_down;
+    animation-duration: .3s;
+    transition-timing-function:cubic-bezier(0.3, 0, 0.2, 1);
+}
+@keyframes opacity_move_down {
+    0% {opacity:0;top:-50px;}
+    100% {opacity:1;top:0px;}
+}
+.cs .opacity .slide_hover{
+    animation-name: opacity;
+    animation-duration: .3s;
+    transition-timing-function:cubic-bezier(0.3, 0, 0.2, 1);
+}
+@keyframes opacity {
+    from {opacity:0;}
+    to {opacity:1;}
+}
+.cs .zoom .slide_hover{
+    animation-name: zoom;
+    animation-duration: .3s;
+    transition-timing-function:cubic-bezier(0.3, 0, 0.2, 1);
+}
+@keyframes zoom {
+    from {opacity:0;transform: scale(0);-webkit-transform: scale(0)}
+    to {opacity:1;transform: scale(1);-webkit-transform: scale(1)}
+}
+.cs .perspective .slide_hover{
+    animation-name: perspective;
+    animation-duration: .3s;
+    transition-timing-function:cubic-bezier(0.3, 0, 0.2, 1);
+    
+    transition(all 0.4s cubic-bezier(0.3, 0, 0.2, 1));
+}
+@keyframes perspective{
+    0%   {-webkit-transform:translateY(-20px) perspective( 600px ) rotateX( 50deg ); 
+          -moz-transform:translateY(-20px) perspective( 600px ) rotateX( 50deg );
+          -ms-transform:translateY(-20px) perspective( 600px ) rotateX( 50deg );
+          -o-transform:translateY(-20px) perspective( 600px ) rotateX( 50deg );
+          transform:translateY(-20px) perspective( 600px ) rotateX( 50deg );
+        
+        opacity:0;}
+    100% {-webkit-transform:translateY(0px) perspective( 600px ) rotateX( 0deg ); 
+          -moz-transform:translateY(0px) perspective( 600px ) rotateX( 0deg );
+          -ms-transform:translateY(0px) perspective( 600px ) rotateX( 0deg );
+          -o-transform:translateY(0px) perspective( 600px ) rotateX( 0deg );
+          transform:translateY(0px) perspective( 600px ) rotateX( 0deg );
+        opacity:1;}
+}
+/*------>*/
+</style>

@@ -1,0 +1,48 @@
+{{
+    /*
+        @title 			notifyAdminContractorAcceptQuoteProject
+        Description		Email for the admin when a contractor accepts to give a quote for a project.
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+        @version		1.1 2016-08-10 madupuis@sednove.com
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use project_contractor;
+
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    entrepreneur_titre = (project_contractor.rows.contact_gender eq "f") ? mme : mr; 
+    client_titre = (project_contractor.rows.gender eq "f") ? mme : mr; 
+    
+    client_nom = project_contractor.rows.firstname .+ " " .+ project_contractor.rows.lastname;
+    adresse = project_contractor.rows.street_no .+ " " .+ project_contractor.rows.street .+ ", " .+ project_contractor.rows.city;
+    telephone_maison = project_contractor.rows.phone1;
+    telephone_bureau = project_contractor.rows.phone2;
+    telephone_cellulaire = project_contractor.rows.phone3;
+    courriel = project_contractor.rows.email;
+    meilleur_moment = project_contractor.rows.when_to_call;
+    description = project_contractor.rows.description;
+    info_additionnelle = project_contractor.rows.additional_info;
+    id_projet = project_contractor.rows.uid;
+    
+    entrepreneur_nom = project_contractor.rows.contact_firstname .+ " " .+ project_contractor.rows.contact_lastname;
+   	compagnie = project_contractor.rows.company_name;
+    telephone_compagnie = project_contractor.rows.company_phone;
+    rbq = project_contractor.rows.rbq;
+    siteWeb = project_contractor.rows.website;
+    telephone_contact = project_contractor.rows.contact_phone;
+    courriel_contact = project_contractor.rows.contact_email;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

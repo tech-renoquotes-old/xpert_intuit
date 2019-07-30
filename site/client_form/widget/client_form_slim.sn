@@ -1,0 +1,258 @@
+{{
+    /*
+        @title client_form_slim
+        Description: This widget is the form used to register a new client.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-03
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+<style>
+    #upload_files_slim>div{
+        position:relative;
+    }
+    #upload_files_slim > div > input {
+        margin:3px 0px;
+    }
+    #upload_files_slim > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files_slim > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files_slim > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    
+    #phones > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #phones > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    
+    
+    #blck_phone2{
+        display:none;
+    }
+    
+    .side-form {
+        margin-bottom:-20px;
+    }
+    
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+</style>
+
+\{{
+    use page;
+    cookies = cookies();
+}}
+    <form class="form-horizontal" enctype="multipart/form-data" action="{{pages('client_additional_information', lg.rows.lg, table:'pages')}}" id="add_client_slim" name="add_client_slim" method="POST">
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="name" id="name" value="" placeholder='{{sn_ct(edit:false,"client_form Votre nom", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*'>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid name')}}" data-validator-error="name"></span>
+            </div>
+        </fieldset>
+        
+        <!--<fieldset class="form-group">-->
+        <!--    <div class="side-form">-->
+        <!--        <input class="form-control LoNotSensitive" type="text" name="phone" id="phone" value="" placeholder='{{sn_ct(edit:false,"client_form Votre téléphone", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*'>-->
+        <!--        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid phone')}}" data-validator-error="phone"></span>-->
+        <!--    </div>-->
+        <!--</fieldset>-->
+        
+        <fieldset class="form-group">
+            <div style="width:100%;padding:0" class="col-md-8" id='blck_phone1'>
+                <div style="padding:0" class="col-xs-7"> 
+                    <input placeholder='{{sn_ct(edit:false,"client_form Téléphone 1", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*' class="form-control" type="text" name="phone" id="phone" value=""> 
+                </div>
+                <div class="col-xs-4"> 
+                    <input placeholder='{{sn_ct(edit:false,"Poste", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}' class="form-control" type="text" name="ext1" id="ext1" value=""> 
+                </div>
+                <div style="line-height:3;padding:0;" class="col-xs-1" id="phones"><a onclick="addPhones()"><i class="fa"></i></a></div>
+                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,"Composé de chiffres seulement, au moins 10 caractères", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}" data-validator-error="phone"></span>
+            </div>
+            <div style="width:100%;padding:0" class="col-md-8" id="blck_phone2">
+                <div style="padding:0" class="col-xs-7"> 
+                    <input placeholder='{{sn_ct(edit:false,"client_form Téléphone 2", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*' class="form-control" type="text" name="phone2" id="phone2" value=""> 
+                </div>
+                <div class="col-xs-4"> 
+                    <input placeholder="'{{sn_ct(edit:false,"Poste", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}'" class="form-control" type="text" name="ext2" id="ext2" value="">
+                </div>
+                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,"Composé de chiffres seulement, au moins 10 caractères", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}" data-validator-error="phone2"></span>
+            </div>
+        </fieldset>
+
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="email" id="email" value="" placeholder='{{sn_ct(edit:false,"client_form Votre courriel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*'>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="address" id="address_slim" value="" placeholder='{{sn_ct(edit:false,"client_form Votre adresse", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*' onFocus="geolocate()" placeholder="">
+                <input type="hidden" class="field" id="street_number" name="street_number" disabled="true"></input>
+                <input type="hidden" class="field" id="route" name="route" disabled="true"></input>
+                <input type="hidden" class="field" id="locality" name="locality" disabled="true"></input>
+                <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" disabled="true"></input>
+                <input type="hidden" class="field" id="postal_code" name="postal_code" disabled="true"></input>
+                <input type="hidden" class="field" id="country" name="country" disabled="true"></input>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid address')}}" data-validator-error="address"></span>
+            </div>
+                
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <textarea class="form-control LoNotSensitive" name="description" placeholder='{{sn_ct(edit:false,"client_form Votre projet", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} - {{sn_ct(edit:false,"client_form (ex. : Description des travaux à faire dans vos mots, délai de réalisation, budget, etc.)", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*' rows="5"></textarea>    
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid description')}}" data-validator-error="description"></span>
+            </div>
+        </fieldset>
+    
+        <fieldset class="form-group">
+            <b>{{sn_ct("client_form Joindre un fichier", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</b>
+            <div class="side-form" style="margin-top:3px;">
+                <div id="upload_files_slim"></div>
+                <input class="form-control LoNotSensitive" type='hidden' name="upld" id="uploaded_size_slim" value="0"/>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Vos fichiers ont atteint une taille de ')}}" data-validator-error="upld"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form" style="margin-top:3px;">
+                <input class="form-control LoNotSensitive" type='hidden' name="myfilename" id="myfile_slim"/>
+                <span class="help-block" data-validator-msg="" data-validator-error="myfilename"></span>
+            </div>
+        </fieldset>
+        
+        <p>{{sn_ct(edit:false,"client_form_slim En soumettant votre projet, vous acceptez nos Conditions d'utilisation", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</p>
+        
+        <div class="form-group">
+            <button id="submit_add_client" type="submit" class="btn btn-primary btn-block">
+                {{sn_ct(edit:false,"client_form Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+            </button>
+        </div>
+        <!--<p style="text-align:center;">OU</p>-->
+        <div id ="contact_info" class="form-group" style="margin-bottom:-15px;">
+            <button  class="btn btn-primary btn-block disabled" style="border-top-color:#f9b842 !important;border-left-color:#f9b842 !important;border-right-color:#f9b842 !important;background-color:#f9b842 !important;border-color:#f9b842 !important;color:#004870 !important">
+                {{sn_ct(edit:false,"client_form Contactez-nous au 1 855 239-7836 du lundi au vendredi de 8h à 18h", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+            </button>
+        </div>
+        <!--<div>-->
+        <!--    {{sn_ct(edit:true,"client_form Contactez-nous au 1 855 239-7836 du lundi au vendredi de 8h à 18h", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}-->
+        <!--</div>-->
+        
+        <script>
+            function addUploadFile_slim() {
+                return $('<div><input type="file" name="file" onchange="checkFilename();sizeLimit()"><a><i class="fa"></i></a></div>').prependTo('#upload_files_slim');
+            }
+            $('#upload_files_slim').on('click', "div:not(:first-child) > a", function(){
+                $(this).parent().remove();
+                $('#upload_files_slim > span').remove();
+                sizeLimit();
+                checkFilename();
+            });
+            $('#upload_files_slim').on('click', "div:first-child > a", function(){
+                addUploadFile_slim();
+                if ($('#upload_files_slim').find('div > input').length >= 5) {
+                    $('#upload_files_slim').prepend('<span>');
+                }
+            });
+            addUploadFile_slim();
+        </script>
+    </form>
+</div>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_client_slim');
+}}
+<script>
+    // separate files 
+    $('form[name=add_client_slim]').submit(function(){
+        var file_nb = 0;
+        $('#upload_files_slim').find('div > input').each(function(){
+            file_nb++;
+            $(this).attr("name", $(this).attr("name") + file_nb);
+        });
+    });
+    
+</script>
+
+<script>
+function addPhones(){
+    $('#blck_phone2').show();
+}
+    
+function sizeLimit() {
+    var total_size = 0;
+    $('input[name=file]').each(function(){
+        if(this.files[0] !== undefined){
+            total_size = total_size + this.files[0].size; 
+        }
+    });
+    
+    $('#uploaded_size_slim').val(total_size);
+    $('span[data-validator-error=upld]').attr('data-validator-msg','{{sn_ct(edit:false,"Vos fichiers ont atteint une taille de ")}} ' + total_size + ' Bytes. ' +  '{{sn_ct(edit:false,"Le maximum autorisé est 64000000 Bytes")}}');
+    
+    if(total_size >= 64000000){
+        return false;
+    }
+}
+
+function checkFilename() {
+    var found = '';
+    var dsp = '';
+    $('#myfile_slim').val('');
+    
+    $('input[name=file]').each(function(){
+        if(this.files[0] !== undefined){
+            if(!isValid(this.files[0].name)){
+                if(found != ""){
+                    found = found + ';';
+                    dsp = dsp + '\n';
+                }
+                found = found + this.files[0].name;
+                dsp = dsp + this.files[0].name;
+                $('#myfile_slim').val(found);
+            }else{
+                if(found.indexOf(this.files[0].name) == 1){
+                    found.replace(this.files[0].name, '');
+                    dsp.replace(this.files[0].name, '');
+                }
+            }
+        }
+        
+        $('span[data-validator-error=myfilename]').attr('data-validator-msg','{{sn_ct(edit:false,"Il y a au moins un fichier avec le nom incorrecte :")}} ' + dsp);
+    });
+}
+
+function isValid(myfilename){
+     res = (myfilename.indexOf(".") + 1) % ( myfilename.lastIndexOf(".") + 1 ) === 0;
+     return res;
+}
+</script>
+

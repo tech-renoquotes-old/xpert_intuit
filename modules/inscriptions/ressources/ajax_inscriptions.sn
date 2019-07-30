@@ -1,0 +1,58 @@
+{{ 
+    %include "/extenso/functions/sn_ct.snc";     
+    %include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc";    
+
+    use lg;
+    use structure;    
+    use user;
+}}  
+\{{
+    cgidata = cgidata();
+    // subscribe to newsletter --------------------------------------------------------
+    if cgidata.op eq "subscribe" then
+        if cgidata.inscriptions_email =~ "^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$" then
+            data = sql(single:true,"SELECT * FROM inscriptions WHERE email='?'", cgidata.inscriptions_email);
+            if data.nbrows > 0 then
+                // existing email
+                if data.rows.active ne "yes" then
+                    // update existing entry to active=yes
+                    res = sql(single:true,"UPDATE inscriptions SET active='yes' WHERE email='?'", cgidata.inscriptions_email);
+                    }}
+                        {
+                            "message" : "1"
+                        }
+                    \{{  
+                else
+                    }}
+                        {
+                            "message" : "2"
+                        }
+                    \{{                                      
+                endif
+            else
+                // insert new subscription
+                res = sql(single:true,"INSERT INTO inscriptions SET active='yes', email='?'", cgidata.inscriptions_email);
+                }}
+                    {
+                        "message" : "1"
+                    }
+                \{{                  
+            endif
+        else
+            }}
+                {
+                    "error" : 2, 
+                    "message" : "Invalid email"
+                }
+            \{{  
+        endif            
+    else
+        }}
+            {
+                "error" : 1, 
+                "message" : "Invalid operation"
+            }
+        \{{
+    endif
+}}

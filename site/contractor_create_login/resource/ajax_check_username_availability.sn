@@ -1,0 +1,25 @@
+{{
+    /*
+        @title ajax_check_username_availability
+        Description: Checks if username is available.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}\{{
+    cgidata = cgidata();  
+    
+    exists = sql("SELECT uid FROM sr_contractor WHERE username='?'", cgidata.value);
+    if exists.nbrows == 0 then
+        "OK"; //for the validator to pass
+    endif
+    
+    

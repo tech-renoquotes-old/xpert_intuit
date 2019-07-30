@@ -1,0 +1,57 @@
+{{
+    /*
+        @title ajax_add_contractor
+        Description: Adds a contractor to the database via ajax call.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-14
+        @version 1.01 2017-03-07  add language default bilingue
+
+    */
+    
+}}
+\{{
+
+cgidata = cgidata();  
+connection = connection();
+
+if cgidata.suggestion then
+    service = sql("
+        SELECT search_title_? as title, MATCH(search_keywords_?) AGAINST ('?') as 'relevance', url_? as url
+        FROM sr_page_seo
+        WHERE MATCH(search_keywords_?) AGAINST ('*?*' WITH QUERY EXPANSION) 
+        OR MATCH(search_keywords_?) AGAINST ('*?*' IN BOOLEAN MODE)
+        OR SOUNDEX(search_keywords_?) = soundex ('?') 
+        ORDER BY relevance DESC
+        LIMIT 5
+    ", cgidata.lang, cgidata.lang, cgidata.suggestion, cgidata.lang, cgidata.lang, cgidata.suggestion, cgidata.lang, strsub(finish:length(cgidata.suggestion)-2,cgidata.suggestion), cgidata.lang, cgidata.suggestion);
+
+    blog = sql("
+        SELECT title, MATCH(full_text) AGAINST ('?') as 'relevance', url
+        FROM sed_blog_article
+        WHERE (MATCH(full_text) AGAINST ('*?*' IN BOOLEAN MODE)
+            OR SOUNDEX(full_text) = soundex ('?'))
+        AND language = '?'
+        ORDER BY relevance DESC
+        LIMIT 5
+    ", cgidata.suggestion, cgidata.suggestion, cgidata.suggestion, cgidata.lang);
+
+    void sql("INSERT INTO sr_search_results (sn_cdate, search_term, from_url, type, ip) VALUES (now(), '?', '?', 'search', '?')", cgidata.suggestion, cgidata.from, connection.client_ip);
+    
+    headers_out('X-service', service.rows, 'X-blog', blog.rows);
+endif
+
+if cgidata.good_result then
+    void sql("INSERT INTO sr_search_results (sn_cdate, search_term, to_url, from_url, type, ip) VALUES (now(), '?', '?', '?', '?', '?')", cgidata.search, cgidata.url, cgidata.from, cgidata.type, connection.client_ip);
+    search_terms = explode(" ", cgidata.search);
+    if cgidata.type eq 'service' then
+        for s in search_terms do
+            // exists = sql("SELECT null FROM sr_page_seo WHERE search_keywords_? LIKE '%?%'", cgidata.lang, s);
+            // if exists.nbrows < 1 then
+                void sql("UPDATE sr_page_seo SET search_keywords_? = concat(search_keywords_?, ' ?') WHERE url_? = '?'", cgidata.lang, cgidata.lang, s, cgidata.lang, cgidata.url);
+            // endif
+        endfor
+    endif
+endif
+}}

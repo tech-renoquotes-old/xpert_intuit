@@ -1,0 +1,49 @@
+{{
+    table_dest = 'sn_users';
+    table_from = 'wp_users';
+
+    select_query_from_src = "
+            SELECT 
+            	ID, 
+                user_login, 
+                user_pass, 
+                user_email, 
+                user_registered as registered_date, 
+                display_name as name
+            FROM wp_users
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [
+        'laplante',
+        'etienne',
+        'pascale',
+        'thomas',
+        'olivier',
+        'ilya',
+        'macright',
+        'richard',
+        'jg',
+        'gamila',
+        'michel',
+        'madupuis'
+    ];
+    rows_to_keep_key = 'username';
+    rows_to_keep_key_void = false;
+
+    fields = {
+        'uid' : "ID::?+100",
+        'sn_cdate' : "registered_date",
+        'username' : "user_login",
+        'firstname' : "name",
+        'roles' : "'sn_admin'",
+        'email' : "user_email",
+        'active' : "'yes'",
+        'change_password': 'yes',
+        'password' : "",
+        'sn_hash_password' : "",
+        'sn_salt_password' : ""
+    };
+    
+    %include 'migration.sn';
+    

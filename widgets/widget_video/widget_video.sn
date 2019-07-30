@@ -1,0 +1,60 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+	use widget;
+	use lg;
+	video = sql(single:true, "select * from widget_video where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+<div class="img-wrap">
+    <a href="javascript:void(0);" onclick="show_video(this);" title="{{video.rows{'alt_'.+ lg.rows.lg};}}">
+        <img src="{{video.rows.image;}}" alt="{{video.rows{'alt_'.+ lg.rows.lg};}}" />
+        <div class="video-embed" style="display: none">{{video.rows{'video_'.+ lg.rows.lg};}}</div>
+    </a>
+</div>
+
+<script type="text/javascript">
+    function close_video(element){
+        var video_dialog = $(element).closest(".video-dialog");
+        $(video_dialog).dialog( "close" );
+    }
+    
+    function show_video(element){
+        var title = $(element).attr("title");
+        var video = $(element).find(".video-embed").html();
+        $(
+            '<div class="video-dialog">' + 
+              '<div class="modal-header">' +
+                '<button data-dismiss="modal" class="close" onclick="close_video(this);" type="button">' +
+                  '<span aria-hidden="true">×</span><span class="sr-only">{{sn_ct("Close")}}</span>' + 
+                '</button>' + 
+                '<h4 class="modal-title">' + title + '</h4>' +
+              '</div>' +
+              video + 
+            '</div>'
+        ).dialog({
+            resizable: false,
+            modal: true,
+            width:'auto',
+            dialogClass: "video-dialog-wrap",
+            close: function( event, ui ) {
+                $( this ).dialog( "destroy" ).remove();
+            }           
+        });
+    }
+</script>
+
+<style type="text/css">
+    .img-wrap{
+        margin-bottom: 10px;
+    }
+    .img-wrap img{
+        max-width: 100%;
+    }
+    .ui-dialog.video-dialog-wrap { z-index: 1001 !important ;}
+    .ui-dialog.video-dialog-wrap .modal-header{
+        padding: 2px 0 5px;
+        margin-bottom: 10px;
+    }
+    .video-dialog-wrap .ui-widget-header{
+        display: none !important;
+    }
+</style>

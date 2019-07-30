@@ -1,0 +1,26 @@
+{{
+    /*
+        @title 			sr_client_form_admin_email_contractor_payment_failed_c11
+        Description		Admin - Payment failed send from contractor
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    titre = "Mr";    
+    prenomEntrepreneur = "Marc-André";
+    montant = "100.00";
+    typeCarte = "Visa";
+    finCarte = "1234";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

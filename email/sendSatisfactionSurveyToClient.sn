@@ -1,0 +1,176 @@
+{{
+    /*
+        @title 			sendSatisfactionSurveyToClient
+        Description		Sends a survey email to know the satisfaction of client. 
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+	use client;
+}}
+
+\{{
+    use contractors;
+	use service;
+    //Il faut prendre le token de sr_project_contractor et non de sr_project
+	use token;
+    url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
+	url = url.rows.url_prod;
+	//Il faut prendre le token de sr_project_contractor et non de sr_project
+	url_survey = url.+'{{pages(table:'pages','client_survey',lg.rows.lg)}}?token='.+token;
+	service = service.rows.service;
+
+	uid_client = client.rows.uid;
+}}
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+        </span>
+    </span>
+</div>
+<br>
+\{{
+    
+    for c in contractors.rows do
+
+    token = c.token;
+    
+    if c.contact_lg eq 'fr' then
+        profile = "/entrepreneur/" .+ c.seo;
+    else
+        profile = "/contractor/" .+ c.seo;
+    endif
+
+
+}}
+
+
+
+<div>
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+       <span style="font-size:16px;font-weight:bold;">
+           \{{c.contact_firstname}} \{{c.contact.lastname}} - \{{c.company_name}}
+       </span> 
+    </span> 
+</div>
+<table class="vote" cellpadding="0" cellspacing="5" width="100%">
+    <tr>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{token}}&n=1" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{token}}&n=2" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    **
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{token}}&n=3" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ***
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{token}}&n=4" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ****
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{token}}&n=5" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *****
+                </div>
+            </a>
+        </td>
+    </tr>
+</table>
+\{{endfor}}
+
+<!--<form action="\{_{url}}{_{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?token=\{_{token}}" name="frm_comment" method="get" >-->
+  <!--<div>-->
+  <!--    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">-->
+  <!--       <span style="font-size:16px;font-weight:bold;">-->
+  <!--           {_{sn_ct("client_survey  Commentaire", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}-->
+  <!--       </span> -->
+  <!--    </span> -->
+  <!--</div>-->
+  <!--<table class="vote" cellpadding="0" cellspacing="5" width="100%">-->
+  <!--    <tr>-->
+  <!--        <td width="100%">-->
+           <!--  <a href="\{_{url}}{_{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?token=\{_{token}}&c=$('#comment').text()" -->
+  <!--          <a>-->
+  <!--                <div > <input class=" input-lg" name="comment" type="text" value="" size="80">-->
+  <!--                </div>-->
+  <!--            </a>-->
+  <!--        </td>-->
+  <!--    </tr>-->
+  <!--    <tr>-->
+  <!--      <td>-->
+  <!--        <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">-->
+  <!--        	<button  class="btn btn-primary btn-block" type="submit"  color="#2a769f" >{_{sn_ct("client_survey  Send", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}  </button>-->
+  <!--        </div> -->
+  <!--       </td>-->
+  <!--    </tr>-->
+  <!--<table>-->
+<!--</form>     -->
+    	
+ 
+<br>
+<br>
+<hr style="background:#2a769f;color:#2a769f;">
+<!--<br>-->
+<!--<br>-->
+<!--<table width="100%" border="0" cellspacing="0" cellpadding="0">-->
+<!--  <tr>-->
+<!--    <td>-->
+<!--      <table width="100%" border="0" cellspacing="0" cellpadding="0">-->
+<!--        <tr>-->
+<!--          <td align="center" style="font-weight:bold;-webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;" bgcolor="#2a769f"><a href="\{{url}}{{pages(table:'pages','client_share_satisfaction',lg.rows.lg)}}?n=not_evaluated" target="_blank" style="border-top:7px #2a769f solid;border-bottom:7px #2a769f solid;font-size: 14px; color: #ffffff; text-decoration: none; text-decoration: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;display: block;width:100%;"><span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je n'ai pas retenu les services de ces entrepreneurs",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span></a></td>-->
+<!--        </tr>-->
+<!--      </table>-->
+<!--    </td>-->
+<!--  </tr>-->
+<!--</table>-->
+<br>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td style="padding:7px;border:1px #000 solid;font-size:13px;">
+      <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;"><a href="\{{url_survey}}">\{{url_survey}}</a></span>
+    </td>
+  <tr>
+</table>
+<br>
+<div style="font-size:16px;">
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+      	{{sn_ct("client_survey  Vous ne pouvez pas cliquer sur le lien? Copiez et collez-le dans votre navigateur web.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        <br><br>
+      	{{sn_ct("client_survey Note: Est-ce qu'un autre entrepreneur que ceux listé ici s'est présenté comme ayant été référé par SoumissionRenovation.ca?  Si c'est le cas et dans le but d'offrir d'offrir un service sans soucis, nous aurions besoin de votre collaboration.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}{{sn_ct("client_survey Vous pouvez tout simplement répondre à ce courriel en indiquant qui est cet entrepreneur.")}}
+      <br><br>
+        {{sn_ct("client_survey  Merci de votre participation!", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+    </span>
+</div>
+<p style="font-size: 8px;">\{{uid_lient}}</p>

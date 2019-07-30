@@ -1,0 +1,20 @@
+{{ 
+	%include "/extenso/functions/sn_pages.snc";  
+	%include "/extenso/functions/sn_ct.snc"; 
+
+	function search() 
+		use lg; url = pages("search_result",lg.rows.lg,error:false); 
+}}
+<div class="search-2-wrap desktop">
+	<form class="search-2 clearfix" action="{{url}}">
+		<div class="search-left">
+			<input type="search" placeholder="{{ sn_ct(edit:false,"Recherche") }}" name="kw" value="\{{esc(filter:"html",cgidata.kw);}}">
+		</div>
+		<div class="search-right">
+			<button onclick="document.submit();">
+				<i class="fa fa-search"></i>
+			</button>
+		</div>
+	</form><!--/.search-2-->
+</div><!--/.search-2-wrap-->
+{{ endf }}

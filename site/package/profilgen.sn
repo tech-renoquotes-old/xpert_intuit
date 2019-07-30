@@ -1,0 +1,128 @@
+
+\{{
+package profilgen;
+    
+   function generate(cuid)
+   
+     template_en = "/site/profiles/profile_template.sn";
+     template_fr = "/site/profiles/profile_modele.sn";
+
+    res = sql("select * from sr_contractor where active = 'yes' and uid = ?", cuid);
+	counter = 0;
+    contractors = res.rows;
+ 	contractors;
+ 	
+    //create data structure contractor to be used in templates.
+    for contractor in contractors do
+        photos = sql("SELECT * FROM sr_gallery WHERE uid_contractor='?' AND active='yes' ORDER BY priority ASC, uid DESC", contractor.uid);    	
+        address = sql(single:true, "SELECT a.street_no, a.street, a.zip, a.province, c.name_? as real_city FROM sr_address a INNER JOIN sr_city c ON a.uid_city = c.uid WHERE uid_contractor = ?", contractor.contact_lg, contractor.uid);
+        contractor_services = sql("SELECT * FROM sr_contractor_service cs INNER JOIN sr_service s ON s.uid = cs.uid_service WHERE cs.uid_contractor = ? GROUP BY name_?", contractor.uid, contractor.contact_lg);
+        profil = sql(single:true, "SELECT * FROM sr_contractor_profil WHERE uid_contractor='?'", contractor.uid);
+        customLicenses = sql("SELECT * FROM sr_additional_license WHERE uid_contractor='?'", contractor.uid);
+        update_profile = sql("UPDATE sr_contractor SET show_profile = 'yes' WHERE show_profile IS NULL and uid = ? ", contractor.uid);
+
+        
+        licenses = customLicenses.rows;
+        lic_iterator = 0;
+        current_profil = profil.rows;
+        pics = photos.rows;
+        services = contractor_services.rows;
+        numpic = 0;
+        contractor.streetNo = address.rows.street_no;
+        contractor.street = address.rows.street;
+        contractor.city = address.rows.real_city;
+        contractor.zip = address.rows.zip;
+        contractor.province = address.province;
+        //contractor.services = services;
+        contractor.language = lg;
+        contractor.mylogo = current_profil.company_logo;
+        contractor.mybanner = current_profil.banner_1;
+
+
+        current_page = contractor.seo;
+		lg = contractor.contact_lg;
+		
+		//Company description length
+		if(contractor.company_desc.length() > 200) then
+		    if(lg eq 'fr') then
+    		    new_string = contractor.company_desc.substr(0,200) .+ "<a href='#apropos'>Lire plus</a>";
+		        contractor.brieve_desc = new_string;
+		    else
+    		    new_string = contractor.company_desc.substr(0,200) .+ "... <a href='#about'>Read more</a>";
+		        contractor.brieve_desc = new_string;
+		    endif
+		endif
+		
+		//Generate bgcolor if there is no logo
+		if(current_profil.company_logo ne "") then
+            contractor.logoBg = "";
+        else
+    		contractor.logoBg = "#eeeeee";
+		endif
+		
+        //create album element
+        for thePic in pics do
+            contractor.pic[numpic] = thePic.photo;
+            numpic++;
+        endfor
+        
+        for l in licenses do 
+            contractor.licname[lic_iterator]  = l.lic_name;
+            contractor.licnumber[lic_iterator] = l.lic_number;
+            
+            contractor.lics .+= '<tr><th><h5>';
+            contractor.lics .+= contractor.licname[lic_iterator];
+            contractor.lics .+= '</h5></th><td>';
+            contractor.lics .+= contractor.licnumber[lic_iterator];
+            contractor.lics .+= '</td></tr>';
+            lic_iterator = lic_iterator + 1;
+        endfor
+
+        
+        
+        //load contractor services
+        i = 0;
+        for s in services do 
+            if lg eq "fr" then
+                contractor.srv[i] = s.name_fr;
+                i = i + 1;
+            elseif lg eq "en" then
+                contractor.srv[i] = s.name_en;
+                i = i + 1;
+            endif
+        endfor
+
+
+        if current_page.length() > 0 then
+			//profile has not been updated, since last update skip
+		else
+            seo = lc(esc(nodouble:true,filter:"filenameinutf8", contractor.company_name));
+            void sql("update sr_contractor set seo = '?' where uid = '?'", seo, contractor.uid);
+            contractor.seo = seo;
+            
+              if(lg eq 'fr') then
+                // generate the profile in french for the contractor
+                generate(delcompile: false, compile: true, file: "/html/entrepreneur/" .+ contractor.seo .+ ".snc",template: template_fr);
+              elseif(lg eq 'en') then
+                // generate the profile in english for the contractor
+                generate(delcompile: false, compile: true, file: "/html/contractor/" .+ contractor.seo .+ ".snc",template: template_en);
+              endif
+
+			  counter++;
+        endif
+
+     	//log information into sr_debug for each profile updated according to the generation language.
+         if lg eq "fr" then
+    		void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/entrepreneur/" .+ contractor.seo .+ ".snc"});
+         elseif lg eq "en" then
+    		void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/contractor/" .+ contractor.seo .+ ".snc"});
+         endif
+    
+        endfor
+    	
+    	//count number of generation for this rope
+    	void insert(table:'sr_debug', fields:{'description':'Total profile generation for this rope is '.+ counter,'text':'waiting for next rope'});
+    endf
+endp
+    
+}}

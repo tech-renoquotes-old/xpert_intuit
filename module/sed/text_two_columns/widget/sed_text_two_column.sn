@@ -1,0 +1,49 @@
+{{  /*
+    	@title	sed_text_two_column
+    	Description:Implement widget sed_text_two_column. This widget uses information from sn_widget, sn_tables, sn_fields and
+                    sn_languages to implement sed_text_two_column. It will also get the information from the
+	                 table sed_text_two_column.
+        @author laplante@sednove.com
+    	@version 1.0 2015-11-18 16:01:13 laplante@sednove.com : Intitial code
+    	@version 1.1 2061-05-30 15:00:00 pascale@sednove.com : Code review
+    	@version 1.2 2061-05-30 15:00:00 gamila@sednove.com : default value
+    */
+	
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	textcontent = sql(single:true, "SELECT * FROM sed_text_two_columns WHERE uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+	if textcontent.nbrows == 0 then
+	 // Set default content
+    	fields = {
+    	            "uid" : widget.rows.uid_widget_list,
+                    "uid_widget":widget.rows.uid_widget_list
+        };
+            
+        for l sql("select * from sn_languages where active = 'yes'") do
+                    fields{"titre1_" .+ l.rows.lg} = "Title1 " .+ l.rows.lg;
+                    fields{"titre2_" .+ l.rows.lg} = "Title2 " .+ l.rows.lg;
+                    fields{"description1_" .+ l.rows.lg} = "description1 " .+ l.rows.lg;
+                    fields{"description2_" .+ l.rows.lg} = "description2".+ l.rows.lg ;
+        endfor
+    	verif_ctx = sql(single:true,"SELECT uid FROM sed_text_two_columns WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_text_two_columns",fields:fields);
+	        endif
+        textcontent = sql(single:true, "SELECT * FROM sed_text_two_columns WHERE uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+    endif
+}}
+
+<div class="row">
+	<div class="col-md-6">
+		<h3 class="section-title">{{textcontent.rows{'titre1_'.+ lg.rows.lg};}}</h3>
+        {{textcontent.rows{'description1_'.+ lg.rows.lg};}}			
+	</div>
+	
+	<div class="col-md-6">
+		<h3 class="section-title">{{textcontent.rows{'titre2_'.+ lg.rows.lg};}}</h3>
+		{{textcontent.rows{'description2_'.+ lg.rows.lg};}}
+	</div>
+</div>

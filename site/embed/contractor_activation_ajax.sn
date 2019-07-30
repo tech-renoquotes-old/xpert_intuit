@@ -1,0 +1,13 @@
+/*
+if (cgidata.f eq 'active' && v eq 'yes') then
+    FORCE_EMAIL_PROD = true;
+    contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", cgidata.uid);
+    if (contractor.rows.contact_lg ne '') then
+		void sql("UPDATE sr_contractor SET sent_welcome_email = 'yes' WHERE uid = '?'", cgidata.uid);
+  	    contractor::activateContractor(cgidata.uid);
+  	else
+  	    void sql("UPDATE sr_contractor SET active = 'no' WHERE uid = '?'", cgidata.uid);
+  	    'You must specify a contact language before activating the contractor';
+  	endif
+endif
+*/

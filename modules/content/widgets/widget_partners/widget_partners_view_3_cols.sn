@@ -1,0 +1,53 @@
+{{
+	use uid;
+	use table;
+	use lg;
+	%include "/extenso/functions/sn_ct.snc"; 
+	use widget;
+}}
+{{	
+	config=config();
+	cgi=cgidata();
+	lg_rows="{{lg.rows.lg}}";
+}}
+<!---- style a enelver en prod--->
+<style>
+.partner-wrap {margin:0 -10px;}
+.partner-box {padding:0 10px; margin:0 0 20px 0;}
+@media (min-width :450px){
+	.partner-box {float:left; width:50%;}
+	.partner-box:nth-child(2n+1) {clear:left;}
+}
+@media (min-width :750px){
+	.partner-box {width:33.33%;}
+	.partner-box:nth-child(2n+1) {clear:none;}
+	.partner-box:nth-child(3n+1) {clear:left;}
+}
+.client {
+    background: none repeat scroll 0 0 transparent;
+    border:1px solid #ddd;
+    padding:15px;
+}
+.client img {width: 100%;}
+.client-text {margin:16px 0 20px 0;}
+.client-text h4 {margin:0 0 5px 0; font-weight:300; font-size:20px;}
+.client-text p {margin:0;}
+</style>
+
+<div class="partner-wrap clearfix">
+	{{ for content sql("select * from widget_partners where actif='oui'".+ "ORDER BY sn_custom ;") do }}
+		<div class="partner-box">
+			<div class="client">
+			  {{ if content.rows{'url_'.+ lg.rows.lg} ne "" then}}
+                  <a href="{{content.rows{'url_'.+ lg.rows.lg};}}" target="_blank">
+                      <img src="{{content.rows.image}}" alt="{{content.rows{'alt_'.+ lg.rows.lg};}}">
+                  </a>
+              {{else}}
+                  <img src="{{content.rows.image}}" alt="{{content.rows{'alt_'.+ lg.rows.lg};}}">
+              {{endif}}
+              
+			</div>
+			<div class="client-text">{{content.rows{'text_'.+ lg.rows.lg};}}</div>
+		</div><!-- /.partner-box-->
+	{{endfor}}		
+</div><!-- /.partner-wrap-->

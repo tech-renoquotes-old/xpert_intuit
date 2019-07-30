@@ -1,0 +1,537 @@
+{{
+    /*
+        @title contractor_clients
+        Description: This widget display the list of clients of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-02
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+
+\{{
+    data = cgidata();
+    
+    /* DEBUT recuperation du nombre de pages */
+    if (data.n.length() > 0) then
+    nombreDeElementsParPage = data.n;
+        if (nombreDeElementsParPage < 5) then
+                nombreDeElementsParPage = 5; // par défaut
+        endif
+    else 
+       nombreDeElementsParPage = 20; // par défaut
+    endif
+    
+
+    /* DEBUT recuperation du numéro de page courante */
+    if (data.p.length() > 0) then
+        page = data.p;
+    else // La variable n'existe pas, c'est la première fois qu'on charge la page
+        page = 1;  // On se met sur la page 1 (par défaut)
+    endif
+    
+    /* On calcule le numéro du premier élément qu'on prend pour la LIMIT de MySQL */
+    premierElementAAfficher = (page - 1) * nombreDeElementsParPage;
+    
+    use extranet_user;
+    
+    query_rtotal = "
+        SELECT  count(*) as rtotal FROM sr_project_contractor pc
+        INNER JOIN sr_project p ON pc.uid_project=p.uid
+        INNER JOIN sr_client c ON p.uid_client = c.uid
+        LEFT JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city ci ON a.uid_city = ci.uid
+        WHERE pc.uid_contractor='?'
+        AND pc.accepted='yes'
+        AND (pc.hidden != 'yes' OR pc.hidden IS NULL)
+        ORDER BY pc.accepted_date DESC
+    ";
+
+    
+    query = "
+        SELECT  p.uid, pc.sn_cdate, c.firstname, c.gender, c.lastname, 
+                CONCAT(a.street_no,' ',a.street,', ',ci.name_fr,', ', a.zip) as address, 
+                p.description, pc.comments, pc.amount_contract_report, pc.expected_date,
+                c.email, a.phone1, a.phone2, a.phone3, pc.quote, pc.contract_signed, pc.file, pc.accepted_date
+        FROM sr_project_contractor pc
+        INNER JOIN sr_project p ON pc.uid_project=p.uid
+        INNER JOIN sr_client c ON p.uid_client = c.uid
+        LEFT JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city ci ON a.uid_city = ci.uid
+        WHERE pc.uid_contractor='?'
+        AND pc.accepted='yes'
+        AND (pc.hidden != 'yes' OR pc.hidden IS NULL)
+        ORDER BY pc.accepted_date DESC
+    ";
+    
+    limit = "LIMIT " .+ premierElementAAfficher .+ ", " .+ nombreDeElementsParPage;
+
+    totalProjects = sql(query_rtotal, extranet_user.uid); // get all projects
+    nombreLignes = totalProjects.rows[0].rtotal; // total number of lines returned by previous query.
+    
+    projects = sql(query .+ limit, extranet_user.uid); // get a list of projects to display as per value of limit.
+    nombreDeElementsSurCettePage = projects.nbrows;
+
+    nombreDePages  = ceil(nombreLignes/nombreDeElementsParPage); 
+    
+    //how many link to display per page to avoid overflow
+    if(nombreDePages > 15) then
+        limitpages = 15;
+    else
+        limitpages = nombreDePages;
+    endif
+    
+
+    if(data.start.length() > 0) then
+        startpage = data.start;
+    else
+        startpage = 1;
+    endif
+    
+    if(nombreDePages > 1 ) then
+        //afficher un lien vers les pages précedentes
+            
+            
+        if(nombreDePages > limitpages) then
+        
+            if (page != 1) then
+                if (page != limitpages) then
+                    if (page % limitpages == 0) then
+                        pagination .+= '<a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page - 1) 
+                        .+ '&amp;start=' .+ (startpage - limitpages) .+ '" title="page ' .+ (page - 1) .+ '"><abbr title="page pr&eacute;c&eacute;dente"> << </abbr></a>&nbsp;';
+                    else
+                        pagination .+= '<a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page - 1) 
+                        .+ '&amp;start=' .+ startpage .+ '" title="page ' .+ (page - 1) .+ '"><abbr title="page pr&eacute;c&eacute;dente"> << </abbr></a>&nbsp;';
+                    endif
+                else
+                    pagination .+= '<a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page - 1) 
+                    .+ '&amp;start=' .+ 1 .+ '" title="page ' .+ (page - 1) .+ '"><abbr title="page pr&eacute;c&eacute;dente"> << </abbr></a>&nbsp;';
+                endif
+            endif
+            
+            
+            if (page != nombreDePages) then
+                if (page + 1 >= limitpages) then
+                    if ((page + 1) % limitpages == 0) then
+                        // si on n'est pas sur la dernière (= pas de suivante)
+                        pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page + 1) 
+                        .+ '&amp;start=' .+ ((startpage - 1) + limitpages) .+ '" title="page ' .+ (page + 1) .+ '"><abbr title="page suivante"> >> </abbr></a>&nbsp;';
+                    else
+                        pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page + 1) 
+                        .+ '&amp;start=' .+ startpage .+ '" title="page ' .+ (page + 1) .+ '"><abbr title="page suivante"> >> </abbr></a>&nbsp;';
+                    endif
+                else
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page + 1) 
+                    .+ '&amp;start=' .+ 1 .+ '" title="page ' .+ (page + 1) .+ '"><abbr title="page suivante"> >> </abbr></a>&nbsp;';
+                endif
+           endif
+            
+            if(startpage >= limitpages) then
+                pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ 1 .+ '&amp;start=' .+ 1 .+ '" title="page '.+ 1 .+ ' sur ' .+ nombreDePages
+                .+ '">&nbsp;'.+ 1 .+ '&nbsp;</a>';
+                pagination .+= "....";
+            endif
+        
+            if(startpage == 1) then
+
+               for (i = startpage; i <= limitpages; i++) do
+                    if (i == page) then // si on est sur la page actuelle
+                        pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                    else
+                        if(i % limitpages != 0) then
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                        else
+                            pagination .+= "....";
+                            startpage = i;
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;'.+ i .+ '&nbsp;</a> -';
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ nombreDePages .+ '&amp;start=' .+ (trunc(nombreDePages / limitpages) * limitpages) .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;' .+ nombreDePages .+ '&nbsp;</a>';
+                        endif
+                    endif
+                endfor
+                
+            elseif(page % limitpages == 0) then
+            startpage = page;
+            
+               for (i = page; i <= page + limitpages; i++) do
+               
+                    if (i == page) then // si on est sur la page actuelle
+                        pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                    else
+                        if(i % limitpages != 0) then
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                        else
+                            startpage = i;
+                            pagination .+= "....";
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;'.+ i .+ '&nbsp;</a> -';
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ nombreDePages .+ '&amp;start=' .+ (trunc(nombreDePages / limitpages) * limitpages) .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;' .+ nombreDePages .+ '&nbsp;</a>';
+                            
+                        endif
+                    endif
+                    
+                    if(i == nombreDePages) then
+                        break;
+                    endif
+                endfor
+                
+            else
+                if(trunc(page/limitpages) != trunc(nombreDePages / limitpages)) then
+                    for (i = startpage; i < startpage + limitpages; i++) do
+                        if (i == page) then // si on est sur la page actuelle
+                            pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                        else
+                            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                            .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                        endif
+                    endfor
+                    pagination .+= "....";
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                    .+ '">&nbsp;'.+ i .+ '&nbsp;</a> -';
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ nombreDePages .+ '&amp;start=' .+ (trunc(nombreDePages / limitpages) * limitpages) .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                    .+ '">&nbsp;' .+ nombreDePages .+ '&nbsp;</a>';
+                else
+                    for (i = startpage; i <= startpage + limitpages; i++) do
+                        if (i == page) then // si on est sur la page actuelle
+                            pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                        else
+                                pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                                .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                        endif
+                        
+                        if(i == nombreDePages) then
+                            break;
+                        endif
+                    endfor
+
+                endif
+
+            endif
+            
+        else
+        
+            if (page != 1) then
+                pagination .+= '<a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page - 1) 
+                .+ '&amp;start=' .+ 1 .+ '" title="page ' .+ (page - 1) .+ '"><abbr title="page pr&eacute;c&eacute;dente"> << </abbr></a>&nbsp;';
+            endif
+        
+            if (page != nombreDePages) then
+                // si on n'est pas sur la dernière (= pas de suivante)
+                pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page + 1) 
+                .+ '&amp;start=' .+ 1 .+ '" title="page ' .+ (page + 1) .+ '"><abbr title="page suivante"> >> </abbr></a>&nbsp;';
+            endif
+        
+            for (i = 1; i <= nombreDePages; i++) do
+                if (i == page) then // si on est sur la page actuelle
+                    pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                else
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '&amp;start=' .+ startpage .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                    .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                endif
+            endfor
+            
+        endif
+        
+    else
+        pagination .+= 1;
+    endif
+
+    if projects.nbrows > 0 then
+    
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/update_project_validator.sn";
+
+    //savexls(projects.rows, "/sn_uploads/testfile.xls");
+}}
+
+<style>
+    input.input_file{
+        width:100%;
+        height:100%;
+        display:inline-block;
+        position:absolute;
+        left:0;
+        top:0;
+        opacity:0;
+        cursor:pointer;
+    }
+    a.input_file{
+        position:relative;
+    }
+    a.file{
+        text-decoration: none;
+        color:inherit;        
+    }
+    [data-validator-error]{
+        min-height:1em;
+        display:inline-block;
+    }
+
+</style>
+
+    \{{ 
+        data.id;
+        if(data.id == extranet_user.uid) then
+        clientInfo = sql(query, extranet_user.uid);
+        clients[0] = ['project ID', 'Fullname','Address', 'Email','Phone','Referred on', 'Approx. Starting Date', 'Quotes available', 'Contract is signed', 'Montant', 'commentaire', 'Description'];
+        i =1;
+        xlsfile = "/sn_uploads/clients_list_" .+ extranet_user.uid .+ ".xls";
+        
+        
+        for p in clientInfo.rows do
+        
+        if (p.'quote' eq '' || p.'quote' eq 'no') then
+            p.'quote' = 'no';
+        else
+            p.'quote' = 'yes';
+        endif
+        
+        if (p.contract_signed eq '' || p.contract_signed eq 'no') then
+            p.contract_signed = 'no';
+        else
+            p.contract_signed = 'yes';
+        endif
+        
+        fullname=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.firstname .+ " " .+ p.lastname);
+        address=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.address);
+        description=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.description);
+        comments=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.comments);
+
+            clients[i] = [
+            p.uid,
+            fullname, 
+            address, 
+            p.email, 
+            p.phone1, 
+            p.phone2,
+            p.phone3,
+            p.accepted_date,
+            p.expected_date,
+            p.'quote',
+            p.contract_signed,
+            p.amount_contract_report,
+            comments,
+            description
+            ];
+            i++;
+        endfor
+        
+        savexls(clients
+        ,xlsfile
+        ,true);
+        
+            headers_out("X-success", xlsfile);
+        endif
+    }}
+
+    <div class="row mb-sm">
+        <div class="panel">
+            <h5>
+              Pages: \{{ pagination; }}
+            </h5>
+        </div>
+        <div class="col-sm-3 no-print">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="window.print();">
+                {{sn_ct("contractor_clients Imprimer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+        </div>
+        
+        <div class="col-sm-3 no-print">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="generateXls()">
+                {{sn_ct("contractor_clients Exporter", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+            <a href=""></a>
+        </div>        
+    </div>
+    \{{for p in projects.rows do}}
+    <div class="panel panel-default project-panel">
+        <form action="{{ sn_pages('ajax_update_project', lg.rows.lg, table:'ressources')}}" class="update_project" name="update_project_\{{p.uid}}" method="POST">
+            <div class="panel-heading"><h3 class="heading-sm"><b>{{sn_ct("contractor_clients ID", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b> \{{p.uid}}</h3></div>
+            <input type="hidden" name="uid_project" value="\{{p.uid}}">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group font-md">
+                            <label>
+                                {{sn_ct("contractor_clients Référé le", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{(p.accepted_date !='0000-00-00')?p.accepted_date:''}}
+                            </div>
+                        </div>
+                        <div class="form-group font-md">
+                            <label>
+                                {{sn_ct("contractor_clients Adresse", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                            </label>
+                            <div>
+                                \{{p.firstname .+ " " .+ p.lastname}}<br>
+                                \{{p.address}}<br>
+                                <a href="mailto:\{{p.email}}">\{{p.email}}</a><br>
+                                <a href="tel:\{{p.phone1}}">\{{p.phone1}}</a> <a href="tel:\{{p.phone2}}">\{{p.phone2}}</a> <a href="tel:\{{p.phone3}}">\{{p.phone3}}</a>
+                            </div>
+                        </div>
+                        <div>
+                            <b>{{sn_ct("contractor_clients Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                        </div>
+                        <p>
+                            \{{p.description}}
+                        </p>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Comementaires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                            </label>
+                            <div>
+                                <textarea name="comments" rows="5" class="form-control">\{{p.comments}}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 font-md">
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Montant du contrat", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <input name="amount_contract_report" class="form-control" type="text" value="\{{p.amount_contract_report}}"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Date approximative des travaux", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <input name="expected_date" class="form-control" type="text" value="\{{(p.expected_date !='0000-00-00')?p.expected_date:''}}" placeholder="{{sn_ct("contractor_clients AAAA-MM-JJ",edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"/>
+                                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="expected_date"></span>
+                            </div>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input name="quote" type="checkbox" value="yes" \{{if p.quote eq 'yes' then}}checked\{{endif}}/> {{sn_ct("contractor_clients Soumission déposée", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input name="contract_signed" type="checkbox" value="yes" \{{if p.contract_signed eq 'yes' then}}checked\{{endif}}/> {{sn_ct("contractor_clients Contrat signé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                        </div>
+                        <div class="form-group no-print input-file-group">
+                        \{{if p.file ne "" then}}
+                            <a class="file" href="\{{p.file}}" target="_blank"><b>\{{basename(p.file)}}</b></a>
+                            <a href="javascript:void(0)" onclick="if (confirm('{{sn_ct("contractor_clients Êtes-vous certain de vouloir supprimer ce fichier ?", edit:false,publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} ')){delete_file(this)};" class="mb-md btn btn-default btn-block">
+                                {{sn_ct("contractor_clients Supprimer un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                            </a>
+                            <input id="action" name="action" type="hidden" value=""/> 
+                        \{{else}}
+                            <a href="javascript:void(0)" class="mb-md btn btn-primary btn-block input_file">
+                                {{sn_ct("contractor_clients Ajouter un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                                <input class="input_file" name="file" type="file"/>    
+                            </a>
+                        \{{endif}}
+                        </div>
+                        <div class="form-group no-print">
+                            <div>
+                                <button class="btn btn-primary btn-block" type="submit">
+                                    {{sn_ct("contractor_clients Enregistrer les modifications", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                                <button class="btn btn-default btn-block" onclick="return hide_project(this,'\{{p.uid}}')">
+                                    {{sn_ct("contractor_clients Retirer le client de la liste", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+             </div>
+        </form>
+    </div>
+    
+    \{{ validator.validateJS(form:'update_project_'.+p.uid);}}
+    
+    \{{endfor}}
+    
+    <div class="panel">
+        <h5>
+            Pages: \{{ pagination; }}
+        </h5>
+    </div>
+    
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_clients Vous n'avez présentement aucun client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}
+
+<script>
+    $(".update_project").on('submit', function(){
+        return (confirm('{{sn_ct(edit:false,"contractor_clients Enregistrer les modifications ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}'));
+    });
+
+    // removes a project from the list only for this contractor
+    function hide_project(e,uid_project){
+        if (confirm('{{sn_ct(edit:false,"contractor_clients Êtes-vous certain de vouloir cacher ce projet ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}')){
+            $.ajax({
+                type: "post",
+                data:{
+                    "uid_project": uid_project
+                },
+                url: "{{ sn_pages('ajax_hide_project', lg.rows.lg, table:'ressources')}}",
+                success:function(data){
+                    $(e).parents(".project-panel").hide('swing', function(){$(this).remove()});
+                }
+            });
+        }
+        else{
+            return false;
+        }
+    }
+    
+    // Bind update_project form to ajaxform plugin to send the form via ajax
+    $('form.update_project').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                location.reload(true);
+                console.log(data);
+            }
+        }    
+    }); 
+    
+    $("a.input_file").on("change", function(){
+        $(this).parents("form").submit(); 
+    });
+    
+    function delete_file(e){
+        $("input#action").val("delete_file");
+        $(e).parents("form").submit(); 
+    }
+    
+    function generateXls() {
+        var values = {
+            'file': '/sn_upload/myClients.xls',
+            'id': '\{{extranet_user.uid}}'
+        };
+    
+        $.ajax({
+            type: "POST",
+            data: values,
+            success:function(data, statusText, xhr){
+                if (xhr.getResponseHeader("X-success")){
+                    //alert(xhr.getResponseHeader("X-success"));
+                   window.location.assign(xhr.getResponseHeader("X-success"));
+                }
+            }
+        });
+
+    }
+    
+</script>

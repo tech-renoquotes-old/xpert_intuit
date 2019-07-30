@@ -1,0 +1,22 @@
+{{%include '/site/package/all.sn';}}
+
+\{{
+
+
+    for contractor sql("SELECT cc.last_digits, cc.exp, c.contact_email, c.contact_firstname, contact_lastname, contact_lg, c.uid
+               FROM sr_contractor c
+               INNER JOIN sr_cc cc ON c.uid = cc.uid_contractor WHERE date_format(now(), '%m%y') = cc.exp AND c.active = 'yes'"
+            )
+    do
+
+        automail::sendEmail(
+            "contractorCCExpirationReminder",
+            to: contractor.rows.contact_email,
+            lg: contractor.rows.contact_lg
+        );
+
+	
+		void insert(table:'sr_debug', fields:{'description':'Credit Card Renewal: last digit('.+ contractor.rows.last_digits,'text':'expires ='.+ contractor.rows.'exp' .+ ' / Notification sent to card holder :' .+ contractor.rows.contact_email });
+	endfor 
+
+}}

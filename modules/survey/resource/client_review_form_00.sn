@@ -1,0 +1,465 @@
+{{
+    /*
+        @title client_form_slim
+        Description: This widget is the form used to register a new client.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-03
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include '/site/package/all.sn';
+    
+    use page;
+    use lg;
+}}
+
+\{{
+    cgidata = cgidata();
+
+    default_ct_rate = cgidata.ct_rate;
+    default_cuid = cgidata.cuid;
+    
+    if(cgidata.notecounter eq "") then
+        note = cgidata.n;
+    endif
+    
+    contact_list = cgidata.'chkname[]';
+    contacts = explode(",",contact_list);
+
+    configs = sql(single:true, "SELECT * FROM sn_configs where uid = 1");
+    project = sql(single:true,"SELECT p.uid_client, p.uid, c.firstname, c.lastname, c.email, token FROM sr_project p INNER JOIN sr_client c on c.uid = p.uid_client where p.token='?'", cgidata.token);
+    uid_project = project.rows.uid;
+    SUCCESS = false;
+
+    contractors = sql("
+        SELECT pc.uid_contractor, c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.token
+        FROM sr_project_contractor pc
+        INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+        WHERE accepted = 'yes'
+        AND uid_project = '?' AND pc.uid_contractor = '?'
+        ", uid_project, default_cuid
+    );  
+    
+
+    if(!cgidata.savesurvey == undefined && cgidata.no_contact eq "") then
+        failed = 0;
+        for ctr in contractors.rows do
+            
+            note = cgidata['cnote_' .+ ctr.uid_contractor];
+            comment = cgidata['comment_' .+ ctr.uid_contractor];
+            contacted = cgidata['contact_' .+ ctr.uid_contractor];
+            met = cgidata['meet_' .+ ctr.uid_contractor];
+            winner = (cgidata.winner == ctr.uid_contractor)? cgidata.winner :null;
+            
+            survey = {"uid_project":uid_project, "token": cgidata.token, "uid_survey": "1", "uid_project_contractor": ctr.uid, "answered_date": datetime(), "answered_by": project.rows.email, "winner": winner};
+            
+            if(note ne "") then
+                survey.service_rate = note;
+            endif
+            
+            if(comment ne "") then
+                survey.service_comment = comment;
+            endif
+            
+            if(contacted ne "") then
+                survey.xpert_contacted = "yes";
+            else
+                survey.xpert_contacted = "no";
+            endif
+            
+            if(met ne "") then
+                survey.xpert_met = "yes";
+            else
+                survey.xpert_met = "no";
+            endif
+            
+            project_survey = sql(single:true,"SELECT * FROM xpert_project_survey WHERE uid_project_contractor = '?'", ctr.uid);
+           
+            if(note ne "" || comment ne "" || contacted ne "" || met ne "") then
+                if(project_survey.nbrows > 0 ) then
+                    upd = update(tables:'xpert_project_survey',fields: survey, uid:project_survey.rows.uid);
+                    if(upd.sqlcode > 0) then
+                        failed++;
+                    endif
+                else
+                    ins = insert(table:'xpert_project_survey', fields:survey);
+                    if(ins.sqlcode > 0) then
+                        failed++;
+                    endif
+                endif
+            endif
+        endfor
+        
+        if(failed == 0) then
+            SUCCESS = true;
+        endif 
+    elseif(!cgidata.savesurvey == undefined && cgidata.no_contact ne "") then
+        failed = 0;
+        for ctr in contractors.rows do
+            note = cgidata['cnote_' .+ ctr.uid_contractor]; 
+            comment = cgidata['comment_' .+ ctr.uid_contractor];
+            contacted = cgidata['contact_' .+ ctr.uid_contractor];
+            met = cgidata['meet_' .+ ctr.uid_contractor];
+            
+            survey = {"uid_project":uid_project, "token": cgidata.token, "uid_survey": "1", "uid_project_contractor": ctr.uid, "answered_date": datetime(), "answered_by": project.rows.email, "winner":""};            
+            
+            if(note ne "") then
+                survey.service_rate = note;
+            endif
+            
+            if(comment ne "") then
+                survey.service_comment = comment;
+            endif
+
+             if(contacted ne "") then
+                survey.xpert_contacted = "yes";
+            else
+                survey.xpert_contacted = "no";
+            endif
+            
+            if(met ne "") then
+                survey.xpert_met = "yes";
+            else
+                survey.xpert_met = "no";
+            endif
+
+            project_survey = sql(single:true,"SELECT * FROM xpert_project_survey WHERE uid_project_contractor = '?'", ctr.uid);
+            
+           
+            if(project_survey.nbrows > 0 ) then
+                upd = update(tables:'xpert_project_survey',fields: survey, uid:project_survey.rows.uid);
+                if(upd.sqlcode > 0) then
+                    failed++;
+                endif
+                
+            else
+                ins = insert(table:'xpert_project_survey', fields:survey);
+                if(ins.sqlcode > 0) then
+                    failed++;
+                endif
+            endif
+            
+            if(failed == 0) then
+                SUCCESS = true;
+            endif             
+        endfor
+    endif
+    
+    
+}}
+<html lang="{{lg.rows.lg}}">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <link type='text/css' rel='stylesheet' href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <title>{{sn_ct("client_review_form_00 Sondage de satisfaction",edit:false,publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</title>
+        
+    </head>
+<body>
+    <style>
+        fieldset input[type=checkbox], input[type=radio] {
+            vertical-align: middle;
+            position: relative;
+            /*bottom: 1px;*/
+        }
+        fieldset input[type=radio] {
+            bottom: 2px;
+        }
+        
+        .glyphicon-star{
+            font-size:1.5em;
+            color:orange;
+            cursor:pointer;
+        }    
+        
+        .glyphicon-star-empty{
+            font-size:1.5em;
+            color:orange;
+            cursor:pointer;
+        }
+        
+        .ftable{
+            width:100%;
+        }
+        
+        .ftable td{
+            border-left:1px solid #ddd !important;
+            border-right:1px solid #ddd !important;
+    
+        }
+        
+        .dialog{
+            font-size:0.6em;
+            font-weight:bold;
+            color:#fff;
+            background-color:green;
+            position:absolute;
+            left:-100px;
+            height:30px;
+            line-height:20px;
+            padding:5px;
+            border-radius: 5px;
+            -webkit-box-shadow: -2px 2px 7px -1px rgba(0,0,0,0.75);
+            -moz-box-shadow: -2px 2px 7px -1px rgba(0,0,0,0.75);
+            box-shadow: -2px 2px 7px -1px rgba(0,0,0,0.75);
+        }
+        
+        
+        .triangle{
+            position:absolute;
+            left:102px;
+            top:5;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 10px 0 10px 10px;
+            border-color: transparent transparent transparent green;
+            line-height: 0px;
+            _border-color: #000000 #000000 #000000 green;
+            _filter: progid:DXImageTransform.Microsoft.Chroma(color='#000000');           
+        }
+        
+        .error{
+            display:none;
+            top:50%;
+            left:50%;
+            position:fixed;
+            height:200px;
+            width:400px;
+            padding-left:20px;
+            padding-right:20px;
+            z-index:9;
+            background-color:#ffdddd;
+            margin-top: -100px; /* Negative half of height. */
+            margin-left: -200px; /* Negative half of width. */   
+            border:1px solid #ddd;
+            -webkit-box-shadow: -1px 2px 5px 1px rgba(0,0,0,0.76);
+            -moz-box-shadow: -1px 2px 5px 1px rgba(0,0,0,0.76);
+            box-shadow: -1px 2px 5px 1px rgba(0,0,0,0.76);          
+        }
+        
+       .error i {
+            float:right;margin-top:5px;margin-right:-10px;cursor:pointer;
+        }
+        
+    </style>
+    <div class='container' style="background-color:#0f4e6d;height:40px;width:100%;border-top:5px solid #f9b842;margin-bottom:20px"></div>
+        <div class='container'>
+            
+            <div class='row' \{{ if(SUCCESS) then 'style="display:block"'; else 'style="display:none"'; endif}}>
+                <div style="text-align:center;width:100%">
+                    <h1 style="color:#7ab250">{{sn_ct("client_review_form_00 Merci!", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h1>
+                    <h2 style="color:#999999">{{sn_ct("client_review_form_00 A très bientot!", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h2>
+                </div>
+            </div>
+            
+            
+            <div class='row' \{{if(project.nbrows == 0 || SUCCESS == true) then 'style="display:none"'; endif}}>
+                <div class='col-md-12' style="margin-bottom:20px">
+                    <h4>
+                        \{{contractors.rows[0].contact_firstname}} {{sn_ct("client_review_form_00 Voudrait bien avoir votre avis sur le service qu'il vous a offer recemment.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}.
+                    </h4>
+                    <hr>
+                    <h4><ul style="margin-left:-15px;color:#0f4e6d;font-weight:bold"><li>{{sn_ct("client_review_form_00 Attribuez une note de 1 à 5 étoiles par rapport au service offert par ", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} \{{contractors.rows[0].contact_firstname}} \{{contractors.rows[0].contact.lastname}}</li></ul></h4>                
+                    <br>
+                    <form name="survey_form" id="survey_form" method="POST">
+                    <table class='table ftable'>
+                    \{{
+                        
+                        
+                        project_array = sql("SELECT uid FROM sr_project WHERE token = '22a9bb595430fbfba4ef61aa96663deecc3fa3fc135ba'");
+                        
+                        for c in contractors.rows do
+                    
+                        //token_array = sql("SELECT token FROM sr_project_contractor WHERE uid_project = 19823");
+                        token = c.token;
+                        // token = token_array.rows.token;
+                    
+                    }}
+                
+                    
+                    <tr>
+                        <td width="4%" style="background-color:#eeee;">
+ 
+                        </td>
+                        <td width='96%' style="background-color:#eeee">
+                            <fieldset class="col-sm-8">
+                                <label for="winner">\{{c.contact_firstname}} \{{c.contact.lastname}} - \{{c.company_name}}</label>
+                            </fieldset>
+                            <fieldset class="col-sm-4">
+                                
+                                \{{if(default_ct_rate == 1 && default_cuid == c.uid_contractor) then}}
+                                        <span  onclick="toggle(this, 1, \{{c.uid_contractor}})" class="glyphicon glyphicon-star"></span>
+                                        <span  onclick="toggle(this, 2, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty"></span>
+                                        <span  onclick="toggle(this, 3, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty"></span>
+                                        <span  onclick="toggle(this, 4, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty"></span>
+                                        <span  onclick="toggle(this, 5, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty"></span>                               
+                                \{{elseif(default_ct_rate == 2 && default_cuid == c.uid_contractor) then}}
+                                        <span  onclick="toggle(this, 1, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 2, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 3, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 4, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 5, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>                                
+                                \{{elseif(default_ct_rate == 3 && default_cuid == c.uid_contractor) then}}
+                                        <span  onclick="toggle(this, 1, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 2, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 3, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 4, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 5, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty"></span>                                               
+                                \{{elseif(default_ct_rate == 4 && default_cuid == c.uid_contractor) then}}
+                                        <span  onclick="toggle(this, 1, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 2, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 3, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 4, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 5, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>                                               
+                                \{{elseif(default_ct_rate == 5 && default_cuid == c.uid_contractor) then}}
+                                       <span   onclick="toggle(this, 1, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 2, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 3, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 4, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>
+                                        <span  onclick="toggle(this, 5, \{{c.uid_contractor}})" class="glyphicon glyphicon-star" ></span>                           
+                                \{{else}}
+                                        <span  onclick="toggle(this, 1, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 2, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 3, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 4, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>
+                                        <span  onclick="toggle(this, 5, \{{c.uid_contractor}})" class="glyphicon glyphicon-star-empty" ></span>                                
+                                \{{endif}}
+                            </fieldset>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan='2'>
+                            <textarea name="comment_\{{c.uid_contractor}}" style="width:100%;background-color:#f9b84" rows="3" class="form-control" placeholder="{{sn_ct(edit:false,"Ecrivez un commentaire sur le service offert par ")}}\{{c.contact_firstname}}"></textarea>
+                            <input type="hidden" name="cnote_\{{c.uid_contractor}}" value="\{{(default_cuid st c.uid_contractor)?default_ct_rate:''}}"/>
+                        </td>
+                    </tr>
+                    <tr >
+                        <td colspan="3" style="background-color:#eee">
+                            <fieldset class="col-sm-4">
+                                <label style="display:inline-block;margin-right:10px">{{sn_ct("J'ai contacté cet expert")}}</label>
+                                <input name="contact_\{{c.uid_contractor}}" style="display:inline-block;width:20px;margin:0" type="checkbox" class="form-control contact"/>
+                            </fieldset>
+                            <fieldset class="col-sm-4">
+                                <label style="display:inline-block;margin-right:10px">{{sn_ct("J'ai rencontré cet expert")}}</label>
+                                <input name="meet_\{{c.uid_contractor}}" style="display:inline-block;width:20px;margin:0" type="checkbox" class="form-control contact"/>
+                            </fieldset>
+                            <fieldset class="col-sm-4">
+                               
+                            </fieldset>                 
+                        </td>
+                    </tr>
+                    <tr>
+                        <th colspan="3">
+                            &nbsp;
+                        </th>                        
+                    </tr>
+
+                    \{{endfor}}
+                    
+                    <tr>
+                        <td align="center" style="background-color:#0f4e6d;height:45px!important">
+                            <input type='hidden' id="ctNote" name="ctNote" value=''>
+                            <input style="width:20px;height:20px" class="form-control" \{{if(cgidata.contact eq 'none') then}} checked \{{endif}} type='checkbox' id='no_contact' value="no contact" name='no_concact'/>
+                        </td>
+                        <td style="background-color:#0f4e6d;vertical-align:middle;height:45px!important">
+                            <span style="color:#eee;font-style:italic">{{sn_ct("Cet expert ne m'a pas contacté ni rencontré.")}}</span>
+                            <button name="savesurvey" value="" type="submit" class="btn btn-warning" style="float:right;width:150px;height:26px;padding:0">{{sn_ct("client_review_form_00 Poursuivre",edit:false,publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</button>
+                        </td>
+                    </tr>        
+                    </table>
+
+                    <div class="error alert-danger"><i onclick="$(this).parent().fadeOut()" class='fa fa-window-close fa-2x' aria-hidden='true'></i><div style="margin-top:80px;width:100%" id="survey_error"></div></div>
+                    <input type='hidden' name="default" id="default" value='\{{note}}'/>
+                    </form>
+    
+                </div>
+            </div>
+        </div>
+<script>
+    
+$(document).ready(function(){
+    var ln = $('#notecounter').val();
+    
+    $('form[name=survey_form]').submit(function(e){
+        
+        if($('#notecounter').val() == ""){
+            $('#survey_error').html('{{sn_ct(edit:false,"Attribuer une note de service pour pouvoir continuer.")}}');
+            $('.error').show();
+            return false;
+        }
+    });
+    
+    $('input[type=radio][name=winner').change(function(){
+        $('#no_contact').prop('checked', false);
+    });
+
+     $('.contact').change(function(){
+         $('#no_contact').prop("checked", false);
+     });
+     
+    $('#no_contact').change(function(){
+        if($(this).is(':checked')){
+            $('.contact').prop("checked", false);
+            $('.dialog').hide();
+            $('.btn.btn-primary.btn-sm').each(function(){
+                $(this).removeClass('btn btn-primary btn-sm');
+                $(this).toggleClass('btn btn-default btn-sm');
+            })
+        }
+    });
+    
+    if(ln != ""){
+        $('#'+ln).removeClass('btn btn-default btn-grey btn-sm');
+        $('#'+ln).toggleClass('btn btn-warning btn-sm')
+    }
+    
+    
+})
+</script>
+<script>
+    
+    function change_class(btn){
+        var note = $(btn).children('span').length;
+        
+        $('.btn.btn-warning.btn-sm').each(function(){
+            $(this).removeClass('btn btn-warning btn-sm');
+            $(this).toggleClass('btn btn-default btn-grey btn-sm');
+        })
+        
+        $(btn).toggleClass('btn btn-default btn-grey btn-sm');
+        $(btn).toggleClass('btn btn-warning btn-sm');
+        
+        $("#notecounter").val(note);
+    }
+    
+    function toggle(btn, rate, cuid){
+        $('input[name=cnote_'+cuid+']').val(rate);
+        var spans = $(btn).parent().find("span");
+        $(spans).removeClass("glyphicon-star");
+        $(spans).addClass("glyphicon-star-empty");
+    
+        spans.each(function(key, value){
+            if(key < rate){
+                $(value).removeClass('glyphicon glyphicon-star-empty');
+                $(value).addClass('glyphicon glyphicon-star');
+            }
+        });
+    }
+    
+</script>
+
+</body>
+
+
+
+</html>
+
+
+

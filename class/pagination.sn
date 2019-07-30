@@ -1,0 +1,48 @@
+{{
+/*
+ * @title pagination Class
+ * @version 0.1 - 2017-03-16
+ * @author Jhonny Louis Alcius <louis.jhonny@gmail.com>
+ * 
+ * @description Easy and Fast to implement Form Validation with a single configuration for both Server-side and Client-side
+ * 
+ * 
+ * Server-side implementation (within a dynamic sncode context) : 
+ 
+ */
+class Pagination 
+    nbrPerPage = 20;
+    total_lines = 1;
+    links_per_page = 15;
+    
+
+    method Pagination(per_page, linksPerPage, query, where_query)
+        
+        //check if there is a where clause in the query
+        if(where_query != "") then
+            nbrOfLines = sql(query .+ " " .+ where_query);
+        else
+            nbrOfLines = sql(query);
+        endif
+        
+        this.total_lines = nbrOfLines.rows;
+        this.nbrPerPage = per_page;
+        this.links_per_page = linksPerPage;
+        
+        this.links_perpage;
+    endm
+    
+    method generate_header(startpage, page = 1)
+        for (i = startpage; i <= this.nbrPerPage; i++ )
+            do
+            pagination .+= '<a href="?n=' .+ this.nbrPerPage .+ '&amp;p=' .+ (page - 1) 
+            .+ '&amp;start=' .+ (startpage - this.links_per_page) .+ '" title="page ' .+ (page - 1) .+ '"><abbr title="page pr&eacute;c&eacute;dente"> << </abbr></a>&nbsp;';        
+        endfor
+   endm
+   
+    
+    method update_page ()
+        return "you have called update_page function";
+    endm
+endc
+}}

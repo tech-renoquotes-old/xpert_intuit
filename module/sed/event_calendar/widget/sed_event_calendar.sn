@@ -1,0 +1,64 @@
+{{
+    /*
+	    @title		 sed_event_calendar
+
+	    use to dispaly all the event in list and details 
+	
+    	@author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47 laplante@sednove.com
+    	
+	*/
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_debug_widget.snc";
+	%include "/extenso/functions/sn_widget_get_select_view.snc";
+
+	use widget;		// widget variable is from function sn_widgets
+    
+	if widget.rows.publish eq "no" || widget.rows.widget_global eq "yes" then
+		view = sn_widget_get_select_view(widget.rows);
+		if view.select_view == 0 then
+
+			if widget.rows.table_name ne '' && widget.rows.table_name ne 'none' then
+				for widget_content sql("select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list) do
+				endfor
+			endif
+		else
+			if widget.rows.table_name ne '' && widget.rows.table_name ne 'none' then
+				widget_content = sql("select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list);
+			
+				read(view.file);
+			else
+		    	read(view.file);
+			endif
+		endif
+	endif
+	
+}}
+
+{{ // This case is used when the widget is not global but publish is set to yes }}
+{{ if widget.rows.publish eq "yes" && widget.rows.widget_global ne "yes" then }}
+\{{
+	%include "/extenso/functions/sn_widget_get_select_view.snc";
+	%include "/extenso/functions/sn_ct.snc";
+
+	use widget;
+	if widget.rows.publish eq "yes" && widget.rows.widget_global ne "yes" then
+		view = sn_widget_get_select_view(widget.rows);
+		if view.select_view == 0 then
+			if widget.rows.table_name ne '' && widget.rows.table_name ne 'none' then
+				for widget_content sql("select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list) do
+				endfor
+			endif
+		else
+			if widget.rows.table_name ne '' && widget.rows.table_name ne 'none' then
+				widget_content = sql("select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list);
+				 read(view.file);
+			else
+				read(view.file);
+			endif
+		endif
+		
+	endif
+}}
+{{ endif }}
+</pre>

@@ -1,0 +1,55 @@
+    {{
+	//
+	// Name:		widget  recherche
+	// Version:		1.0 bbduc@yahoo.com  search
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+        use widget;     // widget variable is from function sn_widgets
+        use lg;
+        use page;
+
+    }}
+    
+     <script>
+        url='http://ssr.sednove.ca/fr/qui-sommes-nous';
+        url;
+    /*    window.open(url, '_self');
+        url;
+
+        function openInNewTab(url) {
+        //add_recherche();
+        //var win = window.open(url, '_blank');
+        var win = window.open(url, '_self');
+        //win.focus();
+        }
+    */    
+    //    $("#frame1").src = url;
+     function   show1(){
+            $("#frame1").src = "http://yahoo.com";
+        }
+    </script>
+    
+    
+    \{{ cgidata =cgidata();
+        request = request();
+    //request;
+    cgidata;"1234567890";
+    }}
+     
+    {{ site1 = (lg.rows.lg eq 'fr') ? 'soumissionrenovation.ca' : 'renoquotes.com';
+    site1;
+    
+    
+    }}  
+
+   <br>
+   <h2></h2>
+    <button  id="btn1" onclick="show1()">Go</button>
+  
+    <input type="text" id="inp1"  onclick="show1()">
+    
+    <iframe name="frame1"  id="frame1"  </iframe>
+
+   

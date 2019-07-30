@@ -1,0 +1,29 @@
+{{ 
+    //
+    // Name:        contact_test
+    //
+    // Description: header for the emails
+    //
+    // Version:     1.0 2015-06-02 ilya@sednove.com Initial Version
+    //
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc";
+	
+    use lg;             // Loop from the publish
+	ct_logo = sql(single:true,"select * from ct where code='header_email_img'");
+}}
+\{{ config_gen=config();
+    site_config = config(); 
+    config = sql(single:true,"select * from sn_configs");
+    base_url = config.rows.url_staging;
+    if site_config.site ne "staging" then 
+        base_url = config.rows.url_prod;
+    endif
+}}
+
+<div style="border-bottom:1px solid #c0bfc0;">
+	<div style="border-top:50px solid #FFFFFF; border-bottom:20px solid #FFFFFF; text-align:center;"\{{ if config_gen.site eq "staging" then }} class="sn_pencil" data-sn_title1="Edit" data-sn_class1="edit" data-sn_link1="/extenso/extranet/ct/fr/edit.snc?uid={{ct_logo.rows.uid}}&sn_modal=t"\{{ endif }}>
+		<img src="\{{base_url}}{{sn_ct("header_email_img", lg.rows.lg, format:'image',edit:false,publish:'/publish/email.sn',uids:'*')}}" alt="" style="border:0;">
+	</div>
+</div>

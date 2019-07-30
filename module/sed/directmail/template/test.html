@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+		<title>{{ if user.lg eq "fr" then }}Infolettre {{ else }}Newletter {{ endif }}</title>
+	</head>
+  <body>
+	  {{ 
+		%include "/extenso/functions/sn_ct.snc"; 
+		%include "/extenso/functions/sn_pages.snc"; 
+
+
+		site_config = sql(single:true,"select * from sn_configs");
+    
+		use user; use code;
+		lg = user.rows.lg;
+		if lg eq "" then
+			lg="en";
+		endif
+    	
+    	cgidata = cgidata();
+        status = sql(single:"true","SELECT * FROM sed_directmail_status WHERE uid='?'",cgidata.uid_status);
+    	campaign = sql(single:"true","SELECT * FROM sed_directmail_campaign WHERE uid='?'",status.rows.uid_campaign);
+        ctx_track=sql(single:true, "select * from ressources where code='directmail_tracking'");
+		urltrack=site_config.rows.url_prod .+ ctx_track.rows{'url_'.+lg} .+ ctx_track.rows{'file_'.+lg} .+ "?u=" .+ code .+ "&url=";
+
+		function urltrack(url)
+			use urltrack;
+			return urltrack .+ urlencode(url);
+		endf
+        campaign.rows.ck;
+	  }}
+	<a href="{{ urltrack('http://www.sednove.com/pl1?a=5&b=+')}}">Cliquez ici</a>
+    <img src="{{site_config.rows.url_prod; "/extenso/module/sed/directmail/"; lg; "/tracking.snc?code="; code}}">
+    
+  	<br>pour se désabonner :
+    <a href="{{site_config.rows.url_prod; pages('unsubscribe_from_email',lg); "?code="; code}}" >Cliquez ici</a>
+
+  </body>
+</html>

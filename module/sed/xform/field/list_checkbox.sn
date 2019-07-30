@@ -1,0 +1,69 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a list of checkbox field
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+	use field;
+	use field_title;
+	use field_name;
+	use lg;
+	use declaration;
+	
+	valuesfrom = field.rows.addvalues;
+	
+	enum =  splitre(value:valuesfrom,re:"\s*,\s*");
+	enum_length = enum.length();
+	
+	option =  splitre(value:field.rows{"addoptions_" .+ lg.rows.lg},re:"\s*,\s*");
+	option_length = option.length();
+
+	addvalue =  splitre(value:field.rows.addvalues,re:"\s*,\s*");
+	
+	if enum_length != option_length then
+	    error("The length of values and option are different in field " .+ field.rows.field_name );
+	endif
+	
+	if isdigit(field.rows.nbcol)  && field.rows.nbcol != 0 then
+		nbcoltodisplay = field.rows.nbcol;
+		if nbcoltodisplay >= 6 then
+		    row = 2;
+		elseif nbcoltodisplay == 5 || nbcoltodisplay == 4 then
+		    row = 3;
+		elseif nbcoltodisplay == 3 then
+		    row = 4;
+		elseif nbcoltodisplay == 2 then
+		    row = 6;
+		else 
+		    row = 12;
+		endif
+	else
+		row = 2;
+	endif
+	
+	nbcol = 0;
+}}
+<div class="form-group">
+    <label for="{{ field_name }}">{{ 
+        field_title;
+        if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+            }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+        endif
+    }}</label><br />
+
+    <div class="row">
+        {{ for (f=0; f<enum_length; ++f) do }}
+            <div class="col-md-{{row}}">
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="{{ field_name }}" id="{{ field_name }}" value="{{enum[f]}}" {{ declaration }} >{{ option[f] }}
+                </label>
+            </div>
+            {{ nbcol+=row; if nbcol >= 12 then nbcol=0; "</div><div class='row'>"; endif }}
+        {{ endfor }}
+    </div>
+</div>

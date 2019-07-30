@@ -1,0 +1,28 @@
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	for content sql("select * from widget_call_to_action where uid_widget = '?'", widget.rows.uid_widget_list) do
+		if content.rows.type_url eq "interne" then
+			page = sql(single:true,"select * from pages where uid = '?'", content.rows.url_interne);
+			if page.nbrows == 1 then
+				target = "_self";
+				url = page.rows{"folder_" .+ lg.rows.lg} .+ page.rows{"page_" .+ lg.rows.lg} .+ ".snc";
+			endif
+		else
+			target = "_snkelf";
+			url = content.rows{"url_externe_" .+ lg.rows.lg};
+		endif
+		}}<a target="{{target}}" href="{{url}}">{{
+		dq((<div class="box">));
+		dq((<span>));
+			content.rows{"content_" .+ lg.rows.lg};
+		dq((</span>));
+		dq((<br />));
+		dq((<strong class="big red">)); content.rows{"title_" .+ lg.rows.lg}; dq((</strong>));
+		dq((</div></a>));
+	endfor
+}}

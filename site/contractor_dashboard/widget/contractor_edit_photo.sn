@@ -1,0 +1,399 @@
+{{
+    /*
+        @title contractor_edit_photo
+        Description: Allow to edit, delete, move photos in the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-28
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    //test session
+    %include "/extenso/functions/sessions.snc"; 
+    request =request();
+//    connection=connection();
+//    connection.local_ip;  // 158.69.67.75
+//    connection.client_ip;  // 104.156.72.242
+     
+// void insert(table:'sr_debug', fields:{'description':'hostname=','text':request.hostname});
+//session
+
+
+}}
+\{{
+    use extranet_user;
+    
+    photos = sql("SELECT * FROM sr_gallery WHERE uid_contractor='?' AND active='yes' ORDER BY priority ASC, uid DESC", extranet_user.uid);
+    
+    imageprocessor_params = '?size=300x251&crop';
+    
+    // photo_name = "photo_" .+ substr(hash(algo:"sha512", extranet_user.uid .+ time.secs .+ time.usecs .+ random(min:1, max:999999), 20);
+    
+//------    
+ // test session
+ //?region=mtl&net=g&cre=146204715289&campaignid=250098300&adgroupid=18001996140&pos=1t4&kw=Entrepreneur Général
+/*    cgidata=cgidata();
+
+   // cgidata;   
+cre = cgidata.cre;
+
+void insert(table:'sr_debug', fields:{'description':'test_cre  photo','text':'cre='.+cre});
+void insert(table:'sr_debug', fields:{'description':'test_cre  photo arg','text':request.args});
+
+first_visited = session_get("url");
+void insert(table:'sr_debug', fields:{'description':'test_cre  photo url','text':first_visited});
+//if stripos(request.args,"&cre=")>= 0 then
+if (first_visited eq '') then  // pour remplir session la 1ère fois
+    void insert(table:'sr_debug', fields:{'description':'test_url  photo2','text':first_visited});
+    session_set("V1",cgidata.V1, exp:"+3000s");
+    session_set("adwords",request.args, exp:"+3000s");
+    session_set("url",  request.hostname .+ request.uri, exp:"+3000s");
+endif
+//------
+*/
+//session_get avec cookie
+// Initialise cookie
+cookies = cookies();
+if cookies.soumissionrenovation == undefined then
+    if (request.args) then     // test si contient cre
+        if strpos(request.args,"cre") >= 0 then 
+        	date = datetime();
+        	adwords = request.args;
+        	cookie = { 'url' : request.hostname .+ request.uri, 'adwords' : adwords, 'date' : date };
+        	expirytime=datetime(extended:true,op:"+3h",format:"%Sednove2");
+        	cookies(name:"soumissionrenovation",value:cookie,path:"/",expiry:expirytime);
+        endif
+    endif
+endif
+
+
+}}
+
+<style>
+    .cs .form-horizontal input[type="file"]{
+        padding-top:7px;
+    }
+    i.fa-check{
+        color: #227c0d;
+        display:none;
+    }
+    .check-group{
+        position:relative;
+    }
+    .check-group input{
+        padding-right:30px;
+    }
+    .check-group i{
+        position:absolute;
+        top:50%;
+        margin-top:-7px;
+        right:10px;
+    }
+    #photo_container > div.photo:first-child a[data-direction=up], #photo_container > div.photo:last-child a[data-direction=down]{
+        opacity:0.2;
+        cursor:default;
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+
+</style>
+
+<script src="/js/jquery.magnific-popup.min.js"></script>
+<link rel="stylesheet" href="/css/bootstrap-social.css">
+
+<div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h2 class="panel-title">
+                        {{sn_ct("contractor_edit_photo Vous pouvez créer une galerie de photo que nous enverrons aux clients que nous vous référons.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </h2>
+                </div>
+                <div class="panel-body">
+                    
+                    <form class="form-horizontal" action="{{ sn_pages('ajax_add_photo', lg.rows.lg, table:'ressources')}}" id="add_photo" name="add_photo" method="POST">
+                        <div class="form-group">
+                            <label for="title" class="col-sm-4 control-label">{{sn_ct("contractor_edit_photo Titre de la photo", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="title" name="title" >
+                                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_edit_photo  Missing title", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="title"></span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="photo" class="col-sm-4 control-label">{{sn_ct("contractor_edit_photo Joindre un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}&nbsp;<i title="format jpg, jpeg,png  Max 2 MB" class="fa fa-file-image-o" aria-hidden="true"></i></label>
+                            <div class="col-sm-8">
+                                <input type="file" id="photo" name="photo">
+                                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_edit_photo  Error", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="photo"></span>
+                                <p>{{sn_ct(edit:false,"contractor-edit-photo accepted files", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-4 col-sm-8">
+                                <button type="submit" class="btn btn-primary">{{sn_ct("contractor_edit_photo Ajouter la photo", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button>
+                            </div>
+                            <input type="hidden" id="cuid" name="cuid" value="\{{extranet_user.uid}}"/>
+                        </div>
+                    </form>
+                    
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="col-md-6 text-center">
+            <a href="{{pages(table:'pages','sr_contractor_photo_gallery',lg.rows.lg)}}" class="btn btn-primary mb-sm visit_gallery">
+                {{sn_ct("contractor_edit_photo Visiter ma galerie photo", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+            <form action="{{ sn_pages('ajax_change_photo_priority', lg.rows.lg, table:'ressources')}}" id="change_photo_priority" name="change_photo_priority" method="POST">
+                <div id="no_photo" class="alert alert-info" style="display:none">{{sn_ct("contractor_edit_photo Vous n'avec présentement aucune photo dans votre galerie", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</div>
+                <div id="photo_container">
+                    \{{ for p in photos.rows do}}
+                        <div class="photo well">
+                            <div class="row">
+                                <div class="col-md-6 zoom-gallery mb-sm">
+                                    <a href="\{{p.photo}}" data-source="\{{p.photo}}" title="\{{p.title}}">
+                                        <img data-uid="\{{p.uid}}" title="\{{p.title}}" src="\{{p.photo}}\{{imageprocessor_params}}" alt="\{{p.title}}" class="img-responsive mauto"/>
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <div>
+                                        <div>
+                                            <div class="form-group">
+                                                <div class="check-group">
+                                                    <input type="text" class="form-control mb-xs title" value="\{{p.title}}"><i class="fa fa-check" aria-hidden="true"></i>
+                                                </div>
+                                                <a href="javascript:void(0);" data-uid="\{{p.uid}}" onclick="change_photo_title(this);" class="btn btn-primary btn-xs btn-block">{{sn_ct("contractor_edit_photo Enregistrer modification du texte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="panel panel-default panel-custom pull-left">
+                                                <div class="panel-body">
+                                                    {{sn_ct("contractor_edit_photo Ordre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                                </div>
+                                                <div class="panel-value">
+                                                    
+                                                </div>
+                                                <div class="panel-control">
+                                                    <div>
+                                                        <div class="up">
+                                                            <a class="change_priority" data-direction="up" href="javascript:void(0)"><i class="fa fa-chevron-up" aria-hidden="true"></i></a>
+                                                        </div>
+                                                        
+                                                        <div class="drag-handle">
+                                                            <i class="fa fa-arrows" aria-hidden="true"></i>
+                                                        </div>
+                                                        
+                                                        <div class="down">
+                                                            <a class="change_priority" data-direction="down" href="javascript:void(0)"><i class="fa fa-chevron-down" aria-hidden="true"></i></a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="pull-right col-sm-12"  >
+                                                <a href="javascript:void(0)" onclick="rotate_photo(this,90)" class="btn-delete btn btn-success pull-right"  title="{{sn_ct(edit:false,"contractor_edit_photo 270 degrés de rotation.")}}" ><i class="fa fa-shield  fa-rotate-90" aria-hidden="true"></i></a>    
+                                                <a href="javascript:void(0)" onclick="rotate_photo(this,180)" class="btn-delete btn btn-success pull-right"  title="{{sn_ct(edit:false,"contractor_edit_photo 180 degrés de rotation.")}}" ><i class="fa fa-shield " aria-hidden="true"></i></a>    
+                                                <a href="javascript:void(0)" onclick="rotate_photo(this,270)" class="btn-delete btn btn-success pull-right"  title="{{sn_ct(edit:false,"contractor_edit_photo 90 degrés de rotation.")}}" ><i class="fa fa-shield fa-rotate-270" aria-hidden="true"></i></a>    
+                                                <a href="javascript:void(0)" onclick="delete_photo(this)" class="btn-delete btn btn-danger " title="{{sn_ct(edit:false,"contractor_edit_photo effacer photo")}}"><i class="fa fa-trash" aria-hidden="true"></i></a>    
+                                                <input type="hidden" name="photo_uid" value="\{{p.uid}}">
+                                                <!--<input type="hidden" name="rotation" value="">-->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div><!--end col-->
+                            </div>
+                        </div><!--end well-->
+                    \{{endfor}}
+                </div>
+            </form>
+            <a href="{{pages(table:'pages','sr_contractor_photo_gallery',lg.rows.lg)}}" class="btn btn-primary mb-sm visit_gallery">
+                {{sn_ct("contractor_edit_photo Visiter ma galerie photo", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+        </div>
+    </div>
+</div>
+\{{
+     // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_photo_validator.sn";
+    // validate client side
+    validator.validateJS(form:'add_photo');   
+
+}}
+
+<script>
+$(document).ready(function(){
+        // $('#photo').change(function(e){
+        //     e.target.files[0].name = $('#cuid').val() + "_" + e.target.files[0].name;
+        //     var fileName = e.target.files[0].name;
+        //     alert('The file "' + fileName +  '" has been selected.');
+        // });
+    });
+</script>
+
+<script>
+    // on document ready
+    $(function() {
+        // bind sortable to the photo container
+        $( "#photo_container" ).sortable({ 
+            handle:".drag-handle",
+            stop: function(){
+                $('form[name=change_photo_priority]').submit();
+                get_image_order();
+            }
+        });
+    });
+    
+    // bind the delete button to ajax_delete_photo
+    function delete_photo(elem){
+        if (confirm(" {{sn_ct(edit:false,"contractor_edit_photo Êtes-vous certain de vouloir supprimer cette photo ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){
+            var photo_uid = $(elem).siblings("input").val();
+            $.ajax({
+                type: "post",
+                data:{
+                    "photo_uid": photo_uid
+                },
+                url: "{{ sn_pages('ajax_delete_photo', lg.rows.lg, table:'ressources')}}",
+                success:function(result, status, xhr){
+                    $(elem).parents(".photo").hide('swing', function(){ $(this).remove(); get_image_order();});
+                }
+            });  
+            }
+        }
+    
+    // bind the save title button to ajax_change_photo_title   
+    function change_photo_title(elem){
+        var photo_title = $(elem).siblings("div").children("input").val();
+        var photo_uid = $(elem).attr("data-uid");
+
+        $.ajax({
+            type: "post",
+            data:{
+                "photo_title": photo_title,
+                "photo_uid": photo_uid
+            },
+            url: "{{ sn_pages('ajax_change_photo_title', lg.rows.lg, table:'ressources')}}",
+            success:function(result){
+                $(photo_title).text(photo_title);
+                $(elem).siblings('.check-group').find("i").fadeIn(200);
+            }
+        });  
+    }
+    $("input.title").on("focus", function(){
+        $(this).siblings("i").fadeOut(200); 
+    });
+   
+    
+    // Put the order of the photo gallery in javascript
+    function get_image_order(){
+        var length = $("#photo_container > div").length;
+        console.log(length);
+        if (length == 0){ // length is 1 when there is no image
+            $("div#no_photo").show();
+            $(".visit_gallery").hide();
+        }
+        else{
+            $("div#no_photo").hide();
+            $(".visit_gallery").show();
+        }
+        for (i=0;i<length;i++){
+            $("#photo_container > div:nth-child("+(i+1)+")").find("div.panel-value").html(i+1);
+        }
+    } 
+    get_image_order();
+    
+    // bind the up/down arrows to change priority
+    $("a.change_priority").on("click", function(){
+        var photo = $(this).parents('.photo');
+        var index = photo.index()+1;
+
+        if ($(this).attr("data-direction") == "up"){
+            if (index > 0) {
+                photo.hide('swing', function(){$(this).insertBefore($("#photo_container > div:nth-child("+(index-1)+")")).show('swing'); get_image_order(); $('form[name=change_photo_priority]').submit();});
+            }
+        }
+        else if (index < $("#photo_container > div").length) {
+            photo.hide('swing',function(){$(this).insertAfter($("#photo_container > div:nth-child("+(index+1)+")")).show('swing'); get_image_order(); $('form[name=change_photo_priority]').submit();});
+        }
+    });
+    
+    // Bind change_photo_priority form to ajaxform plugin to send the form via ajax
+    $('form[name=change_photo_priority]').ajaxForm({
+        success:function(data){
+        },
+        error:function(data){
+
+        }
+    });
+    
+    
+
+
+    // Bind add_photo form to ajaxform plugin to send the form via ajax
+    $('form[name=add_photo]').ajaxForm({
+        resetForm:true, // to reset the form once it is sent
+        success:function(data, statusText, xhr){
+            location.reload(true);
+        },
+        error:function(data){
+
+        }
+    });
+
+    
+    //Initialize the magnific popup
+	$('.zoom-gallery').magnificPopup({
+		delegate: 'a',
+		type: 'image',
+		closeOnContentClick: false,
+		closeBtnInside: false,
+		mainClass: 'mfp-with-zoom mfp-img-mobile',
+		image: {
+			verticalFit: true,
+			titleSrc: function(item) {
+				return item.el.attr('title') + ' &middot; <a class="image-source-link" href="'+item.el.attr('data-source')+'" target="_blank">Source de l\'image</a>';
+			}
+		},
+		gallery: {
+			enabled: true
+		},
+		zoom: {
+			enabled: true,
+			duration: 300, // don't foget to change the duration also in CSS
+			opener: function(element) {
+				return element.find('img');
+			}
+		}
+	});
+	
+	
+	function rotate_photo(elem,angle){
+        if (confirm(" {{sn_ct(edit:false,"contractor_edit_photo Êtes-vous certain de vouloir tourner cette photo vers la droite ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){
+            var photo_uid = $(elem).siblings("input").val();
+            $.ajax({
+                type: "post",
+                data:{
+                    "photo_uid": photo_uid,
+                    "rotation": angle
+                },
+                url: "{{ sn_pages('ajax_rotate_photo', lg.rows.lg, table:'ressources')}}",
+                success:function(result){
+                    $('img[data-uid='+photo_uid+']').attr('src', result + '\{{imageprocessor_params}}')
+                        .parent().attr({
+                            'href': result,
+                            'data-source': result
+                        });
+                    console.log(result);
+                }
+            });  
+        }
+    }
+</script>

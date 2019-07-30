@@ -1,0 +1,15 @@
+// NOT USED FOR NOW... MISSING STUFF
+
+
+/*
+if (cgidata.f eq 'status' && v eq 'active') then
+    FORCE_EMAIL_PROD = true;
+    
+    if (contractor.rows.uid_address ne '') then
+	    project::activateProject(cgidata.uid);
+    else
+        void sql("UPDATE sr_project SET status = 'new' WHERE uid = '?'", cgidata.uid);
+	    'You must specify an address before activating the project';
+	endif
+endif
+*/

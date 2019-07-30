@@ -1,0 +1,66 @@
+{{ 
+    use lg;         // Function publish use context lg
+	use page;		// From publish of pages
+	use url;		// from sn_publish
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+	CRESecureID="gt345421892264SB";
+
+}}
+
+{{ if production then }}
+<form method="post" action="https://safe.gtpaysecure.net/securepayments/a1/cc_collection.php">
+{{ else }}
+<form method="post" action="https://safe.sandbox-gtpaysecure.net/securepayments/a1/cc_collection.php">
+{{ endif }}
+
+\{{ 
+	// Create a new entry in table dons and the uid will be used to the uID field in global payment
+
+	time = time();
+	cookie = cookies();
+	cle = cookie.sednove .+ "/" .+ time.secs .+ time.usecs;
+
+	void insert(table:"dons",fields:{ "date_creation" : datetime(), "cle" : cle });
+	uid = lastuid();
+}}
+	 <input type="hidden" name="CRESecureID" value="{{CRESecureID}}">
+	 <input type="hidden" name="return_url" value="https://sncode.sednove.ca/returngp.snc?c=\{{cle}}" />
+	 <input type="hidden" name="content_template_url" value="https://sncode.sednove.ca{{pages("carte_credit",lg.rows.lg)}}" />
+	 <input type="hidden" name="sess_id" value="\{{cle}}" />
+     <input type="hidden" name="sess_name" value="session" />
+     <input type="hidden" name="allowed_types" value="Visa|MasterCard|American Express" />
+	 <input type="hidden" name="lang" value="fr_CA" />
+	 <p>
+	 <label>{{sn_ct("Un don de ", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn",uids:7) }}
+		 <input type="text" name="total_amt" value="1.00" >
+	 </label>
+	 </p>
+	 <p>
+	 <label>{{sn_ct("Adresse", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn",uids:7) }}
+		 <input type="text" name="customer_address" value="791 saint-charles" />
+	 </label>
+	 </p>
+	 <p>
+	 <label>{{sn_ct("Courriel", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn",uids:7) }}
+		 <input type="text" name="customer_email" value="laplante@sednove.com" />
+	 </label>
+	 </p>
+	 <p>
+	 <label>{{sn_ct("Téléphone", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn",uids:7) }}
+		 <input type="text" name="customer_phone" value="450-671-9307"/>
+	 </label>
+	 </p> <p>
+	 <label>{{sn_ct("Code postal", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn",uids:7) }}
+		 <input type="text" name="customer_postal_code" value="j4p2a2" />
+	 </label>
+	 </p>
+	 <p> <label>
+		 <input type="submit" name="submit" value="Submit" />
+	 </label>
+	 </p>
+
+
+</form>

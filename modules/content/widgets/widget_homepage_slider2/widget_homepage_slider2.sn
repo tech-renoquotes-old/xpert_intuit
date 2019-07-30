@@ -1,0 +1,165 @@
+{{
+	%include "/extenso/functions/sn_ct.snc";
+	use uid;
+	use table;
+	use widget;
+	use lg;
+}}
+
+
+<style type="text/css" media="screen">
+/* slider-a ; ie9+ ; Paul Tanase */
+.slider-a {background-color:#f3f3f3;overflow-x:hidden;}
+.slider-a .viewport {position:relative;max-width:1230px;margin:0 auto;min-height:250px;}
+.slider-a .viewport > div:first-child {padding-top:43%;}
+.slider-a .viewport > .viewport2 {position:absolute;z-index:1;left:0;top:0;bottom:0;right:0;min-height:250px;}
+.slider-a .viewport > .see {position:absolute;z-index:2;top:50%;margin-top:-53px;outline:none;}
+.slider-a .viewport > .see.prev {left:20px;}
+.slider-a .viewport > .see.next {right:20px;}
+.slider-a .viewport > .see>img {display:block;}
+.slider-a .viewport > .control {position:absolute;z-index:2;bottom:10px;width:100%;text-align:center;}
+.slider-a .viewport > .control>a {display:inline-block;-moz-border-radius:10px;-webkit-border-radius:10px;border-radius:10px;background:#ffffff;width:8px;height:8px;margin:8px;vertical-align:middle;}
+.slider-a .viewport > .control>a.on {background:#007dc0;}
+
+.slider-a .slide {position:absolute;z-index:1;display:none;width:100%;height:100%;top:0;left:0;overflow:hidden;border-right: 2px solid rgb(255, 255, 255);}
+.slider-a .slide > div {width:100%;height:100%;background-position:center;background-size:cover;background-repeat:no-repeat;}
+.slider-a .slide .text {display:none;width:100%;height:100%;padding:8% 12%;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;box-sizing:border-box;text-align:center;}
+.slider-a .slide .text h2 {color:#fff!important;font-weight:300;font-size:20px;line-height:100%;margin:0 0 20px 0; text-align:center;}
+.slider-a .slide .text h1 {color:#fff!important;font-weight:300;font-size:55px;line-height:110%;margin:0;text-align:center;}
+@media only screen and (max-width:1080px){
+    .slider-a .slide .text h1 {font-size:45px;}
+}
+@media only screen and (max-width:880px){
+    .slider-a .slide .text h1 {font-size:35px;}
+}
+@media only screen and (max-width:680px){
+    .slider-a .slide .text h1 {font-size:30px;}
+    .slider-a .viewport > .see {display:none;}
+}
+@media only screen and (max-width:580px){
+    .slider-a .slide .text h1 {font-size:25px;}
+}
+
+.slider-a .slide .text.model2 {padding:3% 10%;background-position:center;background-repeat:no-repeat;}
+.slider-a .slide .text.model2>div {max-width:430px;margin:0 auto;padding:20px;}
+.slider-a .slide .text.model2 img {display:block;max-width:100%;margin:0 auto 20px auto;}
+.slider-a .slide .text.model2 h1 {font-size:35px;margin-bottom:10px;text-align:center;}
+.slider-a .slide .text.model2 h2 {margin-bottom:25px}
+@media only screen and (max-width:1100px){
+    /*.slider-a .slide .text.model2  h2 {display:none;}*/
+}
+@media only screen and (max-width:1000px){
+    .slider-a .slide .text.model2 h1 {font-size:32px;margin-bottom:20px;}
+    .slider-a .slide .text.model2 h2 {font-size:20px;}
+}
+@media only screen and (max-width:850px){
+    .slider-a .slide .text.model2 h1 {font-size:28px;margin-bottom:15px;}
+    .slider-a .slide .text.model2 h2 {font-size:20px;}
+}
+@media only screen and (max-width:760px){
+    .slider-a .slide .text.model2 {padding:2% 10%;}
+    .slider-a .slide .text.model2 h1 {font-size:24px;}
+    .slider-a .slide .text.model2 h2 {font-size:16px;}
+}
+@media only screen and (max-width:600px){
+    .slider-a .slide .text.model2 h1 {font-size:20px;line-height:120%;}
+    .slider-a .slide .text.model2 h2 {font-size:14px;}
+}
+.slider-a .slide{opacity:0.5;}
+.slider-a .slide:nth-child(2) {left:100%;display:block;}
+.slider-a .slide:nth-child(3) {left:200%;display:block;}
+.slider-a .slide.before-last {left:-200%;display:block;}
+
+.slider-a .slide:last-child {left:-100%;display:block;}
+.slider-a .slide:first-child {left:0;display:block;opacity:1;}
+@-webkit-keyframes fadein {
+    0% {opacity:0;}
+    100% {opacity:1;}
+}
+@keyframes fadein {
+    0% {opacity:0;}
+    100% {opacity:1;}
+}
+@-webkit-keyframes fadeinslide {
+    0% {opacity:0.5;}
+    100% {opacity:1;}
+}
+@keyframes fadeinslide {
+    0% {opacity:0.5;}
+    100% {opacity:1;}
+}
+.slider-a .slide:first-child .text {display:block;opacity:1;animation:fadein;-webkit-animation:fadein;animation-duration:0.5s;-webkit-animation-duration:0.5s;}
+.slider-a .slide:first-child {opacity:1;animation:fadeinslide;-webkit-animation:fadeinslide;animation-duration:0.5s;-webkit-animation-duration:0.5s;}
+
+.slide-content{max-width:430px;padding:0 20px;display: table;height:100%;}
+.slide-content div{display: table-cell; vertical-align: middle;}
+</style>
+
+
+<div class="slider-a" data-px-per-sec="2000" data-delay="5000">
+	<div class="viewport">
+		<div></div>
+		<div class="viewport2">
+			\{{ production_select= "";
+			if config.site ne "staging" then production_select .+= " and production='oui'"; endif
+			for s sql("select * from widget_homepage_slider2 where uid_widget = '{{use widget; widget.rows.uid_widget_list}}' and actif='oui' ".+ production_select .+ " ORDER BY sn_custom") do }}
+				<div class="slide">
+					\{{ if s.rows.image ne "" && -e s.rows.image then
+							src = s.rows.image;
+						else
+							src = "http://placehold.it/1230x450";
+						endif 
+					}}
+					<div style="background-image:url(\{{src}});">
+						\{{ if s.rows.type_slide eq "link" then }}
+							\{{ if s.rows.image2 ne "" && -e s.rows.image2 then style="background-image:url(".+ s.rows.image2 .+");"; endif }}
+							<div class="text model2" style="\{{style}}">
+								<div>
+									\{{ if s.rows.logo ne "" && -e s.rows.logo then }}<img src="\{{s.rows.logo}}">\{{ endif }}
+									<h2>\{{s.rows.texte_{{lg.rows.lg}};}}</h2>
+									<h1>\{{s.rows.texte2_{{lg.rows.lg}};}}</h1>
+									\{{ url="";
+										if s.rows.type_url eq "interne" then
+											p = sql(single:true,"select * from pages where uid = '?'", s.rows.url_interne);
+											if p.nbrows == 1 then
+												target = "_self";
+												url = p.rows.folder_{{lg.rows.lg}} .+ p.rows.page_{{lg.rows.lg}} .+ ".snc";
+											endif
+										else
+											target = "_blank";
+											url = s.rows.url_externe_{{lg.rows.lg}};
+										endif 
+									
+									if url ne "" then }}
+										<a target="\{{target}}" href="\{{url}}"  class="btn btn-white">
+											\{{ if s.rows.lien_texte_{{lg.rows.lg}} ne "" then 
+												s.rows.lien_texte_{{lg.rows.lg}};
+											else }}
+												{{sn_ct("Lien", edit:"false", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+											\{{ endif }}
+										</a>
+									\{{ endif }}
+								</div>
+							</div>
+						\{{ else }}
+							<div class="text">
+								<h2>\{{s.rows.texte_{{lg.rows.lg}};}}</h2>
+								<h1>\{{s.rows.texte2_{{lg.rows.lg}};}}</h1>
+							</div>
+						\{{ endif }}
+					</div>
+				</div>
+			\{{ endfor }}
+		</div>
+	</div>
+</div><!-- /.slider-a -->
+
+
+<script type="text/javascript" src="/js/slider-a.js"></script>
+<script type="text/javascript" src="/js/touch.js"></script>
+
+<script>		
+	$(function(){
+		$('.slider-a').slider_a();
+	});
+</script>

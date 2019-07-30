@@ -1,0 +1,17 @@
+{{
+    db_from_params = {
+        'dbhost' : "soumissionrenovation.ca", 
+        'dbuser' : "soumis5_sednove", 
+        'dbpass' : "1@N8dMc!CEho", 
+        'dbname' : "soumis5_sr"
+    };
+    
+    // Connect to Databases
+    db_from = connect(
+        dbhost : db_from_params.dbhost, 
+        dbuser : db_from_params.dbuser, 
+        dbpass : db_from_params.dbpass, 
+        dbname : db_from_params.dbname
+    );
+    
+    

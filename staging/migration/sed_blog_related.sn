@@ -1,0 +1,46 @@
+{{
+    table_dest = 'sed_blog_related';
+    table_from = 'tmp_migration_related_posts';
+    
+    void sql(db:db_dest, "DROP TABLE IF EXISTS `tmp_migration_related_posts`");
+    void sql(db:db_dest, "CREATE TABLE `tmp_migration_related_posts` (ID INT, reference_ID INT)");
+    
+    qty = 0;
+    currentID = 0;
+    for row sql(db:db_from, "
+                SELECT ID, reference_ID, score
+                FROM wp_yarpp_related_cache
+                WHERE ID > 0
+                ORDER BY ID ASC, score DESC
+            ") do
+        if (currentID == row.rows.ID) then
+            qty++;
+        else
+            currentID = row.rows.ID;
+            qty = 1;
+        endif
+        if (qty > 5) then
+            continue;
+        endif
+        void sql(db:db_dest, "INSERT INTO `tmp_migration_related_posts` (ID,reference_ID) VALUES('?', '?')", row.rows.ID, row.rows.reference_ID);
+    endfor
+    
+    select_query_from_src = "SELECT * FROM tmp_migration_related_posts";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid_parent_article' : "ID",
+        'uid_related_article' : "reference_ID"
+    };
+    
+    tmp_db = db_from;
+    db_from = db_dest;
+    %include 'migration.sn';
+    db_from = tmp_db;
+    
+    void sql(db:db_dest, "DROP TABLE IF EXISTS `tmp_migration_related_posts`");
+    

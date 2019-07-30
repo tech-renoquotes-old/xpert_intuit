@@ -1,0 +1,3420 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/site/package/contractor.sn";
+
+    use lg;
+    use page;
+    
+    use contractor;
+}}
+
+\{{
+    cgidata = cgidata();
+
+    if(cgidata.lg eq 'fr' || cgidata.lg eq 'en') then
+        lg = cgidata.lg;
+    else
+        lg = "{{lg}}";
+    endif
+    
+    uid_contractor = "{{contractor.uid}}";
+    contractor_services = sql("SELECT * FROM sr_contractor_service cs INNER JOIN sr_service s ON s.uid = cs.uid_service WHERE cs.uid_contractor = ? GROUP BY name_?", uid_contractor, lg);
+    services = contractor_services.rows;
+    
+    //load contractor services
+    i = 0;
+    for s in services do 
+        if lg eq "fr" then
+            contractor.srv[i] = s.name_fr;
+            i = i + 1;
+        elseif lg eq "en" then
+            contractor.srv[i] = s.name_en;
+            i = i + 1;
+        endif
+    endfor
+}}
+
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+{{if contractor.show_profile eq 'no' then}}
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content="0; url=/index.sn" />
+{{else}}
+    <meta name="robots" content="index, follow"> 
+{{endif}}
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<title>{{contractor.company_name}}</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!--[if lt IE 9]>
+   <script>
+      document.createElement('header');
+      document.createElement('nav');
+      document.createElement('section');
+      document.createElement('article');
+      document.createElement('aside');
+      document.createElement('footer');
+   </script>
+<![endif]-->
+
+<meta name="sednove_lg" content="en">
+<meta name="sednove_uid" content="311">
+<meta name="sednove_url" content="/en/my-profile">
+<meta name="sednove_section" content="">
+<meta name="sednove_date" content="2017-03-29">
+
+{{if lg eq 'en' then}}
+    <link rel="alternate" hreflang="fr-CA" href="https://xpertsource.com/expert/{{contractor.seo}}?lg=fr">
+    <link rel="alternate" hreflang="en-CA" href="https://xpertsource.com/expert/{{contractor.seo}}">
+    <link rel="canonical" href="https://xpertsource.com/expert/{{contractor.seo}}">
+{{else}}
+    <link rel="alternate" hreflang="fr-CA" href="https://xpertsource.com/expert/{{contractor.seo}}">
+    <link rel="alternate" hreflang="en-CA" href="https://xpertsource.com/expert/{{contractor.seo}}?lg=en">
+    <link rel="canonical" href="https://xpertsource.com/expert/{{contractor.seo}}">
+{{endif}}
+
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+<link href="/css/en/styles.css" rel="stylesheet">
+
+<meta name="description" content="{{contractor.company_name}} - Expert chez XpertSource.com"  />
+<meta name="keywords" content="" />
+<meta name="generator" content="" />
+<meta name="author" content=""> 
+<meta name="google-site-verification" content="vOMuMnfKTFZ5qq_HecTT9cRaYV8YQjiFLEcXaPsHV8I"/>
+
+<!-- GEO LOCALISATION -->
+
+
+<meta name="DC.title" content="XpertSource.com" /> 
+<meta name="geo.region" content="CA" />
+<meta name="geo.placename" content="Montreal" /> 
+<meta name="geo.position" content="45.523428;-73.600159" /> 
+<meta name="ICBM" content="45.523428, -73.600159" /> 
+
+<!-- OPEN GRAPH -->
+
+
+<meta property="og:site_name" content="{{contractor.company_name}} | XpertSource.com" /> 
+
+
+<meta property="og:title" content="{{contractor.company_name}}"/> 
+
+
+<meta property="og:description" content="" />
+
+
+<meta property="og:url" content="https://xpertsource.com" /> 
+
+
+<meta property="og:image" content=""/> 
+
+
+<meta property="og:image:type" content="jpg" /> 
+
+
+<meta property="og:image:width" content="1200" /> 
+
+
+<meta property="og:image:height" content="630" /> 
+
+
+<!-- TWITTER CARD ================ -->
+<meta name="twitter:card" content="summary" />
+
+    <meta name="twitter:site" content="https://xpertsource.com" />
+
+
+    <meta name="twitter:title" content="{{contractor.company_name}}" />
+
+
+    <meta name="twitter:description" content="" />
+
+
+    <meta name="twitter:image" content="" />
+
+
+<!-- Others metas -->
+
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+<script src="/js/en/site.js"></script>
+<script src="//oss.maxcdn.com/jquery.form/3.50/jquery.form.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+
+<meta name="sednove_lg" content="en">
+<meta name="sednove_uid" content="311">
+<meta name="sednove_url" content="/en/my-profile">
+<meta name="sednove_section" content="">
+<meta name="sednove_date" content="2017-03-29">
+
+</head>
+    <body class="site">
+        
+ 
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="/extenso/css/files.css"/>
+<link rel="stylesheet" type="text/css" href="/extenso/css/fullpage.css"/>
+<link rel="stylesheet" type="text/css" href="/extenso/css/pencil.css"/>
+<link rel="stylesheet" type="text/css" href="/extenso/css/pretty_checkable.css"/>
+<link rel="stylesheet" type="text/css" href="/extenso/codemirror/lib/codemirror.css"/>
+<link href='//fonts.googleapis.com/css?family=Open+Sans:400,400italic,600italic,600,700,300,300italic' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="/extenso/fonts/special_font.css"/>
+<link rel="stylesheet" type="text/css" href="/extenso/css/sn-overwrite-bootstrap.css"/>
+<link rel="stylesheet" type="text/css" href="/extenso/css/extenso.css"/>
+<script src="/extenso/highcharts/js/highcharts.js"></script>
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css">
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+<script type="text/javascript" src="/extenso/js/en/extenso.js"></script>
+<script type="text/javascript" src="/extenso/codemirror/lib/codemirror.js"></script>
+<script type="text/javascript" src="/extenso/codemirror/mode/css/css.js"></script>
+<script type="text/javascript" src="/extenso/codemirror/addon/edit/matchbrackets.js"></script>
+<script type="text/javascript" src="/extenso/codemirror/addon/mode/loadmode.js"></script>
+<script type="text/javascript" src="/extenso/codemirror/mode/xml/xml.js"></script>
+<script type="text/javascript" src="/extenso/codemirror/mode/htmlmixed/htmlmixed.js"></script>
+<script type="text/javascript" src="/extenso/ckeditor/ckeditor.js"></script>
+<script type="text/javascript" src="/extenso/colpick/js/colpick.js"></script>
+<link rel="stylesheet" href="/extenso/colpick/css/colpick.css" type="text/css"/>
+<script type="text/javascript" src="/extenso/js/site.js"></script>
+<script type="text/javascript" src="/extenso/js/main.js"></script>
+<script type="text/javascript" src="/extenso/js/pretty_checkable.js"></script>
+<script src="/extenso/js/fr/pencil.js"></script>
+<script type="text/javascript" src="/extenso/formvalidation/js/formValidation.min.js"></script>
+<link rel="stylesheet" href="/extenso/formvalidation/css/formValidation.min.css">
+<style>
+.CodeMirror-scroll{min-height:30px;}
+</style>
+    <script type="text/javascript">
+    // Fonction pour l'ouverture du menu
+    function sn_fpOpenMenu (save) {
+        if($('.snfp_logo').hasClass('openned')){
+            $( ".snfp_side_menu" ).animate({
+                left: "-240px",
+                opacity:0,
+              }, 300, function() {
+              });
+            $( ".snfp_logo" ).animate({
+                left: "10px"
+              }, 300, function() {
+              });
+			  
+			$('body').addClass('snfp_side_menu_off');
+        }
+
+        if($('.snfp_logo').hasClass('closed')){
+             $( ".snfp_side_menu" ).animate({
+                left: "0px",
+                opacity:0.95,
+              }, 300, function() {
+              });
+             $( ".snfp_logo" ).animate({
+                left: "210px"
+              }, 300, function() {
+              });
+			  
+			$('body').removeClass('snfp_side_menu_off');
+        }
+        $('.snfp_logo').toggleClass('openned');
+        $('.snfp_logo').toggleClass('closed');
+        $('.snfp_side_menu').toggleClass('openned');
+		if (save) {
+			state = $('.snfp_logo').hasClass('openned');
+			sn_run_op("op=set&var=menuopen_state&state="+state, "Can't save state of menu : ");
+		}
+    }
+
+	function sn_run_op(data, errmsg, callback) {
+		$.ajax({//
+			url: "/extenso/extranet/fr/fullpage_ajax.snc",
+			data: data,
+			dataType: 'JSON',
+			success: function(ret){//
+				if(ret.retcode != 0) {//
+					alert(ret.retmesg);
+				} else {
+					if (callback != undefined) {
+						callback(ret);
+					}
+				}
+			},
+			error: function(a,b,c) {
+				alert(errmsg + a + b + c);
+			}
+		});
+	}
+	
+	function auto_load_panel() {
+	    
+	}
+
+
+    // Button Edit page
+    function sn_edit_page(){
+		var pencil_init = $("#edit-page").data("pencil_init");
+		console.log("sn_edit_page:"+pencil_init)
+		$('#edit-page').toggleClass('active');
+		$('#edit-toggle').toggleClass('fa-edit');
+
+		if (pencil_init != undefined) {
+			// Save state of pencil
+			state = $('#edit-page').hasClass('active');
+			//console.log("state = " + state);
+			data = "op=set&var=pencil_state&state=" + state;
+			$.ajax({//
+				url: "/extenso/extranet/fr/fullpage_ajax.snc",
+				data: data,
+				dataType: 'JSON',
+				success: function(ret){//
+					if(ret.retcode != 0) {//
+						alert(ret.retmesg);
+					}
+				},
+				error: function(a,b,c) {
+					alert("Can't save state : " + a + b + c);
+				}
+			});
+		} else {
+			$("#edit-page").data("pencil_init","def");
+		}
+    }
+
+    /* toggle menu left */
+	function toggle_menu_left(bo){
+      $(bo).parent().find("> div").not($(bo)).slideToggle();
+      $(bo).parent().toggleClass('on');
+
+	  id = $(bo).attr('id');
+      state  = $(bo).parent().hasClass('on');
+	  console.log("menu = " + id + ", state = " + state);
+	  sn_run_op("op=set&var=" + id + "&state="+state, "Can't save state of menu : ");
+  	}
+
+	// Implement widget d&d
+	$(function() {
+		sn_init_fullpage();
+		$(".sn_all,#centre,#droite,#haut,#bas,#gauche,#haut-gauche").sortable({ // 
+        connectWith: ".sn_drag",
+        handle: ".sn_widget_drag",
+		forcePlaceholderSize: true,
+		placeholder: "ui-state-highlight",
+		items: ".sn_pencil", // Specify only sn_pencil to be stortable
+        update: function(event, ui) { //
+			//ui.item.closest('.sn_pencil').removeClass('on');
+			ui.item.closest('.sortable').find('>.sn_pencil').attr('style','');
+			console.log("sn_widget_drag");
+			position = $(this).attr('id');
+			src = ui.item.attr('id');
+			nexto = ui.item.next();
+			nextuid = nexto.attr('id');
+			data = "op=update_widget_position&src="+src+"&nextuid="+nextuid+"&position="+position;
+			$.ajax({//
+				url: "/extenso/extranet/fr/widget-ajax.snc",
+				data: data,
+				dataType: 'JSON',
+				success: function(res){//
+					var data = res; // no need for parse json anymore $.parseJSON(res);
+					if(data.erreur != 0) {//
+						alert(data.message);
+					}
+				},
+				error: function(data) {
+					alert("Error saving move widget : " + data);
+				}
+			})
+        },
+        start: function(event, ui) { //
+			src = ui.item.attr('id');
+			position = $(this).attr('id');
+			//console.log("start"+src+position);
+		},
+		stop: function(e,ui){//
+			src = ui.item.attr('id');
+			position = $(this).attr('id');
+			//console.log("stop"+src+position);
+			ui.item.closest('.sortable').find('>.sn_pencil').attr('style','');
+		}
+
+		}); // Remove by paul request .disableSelection();
+		// Verify if this role is auth. to edit the page
+		
+		auto_load_panel();
+	})
+    
+    // JS POUR LE SLIDE PANEL
+    function toggleSlidePanel(bo) {        if ($('.sn_slide_panel').hasClass('sn_panel_on')) {
+            $('#sn_container').load(bo);
+        } else {
+            $('.sn_slide_panel').fadeToggle("fast", "linear").addClass('sn_panel_on');
+            $('#sn_container').load(bo);
+        }
+    }
+
+	
+	function sn_load(url, options) {
+		container = $("body").data("sn_id");
+		console.log("container="+container);
+		var defaults = { // Defaults values for options
+			'id' : container,
+			'iframe' : false
+		};
+		var opts = jQuery.extend(defaults, options);
+		//opts.id = container;
+		if (opts.id == undefined) {
+            $('.sn_slide_panel').show().addClass('sn_panel_on');
+			opts.id = "#sn_container";
+		}
+		console.log("sn_load in " + opts.id);
+	
+		if (opts.iframe) {
+			console.log("Load in iframe ");
+			$(opts.id).html("<iframe class='index_iframe' src='"+url+"'><iframe>");
+		} else {
+			$(opts.id).css('opacity','0.5');
+			$.ajax({
+				url:url,
+				success:function(data) {
+					console.log("Loading in "+opts.id);
+					$(opts.id).css('opacity','1.0');
+					$(opts.id).html(data);
+					//console.log("Success");
+				},
+				error:function(data) {
+					$(opts.id).html(data.responseText);
+					$(opts.id).css('opacity','1.0');
+					//console.log("Error");
+				}
+			});
+		}
+	}
+
+	function sn_load_panel(url, options) {
+		var defaults = { // Defaults values for options
+				'id' : '#sn_container',
+			'iframe' : false
+		};
+		var opts = jQuery.extend(defaults, options);
+		$("body").data("sn_id",opts.id); // Set which container
+	
+		$('.sn_slide_panel').fadeIn("fast", "linear").addClass('sn_panel_on');
+		$('body').addClass('sn_slide_panel_on');
+	
+		if (opts.iframe) {
+			console.log("Load in iframe ");
+			$(opts.id).html("<iframe class='index_iframe' src='"+url+"'><iframe>");
+		} else {
+			$(opts.id).css('opacity','0.5');
+			$.ajax({
+				url:url,
+				success:function(data) {
+					console.log("Loading in "+opts.id);
+					$(opts.id).css('opacity','1.0');
+					$(opts.id).html(data);
+					//console.log("Success");
+				},
+				error:function(data) {
+					$(opts.id).html(data.responseText);
+					$(opts.id).css('opacity','1.0');
+					//console.log("Error");
+				}
+			});
+		}
+	}
+
+    function closeSlidePanel() {
+        $('.sn_slide_panel').fadeToggle("fast", "linear").removeClass('sn_panel_on');
+		$('body').removeClass('sn_slide_panel_on');
+    }
+
+	function sn_publish_current_page() {
+		//console.log("page=311");
+		var uid = "311";
+		var publish = "";
+		var arr_href = window.location.href.split("/");
+		var new_href = "", separ_href="";
+	
+		if (uid != undefined) {
+			data = "op=publish&uid="+uid+"&publish="+publish;
+			$.ajax({//
+				url: "/extenso/extranet/fr/fullpage_ajax.snc",
+				data: data,
+				dataType: 'JSON',
+				success: function(ret){//
+					if(ret.retcode != 0 || ret.retmesg != "") {//
+						alert(ret.retmesg);
+					} else {
+						if (confirm("La publication est terminée. Voulez-vous recharger la page ?")) {
+							for(i=0;i<arr_href.length;i++){//
+								if (!arr_href[i].match(/#.*/)){//
+									new_href = new_href + separ_href + arr_href[i];
+									separ_href = "/";
+								}
+							} 
+							window.location = new_href;
+						}
+					}
+				},
+				error: function(a,b,c) {
+					alert("Can't publish page : " + a + b + c);
+				}
+			});
+		}
+	}
+	
+	// This function is loaded at startup
+	sn_init_fullpage = function() { 
+		  console.log("clicking"); $('#edit-page').click(); 
+	
+	}
+	
+	/* highlight current menu item */
+	function set_current_item(bo){
+		if(!$(bo).hasClass("on")){
+			$(".snfp_side_menu .m1_a, .snfp_side_menu .m2_a, .snfp_side_menu .m3_a, .snfp_side_menu .m4_a").removeClass("on");
+			$(bo).addClass("on");
+		}
+	}
+</script>
+
+        <div class="cs sed">
+
+<style>
+     /* COLOR FOR THE TOP MENU - Wrapper width*/
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    
+    /* menu top full */
+    .cs .menu-top-full {
+        padding: 0 8px;
+        border-bottom: 1px solid #E7E7E7;
+    }
+    
+    /* menu top - wrapper */
+    .cs .menu-top-wrapper {
+        
+    }
+    /*align vertical middle code*/
+    .cs .top_header_h{
+        height:35px;
+        line-height:35px;
+    }
+    .cs .top_header_h nav{
+        height:100%;
+        line-height:initial;
+        display:table;
+    }
+    .cs .top_header_h nav a{
+        vertical-align:middle;
+        padding-left:20px;
+        display:table-cell;
+        font-size:15px;
+        font-weight:bold;
+    }
+    .cs .top_header_h .login{
+        padding:0 0 0 30px;
+        position:relative;
+    }
+    
+    .cs .top_header_h .login:hover:before{
+        background-position:bottom;
+    }
+    .cs .cities_enum{
+        background:#00517e;
+        padding:7px 0;
+        font-size:15px;
+        font-weight:bold;
+        text-align:center;
+        color:#5896B4;
+    }
+    .cs .header .model-2{
+        border-bottom:6px #f9b842 solid;
+        background:#FFF;
+    }
+    /*-----------------------------*/
+    /* menu top */
+    .cs .menu-top {
+        float: right;
+    }
+
+
+    .cs .menu-top a,
+    .cs .menu-top a:focus {
+        outline: 0;
+    }
+    /* menu top - level 1 */
+
+
+    /* ======= Color for the text link */
+
+    .cs .menu-top a.item-link:link, .cs .menu-top a.item-link:visited{
+        color:#c8c9c2;
+    }
+
+    /* ======= Color for the hover text link */
+
+    .cs .menu-top a.item-link:hover, .cs .menu-top a.item-link:active{
+        color:#fac45f;
+    }
+
+    .cs .menu-top .item-link.on, .cs .menu-top > .item-link:hover {
+        text-decoration: none;
+        color: #999999;
+    }
+
+    @media screen and (max-width: 997px) {
+        .menu-top-full {
+            display: none;
+        }
+        .cs .menu-top {
+            float: none;
+            padding: 0 0 0 1%;
+        }
+        .cs .menu-top-wrapper {
+            padding: 0px;
+        }
+        .cs .menu-top-full .container-fluid {
+            padding-right: 0px;
+            padding-left: 0px;
+            padding-bottom:0px;
+            padding-top:0px;
+        }
+        .cs .menu-top-full {
+            padding: 0px;
+        }
+    }
+    @media screen and (min-width: 998px) {
+        .menu-top-full {
+            display: block!important;
+        }
+    }
+    /* ==============================================
+    CSS FOR THE MAIN NAV
+    is a temporrary class to protect menu style
+    ============================================== */
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    /* logo-1 */
+
+    .cs .logo-1 {
+        display: inline-block;
+        margin: 5px 0 16px 10px;
+        vertical-align: bottom;
+        max-width: 250px;
+        max-height: 50px;
+        margin-top: 17px;
+    }
+    
+    .logo-mobile .logo {
+        max-width: 240px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .logo-1 {
+            display: none;
+        }
+        .cs .container-full.header .col-md-4,.cs .container-full.header .col-md-8{
+            float:none;
+            width:100%;
+        }
+    }
+    /* menu main - mobile control */
+
+    .cs .menu-main-mobile-control {
+        display: none;
+        padding: 10px 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn {
+        display: inline-block;
+        margin: 0 10px 0 0;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 6px 9px;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover {
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn,
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:focus {
+        outline: 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn .fa {
+        font-size: 24px;
+        color: #4d4d4d;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover .fa {
+        color: #417bad;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main-mobile-control {
+            display: block;
+        }
+    }
+
+    .cs .logo-2 {
+        vertical-align: bottom;
+        width: 100%;
+        max-width: 160px;
+        max-height: 70px;
+        margin: 0;
+    }
+    /* menu main - wrapper */
+
+    .cs .menu-main-wrapper {
+        min-height: 75px;
+        padding-top: 15px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs.model-2 {
+            padding: 0;
+        }
+        .cs .menu-main-wrapper {
+            display: none;
+            padding-top: 0px;
+            /*position: absolute;*/
+            right: 0;
+            left: 0;
+            padding: 0;
+            z-index: 600;
+        }
+        .cs .container-full.header .col-menu{
+            padding:0;
+        }
+        .cs .menu-main-wrapper.on-js {
+            display: block;
+            background-color: #fff;
+        }
+    }
+    /* menu main */
+
+    .cs .menu-main {
+        padding: 5px 0 0 15px;
+        float: right;
+    }
+
+    .cs .menu-main-wrapper .container-fluid {
+        padding: 0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main {
+        	padding-top: 0;
+            padding-left: 0;
+            padding-right: 0;
+            float: none;
+        }
+    }
+
+    .cs .menu-main a,
+    .cs .menu-main a:focus {
+        outline: 0;
+    }
+    /* menu main - level 1 */
+
+    .cs .menu-main > .item {
+        float: left;
+        position: relative;
+        margin: 0 5px 5px 0;
+    }
+
+    .cs .menu-main > .item.separator {
+        border-left: 1px solid #7d7d7d;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item {
+            float: none;
+            position: static;
+            margin: 0;
+        }
+    }
+
+    .cs .menu-main > .item:last-child {
+        margin-right: 0;
+    }
+
+    .cs .menu-main > .item > .item-link {
+        display: block;
+        margin: 0 0 0 30px;
+        padding: 10px 0;
+        font-size: 16px;
+        line-height: 18px;
+        text-decoration: none;
+        color: #666666;
+    }
+
+    .cs .menu-main > .item.on-js > .item-link {
+        color: #000000;
+    }
+
+    .cs .menu-main > .item > .item-link:hover {
+        text-decoration: none;
+        color: #007ed9;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-link {
+            background: #f8f8f8;
+            margin: 0;
+            padding: 10px 14px;
+            border-bottom: none;
+        }
+        .cs .menu-main > .item.on > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item.on-js > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item > .item-link:hover {
+            background: #e0e0e0;
+            border-bottom: none;
+        }
+    }
+    /* menu main - level 2 */
+
+    .cs .menu-main > .item > .item-children {
+        display: none;
+        position: fixed;
+        z-index: 600;
+        left: -50%;
+      
+        width: 200px;
+        border-bottom: none;
+        background: #e0e0e0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-children {
+            position: static;
+            width: auto;
+            border-bottom: 0;
+            border-top: 0px solid #ffffff;
+        }
+        .cs .item-group .item-link {
+            padding-right: 20px;
+        }
+        .cs .item-group > .item-link::after {
+            content: "+";
+            float: right;
+            color: #007ed9;
+        }
+        .cs .menu-main > .item.on-js > .item-link::after {
+            content: "-";
+            color: #007ed9;
+        }
+    }
+
+
+    @media screen and (min-width: 501px) {
+        /*.cs .menu-main > .item:hover > .item-children {display:block;}*/
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link {
+        display: block;
+        border-top: 1px solid #cccccc;
+        padding: 7px 14px 7px 25px;
+        font-size: 14px;
+        line-height: 18px;
+        color: #4d4f53;
+        text-decoration: none;
+    }
+
+    .cs .menu-main > .item > .item-children > .item:first-child > .item-link {
+        border-top: 0;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link.on {
+        background: #d8d8d8;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link:hover {
+        text-decoration: none;
+      	color:#ffffff;
+        background: #007ed9;
+    }
+    /* Underline From Left ======================================  */
+
+    .menu-main > .item>.item-link {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -moz-osx-font-smoothing: grayscale;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .menu-main>.item>.item-link:before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: 0;
+        right: 100%;
+        bottom: 0;
+        background: #007ed9;
+        height: 2px;
+        -webkit-transition-property: right;
+        transition-property: right;
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+        -webkit-transition-timing-function: ease-out;
+        transition-timing-function: ease-out;
+    }
+
+    .menu-main>.item>.item-link:hover:before,
+    .menu-main>.item>.item-link:focus:before,
+    .menu-main>.item>.item-link:active:before,
+    .menu-main>.item.on>.item-link:before{
+        right: 0;
+    }
+
+	/* SOCIAL MEDIA LIST ========== =*/
+
+      /* ======= Color for the text link */
+      
+      .cs .menu-top-full .social-media-list a {
+          color:#c8c9c2;
+      }
+      
+
+      /* ======= Color for the hover text link */
+      
+      .cs .menu-top-full .social-media-list a:hover {
+          color:#fac45f;
+      }
+      
+        
+        .cs .menu-main-mobile-control .menu-main-mobile-btn{background:none;float:left;}
+        .cs .logo-mobile{float:left;display:block;}
+        
+        /* Sub nav CSS
+        ***********************/
+        .cs .menu-main > .item > .item-link{
+            margin:0;
+        }
+        .cs .menu-main > .item {
+            margin: 0 35px 5px 0;
+        }
+        .cs .item.item-group{
+            position:initial;
+            
+        }
+        .cs .item.item-group .item-children{
+            animation-name: submenu_anim;
+            animation-timing-function: cubic-bezier(0.64, 0.57, 0.67, 1.53);
+            animation-duration: .3s;
+            width:100%;
+            left:0;
+            padding:30px 0;
+            background:#044e7c;
+        }
+        @keyframes submenu_anim{
+            0%   {opacity:0;}
+            100% {opacity:1;}
+        }
+        .cs .item.item-group:hover .item-children{
+            opacity:1;
+            display:block;
+        }
+
+        .cs .item.item-group>a{
+            position:relative;
+            overflow: visible;
+        }
+
+        .cs .model-2{
+            position:relative;
+        }
+        .cs .pt.model-2 .container-fluid{
+            position:initial;
+        }
+        .cs .col-md-8.col-menu{
+            position:initial;
+        }
+        
+        .cs .menu-main > .item > .item-children > .item > .item-link{
+            width:33.33334%;
+            float:left;
+            border:none;
+            color:#FFF;
+        }
+        @media (max-width:997px){
+            .cs .menu-main .item.on-js > .item-children {
+                display: block;
+            }
+            .cs .menu-main-wrapper{
+                border-top:1px #eeeeee solid;
+            }
+            .cs .menu-main > .item {
+                margin: 0;
+            }
+            .cs .item.item-group:hover .item-children{
+                display:none;
+            }
+            .cs .item.item-group.on-js .item-children{
+                display:block;
+            }
+            .cs .menu-main > .item > .item-link{
+                background:#FFF;
+            }
+            .cs .menu-main > .item > .item-children > .item > .item-link{
+                width:100%;
+                float:none;
+                border:none;
+                color:#FFF;
+            }
+            .cs .item.item-group>a:hover:after{
+                border:none;
+                height:auto;
+                width:auto;
+                left:initial;
+                top:initial;
+                content: "+";
+                float: right;
+                color: #007ed9;
+                position: relative;
+                z-index: 1;
+            }
+            .cs .item.item-group .item-children{
+                padding:5px 0;
+            }
+            .cs .js_mobile_sticky .sticky{
+                max-height:100%;
+                overflow:auto;
+            }
+        }
+        /**********************/
+        
+      .cs .menu-top-full .social-media-list {
+          float: left;
+          margin-left: 10px;
+      }
+      .cs .menu-top-full .phone {
+          float: left;
+          font-size:17px;
+          display:block;
+          text-decoration:none;
+          color:#fac45f;
+      }
+
+      .cs .menu-top-full .social-media-list a {
+          margin-left: 5px;
+          font-size: 22px;
+          text-decoration:none;
+      }
+
+      @media screen and (max-width: 997px) {
+          .cs .menu-top-full .social-media-list {
+              float: none;
+              width: 100%;
+              margin-left: 0px;
+              text-align: center;
+              margin-bottom: 5px;
+          }
+          .cs .menu-top-full .social-media-list a {
+              margin-left: 5px;
+              margin-right: 5px;
+              font-size: 22px;
+          }
+      }
+      
+      .cs .menu-top-wrapper .col-nb1{
+          width:30%;
+      }
+      .cs .menu-top-wrapper .col-nb2{
+          width:22%;
+          float:right;
+      }
+      .cs .menu-top-wrapper .col-nb3{
+          width:48%;
+          text-align:center;
+      }
+      @media (max-width:1170px){
+          .cs .menu-top-wrapper .col-nb1{
+              width:50%;
+          }
+          .cs .menu-top-wrapper .col-nb2{
+              width:50%;
+              float:right;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              float:right;
+          }
+          .cs .menu-top-wrapper .col-nb3{
+              clear:both;
+              width:100%;
+          }
+          .cs .row-col-nb{
+              margin:0;
+          }
+      }
+      @media (max-width:768px){
+          .cs .menu-top-wrapper .col-nb1 .social-media-list{
+              display:none;
+          }
+    
+      }
+      @media (max-width:560px){
+          .cs .menu-top-wrapper .col-nb1{
+              width:100%;
+              text-align:center;
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb1 .phone{
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2{
+              width:100%;
+              text-align:center;
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              margin:auto;
+          }
+          .cs .menu-top-wrapper .col-nb3{
+              height:auto;
+              float:none;
+          }
+      }
+      </style>
+    
+    
+<!-- MENU-TOP ============================================= -->
+<div class="js_mobile_sticky">
+    <div>
+        <div class="container-full menu-top-full">
+          	<div class="pt clearfix container-fluid">
+        		<div class="menu-top-wrapper clearfix">
+        		    <div class="row row-col-nb">
+        		        <div class="col-xs-4 top_header_h col-nb1">
+        		            <a class="phone" href="tel:1-833-203-7768">
+        		                <i class="fa fa-comment" aria-hidden="true"></i>1 833 203-7768
+        		            </a>
+        		             
+        		        </div>
+            		        <div class="col-xs-3 top_header_h col-nb2">
+            		            <nav class="menu-top clearfix">
+                		            \{{if cgidata.lg eq 'fr' then}}
+                                        <a class="item-link" href="?lg=en">English</a> 
+                                    \{{else}}
+                                        <a class="item-link" href="?lg=fr">Français</a>
+                                    \{{endif}}
+                                </nav>
+            		        </div>
+        		    </div>
+        			
+              	</div>
+            </div>
+        </div>
+        <!-- END MENU TOP-->
+        
+        
+        
+        <!-- MENU-PRINCIPAL ============================================= -->
+        <div class="container-full header">
+            <div class="js_desk_sticky">
+            	<div class="pt model-2 clearfix">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <!-- CLIENT LOGO AREA ======================= -->
+                            <div class="col-md-4">
+                                
+                                <div>
+                                \{{if(lg eq 'fr') then}}
+                                    <a href="/fr/">
+                                        <img src="/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png?maxw=500" alt="XpertSource.com" class="logo-1">
+                                    </a>
+                                \{{else}}
+                                    <a href="/en/">
+                                        <img src="/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png?maxw=500" alt="XpertSource.com" class="logo-1">
+                                    </a>
+                                \{{endif}}
+                                </div>
+                                 
+                                <!-- MOBILE LOGO AND MENU ICON ====================-->
+                                <div class="menu-main-mobile-control clearfix">
+                                    <a href="javascript:void(0);" class="menu-main-mobile-btn" onclick="menu_main_toggle_mobile('.menu-main-wrapper');">
+                                    	<i class="fa fa-bars"></i>
+                                    </a>
+                                    \{{if(lg eq 'fr') then}}
+                                        <a href="/fr/" class="logo-mobile">
+                                            <img src="/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png?maxw=500" alt="XpertSource.com" class="logo-1">
+                                        </a>
+                                    \{{else}}
+                                        <a href="/en/" class="logo-mobile">
+                                            <img src="/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png?maxw=500" alt="XpertSource.com" class="logo-1">
+                                        </a>
+                                    \{{endif}}
+                                </div>
+                            </div>
+                            
+                            <!-- END Client logo area -->
+                            
+                            <div class="col-md-8 col-menu "> 
+                               <div class="menu-main-wrapper clearfix"> 
+ 
+                               </div><!--menu-main-wrapper-->
+                            </div><!--end col-md-8-->
+                            
+                        </div><!--end row-->
+                        
+                    </div><!--container-fluid-->
+                </div><!--end model-2-->
+            </div>
+            
+        </div><!--/.container-full-->
+        <!-- END MENU PRINCIPAL -->
+    </div>
+</div>
+
+<style>
+.menu-main-mobile-btn{
+    float:right!important;
+}
+</style>
+
+<!-- JS FOR THE NAV ============================================= -->
+
+<style>
+    /*Sticky css*/
+    .js_desk_sticky>.sticky{
+        position:fixed;
+        top:0;
+        left:0;
+        right:0;
+        z-index:9;
+    }
+    @media(max-width:997px){
+        .cs .js_desk_sticky>.sticky{
+            position:relative;
+        }
+        .cs .js_desk_sticky{
+            height:auto!important;
+        }
+        .cs .js_mobile_sticky{
+            position:relative;
+            z-index:9;
+        }
+        .cs .js_mobile_sticky>.sticky{
+            position:fixed;
+            top:0;
+            left:0;
+            right:0;
+            -webkit-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            -moz-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            -o-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1);
+        }
+    }
+</style>
+		 	<div class="sed-content">
+                 <div class="widget_area_top">
+
+                 </div>
+
+                  <style scoped>
+                  .sn_grid_main_menu {position:relative;right:0;top:0;z-index:502;margin:0!important;}
+                  a.sn_grid_main_menu {
+                      border: 1px solid transparent;
+                      -moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;
+                      display: inline-block;
+                      font-size: 14px!important;
+                      font-weight: 400;
+                      line-height: 1.42857;
+                      margin-bottom: 0;
+                      padding: 6px 12px;
+                      text-align: center;
+                      vertical-align: middle;
+                      white-space: nowrap;
+                      background-color: #dddddd!important;
+                      border-color: #dddddd!important;
+                      color: #666666!important;
+                  }
+
+                  a.sn_grid_main_menu.widget-add {
+                      padding: 1px;
+                  }
+
+                  a.sn_grid_main_menu.ct {
+                      padding: 1px 4px 1px 4px!important; /* MODIFICATION DES MARGIN */
+                      font-size: 8px!important; /* MODIFICITION FONT-SIZE */
+                      color: black!important;
+                  }
+                  .sn_grid_main_menu .link {
+                      border: 1px solid transparent;
+                      -moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;
+                      display: inline-block;
+                      font-size: 14px!important;
+                      font-weight: 400;
+                      line-height: 1.42857;
+                      margin-bottom: 0;
+                      padding: 6px 12px;
+                      text-align: center;
+                      vertical-align: middle;
+                      white-space: nowrap;
+                      background-color: #dddddd!important;
+                      border-color: #dddddd!important;
+                      color: #666666!important;
+                  }
+                  </style>
+            
+            <div class="cs-main-content">
+				<!--<div class='sn_grid_main_menu'><a class='link'><i class='fa fa-bars'></i></a></div>-->
+				
+					<div class=" container" style="min-height:50px;">
+                        <div class="row">
+                            
+                                <div class="sn_pencil sn-grid col-md-12" 
+                                    data-sn_link1="/extenso/extranet/sn_template_grid_content/en/edit.snc?uid=457&sn_uniq=yes&sn_modal=t" 
+                                    data-sn_class1="edit" data-sn_title1="Edit">
+                                    
+                                    
+                                    
+		
+			
+			<div   
+				id="grid-11" class="sn_drag sn_widget_container sn_pencil sn_all" data-sn_link1="/extenso/extranet/en/widget-add.snc?nb=5&uid_page=311&table=pages&lg=en&position=grid-11&add=true" data-sn_title1="Add a widget " data-sn_class1="widget-add">
+			
+		
+	
+
+	 
+		
+		
+		
+		<!-- Widget 1947 myprofile /site/contractor_dashboard/widget/my_profile.sn 311 pages en grid-11 by Ajhonny 2017-03-29 16:36:08 -->
+		<div id="1947" class="sn_pencil" style="min-height: 40px;">
+		
+
+<link rel="stylesheet" href="css/myprofile/myprofile.css" /> <!-- profile template   -->
+<link rel="stylesheet" href="/js/fr/simple_slidebox/jquery.mSimpleSlidebox.css">
+<script src="/js/fr/simple_slidebox/jquery.mSimpleSlidebox.js"></script>
+
+<style>
+
+    /* Vertical Offset Bottom */
+    .vert-offset-top-12{
+        margin-top: 12em;
+    }
+    .vert-offset-top-11{
+        margin-top: 11em;
+    }
+    .vert-offset-top-10{
+        margin-top: 10em;
+    }
+    .vert-offset-top-9{
+        margin-top: 9em;
+    }
+    .vert-offset-top-8{
+        margin-top: 8em;
+    }
+    .vert-offset-top-7 {
+        margin-top: 7em;
+    }
+    .vert-offset-top-6{
+        margin-top: 6em;
+    }
+    .vert-offset-top-5{
+        margin-top: 5em;
+    }
+    .vert-offset-top-4{
+        margin-top: 4em;
+    }
+    .vert-offset-top-3{
+        margin-top: 3em;   
+    }
+    .vert-offset-top-2{
+        margin-top: 2em;
+    }
+    .vert-offset-top-1{
+        margin-top: 1em;
+    }
+    .vert-offset-top-0{
+        margin-top: 0em;
+    }
+    /* Vertical Offset Bottom */
+    .vert-offset-bottom-12{
+        margin-bottom: 12em;
+    }
+    .vert-offset-bottom-11{
+        margin-bottom: 11em;
+    }
+    .vert-offset-bottom-10{
+        margin-bottom: 10em;
+    }
+    .vert-offset-bottom-9{
+        margin-bottom: 9em;
+    }
+    .vert-offset-bottom-8{
+        margin-bottom: 8em;
+    }
+    .vert-offset-bottom-7{
+        margin-bottom: 7em;
+    }
+    .vert-offset-bottom-6{
+        margin-bottom: 6em;
+    }
+    .vert-offset-bottom-5{
+        margin-bottom: 5em;
+    }
+    .vert-offset-bottom-4{
+        margin-bottom: 4em;
+    }
+    .vert-offset-bottom-3{
+        margin-bottom: 3em;
+    }
+    .vert-offset-bottom-2{
+        margin-bottom: 2em;
+    }
+    .vert-offset-bottom-1{
+        margin-bottom: 1em;
+    }
+    .vert-offset-bottom-0{
+        margin-bottom: 0em;
+    }
+
+
+   .cycle {
+      background-image: url("{{contractor.mybanner}}");
+      background-position:20% 0%;
+      background-size: 100% auto;
+      height: 210px;
+      width: 100%;
+      background-repeat: no-repeat;
+    }
+
+
+.album img {
+    margin: 10px 10px 10px 10px;
+    -webkit-transform: scale(1, 1);
+    -ms-transform: scale(1, 1);
+    transform: scale(1, 1);
+    transition-duration: 0.3s;
+    -webkit-transition-duration: 0.3s; /* Safari */
+    }
+
+.album img:hover {
+	cursor: pointer;
+	-webkit-transform: scale(2, 2);
+    -ms-transform: scale(2, 2);
+    transform: scale(2, 2);
+    transition-duration: 0.3s;
+    -webkit-transition-duration: 0.3s; /* Safari */
+    box-shadow: 10px 10px 5px #888888;
+    z-index: 1;
+    }   
+    
+body {
+  background: #F1F3FA;
+}
+
+.logo_pane {
+    float: left;
+    width: 200px;
+    height: 180px;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 10px;
+    background-image: url('{{contractor.mylogo}}');
+    background-size: 100% auto;
+    text-align: center;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+
+.google_map {
+    float: left;
+    max-width: 550px;
+    height: 180px;
+    margin-top: 20px;
+}
+
+
+
+.hero {
+    position: absolute;
+    background-color: #000000;
+    opacity: 0.5;
+    padding-top: 5px;
+    /* This works in IE 8 & 9 too */
+	/* ... but also 5, 6, 7 */
+    filter: alpha(opacity=50);
+    /* Older than Firefox 0.9 */
+    -moz-opacity:0.5;
+    width: 97%;
+    top: 2%;
+    left: 50%;
+    z-index: 3;
+    color: #fff;
+    text-align: center;
+      -webkit-transform: translate3d(-50%,-50%,0);
+         -moz-transform: translate3d(-50%,-50%,0);
+          -ms-transform: translate3d(-50%,-50%,0);
+           -o-transform: translate3d(-50%,-50%,0);
+              transform: translate3d(-50%,-50%,0);
+}
+
+.hero h1 {
+    font-size: 2em;    
+    font-weight: bold;
+    text-transform: uppercase;
+    color : #FFFFFF;
+    margin: 0;
+    padding: 0;
+}
+
+
+.hero span {
+    font-size: 14px; 
+    color : #000000;
+    margin: 0;
+    padding: 0;
+}
+
+
+.profile_links {
+    color: 'blue';
+    text-decoration: none;
+}
+
+.banner_pane {
+    float: left;
+    width: 100%;
+    height: 210px;
+    text-align: center;
+    background-color:#eeeeee;
+    background-repeat: no-repeat;
+}
+
+.button_link {
+    height: 80px;
+}
+
+.button_link a {
+    color: #000000;
+    display: inline-block;
+}
+
+.button_link a:hover{
+    color: #000000;
+}
+
+.button_link a:visited{
+    color: #000000;
+}
+
+.button_link table{
+    border-spacing: 10px;
+    border-collapse: separate;
+    width:280px;
+}
+
+.button_link td{
+    width:100%;
+}
+
+
+.slidebox{
+    width:98%;
+    height:250px;
+    padding:0
+    margin:0;
+}
+
+.slideBoxContainer_1{
+    padding:0;
+    margin:0;
+}
+
+.slideboxContainer_1 ul .slideboxSlide_1{
+    background-color:#EFF999; 
+    
+
+}
+.slideboxContainer_1 ul .slideboxSlide_2{
+    background-color:#FFFFFF; 
+
+}
+.slideboxContainer_1 ul .slideboxSlide_3{
+    background-color:#CC0092; 
+
+    
+}
+
+
+.twPc-div {
+    background: #fff none repeat scroll 0 0;
+    border: 1px solid #e1e8ed;
+    border-radius: 6px;
+    height: 200px;
+    width: 100%;
+}
+.twPc-bg {
+    background-image: url("{{contractor.mybanner}}");
+    background-position: 0 50%;
+    background-size: 100% auto;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid #e1e8ed;
+    border-radius: 4px 4px 0 0;
+    opacity: 1;
+    z-index: 1;
+    height: 100%;
+    width: 100%;
+}
+.twPc-block {
+    display: block !important;
+}
+.twPc-button {
+    margin: -35px 0 -10px -35px;
+    text-align: right;
+    width: 100%;
+}
+.twPc-avatarLink {
+    background-color: #fff;
+    border-radius: 6px;
+    display: inline-block !important;
+    float: left;
+    margin: -30px 5px 0 8px;
+    padding: 1px;
+    vertical-align: bottom;
+    z-index: 2;
+    position:absolute;
+    border:1px solid #eee;
+}
+.twPc-avatarImg {
+    border: 2px solid #fff;
+    border-radius: 5px;
+    box-sizing: border-box;
+    color: #fff;
+    height:170px;
+    width:auto;
+    max-width:240px;
+}
+.twPc-divUser {
+    margin: 5px 0 0;
+}
+.twPc-divName {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 21px;
+}
+.twPc-divName a {
+    color: inherit !important;
+}
+.twPc-divStats {
+    margin-left: 11px;
+    padding: 10px 0;
+}
+.twPc-Arrange {
+    box-sizing: border-box;
+    display: table;
+    margin: 0;
+    min-width: 100%;
+    padding: 0;
+    table-layout: auto;
+}
+ul.twPc-Arrange {
+    list-style: outside none none;
+    margin: 0;
+    padding: 0;
+}
+.twPc-ArrangeSizeFit {
+    display: table-cell;
+    padding: 0;
+    vertical-align: top;
+}
+.twPc-ArrangeSizeFit a:hover {
+    text-decoration: none;
+}
+.twPc-StatValue {
+    display: block;
+    font-size: 18px;
+    font-weight: 500;
+    transition: color 0.15s ease-in-out 0s;
+}
+.twPc-StatLabel {
+    color: #8899a6;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    text-transform: uppercase;
+    transition: color 0.15s ease-in-out 0s;
+}
+
+/*Rating styles*/
+.btn-grey{
+    background-color:#D8D8D8;
+	color:#FFF;
+}
+.rating-block{
+	background-color:#FAFAFA;
+	border:1px solid #EFEFEF;
+	padding:15px 15px 20px 15px;
+	border-radius:3px;
+	margin-top: 50px;
+}
+
+
+@media (max-width:760px) {
+    .twPc-bg {
+        background-image: none;
+        background-position: none;
+        background-size: none;
+        background-repeat: no-repeat;
+        border:none;
+        margin:0;
+        padding:0;
+        opacity: 1;
+        z-index: 1;
+        height: auto;
+        width: auto;
+    }
+    
+    .twPc-avatarLink {
+        width:100%;
+        border-radius: 6px;
+        float:none;
+        text-align:center;
+        vertical-align: none;
+        position:relative;
+        border:none;
+
+    }
+    
+    
+    
+    .rating-block{
+    	background-color:#FAFAFA;
+    	border:1px solid #EFEFEF;
+    	padding:none;
+    	border-radius:3px;
+    	position:relative;
+    }
+    
+    .twPc-div{
+        border:none;
+    }
+    
+    .twPc-div table{
+        width:100%;
+    }
+    
+    .twPc-div table td{
+        width:25%;
+        text-align:right;
+    }
+    
+    .mobile_addr{
+        text-align:center;
+    }
+    
+    .mobile_title{
+        text-align:center;
+    }
+}
+
+.bold{
+	font-weight:700;
+}
+.padding-bottom-7{
+	padding-bottom:7px;
+}
+
+.review-block{
+	background-color:#FAFAFA;
+	border:1px solid #EFEFEF;
+	padding:15px;
+	border-radius:3px;
+	margin-bottom:5px;
+}
+.review-block-name{
+	font-size:12px;
+	font-weight:bold;
+	margin:10px 0;
+	font-style:italic;
+}
+.review-block-date{
+	font-size:12px;
+}
+.review-block-rate{
+	font-size:13px;
+	margin-bottom:5px;
+}
+
+.review-block-title{
+	font-size:15px;
+	font-weight:700;
+	margin-bottom:5px;
+}
+.review-block-description{
+	font-size:13px;
+}
+
+    .review-block-response{
+    	margin-left:30px;
+    	margin-top:10px;
+    	color:#71390C;
+    	font-size: 13px;
+    } 
+    
+    .review-public-response{
+    	margin-left:30px;
+    	margin-top:10px;
+    	color:#71390C;
+    	font-size: 13px;
+    } 
+    
+    .response{
+        width:100%;
+        margin-bottom:10px;
+    }
+    
+    .response textarea{
+        background-color: #f4e1d2;
+        border: 0px #FAFAFA none;
+        width:100%;
+    } 
+    
+    .textzone{
+        display:inline-block;
+        min-height:10px;
+        min-width:40px;
+        max-width: 100%;    
+    }
+
+
+/*google map styles*/
+.gmap{
+    margin-top: -35px;
+}
+
+
+/*album pics styles*/
+.albumpic{
+    margin-left: 20px;
+    max-width:100px;
+    float:left;
+}
+
+.popup{
+    background-color:#eee;
+    -moz-border-radius:5px;
+    -webkit-border-radius:5px;
+    border-radius:5px;
+    border:1px #333 solid;
+    width:300;
+    max-width:400px;
+    position:fixed;
+    z-index:999;
+    top:50%;
+    left:50%;
+    margin-top: -250px;
+    margin-left: -200px;
+    padding:10px;
+}
+
+
+.popup table{
+    border-collapse:collapse;
+    width:auto%;
+}
+
+.popup td{
+    word-wrap:break-word;
+}
+.popup textarea{
+    width:100%;
+    height:150px;
+}
+
+.popup .cnotes{
+    width:80%;
+}
+
+    #upload_files_slim>div{
+        position:relative;
+    }
+    #upload_files_slim > div > input {
+        margin:3px 0px;
+    }
+    #upload_files_slim > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files_slim > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files_slim > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    .side-form {
+        margin-bottom:-20px;
+        margin-left:15px;
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+
+    #free_form{
+        position:fixed;
+        background-color:#eaeeee;
+        border-radius: 10px;
+        border-bottom: 5px solid #f9bb5e;
+        top:50px;
+        right:0px;
+        width:350px;
+        z-index: 5;
+        overflow:hidden;
+        height:auto;
+        padding-bottom:15px;
+    }
+    
+    #free_form form{
+        width:300px;
+        margin-left:15px;
+        
+    }
+
+
+    .free_form_title{
+        width:100%;
+        height:auto;
+        background-color:#00517e;
+        color:#ffffff;
+        font-weight:bold;
+        padding-left:10px;
+        padding-right:10px;
+        padding-top:10px;
+        padding-bottom:10px;
+        margin-bottom:10px;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+    }
+    
+    .free_form_mobile{
+        width:100%;
+        height:auto;
+        background-color:#00517e;
+        color:#ffffff;
+        font-weight:bold;
+        text-align:center;
+        padding:10px;
+        border-radius: 5px;
+        position:fixed;
+        top:0;
+        right:0;
+        z-index:10;
+    }
+    
+    #form_comments{
+        position:fixed;
+        background-color:#eaeeee;
+        border-radius: 10px;
+        border-bottom: 5px solid #f9bb5e;
+        top:0px;
+        right:0px;
+        width:350px;
+        z-index: 5;
+        overflow:hidden;
+        height:auto;
+        padding-bottom:15px;
+    }
+    
+    #form_suggestion_mobile{
+        position:relative;
+        background-color:#eaeeee;
+        border-radius: 10px;
+        border-bottom: 5px solid #f9bb5e;
+        width:350px;
+        overflow:hidden;
+        height:auto;
+        padding-bottom:15px;
+    }
+    
+    #form_comments form{
+        width:300px;
+        margin-left:15px;
+        
+    }
+    
+    .close_comments{
+        float:right;
+        margin-right:5px;
+        cursor:pointer;
+    }
+
+    .free_form_title .close{
+        float:right;
+        height:100%;
+        color:#e00000;
+    }
+
+        #phones > a > i:before {
+            content: "\f1f8"; /* fa-trash */
+        }
+        #phones > a > i:before {
+            content: "\f067"; /* fa-plus */
+        }
+        
+        
+        #blck_phone2{
+            display:none;
+        }
+</style>
+
+
+{{
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include '/site/package/all.sn';
+    
+}}
+
+
+\{{
+    
+cookies = cookies();
+request = request();
+
+	date = datetime();
+	adwords = request.args;
+	cookie = { 'url' : request.hostname .+ request.uri, 'adwords' : adwords, 'date' : date };
+	expirytime=datetime(extended:true,op:"+3h",format:"%Sednove2");
+	cookies(name:"soumissionrenovation",value:cookie,path:"/",expiry:expirytime);
+
+    if cookies.first_visited == undefined then
+        	expiry=datetime(extended:true,op:"+3h",format:"%Sednove2");
+        	cookies(name:"first_visited",value:request.hostname .+ request.uri,path:"/",expiry:expiry);
+    endif
+
+}}
+
+\{{
+    project = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE token = '?'", cgidata.token);
+    nowdate = datetime(format:'%Y-%m-%d');
+    complete = (cgidata.token ne "" && (project.nbrows > 0))? -1: "";
+    
+    if(cgidata.complete) then
+        // pc = project_contractor uid, n = client note, p = project uid
+        if project.nbrows > 0 && cgidata.n ne "" then
+            project_contractor = sql(single:true,"SELECT * FROM sr_project_contractor WHERE token='?'", cgidata.token);
+            // if note is not 1,2,3,4 or 5 then null
+            note = (cgidata.n  =~ "^[1-5]$") ? cgidata.n : null;
+
+            if project_contractor.nbrows > 0 then
+                if note then // if note is a number
+                    res = update(
+                        tables:"sr_project_contractor",
+                        uid: project_contractor.rows.uid,
+                        fields: {
+                            "client_satisfaction":note,
+                            "evaluation_date":nowdate,
+                            "client_comment": cgidata.comment,
+                            "comment_verified": null
+                        }
+                    );
+                    
+                    if res.sqlcode == 0 then
+                        complete = 1;
+                        if(cgidata.comment ne "") then
+                            automail::sendClientReviewToContractor(project_contractor.rows.uid, 'en');
+                            void insert(table:'sr_debug', fields:{'Description':'contractor rating sent to contractor(en): ' .+ project_contractor.rows.uid_contractor,'text':'rate:'.+ note .+ ' projet: '.+ project_contractor.rows.uid_project .+ ' comment: '.+ cgidata.comment});
+                        endif
+                    endif
+                    
+                else // if note is null, put null in db
+                    void sql("UPDATE sr_project_contractor SET client_satisfaction=NULL WHERE uid='?'", project_contractor.rows.uid);
+                endif
+            endif
+        endif
+    endif
+    
+    if(cgidata.suggestion ne "") then
+        // send email to admin
+        automail::clientSuggestionToAdmin(uid_contractor, cgidata.email, cgidata.suggestion);
+        SUGGESTION_SENT = 1;
+    endif
+}}
+
+<div class="free_form_mobile" style="display:none" id="free_form_mobile">\{{contractor::profile_ct("Obtain a free quote from this contractor","profile_template",lg:lg)}}<div class='close'>&times;</div></div>
+        <div id="free_form" name="free_form" style="padding:10px">
+        <div class="free_form_title" id="free_form_title"> \{{contractor::profile_ct("Obtain a free quote from this contractor","profile_template",lg:lg)}}<div class='close'>&times;</div></div>
+        <form class="form-horizontal" enctype="multipart/form-data" action="{{(contractor.contact_lg eq 'fr')? '/fr/information-additionnelle-client':'/en/client-additional-information'}}" id="add_client_slim" name="add_client_slim" method="POST">
+            <fieldset class="form-group">
+                <div class="side-form">
+                    <input class="form-control LoNotSensitive" type="text" name="name" id="name" value="" placeholder='\{{contractor::profile_ct("Your name","profile_template",lg:lg)}}'>
+                    <span class="help-block LoNotSensitive" data-validator-msg="Invalid name" data-validator-error="name"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <div class="col-md-8" id='blck_phone1' style="padding-bottom:0;margin-bottom:0;width:100%">
+                    <div style="padding:0" class="col-xs-7"> <input placeholder='\{{contractor::profile_ct("Téléphone 1", "profile_template")}}' class="form-control" type="text" name="phone" id="phone" value="" autocomplete='phone'> </div>
+                    <div class="col-xs-4"> <input style="font-size:12px" placeholder="ext1" class="form-control" type="text" name="ext1" id="ext1" value=""> </div>
+                    <div style="line-height:3;padding:0;" class="col-xs-1" id="phones"><a onclick="addPhones()"><i class="fa"></i></a></div>
+                    <span class="help-block LoNotSensitive" data-validator-msg="\{{contractor::profile_ct("Composé de chiffres seulement, au moins 10 caractères","profile_template")}}" data-validator-error="phone"></span>
+                </div>
+                <div class="col-md-8" id="blck_phone2" style="display:none;padding-bottom:0;margin-bottom:0;width:100%">
+                    <div style="padding:0" class="col-xs-7"> <input placeholder='\{{contractor::profile_ct("Téléphone 2", "profile_template")}}' class="form-control" type="text" name="phone2" id="phone2" value="" autocomplete='phone'> </div>
+                    <div class="col-xs-4"> <input style="font-size:12px" placeholder="ext2" class="form-control" type="text" name="ext2" id="ext2" value=""> </div>
+                    <span class="help-block LoNotSensitive" data-validator-msg='\{{contractor::profile_ct("Composé de chiffres seulement, au moins 10 caractères","profile_template")}}' data-validator-error="phone2"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <div class="side-form">
+                    <input class="form-control LoNotSensitive" type="text" name="email" id="email" value="" placeholder='\{{contractor::profile_ct("Your email","profile_template",lg:lg)}}'>
+                    <span class="help-block" data-validator-msg="Invalid email" data-validator-error="email"></span>
+                    <span style="display:none" class="validemail" name="validemail" >\{{contractor::profile_ct("Warning: your email seems to be invalid.  Please verify your email.  If there are no mistakes, please ignore this warning.","profile_template",lg:lg)}}</span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <div class="side-form">
+                    <input class="form-control LoNotSensitive" type="text" name="address" id="address" value="" placeholder='\{{contractor::profile_ct("Your address","profile_template",lg:lg)}}' onFocus="geolocate()" placeholder="">
+                    <input type="hidden" class="field" id="street_number" name="street_number" disabled="true"></input>
+                    <input type="hidden" class="field" id="route" name="route" disabled="true"></input>
+                    <input type="hidden" class="field" id="locality" name="locality" disabled="true"></input>
+                    <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" disabled="true"></input>
+                    <input type="hidden" class="field" id="postal_code" name="postal_code" disabled="true"></input>
+                    <input type="hidden" class="field" id="country" name="country" disabled="true"></input>
+                    <span class="help-block" data-validator-msg="Invalid address" data-validator-error="address"></span>
+                    <span class="help-block" data-validator-msg="Invalid address" data-validator-error="address"></span>
+                </div>
+                    
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <div class="side-form">
+                    <textarea class="form-control LoNotSensitive" name="description" placeholder='\{{contractor::profile_ct("Description, delay, budget of the work to be done, etc.","profile_template",lg:lg)}}' rows="5"></textarea>    
+                    <span class="help-block" data-validator-msg="Invalid description" data-validator-error="description"></span>
+                </div>
+            </fieldset>
+        
+            <fieldset class="form-group">
+                <b>\{{contractor::profile_ct("Attach a file","profile_template",lg:lg)}}</b>
+                <div class="side-form" style="margin-top:3px;">
+                    <div id="upload_files_slim"></div>
+                    <input class="form-control LoNotSensitive" type='hidden' name="upld" id="uploaded_size" value="0"/>
+                    <span class="help-block" data-validator-msg="\{{contractor::profile_ct("Vos fichiers ont atteint une taille de","profile_template",lg:lg)}}" data-validator-error="upld"></span>
+                </div>
+            </fieldset>
+            
+            <p>
+                <fieldset class="form-group">
+                    <div class="side-form" style="margin-top:10px;">
+                        <input type="checkbox" name="more_quotes" id="more_quotes" checked/>
+                        \{{contractor::profile_ct("I want to receive more quotes from certified contractors","profile_template",lg:lg)}} 
+                    </div>
+                </fieldset>
+            </p>
+            
+            <div class="form-group">
+                <div class="side-form" style="margin-top:10px;">
+                    <input type='hidden' name='freeQuote' value='yes' />
+                    <input type='hidden' name='cuid' value='{{contractor.uid}}'/>
+                    <button id="submit_add_client" type="submit" class="btn btn-primary btn-block">
+                        \{{contractor::profile_ct("Submit","profile_template",lg:lg)}}
+                    </button>
+                </div>
+            </div>
+            <!--<p style="text-align:center;">OU</p>-->
+        </form>
+    </div>
+    
+    <div class="form_comments" id="form_comments">
+        <div style="padding:3px" class='close_comments'>&times;</div>
+        \{{if(SUGGESTION_SENT == 1) then}}
+            <div class="alert alert-success">\{{contractor::profile_ct("Sugestion envoyée. Merci!","profile_template",lg:lg)}}</div>
+        \{{else}}
+            <div style="font-size:18px;font-weight:bold;padding:15px">\{{contractor::profile_ct("Avez-vous une suggestion?","profile_template",lg:lg)}}</div>
+            <form class="form-horizontal" action="" name="add_suggestion" method="POST">
+                <fieldset class="form-group">
+                    <div class="side-form">
+                        <input class="form-control LoNotSensitive" type="text" name="email" value="" placeholder='\{{contractor::profile_ct("Your email","profile_template",lg:lg)}}'>
+                        <span class="help-block" data-validator-msg='\{{contractor::profile_ct("Invalid email","profile_template",lg:lg)}}' data-validator-error="email"></span>
+                        <span style="display:none" class="validemail" name="validemail" >\{{contractor::profile_ct("Warning: your email seems to be invalid.  Please verify your email.  If there are no mistakes, please ignore this warning.","profile_template",lg:lg)}}</span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <div class="side-form">
+                        <textarea class="form-control LoNotSensitive" name="suggestion" placeholder='\{{contractor::profile_ct("Inscrivez votre commentaire ici","profile_template",lg:lg)}}' rows="4"></textarea>    
+                        <span class="help-block" data-validator-msg='\{{contractor::profile_ct("Suggestion obligatoire","profile_template",lg:lg)}}' data-validator-error="suggestion"></span>
+                    </div>
+                </fieldset>
+            
+                <div class="form-group">
+                    <div class="side-form" style="margin-top:10px;">
+                        <input type='hidden' name='freeQuote' value='yes' />
+                        <input type='hidden' name='cuid' value='{{contractor.uid}}'/>
+                        <button id="submit_add_suggestion" name="submit_add_suggestion" type="submit" class="btn btn-warning btn-block">
+                            \{{contractor::profile_ct("Submit","profile_template",lg:lg)}}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        \{{endif}}
+    </div>
+    
+    <script>
+        function addPhones(){
+            $('#blck_phone2').show();
+        }
+    
+        function addUploadFile_slim() {
+            return $('<div><input type="file" name="file" onchange="sizeLimit()"><a><i class="fa"></i></a></div>').prependTo('#upload_files_slim');
+        }
+        $('#upload_files_slim').on('click', "div:not(:first-child) > a", function(){
+            $(this).parent().remove();
+            $('#upload_files_slim > span').remove();
+            sizeLimit();
+        });
+        $('#upload_files_slim').on('click', "div:first-child > a", function(){
+            addUploadFile_slim();
+            if ($('#upload_files_slim').find('div > input').length >= 5) {
+                $('#upload_files_slim').prepend('<span>');
+            }
+        });
+        addUploadFile_slim();
+    </script>
+    
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_client_slim');
+}}
+    
+    
+\{{
+    // include the validator for contractor_form
+    %include "/site/profiles/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_suggestion');
+}}
+
+    <script>
+        // separate files 
+        $('form[name=add_client_slim]').submit(function(){
+            var file_nb = 0;
+            $('#upload_files_slim').find('div > input').each(function(){
+                file_nb++;
+                $(this).attr("name", $(this).attr("name") + file_nb);
+            });
+        });
+    </script>
+    
+    <script>
+        function sizeLimit() {
+            var total_size = 0;
+            $('input[name=file]').each(function(){
+                if(this.files[0] !== undefined){
+                    total_size = total_size + this.files[0].size; 
+                }
+            });
+            
+            $('#uploaded_size').val(total_size);
+            $('span[data-validator-error=upld]').attr('data-validator-msg','\{{contractor::profile_ct("Vos fichiers ont atteint une taille de ","profile_template",lg:lg)}} ' + total_size + ' Bytes. ' +  '\{{contractor::profile_ct("Le maximum autorisé est 64000000 Bytes", "profile_template",lg:lg)}}');
+            
+            if(total_size >= 64000000){
+                return false;
+            }
+            
+        }
+    </script>
+    
+    <!-- Google map api for addresses -->
+    <script>
+    // This example displays an address form, using the autocomplete feature
+    // of the Google Places API to help users fill in the information.
+    
+    var placeSearch, autocomplete, autocomplete_slim;
+    var componentForm = {
+      street_number: 'short_name',
+      route: 'long_name',
+      locality: 'long_name',
+      administrative_area_level_1: 'short_name',
+      country: 'long_name',
+      postal_code: 'short_name'
+    };
+    
+    function initAutocomplete() {
+      // Create the autocomplete object, restricting the search to geographical
+      // location types.
+      autocomplete = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */(document.getElementById('address')),
+          {types: ['geocode']});
+    
+      // When the user selects an address from the dropdown, populate the address
+      // fields in the form.
+      autocomplete.addListener('place_changed', fillInAddress);
+      autocomplete.name="normal";
+    
+    
+      // For the second form in the article_detail page (slim)
+      if (document.getElementById('address_slim')){
+          autocomplete_slim = new google.maps.places.Autocomplete(
+              /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+              {types: ['geocode']});
+          autocomplete_slim.addListener('place_changed', fillInAddress);
+          autocomplete_slim.name="slim";
+        }
+    }
+    
+    // [START region_fillform]
+    function fillInAddress() {
+      // Get the place details from the autocomplete object.
+      var place = this.getPlace();
+      index = (this.name === "normal") ? 0 : 1 ;
+    
+      for (var component in componentForm) {
+        document.getElementsByName(component)[index].value = '';
+        document.getElementsByName(component)[index].disabled = false;
+      }
+    
+      // Get each component of the address from the place details
+      // and fill the corresponding field on the form.
+      for (var i = 0; i < place.address_components.length; i++) {
+        var addressType = place.address_components[i].types[0];
+        if (componentForm[addressType]) {
+          var val = place.address_components[i][componentForm[addressType]];
+          document.getElementsByName(addressType)[index].value = val;
+        }
+      }
+    }
+    // [END region_fillform]
+    
+    // [START region_geolocation]
+    // Bias the autocomplete object to the user's geographical location,
+    // as supplied by the browser's 'navigator.geolocation' object.
+        function geolocate() {
+          if (navigator.geolocation) {
+        //     navigator.geolocation.getCurrentPosition(function(position) {
+        //       var geolocation = {
+        //         lat: position.coords.latitude,
+        //         lng: position.coords.longitude
+        //       };
+        //       var circle = new google.maps.Circle({
+        //         center: geolocation,
+        //         radius: position.coords.accuracy
+        //       });
+        //      autocomplete.setBounds(circle.getBounds());
+        //     });
+           }
+        }
+    // [END region_geolocation]
+    
+    </script>
+    <!--<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8"async defer></script>    -->
+    
+
+
+\{{if(complete == -1) then}}
+    <div class='popup' id='popup'>
+        <span align='center'><h4>\{{contractor::profile_ct("Leave a comment about your experience","profile_template",lg:lg)}}</h4></span>
+        <p align='center'>\{{contractor::profile_ct("Note: votre commentaire sera rendu public, toutefois seul votre prénom sera affiché.","profile_template",lg:lg)}}</p>
+        <form class="form-horizontal" name='rating_form' method='POST' action='{{contractor.clink}}'>
+            <table align='center'>
+                <tr>
+                    <td colspan='2'>
+                        <span ><label for="comment">\{{contractor::profile_ct("Laissez votre commentaire ci-dessous (optionnel):","profile_template",lg:lg)}}</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan='2'>
+                        <fieldset class="form-group">
+                            
+                        <textarea name='comment' class='textarea'></textarea>
+                        </fieldset>
+                    </td>
+                </tr>
+                <tr>
+                    <div>
+                        <table class='cnotes' align='center'>
+                            <tr><td colspan = '2'><h4>\{{contractor::profile_ct("Selected Note :","profile_template",lg:lg)}}</h4></td></tr>
+                            <tr>
+                                <td>
+                                    <div class="radio">
+                                      <label><input type="radio" \{{(cgidata.n == 1)? 'checked': ''}} value='1' name="n"><span class="glyphicon glyphicon-star" ></span></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="radio">
+                                      <label><input type="radio" \{{(cgidata.n == 2)? 'checked': ''}} value='2' name="n"><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="radio">
+                                      <label><input type="radio" \{{(cgidata.n == 3)? 'checked': ''}} value='3' name="n"><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="radio">
+                                      <label><input type="radio" \{{(cgidata.n == 4)? 'checked': ''}} value='4' name="n" ><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="radio">
+                                      <label><input type="radio" \{{(cgidata.n == 5)? 'checked': ''}} value='5' name="n" ><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <hr />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type='hidden' name='token' value='\{{cgidata.token}}' />
+                                    <input type='hidden' name='complete' value='complete' />
+                                    <button type='button' name='no_comment' id='no_comment' class='btn btn-primary'>\{{contractor::profile_ct("Cancel","profile_template",lg:lg)}}</button>
+                                    <button type='submit' name='submit_ok' id='submit_ok' class='btn btn-primary'>\{{contractor::profile_ct("Ok","profile_template",lg:lg)}}</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </tr>
+            </table>
+        </form>
+    </div>
+\{{elseif(complete == 1) then}}
+    <div class='popup' id='popup_confirm'>
+        <span align='center'><h4>\{{contractor::profile_ct("Thank you!","profile_template",lg:lg)}}</h4></span>
+            <table align='center'>
+                <tr>
+                    <td colspan='2'>
+                        <span ><label for="comment">\{{contractor::profile_ct("Regarding your comment :","profile_template",lg:lg)}}</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        \{{contractor::profile_ct("Your comment will not be published immediately as we have to verify and approve it. This will be done within a delay of two business days","profile_template",lg:lg)}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <button type='button' name='complete_ok' id='complete_ok' class='btn btn-primary' onclick="$('#popup_confirm').hide()">Ok</button>
+                    </td>
+                </tr>
+            </table>
+    </div>
+\{{endif}}
+
+
+
+<div class="container">
+<div class="row">
+<h1 class="mobile_title" style="color:#005a8c">{{contractor.company_name}}</h1>
+    <address class="mobile_addr">
+        {{contractor.streetNo .+ " " .+ contractor.street}}
+            		
+        {{if contractor.city ne "" then}}
+            {{contractor.city}}, 
+        {{endif}}
+            		
+        {{if contractor.province ne "" then}}
+            {{contractor.province}},  
+        {{endif}}
+        {{if contractor.zip ne "" then}}
+            {{contractor.zip}}
+        {{endif}}
+        {{", Phone: "; contractor.company_phone;}}
+    </address>
+    <br />
+    
+<!-- code start -->
+<div class="twPc-div">
+    <a class="twPc-bg twPc-block" id="background"></a>
+
+	<div>
+		<span title="" class="twPc-avatarLink">
+		    {{if contractor.mylogo ne "" then}}
+    			<img src="{{contractor.mylogo}}" class="twPc-avatarImg">
+			{{else}}
+    			<img src="/sn_uploads/icon/question-mark.gif" class="twPc-avatarImg">
+			{{endif}}
+		</span>
+		
+		 <div class="col-md-3">
+        	<address>
+        	</address>
+        </div>
+        
+		 <div class="col-md-2" >
+    		<div class='button_link'>
+    		    <table><tr>
+        		{{if contractor.weburl ne "" then}}
+        		    <td>
+                	<a target="_blank" href="{{contractor.weburl}}" class="btn btn-warning">\{{contractor::profile_ct("Website", "profile_template", lg:lg )}}</a>
+                	</td>
+            	{{endif}}
+            	{{if contractor.fbsite ne "" then}}
+            	    <td>
+                	<a target="_blank" href="{{contractor.fbsite}}"><img width='50px' src='/sn_uploads/icon/facebook-logo.png'/></a>
+                	</td>
+            	{{endif}}
+            	{{if contractor.igsite ne "" then}}
+            	    <td>
+                	<a target="_blank" href="{{contractor.igsite}}"><img width='40px' src='/sn_uploads/LinkedIn_logo_initials.png'/></a>
+                	</td>
+            	{{endif}}
+            	</tr></table>
+        	</div>
+        </div>
+
+
+		<div class="twPc-divUser">
+			<div class="twPc-divName">
+			</div>
+		</div>
+
+</div>
+</div>
+<!-- code end -->
+</div>
+</div>
+
+
+<!-- First row  -->    
+<div class="container">
+    <div class="row">
+	    <div class="col-sm-3">
+			<div class="rating-block">
+			    <h4>\{{contractor::profile_ct("Moyenne de satisfaction", "profile_template", lg:lg )}}</h4>
+    		    <h2 class="bold padding-bottom-7">{{contractor.avgRate = (contractor.avgRate == 0)?"":contractor.avgRate}}{{(strpos(contractor.avgRate, '.') > 0)? substr(contractor.avgRate,0,strpos(contractor.avgRate,'.') + 2): contractor.avgRate}}<small>/ 5</small></h2>
+    					
+				{{c=1}}
+				{{while (c <= trunc(contractor.avgRate)) do}}
+    				<div class="btn btn-warning btn-sm" aria-label="Left Align">
+    					<span class="glyphicon glyphicon-star" ></span>
+    				</div>
+				{{c++}}
+				{{endw}}
+					
+				{{for (f = 0; f < 5 - trunc(contractor.avgRate); f++) do}}
+        			<div class="btn btn-default btn-grey btn-sm" aria-label="Left Align">
+        				<span class="glyphicon glyphicon-star" ></span>
+        			</div>
+				{{endfor}}
+			</div>
+	        <br />
+    		<div class="review-block">
+    		    <h4>\{{contractor::profile_ct("Reviews", "profile_template", lg:lg )}} ({{contractor.reviews.length()}})</h4>
+    		    <br>
+	   {{for rates in contractor.reviews do}}
+    		    <div class="review-block-rate">
+    		    <div class="review-block-name"><h5>{{rates.service}} / {{rates.city}}</h5></div>
+
+					{{r1=1}}
+					{{while (r1 <= rates.rating) do}}
+						<div class="btn btn-warning btn-xs" aria-label="Left Align">
+							<span class="glyphicon glyphicon-star" ></span>
+						</div>
+						{{r1++}}
+					{{endw}}
+					
+					{{for (f = 0; f < 5 - rates.rating; f++) do}}
+						<div class="btn btn-default btn-grey btn-xs" aria-label="Left Align">
+							<span class="glyphicon glyphicon-star" ></span></span>
+						</div>
+					{{endfor}}
+    			</div>
+        		<div class="review-block-date"><h6><img src='/sn_uploads/icon/user_icon.png' width='30px'/>{{rates.firstname}} \{{contractor::profile_ct("wrote on", "profile_template", lg:lg )}} {{substr(rates.comment_date,0,10)}}:</h6></div>
+    			{{if(rates.comment ne "") then}}
+    			<div class="review-block-description"><font color='#00739f' size='4'>«</font>{{rates.comment}}<font color='#00739f' size='4'>»</font></div>
+        			<div class='review-block-response'>
+        			    <div class="response" id='{{rates.pc_uid}}'>
+            			    <img src='/sn_uploads/icon/user-blue-icon.png' width='30px'/>
+            			    <label>\{{contractor::profile_ct("Answered on", "profile_template", lg:lg )}}: {{rates.resp_date}}:</label>
+            			    <br>
+            			    «<div name="textzone" class="textzone" id='textzone_{{rates.pc_uid}}' contentEditable="false"/>{{rates.response}}</div>»
+            			    <input type='hidden' value="{{rates.pc_uid}}"/>
+        	            </div>
+                    </div>
+    			{{else}}
+    			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{contractor::profile_ct("no comment", "profile_template", lg:lg )}}<font color='#00739f' size='4'>»</font></div>
+    			{{endif}}
+    			<hr />
+		{{endfor}}
+			</div>
+		
+		</div>
+
+        	 
+        <div class="col-sm-4">
+            
+            {{if contractor.verified ne 'yes' then}}
+                \{{contractor::profile_ct("Note: Cet entrepreneur n'a pas été vérifié par SoumissionRenovation.ca<br>", "profile_template", lg:lg)}}
+            {{endif}}
+            
+            <h4 id="about">\{{contractor::profile_ct("A propos de", "profile_template", lg:lg )}} {{contractor.company_name}}</h4>
+            <table  class="table table-user-information">
+                <tbody>
+                   <tr><td>
+                       {{contractor.company_desc}}
+                   </td></tr>
+               </tbody>
+            </table>
+            
+        <div class='album'>
+                   <div class='albumpic'>
+                    {{if contractor.pic[0] then}}
+                	<img width='100px'  src="{{contractor.pic[0]}}" alt="{{contractor.desc[0]}}" class="img-rounded">
+                	{{endif}}
+        	       </div>
+                   <div class='albumpic'>
+                    {{if contractor.pic[1] then}}
+                	<img width='100px'  src="{{contractor.pic[1]}}" alt="{{contractor.desc[1]}}" class="img-rounded">
+                	{{endif}}
+        	       </div>
+                   <div class='albumpic'>
+                    {{if contractor.pic[2] then}}
+                	<img width='100px' src="{{contractor.pic[2]}}" alt="{{contractor.desc[2]}}" class="img-rounded">
+                	{{endif}}
+        	       </div>
+                   <div class='albumpic'>
+                	{{if contractor.pic[3] then}}
+                	<img width='100px'  src="{{contractor.pic[3]}}" alt="{{contractor.desc[3]}}" class="img-rounded">
+                	{{endif}}
+        	       </div>
+                   <div class='albumpic'>
+                    {{if contractor.pic[4] then}}
+                	<img width='100px'  src="{{contractor.pic[4]}}" alt="{{contractor.desc[4]}}" class="img-rounded">
+                	{{endif}}
+        	       </div>
+                   <div class='albumpic'>
+                	<h4>
+                	{{if contractor.pic[0] then}}
+                	<a class='profile_links' href='http://soumissionrenovation.ca/fr/vue-galerie-photo-entrepreneur?cuid={{contractor.uid}}'>\{{contractor::profile_ct("see more..", "profile_template", lg:lg )}}.</a>
+                	{{endif}}
+                	</h4>
+        	       </div>
+        </div>
+
+    </div>
+        	 
+        <div class="col-md-5">
+            <div class='gmap'>
+                <iframe max-width="500" width="100%" height="250" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://www.google.com/maps/embed/v1/place?q={{contractor.streetNo}}%20{{contractor.street}}%2C%20{{contractor.province}}%20{{contractor.city}}%2C%20{{contractor.zip}}%2C%20Canada&key=AIzaSyB683WY0tGEdQS0e88xnWmYmRHRER5CIC4"></iframe>
+            </div>
+            <br>
+            <h4>\{{contractor::profile_ct("License(s) and permit(s)", "profile_template", lg:lg )}}</h4>
+            <table class="table table-user-information table-hover">
+                <tbody>
+                    <tr>
+
+                    <!--<tr>-->
+                    <!--    <td><span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/fr/edit?sn_modal=t&uid=3321"><h5>\{{contractor::profile_ct("RBQ Number(Quebec Only)", "profile_template", lg:lg )}}</h5></span></td>-->
+                    <!--    <td>{{contractor.rbq}}</td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                    <!--    <td><span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/fr/edit?sn_modal=t&uid=3321"><h5>Insurance Number</h5></span></td>-->
+                    <!--    <td>{{contractor.insurance_number}}</td>-->
+                    <!--</tr>-->
+                    {{contractor.lics}}
+                </tbody>
+            </table>            
+            
+        <h4>\{{contractor::profile_ct("Services Category", "profile_template", lg:lg )}}</h4>
+        <table id="About" class="table table-user-information table-hover">
+            <tbody>
+                \{{for categ in contractor.srv do}}
+                <tr>
+                    <td>\{{categ}}</td>
+                </tr>
+                \{{endfor}}
+           </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+<div class="h-divider"><hr></div>
+
+    <div style="display:none" class="form_suggestion_mobile" id="form_suggestion_mobile">
+        \{{if(SUGGESTION_SENT == 1) then}}
+            <div class="alert alert-success">\{{contractor::profile_ct("Sugestion envoyée. Merci!","profile_template",lg:lg)}}</div>
+        \{{else}}
+            <div style="font-size:18px;font-weight:bold;padding:15px">\{{contractor::profile_ct("Avez-vous une suggestion?","profile_template",lg:lg)}}</div>
+            <form class="form-horizontal" action="" name="add_suggestion" method="POST">
+                <fieldset class="form-group">
+                    <div class="side-form">
+                        <input class="form-control LoNotSensitive" type="text" name="email" value="" placeholder='\{{contractor::profile_ct("Your email","profile_template",lg:lg)}}'>
+                        <span class="help-block" data-validator-msg='\{{contractor::profile_ct("Invalid email","profile_template",lg:lg)}}' data-validator-error="email"></span>
+                        <span style="display:none" class="validemail" name="validemail" >\{{contractor::profile_ct("Warning: your email seems to be invalid.  Please verify your email.  If there are no mistakes, please ignore this warning.","profile_template",lg:lg)}}</span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <div class="side-form">
+                        <textarea class="form-control LoNotSensitive" name="suggestion" placeholder='\{{contractor::profile_ct("Inscrivez votre commentaire ici","profile_template",lg:lg)}}' rows="4"></textarea>    
+                        <span class="help-block" data-validator-msg='\{{contractor::profile_ct("Suggestion obligatoire","profile_template",lg:lg)}}' data-validator-error="suggestion"></span>
+                    </div>
+                </fieldset>
+            
+                <div class="form-group">
+                    <div class="side-form" style="margin-top:10px;">
+                        <input type='hidden' name='freeQuote' value='yes' />
+                        <input type='hidden' name='cuid' value='{{contractor.uid}}'/>
+                        <button id="submit_add_suggestion" name="submit_add_suggestion" type="submit" class="btn btn-warning btn-block">
+                            \{{contractor::profile_ct("Submit","profile_template",lg:lg)}}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        \{{endif}}
+    </div>
+
+</div>
+<div id="hidden-resizer" style="visibility: hidden"></div>
+
+<script type="application/ld+json">
+//Google review rating snippet 
+{
+  "@context": "http://schema.org",
+  "@type": "HomeAndConstructionBusiness",
+  "@id": "https://xpertsource.com/expert/{{contractor.seo}}",
+  "name": "{{contractor.company_name}}",
+  "image": "https://xpertsource.com{{contractor.mylogo}}",
+  "sameAs": "https://xpertsource.com/expert/{{contractor.seo}}",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "{{contractor.streetNo}} {{contractor.street}}",
+    "addressLocality": "{{contractor.city}}",
+    "addressRegion": "{{contractor.province}}",
+    "postalCode": "{{contractor.zip}}",
+    "addressCountry": "CA"
+  },
+  "telephone": "{{Contractor.contact_phone}}",
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": {{(strpos(contractor.avgRate, '.') > 0)? substr(contractor.avgRate,0,strpos(contractor.avgRate,'.') + 2): contractor.avgRate}},
+    "bestRating": 5,
+    "worstRating": 1,
+    "ratingCount": {{contractor.reviews.length()}}
+  },
+  "review": {
+    "@type": "Review",
+    "url": "https://xpertsource.com/expert/{{contractor.seo}}",
+    "author": {
+      "@type": "Person",
+      "name": "{{contractor.contact_firstname}} {{contractor.contact_lastname}}"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "XpertSource.com"
+    },
+    "reviewRating": {
+      "@type": "Rating",
+      "worstRating": 1,
+      "bestRating": 5,
+      "ratingValue": {{(strpos(contractor.avgRate, '.') > 0)? substr(contractor.avgRate,0,strpos(contractor.avgRate,'.') + 2): contractor.avgRate}}
+    }
+  }
+}
+</script>
+
+
+<script>
+$('.btn-sm').css('pointer-events','none');
+$('.btn-xs').css('pointer-events','none');
+
+
+    if($('.twPc-avatarImg').attr('src') == '/sn_uploads/icon/question-mark.gif' ) {
+        $('.twPc-avatarImg').css('opacity', '0.4');
+    }
+$(document).on('click', '.panel-heading span.clickable', function(e){
+    var $this = $(this);
+	if(!$this.hasClass('panel-collapsed')) {
+		$this.parents('.panel').find('.panel-body').slideUp();
+		$this.addClass('panel-collapsed');
+		$this.find('i').removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+	} else {
+		$this.parents('.panel').find('.panel-body').slideDown();
+		$this.removeClass('panel-collapsed');
+		$this.find('i').removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+	}
+})
+
+</script>
+
+
+
+			
+		
+		</div>
+		
+	 </div> 
+        </div>
+                            
+        </div><!--/.row-->
+    </div><!--/.container-->
+				
+	
+</div>
+	
+
+<!--<div class="container-fluid wdg_counter">-->
+<!--    <div class="row">-->
+<!--        <div class="col-sm-4">-->
+<!--            <div class="counter_box" style="background-image:url(/sn_uploads/icon/optimi/projets.png);">-->
+<!--                <div class="counter_box_content">-->
+<!--                    <div class="text">-->
+<!--                        \{{contractor::profile_ct("Number of projects submitted", "profile_template", lg:lg )}}-->
+<!--                    </div>-->
+<!--                    <div class="value js_nb_increment"> -->
+<!--                            \{{clients = sql(single:true, noarg:true,"SELECT  count(*)as nbr from sr_project");clients.rows.nbr}}-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-sm-4">-->
+<!--            <div class="counter_box" style="background-image:url(/sn_uploads/icon/optimi/entrepreneurs_2.png);">-->
+<!--                <div class="counter_box_content">-->
+<!--                    <div class="text">-->
+<!--                        \{{contractor::profile_ct("Number of contractors in our network", "profile_template", lg:lg )}}-->
+<!--                    </div>-->
+<!--                    <div class="value js_nb_increment">-->
+<!--                         \{{contractors = sql(single:true, noarg:true,"SELECT count(*) as nbr from sr_contractor where active ='yes'");contractors.rows.nbr}}-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-sm-4">-->
+<!--            <div class="counter_box" style="background-image:url(/sn_uploads/icon/optimi/temps_de_reponse.png);">-->
+<!--                <div class="counter_box_content">-->
+<!--                    <div class="text">-->
+<!--                        \{{contractor::profile_ct("Average time for an answer", "profile_template", lg:lg )}}-->
+<!--                    </div>-->
+<!--                    <div class="value">-->
+<!--                        \{{contractor::profile_ct("One hour", "profile_template", lg:lg )}}-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+<script>
+    function js_nb_increment(){
+        var arr_interval = new Array();
+        var minval = Number.POSITIVE_INFINITY;
+        var maxval = 0;
+        $(".js_nb_increment").each(function(index) {
+            if (maxval < +$(this).text()) maxval = +$(this).text();
+            if (minval > +$(this).text()) minval = +$(this).text();
+        });
+        $(".js_nb_increment").each(function(index) {
+            var val = +$(this).text();
+            $(this).attr('data-nb', val);
+            $(this).text(0);
+            var ele = this;
+            var timeToComplete = 800 + ((val - minval)/(maxval-minval) * 1200);
+            arr_interval[index] = setInterval(function(){
+                $(ele).text(parseInt(+$(ele).text()+(val/timeToComplete*20 + Math.random(2))));
+                if(parseInt($(ele).text())>=parseInt($(ele).attr('data-nb'))){
+                    $(ele).text($(ele).attr('data-nb'));
+                    clearInterval(arr_interval[index]);
+                }
+            }, 20);
+        });
+    }
+    $(window).bind("scroll.increment_scroll", function(){
+        if(($(window).scrollTop()+$(window).height())>$('.js_nb_increment').offset().top){
+            $(window).unbind('.increment_scroll');
+            js_nb_increment();
+        }
+    });
+</script>
+<style>
+    .wdg_counter{
+        padding:15px 30px;
+        background:#c9c9c9;
+    }
+    .counter_box{
+        padding:15px;
+        background-color:#dfdfdf;
+        border-bottom:5px #5896b4 solid;
+        background-position:10% center;
+        background-size:auto 80%;
+        background-repeat:no-repeat;
+        margin:15px 0;
+        border-top-right-radius:10px;
+        border-top-left-radius:10px;
+    }
+    .counter_box .text{
+        font-size:16px;
+        color:#5896b4;
+        padding-left:15%;
+        font-weight:bold;
+    }
+    .counter_box .value{
+        font-size:46px;
+        color:#005a8c;
+        padding-left:15%;
+        font-weight:bold;
+        white-space:nowrap;
+    }
+    @media (max-width:990px) and (min-width:769px){
+        .counter_box .text{
+            padding-left:0;
+        }
+        .counter_box .value{
+            padding-left:0;
+        }
+    }
+    @media (max-width:768px){
+        .counter_box{
+            background-position:20% center;
+        }
+        .counter_box{
+            text-align:center;
+        }
+        .counter_box_content{
+            display:inline-block;
+        }
+        .counter_box .text,.counter_box .value{
+            text-align:left;
+            padding:0;
+        }
+    }
+</style>
+
+<div class="container-full sed-footer no-print">
+	<div class="container-fluid">            
+		<div class="row">
+			<div id="sn_cs_footer">
+			    
+			    
+                <div class="container-fluid footer">
+                    <div class="logo">.
+                        \{{if(lg eq 'fr') then}}
+                            <a href="/fr/">
+                                <img src="/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png?maxw=500" alt="XpertSource.com" class="logo-1">
+                            </a>
+                        \{{else}}
+                            <a href="/en/">
+                                <img src="/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png?maxw=500" alt="XpertSource.com" class="logo-1">
+                            </a>
+                        \{{endif}}
+                    </div>
+                    <div class="footer_copy">
+                        © 2018 <span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=1562">XpertSource.com</span>
+                    </div>
+
+                    <div class="row border-top">
+                        <div class="col-sm-6 dt-pull-right button_container dt-text-right">
+                            <div>
+                                <a class="btn btn-default" href="tel: 1 844 828-1588">
+                                    1 833 203-7768
+                                </a>
+                                <a class="btn btn-primary" href="/en/#sr_client_form">
+                                    \{{contractor::profile_ct("Trouvez le bon expert","profile_template",lg:lg)}}
+                                     <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                                <a class="btn btn-primary" href="/en/homepage-contractor">
+                                    \{{contractor::profile_ct("Expert, inscrivez-vous !","profile_template",lg:lg)}}
+                                     <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                            
+                           
+                        <!--</div>-->
+      <!--                  <div class="col-sm-6 menu mob-center">-->
+                            
+						<!--<div class="item ">-->
+						<!--	<a href="/en/" class="item-link">Home page</a>-->
+						<!--</div><!--item-1-->
+						
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/blog_list" class="item-link">Articles</a>-->
+						<!--</div><!--item-1-->
+						
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/services" class="item-link">Services</a>-->
+						<!--</div><!--item-1-->
+						
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/faq-client" class="item-link">FAQ</a>-->
+						<!--</div><!--item-1-->
+						
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/contact" class="item-link">Contact</a>-->
+						<!--</div><!--item-1-->
+						
+
+
+      <!--                  </div>-->
+                    </div>
+                    <!--<div class="row">-->
+                        <!--<div class="col-sm-6 text-center">-->
+                            <!--<div class="block-mob-center soc_media">-->
+                                <!--<span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=2021">Follow us : </span>-->
+
+
+
+
+
+
+      <!--<div class="social-media-list">-->
+      
+      <!--    <a href="https://www.facebook.com/renoquotescom/" target="_blank">-->
+          
+      <!--        <i class="fa fa-facebook-square"></i>-->
+           
+      <!--    </a>-->
+      
+      <!--    <a href="https://plus.google.com/+SoumissionrenovationCa514-788-5177" target="_blank">-->
+          
+      <!--        <i class="fa fa-google-plus-square"></i>-->
+           
+      <!--    </a>-->
+      
+      <!--    <a href="https://www.linkedin.com/company/3609853" target="_blank">-->
+          
+      <!--        <i class="fa fa-linkedin-square"></i>-->
+           
+      <!--    </a>-->
+      
+      <!--    <a href="https://www.youtube.com/channel/UCDGPAHJV4fwc1HX-u25I7PQ" target="_blank">-->
+          
+      <!--        <i class="fa fa-youtube-play"></i>-->
+           
+      <!--    </a>-->
+      
+      <!--    <a href="https://www.pinterest.com/soumissionrenov/" target="_blank">-->
+          
+      <!--        <i class="fa fa-pinterest"></i>-->
+           
+      <!--    </a>-->
+      
+      <!--</div>-->
+
+
+
+
+                            <!--</div>-->
+                        <!--</div>-->
+                        <!--<div  class="col-sm-6">-->
+                             <!--<div class="mt-sm menu_footer_align_right secondary_menu">-->
+                                
+
+
+
+
+
+
+
+
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/extranet-login" class="item-link">Contractor Login</a>-->
+						<!--</div><!--item-1-->
+						
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/privacy-policy" class="item-link"> Privacy Policy</a>-->
+						<!--</div><!--item-1-->
+						
+						
+						<!--<div class="item ">-->
+						<!--	<a href="/en/terms-of-use" class="item-link">Terms of use</a>-->
+						<!--</div><!--item-1-->
+						
+
+
+                        <!--    </div>-->
+                        <!--</div>-->
+                        
+                    <!--</div>-->
+                    
+                </div><!--end .footer-->
+                <style>
+                    .footer .secondary_menu{
+                        font-size:12px;
+                    }
+                    .footer .row.border-top{
+                        border-top:6px #dfdfdf solid;
+                        padding-top:42px;
+                        margin-top:30px;
+                    }
+                    .footer .logo{
+                        text-align:center;
+                        margin:0 0 30px 0;
+                    }
+                    .footer .logo img{
+                        max-height:120px;
+                        max-width:220px;
+                    }
+                    .footer_towns{
+                        font-weight:bold;
+                        text-align:center;
+                    }
+                    .footer_copy{
+                        font-size:10px;
+                        text-align:center;
+                    }
+                    .footer .menu{
+                        margin:10px 0;
+                    }
+                    
+                    .footer .item{
+                        display:inline-block;
+                        margin-right:15px;
+                        line-height:2;
+                    }
+                    .footer .menu_footer_align_right{
+                        text-align:right;
+                    }
+                    .footer .menu_footer_align_right .item{
+                        display:inline-block;
+                        margin:0 0 0 15px;
+                    }
+                    .footer .soc_media{
+                        font-size:26px;
+                    }
+                    .footer .soc_media a{
+                        text-decoration:none;
+                    }
+                    .footer .signature{
+                        line-height:37px;
+                    }
+                    .button_container .btn{
+                        margin-bottom:7px;
+                    }
+                    .button_container .btn:hover{
+                        text-decoration:none;
+                    }
+                    .button_container .btn i{
+                        font-size:10px;
+                    }
+                    .clearfix:after {
+                     visibility: hidden;
+                     display: block;
+                     font-size: 0;
+                     content: " ";
+                     clear: both;
+                     height: 0;
+                     }
+                     .dt-pull-right{
+                         float:right;
+                     }
+                     .dt-text-right{
+                         text-align:right;
+                     }
+                     .block-mob-center{
+                         text-align:left;
+                     }
+                     .mob-center{
+                         text-align:left;
+                     }
+                     @media (max-width:768px){
+                        .footer .menu_footer_align_right{
+                            text-align:center;
+                        }
+                        .footer .menu_footer_align_right .item{
+                            display:inline;
+                            margin:0 7px;
+                        }
+                         .dt-pull-right{
+                             float:none;
+                         }
+                         .dt-text-right{
+                             text-align:center;
+                         }
+                         .block-mob-center{
+                             display:inline-block;
+                         }
+                         .mob-center{
+                             text-align:center;
+                         }
+                         .soc_media a{
+                             margin:0 4px;
+                         }
+                         .button_container .btn{
+                            margin-bottom:8px;
+                            margin-right:4px;
+                            margin-left:4px;
+                        }
+                        .button_container .btn:hover{
+                            text-decoration:none;
+                        }
+                        .signature{
+                            padding:10px 0 0 0;
+                        }
+                     }
+                     @media (max-width:500px){
+                         .button_container .btn{
+                             display:block;
+                             margin:0 0 7px 0;
+                         }
+                     }
+                </style>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+    //Smooth scrolling
+    $(function() {
+        $('a[href*="#"]:not([href="#"]):not(.open-popup-link)').click(function() {
+            if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top
+                    }, 1000);
+                    return false;
+                }
+            }
+        });
+    });
+</script><!-- Google Analytics -->
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-46921779-3', 'auto');
+ga('send', 'pageview');
+</script>
+<!-- End Google Analytics -->
+
+ <script>(function(w,d,t,r,u){var f,n,i;w[u]=w[u]||[],f=function(){var o={ti:"4049479"};o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad")},n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){var s=this.readyState;s&&s!=="loaded"&&s!=="complete"||(f(),n.onload=n.onreadystatechange=null)},i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)})(window,document,"script","//bat.bing.com/bat.js","uetq");</script><noscript><img src="//bat.bing.com/action/0?ti=4049479&Ver=2" height="0" width="0" style="display:none; visibility: hidden;" /></noscript>
+
+           </div>
+        </div><!--/.cs-->
+         
+        
+		<!-- Placed at the end of the document so the pages load faster -->
+<!--[if lt IE 9]>
+    <script src="/js/html5shiv.js"></script>
+    <script src="/js/respond.min.js"></script>
+<![endif]-->
+     
+    </body>
+</html>
+
+<script>
+function validate_email(){
+    if( isValidEmailAddress($('#email').val())){
+        if($('#emailChk').val() != $('#email').val()){
+            $.ajax({
+                type: "POST",
+                url: "{{sn_pages('ajax_verify_email', lg.rows.lg, table:'ressources')}}",
+                data: {'neverbounce':$('#email').val()},
+                beforeSend: function(){
+                    if ($('#email').val() == ""){
+                        return false;
+                    }
+                    $(".center").show();
+                },
+        
+                success: function(data, statusText, xhr){
+                    $('#emailChk').val($('#email').val());
+                    
+                    if(xhr.getResponseHeader('X-response') == 0){
+                        $(".center").hide();
+                        $('.validemail').hide();
+                        $('.address').focus();
+                    }else if(xhr.getResponseHeader('X-response') == 1){
+                        $(".center").hide();
+                        $('.validemail').show();
+                        $('.address').focus();
+                    }else{
+                        
+                    }
+                },
+                
+                complete: function(data, statusText, xhr) {
+                    $(".center").hide();
+                }
+            });
+        }
+    }
+}
+
+
+function isValidEmailAddress(emailAddress) {
+    var pattern = /^([a-z\d!#$%&'*+\-\/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+(\.[a-z\d!#$%&'*+\-\/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+)*|"((([ \t]*\r\n)?[ \t]+)?([\x01-\x08\x0b\x0c\x0e-\x1f\x7f\x21\x23-\x5b\x5d-\x7e\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|\\[\x01-\x09\x0b\x0c\x0d-\x7f\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))*(([ \t]*\r\n)?[ \t]+)?")@(([a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|[a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF][a-z\d\-._~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]*[a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])\.)+([a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|[a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF][a-z\d\-._~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]*[a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])\.?$/i;
+    return pattern.test(emailAddress);
+};
+</script>
+
+
+<script>
+$(document).ready(function($) {
+    
+    var isDevice = /android|ipad|iphone|ipod|windows phone|webos|blackberry/i.test(navigator.userAgent.toLowerCase());
+    $('#free_form').hide();
+    $('#free_form_title').hide();
+
+    if(!isDevice){
+        $('#free_form').fadeIn();
+        $('#free_form_title').show();
+    }else{
+        $('#form_comments').hide();
+        $('#form_suggestion_mobile').show();
+    }
+    
+    var free_form_h = $('#free_form').height();
+    $('#form_comments').css('top', (free_form_h + 100) + 'px');
+    
+    $(window).scroll(function(event){
+        var st = $(this).scrollTop();
+        
+        if (isDevice)
+        {
+            if (st < 10){
+                $('#free_form_mobile').fadeOut();
+            }else {
+                $('#free_form_mobile').fadeIn();
+                
+            }
+            
+        }else{
+            //display form_slim
+            if (st < 1000){
+                $('#free_form').fadeIn();
+                $('#form_comments').css('top', (free_form_h + 100) + 'px');
+            }else {
+                $('#free_form').fadeOut();
+                $('#form_comments').css('top', 100 + 'px');
+            }
+        }
+
+    });
+    
+    
+    $('#free_form_mobile').click(function(){
+        $('#free_form').css('margin-top','60px');
+        
+        if($('#free_form').is(':visible')){
+            $('#free_form').fadeOut();
+        }else{
+            $('#free_form').css('top',0);
+            $('#free_form').fadeIn();
+        }
+    });
+    
+    $('.close').click(function(){
+        $('#free_form').hide();
+    });
+    
+    $('.close_comments').click(function(){
+        $('#form_comments').hide();
+    });
+    
+    
+   //support to valideEmail() function 
+   if($("#phone").val().length < 10){
+       
+    }
+
+    $('#email').on('input',function(e) {
+        $(this).val($.trim($(this).val()));
+    });
+    
+    $('#email').on('input',function(e) {
+        $(this).val($.trim($(this).val()));
+    });
+    
+    $('#email').keypress(function(e) {
+        if(e.which === 32) 
+            return false;
+    });
+    
+    
+    $('#email').on('input',function(e) {
+           $('.validemail').hide();
+    });   
+    //end support
+    
+    $('.review-block-response').find('.response').each(function(){
+        resp = $('#' + this.id);
+            if(resp.find('.textzone').text().length == 0){
+                resp.hide();
+            }else{
+                resp.show();
+                resp.parent().find('.cancel').show();
+            }
+    });
+    
+
+    $( "#no_comment" ).click(function() {
+      $('#popup').css('display', 'none');
+    });
+
+
+    // var str1 = $('.hero h1').html();
+    // var str2 = $('.hero span').html();
+    // var extra = "";
+
+    // if(str1.length >= 80){
+    //     if(str1.length !== undefined){
+    //         newstr1 = str1.substring(0, 26);
+    //         $('.hero h1').html(newstr1 + '..');
+    //     }
+    // }
+
+});
+</script>
+

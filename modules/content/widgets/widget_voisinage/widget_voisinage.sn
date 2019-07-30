@@ -1,0 +1,40 @@
+{{ /* 
+
+2015-01-12 : version 1.0 paul@sednove.com
+*/ }}
+
+{{	
+	%include "/extenso/functions/sn_ct.snc";
+	use widget;
+	use lg;
+}}
+<div class="container-full bck-pale-gray marg-bt-30">
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-md-12">
+				<style>
+					.contact-layer {left:0;top:0;height:100%;width:40%;padding:5% 5% 5% 5%;background:url(/assets2/images/Sednove_contact.png) no-repeat 100% 50%;position:absolute;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;box-sizing:border-box;}
+					.contact-layer > h1 {color:#FFFFFF;font-size:28px;font-weight:300;text-transform:uppercase;}
+					.contact-layer .item {color:#FFFFFF;font-size:17px;font-weight:500;line-height:40px;padding:3px 0 3px 55px;background-repeat:no-repeat;background-position:0 50%;}
+					.contact-layer .item_1 {background-image:url(/assets2/images/icon-contact-01.png);}
+					.contact-layer .item_2 {background-image:url(/assets2/images/icon-contact-02.png);}
+					.contact-layer .item_3 {background-image:url(/assets2/images/icon-contact-03.png);}
+					.contact-layer .item_4 {background-image:url(/assets2/images/icon-contact-04.png);}
+					@media (max-width: 991px) {
+						.contact-layer > h1 {font-size:24px;}
+						.contact-layer .item {font-size:14px;line-height:40px;padding:1px 0 1px 50px;}
+					}
+				</style>
+				<div class="contact-layer hidden-xs">
+					<h1>{{sn_ct("Notre voisinage", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</h1>
+					<div class="item item_1">{{sn_ct("Train", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</div>
+					<div class="item item_2">{{sn_ct("Restaurant", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</div>
+					<div class="item item_3">{{sn_ct("Cafe", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</div>
+					<div class="item item_4">{{sn_ct("Cocktail", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</div>
+				</div>
+				<img alt="carte" style="width:100%;" src="/assets2/images/carte.png">
+			</div>
+		</div>
+	</div>
+</div>
+

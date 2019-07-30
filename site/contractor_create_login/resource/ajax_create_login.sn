@@ -1,0 +1,71 @@
+{{
+    /*
+        @title ajax_create_login
+        Description: Creates a login account for the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    // include the validator for contractor_create_login
+    %include "/site/contractor_create_login/include/validator.sn";
+    
+    use page;
+    use lg;
+    // %include "/site/package/all.sn";
+}}
+\{{
+    cgidata = cgidata();  
+    // validate server side
+        
+        
+    if(cgidata.username eq "") then
+        contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?'", cgidata.token);
+            if contractor.nbrows > 0 then
+                res = update(
+                    tables:"sr_contractor",
+                    uid: contractor.rows.uid,
+                    fields:{
+                        "username": ""
+                    }
+                );
+                // if no error
+                if res.sqlcode == 0 then
+                    cgidata.username = cgidata.old_username;
+                    deletectx(cgidata,'usr');
+                endif
+            endif
+        endif
+        headers_out("X-cgidata", cgidata);
+        
+
+    if (validator.validate(data:cgidata)) then
+        if(cgidata.usr) then
+            contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?'", cgidata.token);
+        else
+            contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?' AND (username='' OR username IS null)", cgidata.token);
+        endif
+        
+        if contractor.nbrows > 0 then
+            res = update(
+                tables:"sr_contractor",
+                uid: contractor.rows.uid,
+                fields:{
+                    "username": cgidata.username,
+                    "password": hash(algo:'sha512', cgidata.password .+ md5(contractor.rows.company_name)),
+                    "sn_salt_password":md5(contractor.rows.company_name),
+                    "sn_hash_password":"sha512"
+                }
+            );
+            // if no error
+            if res.sqlcode == 0 then
+                headers_out("X-success", 1);
+            endif
+        endif
+    endif
+}}

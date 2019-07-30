@@ -1,0 +1,19 @@
+{{
+    table_dest = 'sr_contractor_service';
+    table_from = 'tbl_services_entrepreneur';
+
+    select_query_from_src = "SELECT `".+table_from.+"`.* FROM `".+table_from.+"` INNER JOIN tbl_services ON ID_Service = idTBL_Services AND Actif != 0";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idtbl_services_entrepreneur',
+        'uid_service'   : 'ID_Service',
+        'uid_contractor' : 'ID_Entrepreneur'
+    };
+    
+    %include 'migration.sn';
+    

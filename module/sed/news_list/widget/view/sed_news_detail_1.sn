@@ -1,0 +1,395 @@
+{{
+    /*
+    	@title	sed_news_datail_1
+        Description:Display the detail of the news
+        @author gamila@sednove.com
+    	@version 1.0 2015-05-31 10:00:00 Version initial
+    	@version 1.1 2016-06-13 14:30:00 Modification the path of widget
+        
+    */
+
+	use lg;
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	use page;
+}}
+<style type="text/css">
+/*================================================================SIDE-BAR-MENU*/
+
+.cs #cssmenu,
+.cs #cssmenu ul,
+.cs #cssmenu ul li,
+.cs #cssmenu ul li a {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    list-style: none;
+    line-height: 1;
+    display: block;
+    position: relative;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.cs #cssmenu {
+    max-width: 100%;
+    color: #ffffff;
+    margin-bottom: 20px;
+}
+
+.cs #cssmenu ul ul {
+    display: none;
+}
+
+.cs #cssmenu > ul > li.active > ul {
+    display: block;
+}
+
+.align-right {
+    float: right;
+}
+
+.cs #cssmenu > ul > li > a {
+    padding: 12px 35px 12px 20px;
+    cursor: pointer;
+    z-index: 2;
+    font-size: 16px;
+    text-decoration: none;
+    color: #666666;
+    background: #efefef;
+    -webkit-transition: color .2s ease;
+    -o-transition: color .2s ease;
+    transition: color .2s ease;
+}
+
+.cs #cssmenu > ul > li > a.on {
+    color: #0a7abe;
+    text-decoration: underline;
+}
+
+.cs #cssmenu > ul > li > a:hover {
+    color: #666666;
+    text-decoration: underline;
+}
+
+.cs #cssmenu ul > li.has-sub > a:after {
+    position: absolute;
+    right: 26px;
+    top: 19px;
+    z-index: 5;
+    display: block;
+    height: 10px;
+    width: 2px;
+    background: #0a7abe;
+    content: "";
+    -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+
+.cs #cssmenu ul > li.has-sub > a:before {
+    position: absolute;
+    right: 22px;
+    top: 23px;
+    display: block;
+    width: 10px;
+    height: 2px;
+    background: #0a7abe;
+    content: "";
+    -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+
+.cs #cssmenu ul > li.has-sub.open > a:after,
+.cs #cssmenu ul > li.has-sub.open > a:before {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+.cs #cssmenu ul ul li a {
+    padding: 14px 36px 14px 32px;
+    cursor: pointer;
+    z-index: 2;
+    font-size: 13px;
+    text-decoration: none;
+    color: #5e5e5e;
+    background: #e3e3e3;
+    -webkit-transition: color .2s ease;
+    -o-transition: color .2s ease;
+    transition: color .2s ease;
+}
+
+.cs #cssmenu ul ul ul li a {
+    padding-left: 32px;
+}
+
+.cs #cssmenu ul ul li a:hover {
+    color: #0a7abe;
+}
+
+.cs #cssmenu ul ul > li.has-sub > a:after {
+    top: 16px;
+    right: 26px;
+    background: #0a7abe;
+}
+
+.cs #cssmenu ul ul > li.has-sub > a:before {
+    top: 20px;
+    background: #0a7abe;
+}
+
+.cs #cssmenu ul ul li a.on {
+    text-decoration: underline;
+}
+
+.cs #cssmenu-mobile {
+    padding: 12px 34px 12px 22px;
+    cursor: pointer;
+    z-index: 2;
+    font-size: 16px;
+    text-decoration: none;
+    color: #666666;
+    background: #E7E7E7;
+    -webkit-transition: color .2s ease;
+    -o-transition: color .2s ease;
+    transition: color .2s ease;
+    margin-bottom: 5px;
+    display: none;
+}
+
+.cs #cssmenu-mobile:after {
+    position: absolute;
+    right: 30px;
+    top: 19px;
+    z-index: 5;
+    display: block;
+    height: 10px;
+    width: 2px;
+    background: #0a7abe;
+    content: "";
+    -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+
+.cs #cssmenu-mobile:before {
+    position: absolute;
+    right: 26px;
+    top: 23px;
+    display: block;
+    width: 10px;
+    height: 2px;
+    background: #0a7abe;
+    content: "";
+    -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+
+.cs #cssmenu-mobile.on:after,
+.cs #cssmenu-mobile.on:before {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+@media (max-width: 990px) {
+    .cs #cssmenu {
+        display: none;
+    }
+    .cs #cssmenu-mobile {
+        display: block;
+    }
+}
+
+@media (min-width: 991px) {
+    .cs #cssmenu {
+        display: block!important;
+    }
+    .cs #cssmenu-mobile {
+        display: none!important;
+    }
+}
+hr {
+	border-color: #cfcfcf;
+}
+.title {
+	color: #{{theme_color.rows.header_highlight_color}};
+	font-size:18px;
+	font-weight: 600;
+}
+.back-drop {
+	background-color: #f0f0f0;
+	margin-bottom: 30px;
+	padding: 20px;
+}
+</style>
+\{{
+
+    %include "/extenso/functions/sn_pages.snc";
+	cgidata = cgidata();
+		
+	news_id = esc(filter:"sql", cgidata.news);
+	title = substr(cgidata.seo,1);
+
+	news = sql(single:true, "SELECT * FROM sed_news WHERE seo_{{lg.rows.lg}} = '?'", title);
+
+	if news.rows.uid eq "" then 
+		redirect("{{ pages('news', lg.rows.lg);}}");
+	endif
+	
+	prev_news = sql(single:true, "SELECT * FROM sed_news WHERE active = 'yes' AND date < '?' ORDER BY date DESC", news.rows.date);
+	next_news = sql(single:true, "SELECT * FROM sed_news WHERE active = 'yes' AND date > '?' ORDER BY date ASC", news.rows.date);
+
+}}
+<div class="row">
+<hr/>
+	<a href="{{ pages('news', lg.rows.lg); }}" class="btn btn-default">{{ sn_ct("Retour", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</a>
+	<div class="pull-right">
+		<label>{{ sn_ct("Events:", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</label>
+		\{{ if prev_news.rows.uid ne "" then }}
+		<a href="\{{ '/{{ lg.rows.lg }}/news-item/'; prev_news.rows.seo_{{lg.rows.lg}}; }}" class="btn btn-default">{{ sn_ct("Previous", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</a>
+		\{{ endif }}
+		
+		\{{ if next_news.rows.uid ne "" then }}
+		<a href="\{{ '/{{ lg.rows.lg }}/news-item/'; next_news.rows.seo_{{lg.rows.lg}}; }}" class="btn btn-default">{{ sn_ct("Next", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</a>
+		\{{ endif }}
+	</div>
+<hr/>
+</div>
+<div class="row news-details">
+ 
+    <style type="text/css">
+    .news-details .news_title {
+        margin-top: 0px;
+    }
+    .news-text p{max-width:650px;}
+    
+    .news-details .news-detail-photo {
+        float: right;
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+        margin-left: 20px;
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #E2E2E2;
+        font-size: small;
+        line-height: 1em;
+        font-style: italic;
+    }
+    
+    .news-details .news-detail-photo img {
+        width: 100%;
+        height: auto;
+    }
+
+    .news-details .news-detail-photo p {
+        margin-top: 5px;
+    }
+    
+    .news-details .news_infos {
+        display: block;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        font-size: small;
+        border-top: 1px solid #E2E2E2;
+        border-bottom: 1px solid #E2E2E2;
+    }
+    
+    @media (max-width: 640px) {
+        .news-details .news-detail-photo {
+            float: none;
+            width: 100%;
+            max-width: 600px;
+            margin-left: 0px;
+        }
+        .news-details .news-detail-photo img {
+            width: 100%;
+            height: auto;
+        }
+    }
+    </style>
+
+    <div class="col-md-12">
+        <h1 class="news_title">
+          <div class="sn_pencil" data-sn_link1="/extenso/extranet/sed_news/fr/edit.snc?uid=\{{ news.rows.uid }}&sn_modal=t" data-sn_class1="edit" data-sn_title1="Edit">
+			\{{esc(filter: "sql",news.rows.title_{{lg.rows.lg}}) }}
+          </div>
+        </h1>
+        <div class="news_infos">
+			\{{
+				date = datetime(date:  esc(filter: "sql",news.rows.date), lg : "{{lg.rows.lg}}", format: "%Y-%m-%d");
+				time = datetime(date:  esc(filter: "sql",news.rows.date), lg : "{{lg.rows.lg}}", format: "%Hh%M");
+			}}
+            <strong>{{ sn_ct("Publié le :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</strong> \{{ esc(filter: "sql",date); " a "; esc(filter: "sql",time); }}  |
+            <strong>{{ sn_ct("Catégorie :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</strong>
+			\{{ 
+				for cat sql("SELECT * FROM sed_news_category WHERE FIND_IN_SET(uid,'?')",news.rows.category) do
+					esc(filter: "sql",cat.rows.category_name_{{lg.rows.lg}});
+					if sn_nb1 ne cat.nbrows then
+						", ";
+					endif
+				endfor 
+			}}
+        </div>
+		\{{ if news.rows.image ne "" then }}
+			<div class="news-detail-photo">
+				<img src="\{{ news.rows.image }}">
+				\{{ if news.rows.image_credit ne '' then }}
+				<p>{{ sn_ct("crédit photo :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}} \{{ news.rows.image_credit; }}</p>
+				\{{ endif }}
+			</div>
+		\{{ endif }}
+		<div class="news-text">
+		    \{{ esc(filter: "sql",news.rows.text_{{lg.rows.lg}}) }}
+		</div>
+    </div>
+</div>
+<script type="text/javascript">
+(function($) {
+    $(document).ready(function() {
+
+        $('#cssmenu li.active').addClass('open').children('ul').show();
+        $('#cssmenu li.has-sub>a').on('click', function() {
+            $(this).removeAttr('href');
+            var element = $(this).parent('li');
+            if (element.hasClass('open')) {
+                element.removeClass('open');
+                element.find('li').removeClass('open');
+                element.find('ul').slideUp(200);
+            } else {
+                element.addClass('open');
+                element.children('ul').slideDown(200);
+                element.siblings('li').children('ul').slideUp(200);
+                element.siblings('li').removeClass('open');
+                element.siblings('li').find('li').removeClass('open');
+                element.siblings('li').find('ul').slideUp(200);
+            }
+        });
+
+    });
+})(jQuery);
+
+function showsubmenu() {
+    $('#cssmenu').toggle();
+    $('#cssmenu-mobile').toggleClass('on');
+}
+</script>

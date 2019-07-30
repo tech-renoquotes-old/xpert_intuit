@@ -1,0 +1,37 @@
+{{
+    /*
+        @title 			notifyAdminContractorCreditProject
+        Description		Sends an email to the administrator when a contractor asks for a credit for a project
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-04 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+    use contractor_info;
+    
+    yes = '{{sn_ct("yes", publish:"", edit:false, uids:"", lg:"fr")}}';
+    no = '{{sn_ct("no", publish:"", edit:false, uids:"", lg:"fr")}}';
+        
+    id_entrepreneur = contractor_info.uid_contractor;
+    id_projet = contractor_info.uid_project;
+    raison = contractor_info.reason;
+    pas_de_soumission = (contractor_info.no_quote) ? yes : no;
+    appelle = (contractor_info.called) ? yes : no;
+    messageVocal = (contractor_info.voicemail) ? yes : no;
+    courriel = (contractor_info.email) ? yes : no;
+    dateAppelle1 = (contractor_info.call1_date eq "0000-00-00 00:00:00") ? "" : contractor_info.call1_date ;
+    dateAppelle2 = (contractor_info.call2_date eq "0000-00-00 00:00:00") ? "" : contractor_info.call2_date ;
+    dateAppelle3 = (contractor_info.call3_date eq "0000-00-00 00:00:00") ? "" : contractor_info.call3_date ;
+    explication = contractor_info.explanation;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

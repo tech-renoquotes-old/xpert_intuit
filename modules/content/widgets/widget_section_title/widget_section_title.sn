@@ -1,0 +1,25 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+	%include "/extenso/functions/sn_ct.snc"; 
+
+	wcontent = sql(single:true, "select * from widget_section_title where uid = '?'", widget.rows.uid_widget_list);
+}}
+
+<style>
+.page-header {
+    padding-bottom: 9px;
+    margin: 0px 0px 20px;
+    border-bottom: 1px solid #DADADA;
+}
+</style>
+
+{{ if wcontent.rows.actif eq "oui" then }}
+	<div class="page-header bck-bleu-pale section-title">
+		<h2>{{wcontent.rows{'titre_'.+ lg.rows.lg};}}</h2>
+        <h3>{{wcontent.rows.date_example;}}</h3>
+	</div>
+{{ endif }}

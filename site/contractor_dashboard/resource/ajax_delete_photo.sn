@@ -1,0 +1,23 @@
+{{
+    /*
+        @title ajax_delete_photo
+        Description: Delete a photo from the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-01
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+    void sql("DELETE FROM sr_gallery  WHERE uid='?' AND uid_contractor='?'", cgidata.photo_uid, extranet_user.uid);
+    
+}}

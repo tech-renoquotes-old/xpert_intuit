@@ -1,0 +1,1204 @@
+{{
+
+/*
+
+*/
+
+%include "/extenso/functions/sn_ct.snc";
+%include "/extenso/functions/sn_pages.snc";
+%include '/site/package/all.sn';
+
+use page;
+use lg;
+}}
+
+\{{
+    
+   cgidata = cgidata();
+
+    //Summary information on user profile
+    active_me = sql(single:true,"select count(*) as today from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status = 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'", user.username);
+    active_me_week = sql(single:true,"select count(*) as last7days from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'", user.username);
+    active_me_last_week = sql(single:true,"select count(*) as count from sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'", user.username);
+   
+    active_team = sql(single:true,"select count(*) as today from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')");
+    active_team_week = sql(single:true,"select count(*) as last7days from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')");
+    active_team_last_week = sql(single:true, "SELECT count(*) as count FROM sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')");
+    new_today = sql(single:true,"select count(uid) as newprojects from sr_project where status = 'new'");
+    
+    if(cgidata.index) then
+        index = cgidata.index;
+    else
+        index = 0;
+    endif
+    
+   
+   if(cgidata.category eq 'old') then
+        clients = sql("select p.uid_client, c.locked, c.locked_by, c.firstname, c.lastname, c.gender, c.email, c.address, c.lang, c.languages, c.when_to_call, a.phone1, a.city, a.country, a.province, a.zip, a.street, a.street_no FROM sr_client c 
+                INNER JOIN sr_project p ON p.uid_client = c.uid
+                LEFT JOIN sr_address a ON a.uid_client = c.uid
+                WHERE p.status = 'new' AND ((c.locked='' OR ISNULL(c.locked)) OR c.locked_by = '?') 
+                AND p.sn_cdate < (NOW() - INTERVAL 7 DAY)
+                GROUP BY c.uid ORDER BY p.uid DESC LIMIT 200 OFFSET ?",user.username, index);
+   
+    else
+       clients = sql("select p.uid_client, c.locked, c.locked_by, c.firstname, c.lastname, c.gender, c.email, c.address, c.lang, c.languages, c.when_to_call, a.phone1, a.city, a.country, a.province, a.zip, a.street, a.street_no FROM sr_client c 
+                INNER JOIN sr_project p ON p.uid_client = c.uid
+                LEFT JOIN sr_address a ON a.uid_client = c.uid
+                WHERE p.status = 'new' AND ((c.locked='' OR ISNULL(c.locked)) OR c.locked_by = '?') 
+                AND p.sn_cdate > (NOW() - INTERVAL 3 DAY)
+                GROUP BY c.uid ORDER BY p.uid DESC LIMIT 200 OFFSET ?",user.username, index);
+    endif
+                
+
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = '1'");
+    
+    headers_out("X-index", clients.rows);
+    history = sql("SELECT f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+    
+    
+    next_page;
+        
+        if(cgidata.action eq 'update_client') then
+            client = update(
+                tables:"sr_client",
+                fields: {
+                "firstname": cgidata.firstname,
+                "lastname": cgidata.lastname,
+                "email": cgidata.email,
+                "when_to_call":cgidata.when_to_call,
+                "languages":cgidata.languages,
+                "lang": cgidata.lang
+                }, 
+                uid:cgidata.clientID
+            );
+            
+            address = sql(single:true,"select * from sr_address where uid_client = '?' and zip = '?' order by uid", cgidata.clientID, cgidata.postal_code);
+            
+            if(address.nbrows > 0) then
+                addr = update(
+                    tables:"sr_address",
+                    fields: {
+                        "city":cgidata.locality,
+                        "street_no": cgidata.street_number,
+                        "street": cgidata.route,
+                        "zip": cgidata.postal_code,
+                        "province": cgidata.administrative_area_level_1,
+                        "country":cgidata.country,
+                        "phone1": cgidata.phone1
+                    }, 
+                    uid:address.rows.uid
+                    
+                );
+                headers_out('X-res', addr);
+            else
+                addr = insert(
+                    table:"sr_address",
+                    fields: {
+                        "uid_client": cgidata.clientID,
+                        "city":cgidata.locality,
+                        "street_no": cgidata.street_number,
+                        "street": cgidata.route,
+                        "zip": cgidata.postal_code,
+                        "province": cgidata.administrative_area_level_1,
+                        "country":cgidata.country,
+                        "phone1": cgidata.phone1
+                    } 
+                );
+                
+                headers_out('X-res', addr);
+            endif
+        endif
+        
+        if(cgidata.refresh) then
+           clients = sql("SELECT p.uid_client FROM sr_client c 
+                        WHERE p.locked = 1 
+                        AND p.status= 'new' 
+                        AND locked_by <> '?'", user.username);
+        endif
+        
+        if(cgidata.action eq 'callback') then
+            fulldate = cgidata.calldate .+ " " .+ cgidata.calltime;
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'3',
+                "when_to_callback": fulldate,
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+                
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'firstcall') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'1',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                
+                }
+            );
+                
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'request_plan') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'11',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+
+            automail::askWorkplanToClient(cgidata.uid_project);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'request_plan_without_email') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'5',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'unreachable') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'4',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+                
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'activate') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'8',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+            project::activateProject(cgidata.uid_project);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'email') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'6',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+            
+            automail::customEmailToClient(cgidata.uid_project, cgidata.subject, cgidata.message);    
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'cancel') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'7',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+            
+            project::incompleteProject(cgidata.uid_project);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'addlock') then
+            project::addLock(cgidata.clientID, user.username);
+            project::followup(uid_msg:9, clientID:cgidata.clientID, uid_project:cgidata.uid_project, username:user.username);
+            headers_out('X-lock', 1);
+        elseif(cgidata.action eq 'removelock') then
+            project::rmLock(cgidata.clientID);
+            project::followup(uid_msg:10, clientID:cgidata.clientID, uid_project:cgidata.uid_project, username:user.username);
+            headers_out('X-lock', 1);
+        elseif(cgidata.action eq 'lockstatus') then
+            locks = project::getLocks();
+            headers_out('X-locks', locks);
+        else
+            headers_out('X-result', history.rows);
+        endif
+
+}}
+<script src="/js/encode.js"></script>
+<!--<script src="/extenso/html/old/ckeditor/config.js"></script>-->
+<style>
+    
+    .infos_client{
+        width:100%;
+        max-height:600px;
+        border:solid 1px #ddd;
+        margin-bottom:5px;
+        margin-top:5px;
+        overflow-y:scroll;
+    }
+    
+    .infos_client table{
+        width:100%;
+        margin-bottom:20px;
+    }
+    
+    .infos_project{
+        width:100%;
+        border:solid 1px #ddd;
+        margin-bottom:5px;
+        margin-top:5px;
+    }
+    
+    .followup{
+        width:100%;
+        height:100px;
+        border:solid 1px #ddd;
+        margin-right:5px;
+        margin-bottom:20px;
+        margin-top:20px;
+        padding:8px;
+    }
+    
+    .followup table{
+        width:100%;
+    }   
+    
+    .followup td{
+        padding:10px;
+    }   
+    
+    .stats{
+        width:100%;
+        max-height:150px;
+        border:solid 1px #ddd;
+        margin-right:5px;
+        margin-bottom:5px;
+        margin-top:5px;
+        overflow:hidden;
+    }
+    
+    .history{
+        width:100%;
+        border:solid 1px #bcd1e2;
+        margin-bottom:5px;
+        margin-top:5px;
+        background-color: #eee;
+        text-align:center;
+    }
+    
+    .history_title{
+        width:100%;
+        background-color:#00517e;
+        color:#fff;
+        height:30px;
+        text-align:center;
+        font-size:18px;
+        padding-top:2px;
+    }
+    
+    .history_tab{
+        width:100%;
+        padding:8px;
+    }
+    
+    .history{
+        width:100%;
+        border:solid 1px #ddd;
+        margin-bottom:5px;
+        margin-top:5px;
+        padding:8px;
+    }
+    
+
+    .matrix{
+        width:100%;
+        background-color:#eee;
+    }
+    
+
+    .matrix td{
+        width:25%;
+        height:20px;
+        border-bottom:solid 1px #ddd;
+        padding: 5px;
+    }
+    
+    .client_list{
+        border-bottom:1px solid #ddd; 
+        width:100%;
+        background-color:#fff;
+    }
+    
+    .client_list:hover{
+        background-color:#eee;
+    }
+    
+    .client_list tr{
+        height:30px;
+    }
+    
+    .client_list td,th{
+        padding-left:5px;
+    }
+    
+    .client_list_select{
+        border-bottom:1px solid #ddd; 
+        width:100%;
+        padding-bottom:20px;
+        background-color:#ddd;
+    }
+    
+    .action_list td{
+        border:none;
+        padding:10px
+    }
+    
+
+    .borderless td, .borderless th {
+        border: none;
+    }  
+    
+    .modal
+        {
+        position: absolute;
+        z-index: 999;
+        height: 100%;
+        width: 100%;
+        top: 0;
+        left: 0;
+        background-color: Black;
+        filter: alpha(opacity=60);
+        opacity: 0.6;
+        -moz-opacity: 0.8;
+    }
+    
+    .center
+    {
+        z-index: 1000;
+        margin: 40% auto;
+        padding: 10px;
+        width: 130px;
+        border-radius: 10px;
+        filter: alpha(opacity=100);
+        opacity: 1;
+        -moz-opacity: 1;
+    }
+    
+    .communications{
+        display:none;
+    }
+    
+    .followup_error{
+        color:red;
+    }
+    
+    
+    #history_tab{
+        width:100%;
+        color:#337ab7;
+        font-size:12px;
+        vertical-align:middle;
+        
+    }
+    
+    #history_tab td{
+        padding-top:5px;
+        padding-bottom:5px;
+    }
+    
+    .save_content{
+        width:auto;
+        position:relative;
+        z-index:9;
+        top:0;
+        text-align:left;
+    }
+    
+    input[type="text"]
+{
+    background: transparent;
+    border: none;
+    height:30px;
+    width:95%;
+}
+
+    select
+{
+    background: transparent;
+    border: none;
+    height:30px;
+}
+    
+
+</style>
+
+
+<input name="username" id="username" type="hidden" value="\{{user.username}}"/>
+<input type="hidden" name="selected_project" id="selected_project" />
+<input type="hidden" name="selected_client" id="selected_client" />
+
+<div class="communications">
+    
+    <div class="client_updated">
+        <span style="width:100%;font-size:18px;color:green">{{sn_ct("mise-a-jour du client completée!")}}</span>
+    </div>
+    
+    <div class="project_updated">
+        <span style="width:100%;font-size:18px;color:green">{{sn_ct("mise-a-jour du projet completée!")}}</span>
+    </div>
+    
+    <div class="followup_error">
+        <span style="width:100%;color:red">{{sn_ct("message : Aucun client n'est séléctionné!")}}</span>
+    </div>
+    
+    <div class="lock_error">
+        <span style="width:100%;color:red">{{sn_ct("message : Le client doit être verrouillé avant modification!")}}</span>
+    </div>
+    
+    <div class="unreachable" >
+        <span><h4>{{sn_ct("Le client est-il injoignable en ce moment?")}}</h4></span>
+    </div>
+    
+    <div class="cancel" >
+        <span><h4>{{sn_ct("Vous êtes sur le point d'annuler ce projet. Voulez-vous continuer?")}}</h4></span>
+    </div>
+    
+    <div class="activate" >
+        <span style="width:100%;font-size:18px;">{{sn_ct("Après activation ce projet sera enlevé de cette liste!<br>Voulez-vous continuer?")}}</span>
+    </div>
+    
+    <div class="firstcall" >
+        <span><h4>{{sn_ct("Voulez-vous appeler le client?")}}</h4></span>
+    </div>
+    
+    <div class="plan_request">
+        <span>{{sn_ct("Voulez-vous envoyer la demande de plan par email au client? ")}}</span>
+        <hr style="margin-top:5px;margin-bottom:5px">
+    </div>
+    
+    <div class="callback">
+        <span>{{sn_ct("Jusqu'a quand est le prochain appel?")}}</span>
+        <hr style="margin-top:5px;margin-bottom:5px">
+        <form name="callback_form">
+        <table>
+            <tr>
+                <td>
+                    <span>{{sn_ct("Quand appel")}} :</span>
+                </td>
+                <td>
+                    <input name="callback_date" id="callback_date" type="text" class="form-control" value="\{{datetime(format:'%Y-%m-%d')}}"/>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span>{{sn_ct("Heure")}} :</span>
+                </td>
+                <td>
+                    <input name="callback_time" id="callback_time" type="text" class="form-control" value="\{{datetime(format:'%H:%M-%S')}}"/>
+                </td>
+            </tr>
+        <form>
+        </table>
+    </div>
+    
+    <div class="email">
+        <span>{{sn_ct("Rédiger le message a envoyer au client:")}}</span>
+        <hr style="margin-top:5px;margin-bottom:5px">
+        <form name="email_form">
+        <table>
+            <tr>
+                <td>
+                    <span>{{sn_ct("Sujet du message")}} :</span>
+                </td>
+                <td>
+                    <input name="subject" id="subject" type="text" class="form-control" value=""/>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span>{{sn_ct("Message")}} :</span>
+                </td>
+                <td>
+                    <textarea rows=5 name="message" id="message" class="form-control" ></textarea>
+                </td>
+            </tr>
+        <form>
+        </table>
+    </div>
+    
+</div>
+
+<div class="row">
+    <div class="stats">
+        <div class='col-md-6'>
+            <table class="table">
+                <tr><td><span>{{sn_ct("Nombre de clients a traiter")}} : \{{new_today.rows.newprojects}}</span></td></tr>
+                <tr><td><span>{{sn_ct("Nombre de suivis restants")}} : \{{}}</span></td></tr>
+            </table>
+        </div>
+        <div class='col-md-6' style="padding:0">
+            <table class="matrix">
+                <tr>
+                    <td style="border-right:solid 1px #ddd;background-color:#fff">
+                        <span style="color:#00517e;font-size:14px;font-weight:bold">{{sn_ct("Projets activés")}}</span>
+                    </td>
+                    <td >
+                        <span>{{sn_ct("clients Aujourd'hui", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </td>
+                    <td>
+                        <span>{{sn_ct("clients Derniers 7 jours", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </td>
+                    <td>
+                        <span>{{sn_ct("clients Dernière semaine :", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-right:solid 1px #ddd;border-top:solid 1px #ddd;">
+                        {{sn_ct("clients Par moi :", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td>
+                       \{{active_me.rows.today}}
+                    </td>
+                    <td>
+                        \{{active_me_week.rows.last7days}}
+                    </td>
+                    <td>
+                        \{{active_me_last_week.rows.count}}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border-right:solid 1px #ddd;border-top:solid 1px #ddd;">
+                       {{sn_ct("clients Par l'équipe :", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                    </td>
+                    <td>
+                       \{{active_team.rows.today}}
+                    </td>
+                    <td>
+                        \{{active_team_week.rows.last7days}}
+                    </td>
+                    <td>
+                        \{{active_team_last_week.rows.count}}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" style="padding-right:5px;padding-left:0">
+        <div class="history">
+            <div class="history_title">
+                {{sn_ct("Historique des suivis")}}
+            </div>
+            <table class="table" id="history_tab">
+                
+                <tr align='right'>
+                    <td></td><td></td><td></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-4" style="padding-right:5px;padding-left:0">
+        <div class="infos_client">
+                <div style="width:100%;height:35px;padding-top:5px;background-color:#fcde9e;color:#9f7837;font-size:16px">
+                    <div class="col-xs-6">
+                    \{{if(cgidata.category eq 'old') then}}
+                        {{sn_ct("Vieux clients : ")}} \{{clients.nbrows}}
+                    \{{else}}
+                        {{sn_ct("Nouveaux clients : ")}} \{{clients.nbrows}}
+                    \{{endif}}
+                    </div>
+                    <div class="col-xs-6" style="text-align:right">
+                    \{{if(cgidata.category eq 'old') then}}
+                        <a style="text-decoration:none" href="{{pages('sr_manage_client', lg.rows.lg, table:'pages')}}?category=new">{{sn_ct("Gerer nouveaux clients")}}</a>
+                    \{{else}}
+                        <a style="text-decoration:none" href="{{pages('sr_manage_client', lg.rows.lg, table:'pages')}}?category=old">{{sn_ct("Gerer vieux clients")}}</a>
+                    \{{endif}}
+                    </div>
+                </div>
+                \{{i=0}}
+                
+                <form name="client_form" class="client_form"  method="POST" action="{{pages('sr_manage_client', lg.rows.lg, table:'pages')}}">
+                \{{for cl in clients.rows do}}
+                    \{{if i == index  then}}
+                        <input type='hidden' name='action' value='update_client'/>
+                        <input type='hidden' name='clientID' value='\{{cl.uid_client}}'/>
+                        <table class="client_list" id="client_list_\{{cl.uid_client}}" onclick="lookup_project(\{{cl.uid_client}})">
+                            <tr>
+                                <td>
+                                    <div class="save_content" id="save_\{{cl.uid_client}}"><input \{{(cl.locked ne 'yes' || cl.locked_by ne user.username)?'disabled':''}} type="image" name="submit" id="submit_\{{cl.uid_client}}" onclick='$(this).closest("form").submit()' src="/sn_uploads/icon/save-icon.png" width="40px"/></div>
+                                </td>
+                                <td>
+                                   <label style="text-align:right" class='col-sm-11' for="locker">{{sn_ct("verouiller")}}:</label>
+                                    <input  \{{(cl.locked eq 'yes')?'checked':''}} \{{(cl.locked_by ne user.username && cl.locked eq 'yes')?'disabled':''}} class='col-sm-1' type="checkbox" name="locker" id="locker_\{{cl.uid_client}}" onclick="toggleLock(\{{cl.uid_client}})">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th colspan='2'>Client# \{{cl.uid_client}} </th>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Firstname")}} :</td>
+                                <td> 
+                                   <input  class="form-control" type='text' name="firstname" value="\{{cl.firstname}}"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Lastname")}} :</td>
+                                <td> 
+                                    <input class="form-control" type='text' name="lastname" value="\{{cl.lastname}}"/></span>
+                                </td>
+                            </tr>
+                              
+                            
+                            <tr><td>{{sn_ct("Courriel ")}} :</td><td><input  name="email" class="form-control" type="text" value='\{{cl.email}}' /></td></tr>
+                            <tr><td>{{sn_ct("Téléphone ")}} :</td><td><input  name="phone1" class="form-control" type="text" value='\{{cl.phone1}}'/></td></tr>
+                            <tr>
+                                <td>
+                                    <span>{{sn_ct("Adresse ")}} :</span>
+                                </td>
+                                <td>
+                                    <input  class="form-control" type="text" name="address" id="address" value="\{{cl.street_no .+ ' ' .+ cl.street .+ ' ' .+ cl.city .+ ', ' .+ cl.province .+ ', ' .+ cl.country .+ ' ' .+ cl.zip}}" onFocus="geolocate()" placeholder="">
+                                    <input type="hidden" class="field" id="street_number" name="street_number"  value="\{{cl.street_no}}"></input>
+                                    <input type="hidden" class="field" id="route" name="route"  value="\{{cl.street}}"></input>
+                                    <input type="hidden" class="field" id="locality" name="locality"  value="\{{cl.city}}"></input>
+                                    <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" value="\{{cl.province}}"></input>
+                                    <input type="hidden" class="field" id="postal_code" name="postal_code"  value="\{{cl.zip}}"></input>
+                                    <input type="hidden" class="field" id="country" name="country"  value="\{{cl.country}}"></input>
+                                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Address invalide')}}" data-validator-error="address"></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span>{{sn_ct("A retranscrire ")}} :</span>
+                                </td>
+                                <td>
+                                    &nbsp;&nbsp;\{{cl.address}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Autre")}} :</td>
+                                <td>
+                                    <hr style="margin-top:5px;margin-bottom:5px">
+        
+                                    <label>{{sn_ct("Langue")}}</label>
+                                    <select  name="lang">
+                                        <option \{{(cl.lang eq 'fr')?'selected':''}} value="fr">fr</option>
+                                        <option \{{(cl.lang eq 'en')?'selected':''}} value="en">en</option>
+                                    </select>
+                                    &nbsp; | &nbsp;
+                                    <label>{{sn_ct("Bilingue ")}}</label>
+                                    <select  name="languages">
+                                        <option \{{(cl.languages == 1)?'selected':''}} value="1">Oui</option>
+                                        <option \{{(cl.languages == 2)?'selected':''}} value="2">Non</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <span><label>{{sn_ct("Quand appeler?")}}</label>
+                                    <input style="display:inline;width:60%" class="form-control" name="when_to_call" type="text" value="\{{cl.when_to_call}}"></span>
+    
+                                </td>
+                            </tr>
+                        </table>
+                    
+                \{{endif}}
+                \{{i++}}
+                \{{endfor}}
+                \{{index++}}
+                </form>
+                <div class="col-xs-4" style="padding:0">
+                    <input class="btn btn-primary" style="width:100%;display:inline-block" name="goto" type="button" id="goto" value="{{sn_ct(edit:false,'Allez au client')}}"/>
+                </div>
+                <div class="col-xs-3" style="padding:0">
+                    <input class="form-control" style="margin-left:5px;border:1px solid #eee;width:100%;height:35px;display:inline-block" type="text" name="gotoid" id="gotoid" placeholder="{{sn_ct(edit:false,'No. client')}}"/>
+                </div>
+
+                <div class="col-xs-5" style="text-align:right">
+                    <input class="btn btn-primary" class="form-control" style="width:150px;display:inline-block" type="button" name="skip" id="skip" value="{{sn_ct(edit:false,'Prochain')}}" onclick="skip(\{{index}})"/>
+                </div>
+        </div>
+        <div class="followup">
+            <h5>{{sn_ct("Communications")}}</h5>
+            <hr style="margin-top:0px;margin-bottom:0px">
+            <form name="followup-form" method='POST' action="">
+                <input type="hidden" name="followup_id" value=""/>
+                <table>
+                    <tr>
+                        <td><input disabled name="unreached_btn" value="{{sn_ct(edit:false,"Non-rejoint")}}" type="button" class="btn btn-warning" onclick="unreachable($('input[name=followup_id]').val())"/></td>
+                        <td><input disabled name="plan_sent_btn" value="{{sn_ct(edit:false,"Demande plan")}}" type="button" class="btn btn-warning" onclick="request_plan($('input[name=followup_id]').val())"/></td>
+                        <td> <input disabled name="callback_btn" value="{{sn_ct(edit:false,"Rappeler")}}" type="button" class="btn btn-warning" onclick="callback($('input[name=followup_id]').val())"/></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-5" style="padding-left:5px;padding-right:0">
+        <div class="infos_project">
+            <div class="modal" style="display: none">
+                <div class="center">
+                    <img alt="" src="/sn_uploads/icon/loading3.gif" />
+                </div>
+            </div>
+            
+            <div class="project_data"></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    var addclass = 'client_list_select';
+    var $cols = $('.client_list').click(function(e) {
+        $cols.removeClass(addclass);
+        $(this).addClass(addclass);
+
+    });
+    
+    
+    
+    function skip(index){
+        $.ajax({
+            type: "POST",
+            data: {'index': index},
+            beforeSend: function(){
+            },
+            
+            success: function(data, statusText, xhr) {
+                //var res = xhr.getResponseHeader('X-index');
+                
+            }
+        });
+    }
+    
+
+    $("form[name=client_form]").ajaxForm({
+        beforeSend: function(){
+            alert('test');
+            return false;
+            // uid = $('#selected_client').val();
+            // if(!isLocked(uid)){
+            //     $('.lock_error').dialog({
+            //         modal: true,
+            //         title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            //     });
+            //     return false;
+            // }
+        },
+        success:function(data, statusText, xhr){
+            $('.client_updated').dialog({
+                modal: true, title: '{{sn_ct(edit:false,"Confirmation")}}', zIndex: 9, resizable: false,
+                buttons: {
+                    Ok: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                
+                close: function (event, ui) {
+                }
+            });
+
+        }
+        
+    });
+    
+    function selectedProject(uid){
+        $('#selected_project').val(uid);
+    }
+    
+    function getLockStatus(){
+        $.ajax({
+            type: "POST",
+            data: {'action': 'lockstatus'},
+            beforeSend: function(){
+            },
+            
+            success: function(data, statusText, xhr) {
+                var res = jQuery.parseJSON(xhr.getResponseHeader('X-locks').decode());
+                var username = $('#username').val();
+                if(res.length > 0){
+                    $.each(res, function(key,value){
+                        if(value.locked_by != username){
+                            $('#client_list_' + value.uid).empty();
+                        }
+                    });
+                }
+            }
+        });
+    }
+    
+    function isLocked(uid){
+        if(!$('#locker_'+uid).is(':checked')){
+            return false;
+        }else{
+            return true;
+        }
+    }
+    
+    function toggleLock(uid){
+        var lg = "{{lg.rows.lg}}";
+        if(isLocked(uid)){
+            action = 'addlock';
+            $('#submit_'+uid).removeAttr('disabled');
+            getHistory(uid,"");
+            $('.project_data').html('<object style="overflow:hidden" width="100%" height="700px" data="\{{configs.rows.url_staging}}/intranet/'+lg+ '/widget_client_projects?clid=' + uid  + '&lock=true">');
+            $('input[name=followup_id]').val(uid);
+            $('#selected_client').val(uid);
+        }else{
+            action = 'removelock';
+            $('#submit_'+uid).attr('disabled','disabled');
+            getHistory(uid,"");
+            $('.project_data').html('<object style="overflow:hidden" width="100%" height="700px" data="\{{configs.rows.url_staging}}/intranet/'+lg+ '/widget_client_projects?clid=' + uid  + '&lock=false">');
+            $('input[name=followup_id]').val(uid);
+            $('#selected_client').val(uid);
+        }
+        
+        $.ajax({
+            type: "POST",
+            data: {'action': action, 'clientID':uid, 'uid_project':$('#selected_project').val()},
+            beforeSend: function(){
+            },
+            
+            success: function(data, statusText, xhr) {
+               getHistory(uid,'');
+            }
+        });
+    }
+    
+    function getHistory(uid,from){
+        
+        $.ajax({
+            type: "POST",
+            data: {'clientID':uid,'action':from, 'calldate':$('#callback_date').val(), 'calltime':$('#callback_time').val(), 'uid_project':$('#selected_project').val(),'subject':$('#subject').val(), 'message':$('#message').val()},
+            beforeSend: function(){
+                
+                if(uid == ''){
+                    $('.followup_error').dialog({
+                        modal: true,
+                        title: "{{sn_ct(edit:false,'suivi - Erreur')}}",
+                    });
+                    return false;
+                }
+            },
+            
+            success: function(data, statusText, xhr) {
+                var res = xhr.getResponseHeader('X-result');
+                res = res.decode();
+                
+                res = jQuery.parseJSON(res);
+                var p = xhr.getResponseHeader('X-cancelled');
+                
+                $('#history_tab').empty();
+                $('#history_tab').html('<tr align="right"><td></td><td align="left"></td></tr>');
+                
+                if(from == 'cancel'){
+                    $('#client_list_' + uid).empty();
+                    $('#history_tab').html('<tr><td></td><td align="left"></td></tr>');
+                    $('.project_data').html("");
+                    
+                }else{
+                    $.each(res, function(key,value){
+                        if(value.when_to_callback == null){
+                            when = ' - ';
+                        }else{
+                            when = value.when_to_callback
+                        }
+                        
+                        $('#history_tab tr:last').after('<tr><td>' + value.sn_cdate + ' &nbsp; </td><td align="left">#'+ value.uid_project + ' - ' + value.msg + ' ' + when + '<font color="#ffbe44" style="font-weight:bold;"> [' + value.followup_agent + '] </span></td></tr>');
+                    });
+                }
+            }
+        });
+    }
+    
+    
+    function callback(uid){
+        if(isLocked(uid)){
+            $('.callback').dialog({
+                modal: true, title: 'suivi - rappeler plus tard' + '(#'+ $("#selected_project").val() +')' , zIndex: 10000, autoOpen: true,
+                width: '450px', resizable: false,
+                buttons: {
+                    Yes: function () {
+                        getHistory(uid,'callback');
+                        $(this).dialog("close");
+                    },
+                    No: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+    }
+    
+    function firstcall(uid,phone){
+        if(isLocked(uid)){
+            $('.firstcall').dialog({
+                modal: true, title: 'suivi - Premier appel' + '(#'+ $("#selected_project").val() +')', zIndex: 10000, autoOpen: true,
+                width: '450px', resizable: false,
+                buttons: {
+                    Yes: function () {
+                        window.location = "sip:"+phone;
+                        getHistory(uid,'firstcall');
+                        $(this).dialog("close");
+                    },
+                    No: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+        
+    }
+    
+    function sendemail(uid){
+        if(isLocked(uid)){
+            $('.email').dialog({
+                modal: true, title: 'suivi - Envoyer un courriel' + '(#'+ $("#selected_project").val() +')', zIndex: 10000, autoOpen: true,
+                width: '450px', resizable: false,
+                buttons: {
+                    Send: function () {
+                        getHistory(uid,'email');
+                        $(this).dialog("close");
+                    },
+                    Cancel: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+        
+    }
+    
+    function unreachable(uid){
+        if(isLocked(uid)){
+            $('.unreachable').dialog({
+                modal: true, title: '{{sn_ct(edit:false,"Suivi - client injoignable")}}' + '(#'+ $("#selected_project").val() +')', zIndex: 9, width:'450px', resizable: false,
+                buttons: {
+                    Yes: function () {
+                        getHistory(uid,'unreachable');
+                        $(this).dialog("close");
+                    },
+                    
+                    No: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+    }
+    
+    function request_plan(uid){
+        if(isLocked(uid)){
+            $('.plan_request').dialog({
+                modal: true, title: '{{sn_ct(edit:false,"Suivi - demande le plan au client")}}' + '(#'+ $("#selected_project").val() +')', zIndex: 9, width:'450px', resizable: false,
+                buttons: {
+                    Yes: function () {
+                        getHistory(uid,'request_plan');
+                        $(this).dialog("close");
+                    },
+                    No: function () {
+                        getHistory(uid,'request_plan_without_email')
+                        $(this).dialog("close");
+                    }
+                },
+                
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+    }
+    
+
+    function cancel_project(uid){
+        if(isLocked(uid)){
+            $('.cancel').dialog({
+                modal: true, title: '{{sn_ct(edit:false,"Suivi - Annulation du projet")}}' + '(#'+ $("#selected_project").val() +')', zIndex: 9, width: '450px', resizable: false,
+                buttons: {
+                    Yes: function () {
+                        getHistory(uid,'cancel');
+                        $(this).dialog("close");
+                    },
+                    
+                    No: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+    }
+    
+
+    function lookup_project(uid, event){
+        var $container = $('.infos_client');
+        var lg = "{{lg.rows.lg}}";
+
+        $scrollTo = $('#client_list_' + uid);
+        
+        
+        if(isLocked(uid)){
+            lck = "true";
+        }else{
+            lck = "false";
+        }
+
+        $container.animate({
+            scrollTop: $scrollTo.offset().top - $container.offset().top + $container.scrollTop()
+        });
+        
+        if($('#selected_client').val() == uid){
+        
+            
+        }else{
+            getHistory(uid,"");
+            $('.project_data').html('<object style="overflow:hidden" width="100%" height="700px" data="\{{configs.rows.url_staging}}/intranet/'+lg+ '/widget_client_projects?clid=' + uid  + '&lock=' + lck + '">');
+            $('input[name=followup_id]').val(uid);
+            $('#selected_client').val(uid);
+        }
+
+    }
+    
+    function goto_map(uid,address){
+        window.open("https://www.google.com/maps/place/"+address, '_blank');
+    }
+    
+
+</script>
+
+<!-- Google map api for addresses -->
+<script>
+// This example displays an address form, using the autocomplete feature
+// of the Google Places API to help users fill in the information.
+
+var placeSearch, autocomplete, autocomplete_slim;
+var componentForm = {
+  street_number: 'short_name',
+  route: 'long_name',
+  locality: 'long_name',
+  administrative_area_level_1: 'short_name',
+  country: 'long_name',
+  postal_code: 'short_name'
+};
+
+function initAutocomplete() {
+  // Create the autocomplete object, restricting the search to geographical
+  // location types.
+  autocomplete = new google.maps.places.Autocomplete(
+      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      {types: ['geocode']});
+      
+  // When the user selects an address from the dropdown, populate the address
+  // fields in the form.
+  autocomplete.addListener('place_changed', fillInAddress);
+  autocomplete.name="normal";
+
+
+  // For the second form in the article_detail page (slim)
+  if (document.getElementById('address_slim')){
+      autocomplete_slim = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+          {types: ['geocode']});
+      autocomplete_slim.addListener('place_changed', fillInAddress);
+      autocomplete_slim.name="slim";
+    }
+}
+
+// [START region_fillform]
+function fillInAddress() {
+  // Get the place details from the autocomplete object.
+  var place = this.getPlace();
+  index = (this.name === "normal") ? 0 : 1 ;
+    
+  for (var component in componentForm) {
+    document.getElementsByName(component)[index].value = '';
+    document.getElementsByName(component)[index].disabled = false;
+  }
+
+  // Get each component of the address from the place details
+  // and fill the corresponding field on the form.
+  for (var i = 0; i < place.address_components.length; i++) {
+    var addressType = place.address_components[i].types[0];
+    if (componentForm[addressType]) {
+      var val = place.address_components[i][componentForm[addressType]];
+      document.getElementsByName(addressType)[index].value = val;
+    }
+  }
+}
+// [END region_fillform]
+
+// [START region_geolocation]
+// Bias the autocomplete object to the user's geographical location,
+// as supplied by the browser's 'navigator.geolocation' object.
+    function geolocate() {
+      if (navigator.geolocation) {
+    //     navigator.geolocation.getCurrentPosition(function(position) {
+    //       var geolocation = {
+    //         lat: position.coords.latitude,
+    //         lng: position.coords.longitude
+    //       };
+    //       var circle = new google.maps.Circle({
+    //         center: geolocation,
+    //         radius: position.coords.accuracy
+    //       });
+    //      autocomplete.setBounds(circle.getBounds());
+    //     });
+       }
+    }
+// [END region_geolocation] 
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8"async defer></script>

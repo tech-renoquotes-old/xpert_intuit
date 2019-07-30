@@ -1,0 +1,215 @@
+{{
+     /*
+    	@title	sed_video_overlay_image_text
+    	Description:Use to display the video , text and button
+        @author Tasso Massouras <tmassouras@globalia.ca>
+    	@version 1.0 2015-11-19 10:00:00 Version initial
+    	@version 1.0 2016-06-30 11:00:00 change the path the name of table 
+    	
+    */
+
+	use widget;
+	use lg;
+   
+}}
+
+<style> 
+{{%include "/module/sed/video_overlay_image_text/widget/css/widget_video_overlay_image_text.css";}}
+</style>
+{{
+
+banner_info = sql(single:true, "SELECT * FROM ? WHERE uid_widget = '?' AND active = 'oui'ORDER BY uid DESC", 'sed_video_overlay_image_text', widget.rows.uid_widget_list);
+
+/*if banner_info.nbrows  ==  0 then
+// Set default content
+    fields = {
+                "active" : "oui",
+                "type_url":"externe",
+                "uid" : widget.rows.uid_widget_list,
+                "color_title":"ffffff",
+                "color_text":"ffffff",
+                "uid_widget":widget.rows.uid_widget_list
+    };
+        
+    for l sql("select * from sn_languages where active = 'yes'") do
+                fields{"title_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                fields{"text_" .+ l.rows.lg} = "Texte " .+ l.rows.lg;
+                fields{"url_externe_" .+ l.rows.lg} = "http://sednove.com/".+ l.rows.lg;
+                fields{"image_" .+ l.rows.lg} = "/module/sed/video_overlay_image_text/image/Logo_sednove_RGB_1.png";
+                fields{"video_" .+ l.rows.lg} = "/module/sed/video_overlay_image_text/video/extenso-video-720p.m4v";
+                fields{"still_image_" .+ l.rows.lg} = "/module/sed/video_overlay_image_text/image/image_default.jpg";
+         
+    endfor
+    verif_ctx = sql(single:true,"SELECT uid FROM sed_video_overlay_image_text WHERE uid_widget='?'",widget.rows.uid_widget_list);
+    	       	if verif_ctx.nbrows == 0 then
+    	            void insert(table:"sed_video_overlay_image_text",fields:fields);
+    	        endif
+    banner_info = sql(single:true, "SELECT * FROM ? WHERE uid_widget = '?' AND active = 'oui' ORDER BY uid DESC", 'sed_video_overlay_image_text', widget.rows.uid_widget_list);	 
+  
+endif*/
+if banner_info.rows.image_en eq  "" then
+    img = banner_info.rows.image_fr;
+    else
+    img = banner_info.rows{'image_'.+lg.rows.lg};
+  endif;
+if banner_info.rows.still_image_en eq  ""  then
+    stillImg = banner_info.rows.still_image_fr;
+else
+    stillImg = banner_info.rows{'still_image_'.+lg.rows.lg};
+endif;
+if banner_info.rows{'url_externe_'.+lg.rows.lg} eq  "" then
+	internal_link = banner_info.rows.url_interne;
+	p = sql(single:true,"select * from pages where uid = '?'", internal_link);
+	link = p.rows{"folder_".+lg.rows.lg} .+ p.rows{"page_".+lg.rows.lg};
+else
+	link = banner_info.rows{'url_externe_'.+lg.rows.lg};
+endif;
+}}
+<div class="container-placeholder-video" style="overflow:hidden;height:340px;" id="video-{{widget.rows.uid_widget_list}}">
+    {{if link ne "" then}}
+       <a href="{{link}}"> 
+    {{endif}}
+      <div class="placeholder-video">
+          
+        {{
+        for vdo sql( "SELECT video_en, video_fr, video_webm_en, video_webm_fr  FROM ? WHERE uid_widget = '?' AND active = 'oui'", 'sed_video_overlay_image_text', widget.rows.uid_widget_list) do;
+
+             if vdo.rows.video_en eq "" then
+                  fieldVdo = vdo.rows.video_fr;
+              else
+          		  fieldVdo = vdo.rows{'video_'.+lg.rows.lg};
+              endif;
+              
+              if vdo.rows.video_webm_en eq "" then
+                  fieldVdoWebm = vdo.rows.video_webm_fr;
+              else
+          		  fieldVdoWebm = vdo.rows{'video_webm_'.+lg.rows.lg};
+              endif;
+        endfor}}
+      	<video id="myVideo" autoplay loop>
+         	<source src="{{fieldVdo}}" id="mp4" type="video/mp4" />
+            <source src="{{fieldVdoWebm}}" id="webm" type="video/webm" />
+        </video>
+      </div>
+      
+      <div class="slide_container opacity_move_down">
+          <div class="item">
+              <div class="mob_image" style="background-image:url(/sn_uploads/Bigfoot_ev_1.jpg);"></div>
+              <div class="container-info">
+                  <div class="container-info-cell">
+                    <div class="slide_hover">
+                        <div class="logo"><img src="{{img}}"></div>
+                      	<div class="heading-text"><h2 style="color: #{{banner_info.rows.color_title}} ">{{banner_info.rows{'title_'.+lg.rows.lg};}}</h2></div>
+                      	<h4 class="text-center" style="color: #{{banner_info.rows.color_text}} ">{{banner_info.rows{'text_'.+lg.rows.lg};}}</h4>
+                    </div>
+                  </div>
+              </div>
+          </div>
+          <div class="item">
+              <div class="mob_image" style="background-image:url({{stillImg}});"></div>
+              <div class="container-info">
+                  <div class="container-info-cell">
+                    <div class="slide_hover">
+                        <div class="logo"><img src="{{img}}"></div>
+                      	<div class="heading-text"><h2 style="color: #{{banner_info.rows.color_title}} ">{{banner_info.rows{'title_'.+lg.rows.lg};}}eeeeeeeeeeeee</h2></div>
+                      	<h4 class="text-center" style="color: #{{banner_info.rows.color_text}} ">{{banner_info.rows{'text_'.+lg.rows.lg};}}wwwwwwwwwwwwww</h4>
+                    </div>
+                  </div>
+              </div>
+          </div>
+          <div class="item">
+              <div class="mob_image" style="background-image:url(/sn_uploads/Bigfoot_ev_1.jpg)"></div>
+              <div class="container-info">
+                  <div class="container-info-cell">
+                    <div class="slide_hover">
+                        <div class="logo"><img src="{{img}}"></div>
+                      	<div class="heading-text"><h2 style="color: #{{banner_info.rows.color_title}} ">{{banner_info.rows{'title_'.+lg.rows.lg};}}</h2></div>
+                      	<h4 class="text-center" style="color: #{{banner_info.rows.color_text}} ">{{banner_info.rows{'text_'.+lg.rows.lg};}}</h4>
+                    </div>
+                  </div>
+              </div>
+          </div>
+          <div class="item in">
+              <div class="mob_image" style="background-image:url({{stillImg}});"></div>
+              <div class="container-info">
+                  <div class="container-info-cell">
+                    <div class="slide_hover">
+                        <div class="logo"><img src="{{img}}"></div>
+                      	<div class="heading-text"><h2 style="color: #{{banner_info.rows.color_title}} ">{{banner_info.rows{'title_'.+lg.rows.lg};}}eeeeeeeeeeeee</h2></div>
+                      	<h4 class="text-center" style="color: #{{banner_info.rows.color_text}} ">{{banner_info.rows{'text_'.+lg.rows.lg};}}wwwwwwwwwwwwww</h4>
+                    </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+      <script>
+        //if more than 1 slide
+        if($('#video-{{widget.rows.uid_widget_list}}').find('.item').length>1){
+            
+            //adding navigation
+            div_to_add='';
+            for(i=0;i<$('#video-{{widget.rows.uid_widget_list}}').find('.item').length;i++){
+                div_to_add += '<div></div>';
+            }
+            $('#video-{{widget.rows.uid_widget_list}}').prepend('<div class="slide_nav">'+div_to_add+'</div>');
+
+            $('#video-{{widget.rows.uid_widget_list}}').find('.slide_nav>div:eq('+$('#video-{{widget.rows.uid_widget_list}}').find('.item').index($('#video-{{widget.rows.uid_widget_list}} .item.in'))+')').addClass('in');
+            
+            $('#video-{{widget.rows.uid_widget_list}}').find('.slide_nav>div').on('click',function(){
+                clearInterval(slide_interval_video_{{widget.rows.uid_widget_list}});
+                slide_item_video_{{widget.rows.uid_widget_list}}('='+$('#video-{{widget.rows.uid_widget_list}}').find('.slide_nav>div').index($(this)));
+                slide_start_video_{{widget.rows.uid_widget_list}}();
+            });
+            //-->
+            
+            //Init the slide after delay
+            var slide_interval_video_{{widget.rows.uid_widget_list}};
+            //slide_start_video_{{widget.rows.uid_widget_list}}();
+            
+            //Function to start the loops
+            function slide_start_video_{{widget.rows.uid_widget_list}}(){
+                clearInterval(slide_interval_video_{{widget.rows.uid_widget_list}});
+                slide_interval_video_{{widget.rows.uid_widget_list}} = setInterval(function(){slide_item_video_{{widget.rows.uid_widget_list}}('+1');}, 1000);
+            }
+            
+            //If hover the content, the looping will stop then restart on mouseout
+            $('#video-{{widget.rows.uid_widget_list}}').find('.slide_hover').hover(
+              function() {
+                clearInterval(slide_interval_video_{{widget.rows.uid_widget_list}});
+              }, function() {
+                slide_start_video_{{widget.rows.uid_widget_list}}();
+              }
+            );
+            
+            //Function that selects the slide to slide to, val='+1'->slide forward; val='-1'-> slide backward; val='=2' -> select the third slide (if exist otherwise it goes to first)
+            function slide_item_video_{{widget.rows.uid_widget_list}}(val){
+                var all_element = $('#video-{{widget.rows.uid_widget_list}} .slide_container').find('.item');
+                var current_index  = all_element.index($('#video-{{widget.rows.uid_widget_list}} .item.in'));
+                var length = all_element.length;
+                var selected_index;
+                if(val.charAt(0)=='='){
+                    selected_index = parseInt(val.substr(1));
+                }
+                else{
+                    selected_index = current_index+parseInt(val);
+                }
+                 if(selected_index>=length){
+                  selected_index = 0;
+                }
+                else if(selected_index<0){
+                  selected_index = length-1;
+                }
+                //console.log(selected_index);
+                all_element.removeClass('in');
+                $('#video-{{widget.rows.uid_widget_list}}').find('.item:eq('+selected_index+')').addClass('in');
+                
+                $('#video-{{widget.rows.uid_widget_list}}').find('.slide_nav>div').removeClass('in');
+                $('#video-{{widget.rows.uid_widget_list}}').find('.slide_nav>div:eq('+selected_index+')').addClass('in');
+            }
+        }
+        
+      </script>
+      
+	{{if link ne "" then}}</a>{{endif}}
+	
+</div>

@@ -1,0 +1,52 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a pulldown menu from an enumeration list
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+	%include "/module/sed/package/sed_util.sn";
+	
+	use field;
+	use lg;
+	use field_title;
+	use field_name;
+	use declaration;
+	
+	if field.rows.field_format eq "enum" then
+		valuesfrom = field.rows.field_enum_values;
+	else
+		valuesfrom = field.rows.addvalues;
+	endif
+	enum =  splitre(value:valuesfrom,re:"\s*,\s*");
+	enum_length = enum.length();
+	option =  splitre(value:field.rows{"addoptions_" .+ lg.rows.lg},re:"\s*,\s*");
+	option_length = option.length();
+
+	addvalue =  splitre(value:field.rows.addvalues,re:"\s*,\s*");
+	
+	if enum_length != option_length then
+	    error("The length of enum and option are different in field " .+ field.rows.field_name );
+	endif
+
+}}
+<div class="form-group">
+    <label for="{{ field_name }}" class="control-label">{{ field_title }}
+        {{
+            if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+                }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+            endif
+        }}
+    </label>
+    
+    <select name="{{ field_name }}" id="{{ field_name }}" class="form-control" {{ if field.onChange ne "" then 'onChange="'; parse(state:0,field.onChange);; '"'; endif }} {{ declaration }} >
+		<option value="">{{sed_util::ct(edit:false,"Please select an option", lg)}}</option> 
+        {{ for (f=0; f<enum_length; ++f) do }}
+            <option value="{{ enum[f] }}">{{ option[f] }}</option>
+        {{ endfor }}
+    </select>
+</div>

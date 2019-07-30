@@ -1,0 +1,100 @@
+{{
+    /*
+        @title ajax_add_photo
+        Description: Add a photo to the contractor's gallery.
+        
+        @author louis.jhonny@gmail.com
+        
+        @version 1.0 2017-04-01
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+\{{
+    use extranet_user;
+    //remove("/sn_uploads/logo/logo_" .+ extranet_user.uid .+ ".jpg");
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/logo/");  
+
+    // include the validator for contractor_form
+   %include "/site/contractor_dashboard/include/add_photo_validator.sn";
+   
+    // load profile generator class to re-generate profile on edit
+    %include '/class/profile_generator.sn';
+
+    
+    //Create an instance of the profile generator
+    profil = new Profilgen();
+
+    
+    profil_exists = sql(single:true, "select * from sr_contractor_profil where uid_contractor = ?", extranet_user.uid);
+    
+    if(cgidata.toberemoved eq 'yes') then
+        remove_photo = sql("UPDATE sr_contractor_profil SET company_logo = '' WHERE uid_contractor = '?'", extranet_user.uid);
+        if(remove_photo.affrow > 0) then
+            headers_out('X-remove', 1);
+        endif
+        profil.generate(extranet_user.uid);
+    else
+        if(cgidata.cropped_image.length() > 0) then
+            if(profil_exists.nbrows == 0 && cgidata.cropped_image.sn_fullname ne "") then
+            // validate server side
+                    photo = insert(
+                        table: "sr_contractor_profil",
+                        fields:{
+                            "uid_contractor":extranet_user.uid,
+                            "company_logo": cgidata.cropped_image.sn_fullname,
+                            "active": "yes"
+                        }
+                    );
+                    
+                update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+            else
+                update_photo = sql("UPDATE sr_contractor_profil SET company_logo = '?' WHERE uid_contractor = '?'", cgidata.cropped_image.sn_fullname, extranet_user.uid); 
+                if(update_photo.affrow  >= 1) then
+                    update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+                    
+                    
+                    new_logo = sql(single:true, "select company_logo from sr_contractor_profil where uid_contractor = '?'", extranet_user.uid);
+                    new_logo.rows.company_logo;
+                    headers_out("X-logo",new_logo.rows.company_logo);
+                endif
+            endif
+        endif
+        profil.generate(extranet_user.uid);
+    endif
+
+    //License
+        licnames = explode(",",cgidata.'licname[]');
+        licnumbers = explode(",",cgidata.'licnumber[]');
+        licEmpty = 0;
+        licSize = licnames.length();
+        
+        for (i = 0; i <= licSize; i++) do
+            if(licnames[i] eq "" || licnumbers[i] eq "") then
+                licEmpty++;
+            endif
+        endfor
+        
+        if (licEmpty == 1) then
+            for (i = 0; i < licSize; i++) do
+                    licenses = insert(
+                        table: "sr_additional_license",
+                        fields:{
+                        "uid_contractor": extranet_user.uid,
+                        "lic_name": licnames[i],
+                        "lic_number": licnumbers[i],
+                        "lic_desc": "none"
+                        }
+                    );
+            endfor
+            update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+            profil.generate(extranet_user.uid);
+            "License has been successfully added!";
+            headers_out('X-success', '1');
+        endif

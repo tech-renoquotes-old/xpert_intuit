@@ -1,0 +1,38 @@
+sndbi_sql: cfile:snmysql.c, cline:245, project:sncodev2, sql:SELECT a.*, b.display FROM sed_directmail_content_bloc a JOIN sed_directmail_bloc_type b ON a.bloc_type_code = b.code WHERE uid_campaign = '2' ORDER by sn_custom, sqlerr=1, errno=1054, error=Unknown column 'sn_custom' in 'order clause'
+file=db.c, line=335, fmt=db/sql : sql error: %s
+
+db/sql : sql error: 'Unknown column 'sn_custom' in 'order clause'':'SELECT a.*, b.display FROM sed_directmail_content_bloc a JOIN sed_directmail_bloc_type b ON a.bloc_type_code = b.code WHERE uid_campaign = '2' ORDER by sn_custom'
+
+	cfile=db.c, cline=335, errcode=4 
+	line=34,file=/usr/local/website/sncodev2/module/sed/directmail/template/default-template.txt, 
+	compile file=;/usr/local/website/sncodev2/module/sed/directmail/template/default-template.txt;/usr/local/website/sncodev2/tmp/-extenso-functions-sn_ct.snc;/usr/local/website/sncodev2/tmp/-extenso-functions-sn_pages.snc
+	function=sql, file db.c line 335
+file=smtp.c, line=1386, fmt=%s
+In function email, error while executing template '%s' : '%s'.
+
+db/sql : sql error: 'Unknown column 'sn_custom' in 'order clause'':'SELECT a.*, b.display FROM sed_directmail_content_bloc a JOIN sed_directmail_bloc_type b ON a.bloc_type_code = b.code WHERE uid_campaign = '2' ORDER by sn_custom'
+
+	cfile=db.c, cline=335, errcode=4 
+	line=34,file=/usr/local/website/sncodev2/module/sed/directmail/template/default-template.txt, 
+	compile file=;/usr/local/website/sncodev2/module/sed/directmail/template/default-template.txt;/usr/local/website/sncodev2/tmp/-extenso-functions-sn_ct.snc;/usr/local/website/sncodev2/tmp/-extenso-functions-sn_pages.snc
+	function=sql
+In function email, error while executing template '/usr/local/website/sncodev2/module/sed/directmail/template/default-template.txt' : '(null)'.
+
+	cfile=smtp.c, cline=1386, errcode=14 
+	line=66,file=/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn, 
+	compile file=;/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn
+	function=email, file smtp.c line 1386
+retcode = 14
+file=smtp.c, line=1386, fmt=Error sending email: %s
+Start Direct-Mail
+2016-06-03 09:13:13
+Mail from extenso@sednove.ca
+format HTML/TEXT
+text file is /module/sed/directmail/template/default-template.txt
+html file is /module/sed/directmail/template/default-template.sn
+Sending email
+Sending to gamila@sednove.ca but change to gamila@sednove.com
+End of loop sending email
+2016-06-03 09:13:14
+
+End of job

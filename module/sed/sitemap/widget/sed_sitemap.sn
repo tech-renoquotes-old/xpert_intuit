@@ -1,0 +1,137 @@
+{{ 
+    /*
+    	@title	sed_sitemap
+    	Description:Widget to display any menu on the sidebar
+        @author laplante@sednove.com
+    	@version 1.0 2014-08-02 08:49:42 laplante@sednove.com initial version (function)
+    	@version 1.1 2015-03-06 07:35:00 manu@i-manu.com
+    
+    */
+	
+     %include "/extenso/functions/sn_ct.snc"; 
+//   %include "/extenso/functions/sn_pages.snc"; 
+
+    
+    use widget;    
+    use lg;          // Loop from the publish    
+    use page;
+}}
+
+\{{ 
+	use page; 
+	menu = [];
+	// Get the menu selected for that widget
+	uid_menu = sql(single:true, "select * from sed_sitemap where uid = '?'", {{widget.rows.uid_widget_list}});
+	//if uid_menu.rows.uid_menu eq  '' then
+	   // uid_menu.rows.uid_menu='9';
+	//endif
+	// If a menu is selected, get the menu_json content
+	if uid_menu.rows.uid_menu ne "" then 
+		// get the menu json
+		menu_json = sql(single:true,wantarray:true,"select json from sn_menus where uid = '?'", uid_menu.rows.uid_menu);
+        //menu_json;
+		if menu_json.rows[0] eq '' then
+			menu = "no menu";
+		else
+			menu = unstringnify(menu_json.rows[0]);
+		endif
+	else // if no menu selected
+		menu="no menu";
+	endif
+
+}}
+
+
+<style>
+ .cs, .cs p  {
+    background: #ffffff !important;
+}
+</style>
+
+   
+    <div class="site-width">             
+         
+	\{{ 
+	function display_menu(menu, lg, level) 
+		use page;
+		for item in menu do 
+			menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+			if menu_item.rows.active eq "yes" then
+				if menu_item.rows.type eq "page" then
+					pg = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+					if pg.nbrows == 1 then
+						active=''; 
+						if page.uid==menu_item.rows.uid_page then 
+							active='on';
+						endif
+						}}
+							<li class="sitemap-page">
+								<a href="\{{pg.rows{"folder_" .+ lg.rows.lg};if pg.rows{"page_" .+ lg.rows.lg} ne "index" then pg.rows{"page_" .+ lg.rows.lg};".snc"; endif}}" class="\{{active}}">\{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+							</li>
+					\{{
+					endif
+				elseif menu_item.rows.type eq "url" then
+					}} 
+						<li class="sitemap-url">
+							<a target="\{{menu_item.rows{"target"};}}" href="\{{menu_item.rows{"url_" .+ lg.rows.lg};}}" class="">\{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						</li>
+				\{{
+				elseif menu_item.rows.type eq "group" then
+					active='';
+					open='';
+					if item.children != undefined then
+						// <!-- Get all page ID from children -->
+						children = stringnify(item.children);
+						arr = explode("\"uid_page\":\"",children); 
+						puids = {};
+						for v in arr do
+							tmp = explode("\"",v,1);
+							if length(tmp) > 0 then
+								puid = (int)tmp[0];
+								if puid > 0 then
+									puids{puid}=1;
+								endif
+							endif
+						endfor                                    
+
+						// <!-- If one child has the current page ID his parent is active -->
+						if puids{page.uid} then
+							active='has-sub on';
+							open='active open';
+						endif 
+					endif
+				}} 
+					<li class='sitemap-group has-sub'>
+						\{{menu_item.rows{"name_" .+ lg.rows.lg};}}
+						<ul>
+							\{{
+								if item.children != undefined then
+									new_level = level + 1;
+									display_menu(item.children, lg, new_level);
+								endif
+							}}
+						</ul>
+					</li><!--item-->
+				\{{
+				endif
+			endif
+		endfor 
+	endf
+}}
+
+<!-- MENU -->
+\{{/* include("/" .+ config.site .+ "/includes/{{lg.rows.lg}}/menu_mobile.snc"); */}}
+
+	<div id="sitemap-container">
+		<ul class="sitemap-ul">
+			\{{if menu eq "no menu" then}}
+			    <div class="alert alert-info" style="margin-bottom:75px;">Il faut choisir un menu a afficher</div>
+			\{{else}}
+				{{
+				lgmod = unstringnify(lg);
+				lgmod = str_replace('}'.+'}','} }',lgmod);
+				}}
+				\{{display_menu(menu, {{lgmod}}, 0);}}
+			\{{endif}}
+		</ul>
+	</div><!--cssmenu-->

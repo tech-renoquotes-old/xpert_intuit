@@ -1,0 +1,11 @@
+{{
+     /*
+    	@title	sed_search_box
+    	Description:Display the box of search
+        @author gamila@sednove.com
+    	@version 1.0 2016-06-23 12:00:00 Version initial
+    
+    */
+	%include "/functions/search.sn";
+    search();
+}}

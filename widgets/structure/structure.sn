@@ -1,0 +1,22 @@
+{{
+	// Name:		structure
+	//
+	// Description:	Build a structure of widget based on numbers of columns
+	//
+	// Version:		2014-11-08 16:40:17 laplante@sednove.com Initial Version
+	//
+
+    %include "/extenso/functions/sn_ct.snc"; 
+
+	use widget;
+	use lg;
+
+	use position;
+	use page;
+	use config;
+
+}}
+\{{
+    
+}}
+    

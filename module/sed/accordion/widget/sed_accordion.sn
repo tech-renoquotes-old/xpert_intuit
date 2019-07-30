@@ -1,0 +1,103 @@
+{{
+    /*
+    	@title	sed_accordion
+    	Description:Implement widget sed_accordion. This widget uses information from sn_tables,
+	                sn_fields and sn_languages to implement accordion. It will also get the information 
+	                from the table sed_accordion.
+        @author laplante@sednove.com
+    	@version 1.0 2015-11-18 16:01:13 laplante@sednove.com  Creation
+        @version  1.1 2016-05-30 14:00:00 pascale@sednove.com   Code review : indentation, code formatting
+        @version  1.2 2016-06-28 11:00:00 gamila@sednove.com   default value
+    */
+ 
+}}
+
+<style>
+    .accordion {margin-top:30px;}
+    .accordion.panel-default {border:0; box-shadow:none;}
+    .accordion .panel-heading {position:relative;  border:0; padding:14px 0; background-color:#f5f5f5; cursor:pointer;}
+    .accordion .panel-heading h4 {margin:0; padding:0 20px;}
+    .accordion .panel-heading i {position:absolute; right:20px; top:14px; font-size: 12px; color:#3289c7;}
+    .accordion .panel-body {margin:0 auto; max-width:650px;}
+    .accordion.panel-default > .panel-heading + .panel-collapse > .panel-body {border-top: 0;}
+    .accordion .panel-collapse {display:none;}
+    .accordion .collapse {visibility:visible;}
+</style>
+
+<div class="widget">
+	<div id="accordion{{use widget; widget.rows.uid_widget_list}}" class="panel-group">	
+        {{ 
+        	use uid;
+        	use table;
+        	use lg;
+	
+            listeid="";
+        	condlist="";
+        	
+        	content_res = sql(single:true,"SELECT * FROM sed_accordion WHERE actif='yes' AND uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list);
+        	
+            fields = {
+            "actif" : "yes",
+            "uid_widget":widget.rows.uid_widget_list
+            };
+        
+            for l sql("select * from sn_languages where active = 'yes'") do
+                fields{"titre_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                fields{"description_" .+ l.rows.lg} = "Texte " .+ l.rows.lg;
+            endfor
+
+        	if content_res.nbrows eq '0' then
+        	   verif_ctx = sql(single:true,"SELECT uid FROM sed_accordion WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	           if verif_ctx.nbrows == 0 then
+    	            void insert(table:"sed_accordion",fields:fields);
+	           endif
+            endif
+            for content sql("SELECT * FROM sed_accordion WHERE actif='yes' AND uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list) do 
+        }}
+        		<div class="accordion panel panel-default">
+        
+        			<div class="panel-heading panel-heading{{sn_nb1}}">
+        				<h4 class="panel-title">{{esc(filter: "html",content.rows{'titre_'.+lg.rows.lg}) }} <i class="glyphicon glyphicon-plus"></i></h4>
+        			</div>
+        
+        			<div style="height: auto;" class="panel-collapse collapse" id="collapse_{{content.rows.uid}}">
+        				<div class="panel-body">
+        					<p>
+        						{{content.rows{'description_'.+lg.rows.lg}; }}
+        					</p>
+        				</div>
+        			</div>
+        		</div>
+
+        {{
+        	    listeid= "#collapse_".+content.rows.uid .+condlist.+listeid;
+        	    condlist=",";
+        	endfor
+        }}		
+	</div>
+
+    <!-- JS -->
+    <script type="text/javascript">
+      $(document).ready(function($) {
+      
+      	// Close the last accordion tab when the document is ready - Patch for the parallax plugin
+    	setTimeout(function(){
+    	  $("#accordion{{widget.rows.uid_widget_list}} .panel-collapse").slideUp('fast');
+    	  $('#accordion{{widget.rows.uid_widget_list}} .glyphicon-minus').removeClass('glyphicon-minus').addClass('glyphicon-plus');
+    	}, 400);
+    	
+        $('#accordion{{widget.rows.uid_widget_list}}').find('.panel-heading').click(function(){
+          //Expand or collapse this panel
+          if($(this).find('.glyphicon').hasClass('glyphicon-plus')){
+                $('#accordion{{widget.rows.uid_widget_list}} .glyphicon').removeClass('glyphicon-minus');
+                $('#accordion{{widget.rows.uid_widget_list}} .glyphicon').addClass('glyphicon-plus');
+             }      
+       	  $(this).find('.glyphicon').toggleClass('glyphicon-plus glyphicon-minus');
+          $(this).next('.panel-collapse').slideToggle('fast');
+    
+          //Hide the other panels
+          $("#accordion{{widget.rows.uid_widget_list}} .panel-collapse").not($(this).next()).slideUp('fast');
+        });
+      });
+    </script>
+</div>

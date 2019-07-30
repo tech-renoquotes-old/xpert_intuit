@@ -1,0 +1,23 @@
+{{
+    /*
+        @title 			sr_client_form_email_contractor_invoice_c09
+        Description		Paid Invoice send to contractor
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    titre = "Mr";    
+    prenomEntrepreneur = "Marc-André";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

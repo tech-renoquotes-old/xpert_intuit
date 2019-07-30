@@ -1,0 +1,17 @@
+{{ 
+	use lg;			// Function publish use context lg
+	%include "/extenso/functions/sn_ct.snc"; 
+}}
+{{ ## <!-- 16/10/2014 ilya@sednove.com Version initiale --> }}
+<h2>{{sn_ct("Partenaires",lg:lg.rows.lg,publish:"/publish/ressources.sn",uids:ressource.rows.uid)}}</h2>
+<div id="partenaires" class="row">
+ <div class="sn_pencil edit" data-sn_link1="/extenso/extranet/partenaires/{{lg.rows.lg}}/index.snc" data-sn_class1="ct" data-sn_title1="Edit ct" style="position: relative;">
+	{{ for parten sql("select * from partenaires where actif = 'oui' order by sn_custom") do }}
+		<div class="col-xs-3">
+			<div class="img-wrap">
+				<img src="{{parten.rows.logo}}" alt="{{parten.rows['alt_' .+ lg.rows.lg]}}" title="{{parten.rows['alt_' .+ lg.rows.lg]}}" />
+			</div>
+		</div>
+	{{ endfor }}
+ </div>
+</div> <!-- End of id="partenaires" -->

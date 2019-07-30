@@ -1,0 +1,306 @@
+{{
+    /*
+     * MySQL Migration Script
+     * 
+     * Version: 1.4
+     * Author: Olivier St-Laurent
+     * 
+     * This script is used to migrate data from one database/table to another with a custom field mapping.
+     * It allows for a very complex custom logic if needed. 
+     * See Configurations below. 
+     */
+    
+    //%include "/extenso/functions/sn_pp.snc";
+    
+    /*
+    
+    // Debug mode is for testing purposes prior to executing the actual migration. 
+    // If set to true, it will not cause any change in any database.
+    debug_mode = true;
+    
+    // Whether to truncate existing destination table or not
+    truncate_dest = false;
+        // Rows to keep from destination table before truncating and to be re-inserted after the migration
+        rows_to_keep = [17, 7164, 7936, 8298, 8313]; // Empty array if not keeping anything
+        rows_to_keep_key = 'uid'; // Key to be used to fetch rows to keep from destination database
+        rows_to_keep_key_void = true; // Do not re-insert old key for rows to keep
+
+    // Connect to Databases
+    db_from = connect(
+            dbhost : "andromeda.sednove.ca", 
+            dbuser : "masterv3", 
+            dbpass : "*****", 
+            dbname : "masterv3"
+    );
+    db_dest = connect(
+            dbhost : "localhost", 
+            dbuser : "masterv4", 
+            dbpass : "*****", 
+            dbname : "masterv4"
+    );
+
+    // Table names
+    table_from = 'sn_login';
+    table_dest = 'users';
+
+    // Select query used to fetch data from source database. 
+    // You may use Joins with field aliases
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    // Field Mapping  'dest_fieldname':'from_expression' 
+    // from_expression can be one of 3 possibilities :
+    //      * The [From table] field name (field alias from the above query); 
+    //      * Any MySQL expression given that the string does not match simple field names format
+    //          Examples : 'importedDate' : "NOW()"     // Parenthesis don't match a field list
+    //                     'status' : "'imported'"      // Single quotes don't match a field list
+    //                     'modifiedby': 'null'         // NULL values will not match a field list
+    //      * An expression in this format : 'from_fields::expression'
+    //          Example : 'fullname' : "firstname,lastname::CONCAT('?', ' ', '?')"
+    //   Note: Field names in expressions can be any string if the custom_logic_value() function defines a specific behavior for it.
+    fields = {
+        // TIPS for creating a field list fast : 
+        // Run the following command for both databases (replace uppercase letters with corresponding values) : 
+        //      echo "describe TABLENAME" | mysql -hDBHOST -uDBUSER -pDBPASS DBNAME | sort
+        // Save each output to different files, then use a DIFF tool ( http://www.diff-online.com/ )
+        // Copy all lines that are the same in both files
+        // Use the following replace regex to transform output lines into a field list : 
+        //      ^[\s\d+-]*(\w[^\s]+)\s+([^\s]+)\s.*$
+        //      '$1' : '$1', // $2
+
+        'username' : 'username',
+        'password' : 'password',
+        'firstname' : 'firstname',
+        'lastname' : 'lastname'
+    };
+    
+    
+    // For more complex logic for certain fields, do it here and return the new value.
+    function custom_logic_value(srcRow, srcFieldName)
+        //ex.  if (srcFieldName eq 'somefieldname') then return SomethingElse; endif
+
+        // Check uploaded files (calculate size and check if exists)
+        uploads_check_files = false;
+        // File Uploads (Extenso V4 to V5)
+        fileUploadFieldPrefixRegex = "^sn_(dir|path|name|ct|size)_(.*)$";
+        if (srcFieldName =~ fileUploadFieldPrefixRegex) then
+            // Parse upload field information
+            fileUploadFieldType = resub(srcFieldName, fileUploadFieldPrefixRegex, "$1");
+            fileFieldName = resub(srcFieldName, fileUploadFieldPrefixRegex, "$2");
+            filePathFieldName = "sn_path_".+fileFieldName;
+            fileNameFieldName = "sn_name_".+fileFieldName;
+            uploadFilePath = srcRow{filePathFieldName} .+ srcRow{fileNameFieldName}; // Full file path
+            // For size :
+            if (fileUploadFieldType eq 'size') then
+                // If file does not exist, return size 0
+                if (!uploads_check_files || trim(uploadFilePath) eq '' || !-e uploadFilePath) then
+                    return '0';
+                endif
+                // return file size
+                return size(uploadFilePath);
+            endif
+            // For dir,path,name,ct : 
+            // If file does not exist, return empty string
+            if (trim(uploadFilePath) eq '' || (uploads_check_files && !-e uploadFilePath)) then
+                return '';
+            endif
+            // For dir, return full path from sn_path_* and sn_name_*
+            if (fileUploadFieldType eq 'dir') then
+                return uploadFilePath;
+            endif
+            // For path,name,ct : if file exists, return the value as is
+            return srcRow{srcFieldName};
+        endif
+        
+        // Default behavior returns the current value as is.
+        return srcRow{srcFieldName};
+    endf
+    
+    */
+    
+    "\n\nImporting into ".+table_dest.+"...\n";flush();
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Main Logic below - EDIT AT YOUR OWN RISKS - Contact author if you find any bug
+
+    // Prepare fields
+    fieldlist = []; // Store destination table fields in an ordered array
+    expressionfieldlist = []; // Store source table fields from expression in an ordered array
+    uid_index = -1;
+    fields_str = "";
+    values_str = "";
+    for field in fields do
+        // check if its a UID field
+        if (field.key eq 'uid') then
+            uid_index = length(expressionfieldlist);
+        endif
+        
+        // Add field to the ordered list
+        push(fieldlist, field.key);
+
+        // Field names
+        if (fields_str ne '') then
+            fields_str .+= ','; // Add commas (,) to separate field names
+        endif
+        fields_str .+= '`'.+ field.key .+'`';
+
+        // Values
+        if (values_str ne '') then
+            values_str .+= ',';
+        endif
+        
+        // Parse expression into values
+        expression = explode('::', field.value, 2);
+        expression_fields = expression[0];
+        // If expression matches field name(s)
+        if (expression_fields !~:i'^(null)?$' && expression_fields =~ "^([a-zA-Z_][a-zA-Z0-9_]*(,\s*[a-zA-Z_][a-zA-Z0-9_]*)*)$") then
+            for expression_field in splitre('value': expression_fields, 're': "(,\s*)") do
+                if (trim(expression_field) ne '') then
+                    // Add each (not empty) field name to an ordered list to be used for inserts to fetch values in the right order
+                    push(expressionfieldlist, expression_field);
+                    // If expression only contains field names, add '?' for each field in the values
+                    if (length(expression) == 1) then
+                        if (values_str ne '' && values_str !~ ",\s*$") then
+                            // Append commas (,) to separate values
+                            values_str .+= ',';
+                        endif
+                        // Add the '?' to be replaced later by the value in each individual insert for each column
+                        values_str .+= "'?'";
+                    endif
+                endif
+            endfor
+            // If expression contains an SQL expression (has a :: separator), append it to the values
+            if (length(expression) > 1) then
+                values_str .+= expression[1];
+            endif
+        else
+            // If expression does not match field name(s), append it directly to values
+            if (expression_fields eq '') then
+                // If expression is an empty string, add single quotes
+                expression_fields = "''";
+            endif
+            values_str .+= expression_fields;
+        endif
+        
+    endfor
+    
+    // Check for errors before executing anything
+    // Count arguments needed in values vs arguments passed
+    cnt_chr = count_chars(values_str);
+    nb_values_needed = (int)cnt_chr['?'];
+    if (nb_values_needed != length(expressionfieldlist)) then
+        "ERROR: Number of arguments do not match the number of '?'";
+        exit(0);
+    endif
+    
+    // Testing Select query for errors using a prepared statement
+    prepareResult = sql('db':db_from, noarg:true, error:false, 'PREPARE selectstatement1 FROM "' .+ select_query_from_src .+ '"');
+    if (prepareResult.error) then
+        "SQL SYNTAX ERROR IN SELECT QUERY : ";prepareResult.sqlerr;
+        exit(0);
+    endif
+    void sql('db':db_from, error:false, 'DEALLOCATE PREPARE selectstatement1');
+    
+    // Prepare SQL stetement for INSERTS
+    insertstatement = "INSERT INTO `".+table_dest.+"` (".+fields_str.+") VALUES (".+values_str.+")";
+    
+    // Testing Insert query for errors using a prepared statement
+    prepareStatement = resub(insertstatement, "'\?'", "?", "g");
+    prepareResult = sql('db':db_dest, noarg:true, error:false, 'PREPARE insertstatement1 FROM "' .+ prepareStatement .+ '"');
+    if (prepareResult.error) then
+        "SQL SYNTAX ERROR IN IMPORT QUERY : ";prepareResult.sqlerr;
+        exit(0);
+    endif
+    void sql('db':db_dest, error:false, 'DEALLOCATE PREPARE insertstatement1');
+    
+    // Truncate existing destination table
+    if (truncate_dest) then
+        // If we need to keep rows from existing destination table, save them in rows_to_keep_results
+        if (length(rows_to_keep) > 0) then
+            rows_to_keep_results = sql('db':db_dest, "SELECT * FROM `".+table_dest.+"` WHERE `".+rows_to_keep_key.+"` IN ('".+implode("','", rows_to_keep).+"')");
+        endif
+        
+        // Truncate destination table
+        if (!debug_mode) then
+            if (truncate_dest_keep_autoincrement) then
+                void sql('db':db_dest, "DELETE FROM `".+table_dest.+"` WHERE 1");
+            else
+                void sql('db':db_dest, "TRUNCATE `".+table_dest.+"`");
+            endif
+        endif
+    endif
+    
+    // List of primary keys - For use in debug mode for dry run
+    primary_keys_values = [];
+    
+    // Fetch all rows from source table
+    for rows sql('db':db_from, select_query_from_src) do
+        row = rows.rows;
+        block;
+            values = [];
+            use row;
+            use expressionfieldlist;
+            use db_dest;
+            use debug_mode;
+            use insertstatement;
+            use primary_keys_values;
+            use uid_index;
+
+            // Generate values from source row, compatible with destination table
+            for field in expressionfieldlist do
+                // Override value with user function for more complex logic if needed
+                value = custom_logic_value(row, field);
+                // Add value to values array
+                push(values, value);
+            endfor
+            
+            // Insert row in destination table or dryrun
+            if (!debug_mode) then
+                insert = sql('db':db_dest, insertstatement, values);
+            else
+                if (uid_index >= 0) then
+                    if (values[uid_index]) then
+                        // Test for duplicate primary keys
+                        if (contains(primary_keys_values, values[uid_index])) then
+                            "\n    *** WARNING: Duplicate primary key '".+values[uid_index].+"' ***\n\n";
+                        endif
+                        push(primary_keys_values, values[uid_index]);
+                    else
+                        // Test for primary key = NULL or 0 
+                        "\n    *** WARNING: a primary key is set to NULL or 0 ***\n\n";
+                    endif
+                endif
+            endif
+        endb;
+        // Clear memory for last block
+        pool_clear_virtual();
+    endfor
+    
+    // Re-insert rows to keep
+    if (truncate_dest && length(rows_to_keep) > 0 && length(rows_to_keep_results.rows) > 0) then
+        for row in rows_to_keep_results.rows do
+        
+            // Void the primary key (ex: generate a new one using the native auto-increment instead)
+            if (rows_to_keep_key_void) then
+                deletectx(row, (type(rows_to_keep_key_void) eq 'string') ? rows_to_keep_key_void : rows_to_keep_key);
+            endif
+            
+            // Delete columns that are automatically added by insert()
+            deletectx(row, 'sn_cdate', 'sn_mdate', 'sn_cuid', 'sn_muid');
+            
+            // Insert the row
+            if (!debug_mode) then
+                insert = insert('db':db_dest, 'table':table_dest, 'fields': row);
+            endif
+        endfor
+    endif
+    
+    // Output something when successful
+    "FINISHED!\n";
+    
+    // if (debug_mode) then
+    //     "\n<br>\n\n *DEBUG MODE* NOTHING HAS CHANGED \n\n";
+    // endif
+    
+    flush();
+}}

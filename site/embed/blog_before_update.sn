@@ -1,0 +1,15 @@
+//
+use extranet_user;
+//cgidata =cgidata();
+cgidata.last_user = extranet_user.uid;
+
+// p = sql(single:true, "SELECT user()as user, now() as date1,length(meta_desc) as len_meta_desc, TIMESTAMPDIFF(MINUTE, last_mod, now()) as age FROM sed_blog_article WHERE uid = '?'", cgidata.uid);
+
+// '<div class="alert alert-danger">Attention!!!  dernière modification il y a ='.+ p.rows.age    .+       ' minutes</div>';
+// '<div class="alert ">Longueur de la description était de:'.+   p.rows.len_meta_desc   .+'</div>';
+
+// void insert(table:'sr_debug', fields:{'description':'avant sr_test1','text':'article'});
+
+//cgidata.last_mod=p.rows.date1;
+//cgidata.last_mod_minutes = p.rows.age;
+//cgidata.used_by=  "";

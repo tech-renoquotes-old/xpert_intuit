@@ -1,0 +1,50 @@
+{{ 
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc"; 
+    %include "/extenso/functions/sn_pages.snc";     
+    use lg;         // Function publish use context lg	
+	use widget;
+	
+	data = sql(single:true,"SELECT * FROM ? where uid='1'", widget.rows.table_name);
+}}
+{{ if data.rows.lat ne "" && data.rows.lng ne "" then }}
+<div class="row">
+	<div class="col-md-12">					
+		<script src="http://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false&amp;language={{lg.rows.lg;}}"></script>
+		<script>
+			function initialize() {
+			  var myLatlng = new google.maps.LatLng({{data.rows.lat}}, {{data.rows.lng}});
+			  var mapOptions = {
+				zoom: 14,
+				scrollwheel: false,
+				center: myLatlng,
+				mapTypeId: google.maps.MapTypeId.ROADMAP
+			  }
+			  var map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+			  var marker = new google.maps.Marker({
+				  position: myLatlng,
+				  map: map,
+				  animation: google.maps.Animation.DROP,
+				  title: '{{data.rows["titre_" .+ lg.rows.lg]}}'
+			  });
+			  
+			  var contentString = '<div class="info-window-content"><h4>{{data.rows["titre_" .+ lg.rows.lg]}}</h4>'+
+								  '<p>{{data.rows["texte_" .+ lg.rows.lg]}}</p></div>';
+								  
+			  var infowindow = new google.maps.InfoWindow({
+				  content: contentString
+			  });
+			  
+			  google.maps.event.addListener(marker, 'click', function() {
+				infowindow.open(map,marker);
+			  });
+			}
+
+			google.maps.event.addDomListener(window, 'load', initialize);
+		</script>
+		<div id="map" style="min-height:200px;"></div>
+	</div>
+</div>
+{{ endif }}

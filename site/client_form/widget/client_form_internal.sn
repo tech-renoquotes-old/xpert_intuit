@@ -1,0 +1,271 @@
+{{
+    /*
+        @title client_form
+        Description: This widget is the form used to register a new client.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-11
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    
+  //  fichier  https://soumissionrenovation.ca/                    sn_uploads/favicon_2.ico
+}}
+<style>
+    #upload_files>div{
+        position:relative;
+    }
+    #upload_files > div > input {
+        margin:3px 0px;
+    }
+    #upload_files > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+</style>
+\{{
+    use page;
+    cookies = cookies();
+    request = request();
+
+if cookies.soumissionrenovation == undefined then
+    if (request.args) then     // test si contient cre
+       // if strpos(request.args,"cre") >= 0 then 
+        	date = datetime();
+        	adwords = request.args;
+        	cookie = { 'url' : request.hostname .+ request.uri, 'adwords' : adwords, 'date' : date };
+        	expirytime=datetime(extended:true,op:"+3h",format:"%Sednove2");
+        	cookies(name:"soumissionrenovation",value:cookie,path:"/",expiry:expirytime);
+        //endif
+    endif
+endif
+if cookies.first_visited == undefined then
+	expiry=datetime(extended:true,op:"+3h",format:"%Sednove2");
+	cookies(name:"first_visited",value:request.hostname .+ request.uri,path:"/",expiry:expiry);
+endif
+}}
+<div class="well custom-well">
+    <form class="form-horizontal" enctype="multipart/form-data" action="{{pages('client_additional_information', lg.rows.lg, table:'pages')}}" id="add_client" name="add_client" method="POST">
+        <fieldset class="form-group">
+            <label for="name" class="control-label col-md-4">
+                {{sn_ct("client_form Votre nom", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+            </label>
+            <div class="col-md-8">
+                <input class="form-control" type="text" name="name" id="name" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid name')}}" data-validator-error="name"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="phone" class="control-label col-md-4">
+                {{sn_ct("client_form Votre téléphone", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+            </label>
+            <div class="col-md-8">
+                <input class="form-control" type="text" name="phone" id="phone" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid phone')}}" data-validator-error="phone"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label class="control-label col-md-4" for="email">
+                {{sn_ct("client_form Votre courriel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+            </label>
+            <div class="col-md-8">
+                <input class="form-control" type="text" name="email" id="email" value="">
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="address" class="control-label col-md-4">
+                {{sn_ct("client_form Votre adresse", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+            </label>
+            <div class="col-md-8">
+                <input class="form-control" type="text" name="address" id="address" value="" onFocus="geolocate()" placeholder="">
+                <input type="hidden" class="field" id="street_number" name="street_number" disabled="true"></input>
+                <input type="hidden" class="field" id="route" name="route" disabled="true"></input>
+                <input type="hidden" class="field" id="locality" name="locality" disabled="true"></input>
+                <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" disabled="true"></input>
+                <input type="hidden" class="field" id="postal_code" name="postal_code" disabled="true"></input>
+                <input type="hidden" class="field" id="country" name="country" disabled="true"></input>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid address')}}" data-validator-error="address"></span>
+            </div>
+                
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label for="description" class="control-label col-md-4"
+                {{sn_ct("Votre projet", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+            </label>
+            <div class="col-md-8">
+                <textarea class="form-control" name="description" placeholder='{{sn_ct(edit:false,"client_form ex. : Description des travaux à faire dans vos mots, délai de réalisation, budget, etc.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}' rows="5"></textarea>    
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid description')}}" data-validator-error="description"></span>
+            </div>
+        </fieldset>
+    
+        <fieldset class="form-group">
+            <label class="control-label col-md-4">{{sn_ct("client_form Joindre un fichier", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</label>
+            <div class="col-md-8" style="margin-top:3px;">
+                <div id="upload_files"></div>
+            </div>
+        </fieldset>
+        
+        <input name="url" type="hidden" value="\{{page.url}}">
+        <input name="first_visited" type="hidden" value="\{{cookies.first_visited}}">
+        
+        <div class="form-group">
+            <div class="col-md-offset-4 col-md-8">
+                <button id="submit_add_client" type="submit" class="btn btn-primary">
+                    {{sn_ct(edit:false,"client_form Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                </button>
+            </div>
+        </div>
+        
+
+        <script>
+            function addUploadFile() {
+                return $('<div><input type="file" name="file"><a><i class="fa"></i></a></div>').prependTo('#upload_files');
+            }
+            
+            $('#upload_files').on('click', "div:not(:first-child) > a", function(){
+                $(this).parent().remove();
+                $('#upload_files > span').remove();
+            });
+            $('#upload_files').on('click', "div:first-child > a", function(){
+                addUploadFile();
+                if ($('#upload_files').find('div > input').length >= 5) {
+                    $('#upload_files').prepend('<span>');
+                }
+            });
+            addUploadFile();
+        </script>
+    </form>
+</div>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator_v2.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_client');
+}}
+<script>
+    // separate files 
+    $('form[name=add_client]').submit(function(){
+        var file_nb = 0;
+        $('#upload_files').find('div > input').each(function(){
+            file_nb++;
+            $(this).attr("name", $(this).attr("name") + file_nb);
+        });
+    });
+</script>
+
+
+
+
+
+
+<!-- Google map api for addresses -->
+<script>
+// This example displays an address form, using the autocomplete feature
+// of the Google Places API to help users fill in the information.
+
+var placeSearch, autocomplete, autocomplete_slim;
+var componentForm = {
+  street_number: 'short_name',
+  route: 'long_name',
+  locality: 'long_name',
+  administrative_area_level_1: 'short_name',
+  country: 'long_name',
+  postal_code: 'short_name'
+};
+
+function initAutocomplete() {
+  // Create the autocomplete object, restricting the search to geographical
+  // location types.
+  autocomplete = new google.maps.places.Autocomplete(
+      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      {types: ['geocode']});
+      
+  // When the user selects an address from the dropdown, populate the address
+  // fields in the form.
+  autocomplete.addListener('place_changed', fillInAddress);
+  autocomplete.name="normal";
+
+
+  // For the second form in the article_detail page (slim)
+  if (document.getElementById('address_slim')){
+      autocomplete_slim = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+          {types: ['geocode']});
+      autocomplete_slim.addListener('place_changed', fillInAddress);
+      autocomplete_slim.name="slim";
+    }
+}
+
+// [START region_fillform]
+function fillInAddress() {
+  // Get the place details from the autocomplete object.
+  var place = this.getPlace();
+  index = (this.name === "normal") ? 0 : 1 ;
+    
+  for (var component in componentForm) {
+    document.getElementsByName(component)[index].value = '';
+    document.getElementsByName(component)[index].disabled = false;
+  }
+
+  // Get each component of the address from the place details
+  // and fill the corresponding field on the form.
+  for (var i = 0; i < place.address_components.length; i++) {
+    var addressType = place.address_components[i].types[0];
+    if (componentForm[addressType]) {
+      var val = place.address_components[i][componentForm[addressType]];
+      document.getElementsByName(addressType)[index].value = val;
+    }
+  }
+}
+// [END region_fillform]
+
+// [START region_geolocation]
+// Bias the autocomplete object to the user's geographical location,
+// as supplied by the browser's 'navigator.geolocation' object.
+    function geolocate() {
+      if (navigator.geolocation) {
+    //     navigator.geolocation.getCurrentPosition(function(position) {
+    //       var geolocation = {
+    //         lat: position.coords.latitude,
+    //         lng: position.coords.longitude
+    //       };
+    //       var circle = new google.maps.Circle({
+    //         center: geolocation,
+    //         radius: position.coords.accuracy
+    //       });
+    //      autocomplete.setBounds(circle.getBounds());
+    //     });
+       }
+    }
+// [END region_geolocation] 
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8"async defer></script>

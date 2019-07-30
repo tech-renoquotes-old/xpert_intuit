@@ -1,0 +1,157 @@
+<html>
+    <head>
+        <meta name="robots" content="noindex" />
+    </head>
+    <header>
+        <title></title>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    </header>
+    <body>
+        
+                <style>
+#contractors {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#contractors td, #customers th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#contractors tr:nth-child(even){background-color: #f2f2f2;}
+
+#contractors tr:hover {background-color: #ddd;}
+
+#contractors th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #4CAF50;
+    color: white;
+}
+
+</style>
+
+{{
+
+    /*
+        @title ajax_change_photo_title
+        Description: Change the title of a photo in the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+
+
+\{{
+    cgidata = cgidata();
+    if(cgidata.token eq 'pawbkvv7ab3zonnvztpea91i1ch7vprwdorbt404') then
+        if(cgidata.min_time) then
+            min_lenght = cgidata.min_time;
+        else
+            min_lenght = 9;
+        endif
+        if(cgidata.max_time) then
+            max_lenght = cgidata.max_time;
+        else
+            max_lenght = 37;
+        endif
+
+        xml = "<table id='contractors'>";
+        xml .+= "<tr><td>Name</td><td>ID</td><td>Nbr</td><td>AvgP</td><td>Tot</td><td>Avg</td><td>Ent</td></tr>"; 
+            
+        rep_cost = 1; //cost to manage leads
+        cost_of_sales = 0.6; //cost of goods
+        ponderation_recent = 0.6; //how much is the period between 38 days and 9 days old affect the report
+        ponderation_old = 0.4; //how much is the period between 365 days and 38 days old affect the report
+        
+        query = "SELECT og.nom, 
+        a.CountOfuid as nb_projects365, 
+        a2.CountOfuid as nb_projects38, 
+        og.Campaign_id, 
+        ifnull(b.sumoflead_price,0) as revenu365, 
+        ifnull(b2.sumoflead_price,0) as revenu38, 
+        ifnull(Round(ifnull((b.SumOflead_price/a.countOfuid-".+rep_cost.+")*".+cost_of_sales.+"*if(b2.sumoflead_price is null,.9,".+ponderation_old.+"),0)+
+        ifnull((b2.SumOflead_price/a2.countOfuid-".+rep_cost.+")*".+cost_of_sales.+"*if(b.SumOflead_price is null,1,".+ponderation_recent.+"),0),2),0) AS target, 
+        ifnull(Round(ifnull(b.CountOfuid/c.count*if(b2.sumoflead_price is null,.9,".+ponderation_old.+"),0)
+        +ifnull(b2.CountOfuid/c2.count*if(b.SumOflead_price is null,1,".+ponderation_recent.+"),0),1),0) AS nb_ent_moyen
+        FROM tbl_campaign_id_adwords og
+        LEFT JOIN
+        (SELECT a.Nom, Count(*) AS CountOfuid, a.Campaign_id, a.idtbl_campaign_id_adwords
+        FROM tbl_campaign_id_adwords a
+        INNER JOIN sr_project p ON a.Campaign_id = p.adwords_campaign
+        WHERE (p.sn_cdate BETWEEN DATE_SUB(NOW(), INTERVAL 365 DAY) AND DATE_SUB(NOW(), INTERVAL 37 DAY))
+        GROUP BY a.Nom, a.Campaign_id, a.idtbl_campaign_id_adwords) AS a ON a.idtbl_campaign_id_adwords = og.idtbl_campaign_id_adwords
+        LEFT JOIN
+        (SELECT a.Nom, Count(*) AS CountOfuid, Sum(pc.lead_price) AS SumOflead_price, a.idtbl_campaign_id_adwords
+        FROM tbl_campaign_id_adwords a 
+        INNER JOIN (sr_project p LEFT JOIN sr_project_contractor pc ON p.uid = pc.uid_project) ON a.Campaign_id = p.adwords_campaign
+        WHERE (((p.active_date)>= DATE_SUB(NOW(), INTERVAL 365 DAY) AND (p.active_date)<=DATE_SUB(NOW(), INTERVAL 37 DAY)) AND ((pc.accepted)='yes'))
+        GROUP BY a.Nom, a.idtbl_campaign_id_adwords) as b
+        ON og.idtbl_campaign_id_adwords = b.idtbl_campaign_id_adwords
+        LEFT JOIN 
+        (SELECT Count(*) as count, a.idtbl_campaign_id_adwords, a.nom, a.campaign_id
+        FROM tbl_campaign_id_adwords a
+        INNER JOIN sr_project p ON a.Campaign_id = p.adwords_campaign
+        WHERE (p.sn_cdate BETWEEN DATE_SUB(NOW(), INTERVAL 365 DAY) AND DATE_SUB(NOW(), INTERVAL 37 DAY))
+        AND p.active_date > 0
+        GROUP BY a.Nom, a.Campaign_id, a.idtbl_campaign_id_adwords) AS c
+        ON og.idtbl_campaign_id_adwords = c.idtbl_campaign_id_adwords
+        LEFT JOIN
+        (SELECT a.Nom, Count(*) AS CountOfuid, a.Campaign_id, a.idtbl_campaign_id_adwords
+        FROM tbl_campaign_id_adwords a
+        INNER JOIN sr_project p ON a.Campaign_id = p.adwords_campaign
+        WHERE (p.sn_cdate BETWEEN DATE_SUB(NOW(), INTERVAL 37 DAY) AND DATE_SUB(NOW(), INTERVAL 9 DAY))
+        GROUP BY a.Nom, a.Campaign_id, a.idtbl_campaign_id_adwords) AS a2
+        ON og.idtbl_campaign_id_adwords = a2.idtbl_campaign_id_adwords
+        LEFT JOIN
+        (SELECT a.Nom, Count(*) AS CountOfuid, Sum(pc.lead_price) AS SumOflead_price, a.idtbl_campaign_id_adwords
+        FROM tbl_campaign_id_adwords a 
+        INNER JOIN (sr_project p LEFT JOIN sr_project_contractor pc ON p.uid = pc.uid_project) ON a.Campaign_id = p.adwords_campaign
+        WHERE (((p.active_date)>= DATE_SUB(NOW(), INTERVAL 37 DAY) AND (p.active_date)<=DATE_SUB(NOW(), INTERVAL 10 DAY)) AND ((pc.accepted)='yes'))
+        GROUP BY a.Nom, a.idtbl_campaign_id_adwords) as b2
+        ON og.idtbl_campaign_id_adwords = b2.idtbl_campaign_id_adwords
+        LEFT JOIN 
+        (SELECT Count(*) as count, a.idtbl_campaign_id_adwords, a.nom, a.campaign_id
+        FROM tbl_campaign_id_adwords a
+        INNER JOIN sr_project p ON a.Campaign_id = p.adwords_campaign
+        WHERE (p.sn_cdate BETWEEN DATE_SUB(NOW(), INTERVAL 37 DAY) AND DATE_SUB(NOW(), INTERVAL 9 DAY))
+        AND p.active_date > 0
+        GROUP BY a.Nom, a.Campaign_id, a.idtbl_campaign_id_adwords) AS c2
+        ON og.idtbl_campaign_id_adwords = c2.idtbl_campaign_id_adwords
+        ORDER BY og.nom ASC ";
+        
+        nlines = 0;
+        
+        // for each language
+        for data sql(query) do
+            xml .+= "<tr><td>" .+  data.rows.nom .+ "</td>";
+            xml .+= "<td>" .+  data.rows.Campaign_id .+ "</td>";
+            xml .+= "<td>" .+ data.rows.nb_projects38 .+ "</td>";
+            xml .+= "<td>0</td>";
+            xml .+= "<td>" .+ data.rows.revenu38 .+ "</td>";
+            xml .+= "<td>" .+ data.rows.target .+ "</td>";
+            xml .+= "<td>" .+ data.rows.nb_ent_moyen .+ "</td>";
+            xml .+= "</tr>";
+                
+            nlines++;
+        endfor
+            
+            xml .+= "</table>";
+   endif     
+}}  
+
+\{{xml}}
+</body>
+</html>

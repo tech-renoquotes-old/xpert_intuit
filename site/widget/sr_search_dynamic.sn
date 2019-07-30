@@ -1,0 +1,255 @@
+{{
+    use width;
+    use center;
+    use main_search;
+    use color;
+}}
+
+    <style>
+        .search input{
+            {{if main_search then}}
+            padding-left:25px;
+            height:50px;
+            border-radius:25px;
+            {{else}}
+            padding-left:25px;
+            border-radius:3px 0 0 3px;
+            {{endif}}
+            
+        }
+        .search form{
+            float:none;
+        }
+        .search .search_icon{
+            font:16px FontAwesome;
+            font-weight:bold;
+            content: "\F002";
+            color:#fff;
+            position:absolute;
+            z-index:1;
+            border-radius:20px;
+            background-color:#f9b233;
+            width:50px;
+            height:40px;
+            padding-right:40px;
+            padding-left:24px;
+            padding-top:12px;
+            margin-left:-70px;
+            margin-top:5px;
+            display:inline-block;
+        }
+        .search-results .item{
+            font-size:15px;
+            padding:5px 0;
+            color:#777;
+            list-style:none;
+        }
+        .search-results .item:hover{
+            background-color:#D3D3D3;
+        }
+        .search-results .category{
+            font-size:15px;
+            padding:10px 0;
+            color:#777;
+            list-style:none;
+            font-weight:bold;
+        }
+        .search-results{
+            padding:20px;
+            padding-top:0px;
+            width:100%;
+            max-width:600px;
+            position:absolute;
+            z-index:99;
+            box-shadow:0 3px 13px 0 rgba(60,60,60,.4);
+            border-radius:3px;
+            background-color:#fff;
+            color:#777;
+            cursor:default;
+            box-sizing:border-box;
+            float:none;
+        }
+    </style>
+    
+    <div class="search" id="search">
+        <form action="" id="search_click" method="post" autocomplete="off" onkeypress="return event.keyCode != 13;" style="width:100%; max-width: {{if width then width; else}}300px{{endif}}; {{if center then}}margin:0 auto;{{endif}}" >
+            <input class="form-control" style="display:inline-block" type="text" id="suggestion" placeholder='{{sn_ct(edit:false, "Essayer \"Agence Web\"")}}' ><div onclick="setTimeout(search,250)" class="search_icon fas fa-search"></div>
+        </form>
+        
+        <div id="result" style="width:100%; max-width: 600px; text-align:left; margin: 0 auto"><ul class='search-results' id='ajax_loader' style='display:none;'><img height="50px" src='/sn_uploads/loading_gif.gif'></ul></div>
+    </div>
+    
+<script>
+function search_this(search_value) {
+    document.getElementById("suggestion").value = search_value;
+    debounce_it();
+}
+
+var debounce_it = debounce(function() {
+	var suggestion = $('#suggestion').val();
+    if (suggestion.length > 3) {
+        isActive = true;
+        $.ajax({
+    		type: "post",
+    		data:{
+    			"suggest": 1,
+    			"suggestion": suggestion,
+    			"lang":"{{lg.rows.lg}}",
+    			"from": window.location.href
+    		},
+    		url: "{{ sn_pages('ajax_search_results', lg.rows.lg, table:'ressources')}}",
+            beforeSend: function(){
+                $('#result').html("<ul class='search-results' id='ajax_loader' style='display:none;'><img height='50px' src='/sn_uploads/loading_gif.gif'></ul>");
+                $('#ajax_loader').show();
+            },
+            complete: function(){
+                $('#ajax_loader').hide();
+            },
+    		success:function(data, statusText, xhr){
+    		    //add services
+    		    var service = xhr.getResponseHeader('X-service');
+    		    var service = JSON.parse(service);
+    		    
+    		    $('#result').html("");
+    		    html = "<ul class='search-results'>";
+    		    
+    		    if (service.length > 0) {
+    		        html += "<li class='category'>{{sn_ct(edit:false,"Cherchez-vous un entrepreneur pour")}}</li>";
+                    service.forEach(function(value,key){
+                        html += "<li class='item'><a target='_blank' onclick='good_result(\"" + value.url.decode() + "\", \"" + suggestion + "\", \"service\")' href='" + value.url.decode() + "'>" + value.title.decode() + "</a></li>";
+                    });
+    		    } else {
+    		        html += "<li class='category'>{{sn_ct(edit:false,'Vous cherchez des entrepreneurs en')}} - " +suggestion + " - {{sn_ct(edit:false,'? Si oui, <a href=\'#sr_client_form\'>cliquez ici</a></li>')}}";
+    		    }
+
+                //add blog articles
+    		    var blog = xhr.getResponseHeader('X-blog');
+    		    var blog = JSON.parse(blog);
+    		    
+    		    
+    		    $('#result').html("");
+    		    if (blog.length > 0) {
+    		        html += "<li class='category'>{{sn_ct(edit:false,"Cherchez-vous à lire un article sur")}}</li>";
+                    blog.forEach(function(value,key){
+                        html += "<li class='item'><a target='_blank' onclick='good_result(\"" + value.url.decode() + "\", \"" + suggestion + "\", \"blog\")' href='" + value.url.decode() + "'>" + value.title.decode() + "</a></li>";
+                    });
+    		    }
+    		    
+    		   
+    		    if (blog.length <= 0 && service.length <= 0 && contractor.length <= 0) {
+    		        html += "{{sn_ct(edit:false,"Aucun résultat trouvé. Ceci peut être dû à des termes trop précis ou encore parce que vous faites une recherche en anglais.")}}"
+    		    }
+                
+                html += "</ul>"
+                $('#result').append(html);
+    		}
+        });
+    } else {
+        $('#result').html("<ul class='search-results' id='ajax_loader' style='display:none;'><img height='50px' src='/sn_uploads/loading_gif.gif'></ul>");
+    }
+}, 500);
+
+document.getElementById("suggestion").addEventListener("keyup", debounce_it);
+document.getElementById("suggestion").addEventListener("keypress", debounce_it);
+
+function good_result(url, search, type) {
+    $.ajax({
+    		type: "post",
+    		data:{
+    			"good_result": 1,
+    			"url": url,
+    			"search":search,
+    			"from": window.location.href,
+    			"type": type,
+    			"lang": "{{lg.rows.lg}}"
+    		},
+    		url: "{{ sn_pages('ajax_search_results', lg.rows.lg, table:'ressources')}}",
+    		success:function(data){
+		    }
+    })
+}
+
+
+String.prototype.encode = function(encoding) {
+           var result = "";
+
+           var s = this.replace(/\r\n/g, "\n");
+
+           for(var index = 0; index < s.length; index++) {
+               var c = s.charCodeAt(index);
+
+               if(c < 128) {
+                   result += String.fromCharCode(c);
+               }
+               else if((c > 127) && (c < 2048)) {
+                   result += String.fromCharCode((c >> 6) | 192);
+                   result += String.fromCharCode((c & 63) | 128);
+               }
+               else {
+                   result += String.fromCharCode((c >> 12) | 224);
+                   result += String.fromCharCode(((c >> 6) & 63) | 128);
+                   result += String.fromCharCode((c & 63) | 128);
+               }
+           }
+
+           return result;
+       };
+
+
+       String.prototype.decode = function(encoding) {
+           var result = "";
+
+           var index = 0;
+           var c = c1 = c2 = 0;
+
+           while(index < this.length) {
+               c = this.charCodeAt(index);
+
+               if(c < 128) {
+                   result += String.fromCharCode(c);
+                   index++;
+               }
+               else if((c > 191) && (c < 224)) {
+                   c2 = this.charCodeAt(index + 1);
+                   result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                   index += 2;
+               }
+               else {
+                   c2 = this.charCodeAt(index + 1);
+                   c3 = this.charCodeAt(index + 2);
+                   result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                   index += 3;
+               }
+           }
+
+           return result;
+       };
+       
+function debounce(func, wait, immediate) {
+	var timeout;
+	return function() {
+		var context = this, args = arguments;
+		var later = function() {
+			timeout = null;
+			if (!immediate) func.apply(context, args);
+		};
+		var callNow = immediate && !timeout;
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+		if (callNow) func.apply(context, args);
+	};
+};
+</script>
+
+<script>
+    var specifiedElement = document.getElementById('search');
+    document.addEventListener('click', function(event) {
+        var isClickInside = specifiedElement.contains(event.target);
+        if (isClickInside) {
+          document.getElementById("result").style.display="block";
+        }
+        else {
+          document.getElementById("result").style.display="none";
+        }
+    });
+</script>

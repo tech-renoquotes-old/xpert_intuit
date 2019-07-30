@@ -1,0 +1,50 @@
+<style type="text/css">
+.wdg_ittl{
+	width:100%;
+    margin-top:20px;
+    margin-bottom:30px;
+}
+.sc_image {
+    max-width: 100%;
+    margin-bottom: 15px;
+}
+.sc_image img {
+    margin-bottom: 5px;
+    max-width: 100%;
+}
+</style>
+
+
+
+{{
+	use widget;
+    use lg;
+	wcontent = sql(single:true,"SELECT * FROM widget_image_title_text_link where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+
+    
+<div class="wdg_ittl">
+  {{ if wcontent.rows.image ne "" then }}
+      <div class="sc_image">
+          <img src="{{wcontent.rows.image;}}">
+      </div>
+  {{ endif }}
+
+  {{if wcontent.rows{'titre_'.+ lg.rows.lg} ne "" then }} 
+      <h2>{{wcontent.rows{'titre_'.+ lg.rows.lg};}}</h2>
+  {{ endif }}
+
+  {{wcontent.rows{'texte_'.+ lg.rows.lg};}}
+
+  {{if wcontent.rows.type_url ne "" then }}
+      {{if wcontent.rows.type_url eq "interne" then }}
+      		{{	intlink = sql(single:true,"SELECT * FROM pages where uid = '?'", wcontent.rows.url_interne);}}
+          	<a href="{{intlink.rows{"folder_" .+ lg.rows.lg};if intlink.rows{"page_" .+ lg.rows.lg} ne "index" then intlink.rows{"page_" .+ lg.rows.lg}; endif}}" class="btn btn-primary">
+            	{{wcontent.rows{'lien_texte_'.+ lg.rows.lg};}}
+            </a>
+      {{ endif }}
+      {{if wcontent.rows.type_url eq "externe" then }}
+          <a href="{{wcontent.rows{'url_externe_'.+ lg.rows.lg};}}" class="btn btn-primary">{{wcontent.rows{'lien_texte_'.+ lg.rows.lg};}}</a>
+      {{ endif }}
+  {{ endif }}
+</div>

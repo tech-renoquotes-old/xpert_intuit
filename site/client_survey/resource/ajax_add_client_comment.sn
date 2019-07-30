@@ -1,0 +1,46 @@
+{{
+    /*
+        @title ajax_add_client_comment
+        Description: Updates a contractor project, adds a client_comment.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-04
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+\{{
+    cgidata = cgidata();  
+    
+    if cgidata.uid_pc ne "" && cgidata.comment ne "" then
+        res =  update(
+            tables:"sr_project_contractor",
+            uid: cgidata.uid_pc,
+            fields:{
+                "client_comment": cgidata.comment
+            }
+        );
+    endif
+    
+    	
+    if cgidata.uid_pc ne "" && (cgidata.comment_sr ne "" || cgidata.note_sr ne "") then
+        res =  update(
+            tables:"sr_project",
+            uid: cgidata.uid_project,
+            fields:{
+                "comment_satisfaction": cgidata.comment_sr,
+                "client_satisfaction": cgidata.note_sr 
+            }
+        );
+        automail::notifyAdminClientSatisfactionSite(cgidata.uid_project);
+    endif
+   
+    cgidata;
+}}

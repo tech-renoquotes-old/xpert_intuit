@@ -1,0 +1,151 @@
+{{
+    /*
+        @title contractor_form_confirmation
+        Description: Confirmation page after registration
+        
+        @author Michel Jodoin
+        
+        @version 1.0 2018-01-10
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+}}
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_form/include/validator.sn";
+    
+    cgidata = cgidata();
+    time = time();
+    id= '';
+    ids = '';
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+    exists = contractor::contractor_exists(cgidata.company_name);
+
+    
+    // validate server side
+if (validator.validate(data:cgidata) && (exists != true)) then
+        //Already    Existing record ?
+
+        // add test of phone or email if no id 
+        if (cgidata.id_tbl_appels_entrepreneurs) then   //Existing
+            // Change Status on tbl_appels_entrepreneurs so that the contractor can stop receiving reminders
+            void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 5 WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id_tbl_appels_entrepreneurs);
+            void insert(table:'sr_log', fields:{'type':'contractor form','uid_project_contractor':id_appels_entrepreneurs,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for id existing ','value':''});
+        else   //search for existing telephone or email
+/*            tel = resub(cgidata.contact_phone,"-| ","$1","g");// remove -  and spaces  
+            for contractor   sql("SELECT t.idtbl_appels_entrepreneurs as id, t.telephone, t.courriel
+                FROM tbl_appels_entrepreneurs t
+                WHERE  REPLACE(REPLACE(t.telephone,'-',''),' ','') = '?' 
+                    OR  t.courriel = '?' 
+                ",tel,cgidata.contact_email) 
+            do
+                void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 5 WHERE id_tbl_appels_entrepreneurs = '?' ", contractor.rows.id);
+                //Update and record
+                void insert(table:'sr_log', fields:{'type':'contractor form','uid_project_contractor':contractor.rows.id,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for tel or email existing ','value':tel});
+                id = contractors.rows.id; 
+                ids = ids .+ contractor.rows.id .+ " ";
+            endfor
+*/        endif
+
+
+         // insert contractor
+        contractor = insert(
+            table:"sr_contractor",
+            fields:{
+                "contact_firstname":cgidata.contact_name,
+                "contact_phone":cgidata.contact_phone,
+                "contact_email":cgidata.contact_email,
+                "contact_title":cgidata.contact_title,
+                "company_name":cgidata.company_name,
+                "company_phone":cgidata.company_phone,
+                "contact_lg":'{{lg.rows.lg}}',
+                "address":cgidata.address,
+                "ne": cgidata.company_number,
+                "rbq":cgidata.rbq,
+                "insurance_company":cgidata.insurance_company,
+                "insurance_number":cgidata.insurance_number,
+                "uid_territory":cgidata.territory,
+                "comments":cgidata.service,
+                "id_tbl_appels_entrepreneurs": cgidata.id_tbl_appels_entrepreneurs,
+                "can_accept_projects": 'yes',
+                "token": hash(algo:"sha512", time.secs .+ time.usecs .+ random(min:1, max:9999999)),
+                "credit_threshold": configs.rows.initial_credit_threshold,
+                "visible":"yes",
+                "languages":3,
+                "email":cgidata.contact_email,
+                "email_accounting":cgidata.contact_email,
+                "promo_code":cgidata.promo,
+                "show_profile":"yes"
+            }
+        );
+        
+        //add all project types by default
+        for project_type sql("SELECT * FROM sr_project_type")
+        do
+        void insert(
+            table:"sr_project_type_contractor",
+            fields:{
+                "uid_project_type": project_type.rows.uid,
+                "uid_contractor": contractor.uid
+            }
+        );
+        endfor
+
+            // if google map plugin was used, insert address
+            if cgidata.street_number ne "" && cgidata.locality ne "" && cgidata.route ne "" then
+                territory = insert(
+                    table:"sr_address",
+                    fields:{
+                        "uid_contractor":contractor.uid,
+                        "city":cgidata.locality,
+                        "street_no":cgidata.street_number,
+                        "street":cgidata.route,
+                        "zip":cgidata.postal_code,
+                        "province":cgidata.administrative_area_level_1,
+                        "country":cgidata.country
+                    }
+                );
+            endif
+            
+            // for each territory entered, insert territory
+            for t in explode(",", cgidata.territory) do
+                void insert(
+                    table: "sr_contractor_territory",
+                    fields:{
+                        "uid_territory":t,
+                        "uid_contractor":contractor.uid
+                    }
+                );
+            endfor
+            
+        void sql("UPDATE sr_contractor SET sent_welcome_email = 'no' WHERE uid = '?'", contractor.uid);
+        contractor::activateContractor(contractor.uid);
+        
+        automail::notifyAdminContractorInscription(contractor.uid);
+        void insert(table:'sr_log', fields:{'type':'contractor formTest','uid_project_contractor':id_appels_entrepreneurs,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for id existing ','value':''});    
+    
+        if cgidata.promo ne "" then
+            referral = sql(single:true, "SELECT uid FROM sr_contractor WHERE token = '?'", cgidata.promo);
+            if (referral.nbrows == 1) then
+                void sql("UPDATE sr_contractor SET uid_contractor_referring = '?' WHERE uid = '?'", referral.rows.uid, contractor.uid);
+                automail::contractorReferaContractor(referral.rows.uid, contractor.uid);
+            endif
+        endif
+        }}
+    <div id="confirmation"  style="display:none">
+    <h2>
+         {{sn_ct(edit:true,"contractor_form Votre demande a bien été reçue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </h2>
+    <p>
+         {{sn_ct(edit:true,"contractor_form Vous recevrez un courriel pour confirmer votre inscription", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </p>
+</div>
+\{{
+endif
+}}

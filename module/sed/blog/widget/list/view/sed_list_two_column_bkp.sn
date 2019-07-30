@@ -1,0 +1,244 @@
+<link rel="stylesheet" href="/css/blog.css">
+{{
+    /*
+     * @title Widget blog_article_detail
+     * @Version 1.0 2016-05-10
+     * @author madupuis@sednove.ca
+     * 
+     * List of articles in the blog
+     */ 
+     
+     
+    // Image sizes
+    first_image_size = "930x600"; 
+    other_image_size = "450x300"; 
+    meta_content=sql(single:true,"select * from sn_configs");
+    // include the list of articles
+    %include "/module/sed/blog/widget/list/include/sed_articles.sn"
+   
+}}
+
+\{{
+    // Get the first article and remove it from the articles
+    //first_article = shift(articles.rows);
+
+    // display the first article
+    if first_article then
+}}
+    <div class="two_columns_container text-center" itemscope itemtype="http://schema.org/Article">
+        <meta  itemprop="author" content=" \{{first_article.firstname}} \{{first_article.lastname}}"/>
+        <meta  itemprop="dateModified" content=" \{{first_article.sn_mdate}} "/>
+        <meta  itemprop="datePublished" content=" \{{first_article.date_article}}"/>
+        <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
+            <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+                <meta itemprop="url" content="{{meta_content.rows.url_prod}}/{{meta_content.rows{'logo_'.+lg.rows.lg};}}">
+            </div> 
+            <meta itemprop="name" content="{{meta_content.rows{'DC_title_'.+lg.rows.lg};}}">    
+        </div>
+
+        
+        <div class="mb-20" itemprop="image" itemscope itemtype="http://schema.org/ImageObject">
+            \{{if first_article.featured_image ne "" then}}
+                 <a href="\{{first_article.url}}" ><img itemprop="url" src="\{{first_article.featured_image}}?size={{first_image_size}}&crop" class="img-responsive"></a>
+            \{{else}}
+                 <a href="\{{first_article.url}}" ><img itemprop="url" src="\{{blog_config.rows.first_article_default_image}}?size={{first_image_size}}&crop" class="img-responsive"></a>
+            \{{endif}}    
+            <meta itemprop="height" content="600">
+            <meta itemprop="width" content="930">
+        </div>
+    
+        <!--
+        <div style="position:relative">
+            \{{ucfirst(datetime(lg:"{{lg.rows.lg}}",date:first_article.date_article, format:"%d %B %Y"))}} 
+            \{{if first_article.allow_comments eq "yes" then}}
+                <a href="\{{first_article.url}}#comment_box" class="noblue comment_bubble">
+                    <span class="fa-stack s_col-sm-right" style="color:#D4D4D4;">
+                        <i class="fa fa-comment fa-stack-2x" aria-hidden="true"></i>
+                        <span class="fa-stack-1x fa-stack-text masonry_comment_count">\{{first_article.comment_count}}</span>
+                    </span>
+                </a>      
+            \{{endif}}             
+        </div>
+        <div>
+            -
+        </div>
+        <div class="blog_brand">
+            \{{first_article.surtitle}}
+        </div>
+        -->
+        <div class="blog_title" >
+            <a href="\{{first_article.url}}" itemprop="mainEntityOfPage"><h2 itemprop="headline">\{{first_article.title}}</h2></a>
+        </div>             
+        <div class="mt-10 blog_category " itemprop="articleSection">
+                \{{ for category sql("SELECT uid,name FROM sed_blog_category WHERE find_in_set(uid, '?') AND language='?'",first_article.category, "{{lg.rows.lg}}") do}}
+                    <a class="noblue"  href="javascript:void(0)" onclick="$('#category').val('\{{category.rows.uid}}'); $('#sed_blog_form').submit();">#\{{category.rows.name}}</a>    
+                \{{ endfor }}
+        </div>   
+        <div class="two_column_brief_first blog_brief_text" itemprop="text">
+            \{{  
+                if first_article.brief_text ne '' then 
+                    first_article.brief_text;
+                else
+                    text_plain=esc(filter:"cleanhtml",first_article.full_text);
+                    text_part=strsub(start:0,finish:150,endblank:true,text_plain) ;
+                    text2=text_part.resub("<strong>","","gi");
+                    text_final= text2.resub("</strong>","","gi");
+                    text_final; 
+                endif
+            }}
+            <a href="\{{first_article.url}}" class="read_more" >{{sn_ct("Read more",edit:false)}}</a>
+        </div> 
+        <!--
+        <div class="two_column_author_first">
+            <i class="fa fa-pencil s_col-sm-left" aria-hidden="true"></i>
+            <a class="noblue" href="javascript:void(0)" onclick="$('#author').val('\{{first_article.author}}'); $('#sed_blog_form').submit();">\{{first_article.firstname}} \{{first_article.lastname}}</a>
+        </div>
+        -->
+        
+        <span style="display:none" itemprop="datePublished"> \{{first_article.date_article}}</span>
+        <div style="display:none"  itemprop="interactionStatistic" itemscope itemtype="http://schema.org/InteractionCounter">
+            <meta itemprop="interactionType" content="http://schema.org/CommentAction"/>
+            <meta itemprop="userInteractionCount" content="\{{first_article.comment_count}}" /> 
+        </div>
+    </div>
+    \{{endif}}
+    <!-- end display first article -->
+    
+    <div class="row article_stack" >
+        \{{
+    // display all other articles
+    for article in articles.rows do
+        categories = sql(single:true, "SELECT GROUP_CONCAT(name ORDER BY uid) as name FROM sed_blog_category WHERE find_in_set(uid, '?') AND language='?'",article.category, "{{lg.rows.lg}}"); 
+     
+}}
+        
+        <div class="col-md-6 text-center" itemscope itemtype="http://schema.org/Article">
+        <meta itemprop="author" content=" \{{article.firstname}} \{{article.lastname}}"/>
+        <meta  itemprop="datePublished" content=" \{{article.date_article}}"/>
+        <meta  itemprop="dateModified" content=" \{{article.sn_mdate}} "/>
+        <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
+            <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+            <meta itemprop="url" content="{{meta_content.rows.url_prod}}/{{meta_content.rows{'logo_'.+lg.rows.lg};}}">
+            </div> 
+        <meta itemprop="name" content="{{meta_content.rows{'DC_title_'.+lg.rows.lg};}}">    
+        </div>
+            <div class="mb-20" itemprop="image" itemscope itemtype="http://schema.org/ImageObject">
+                \{{if article.featured_image ne "" then}}
+                     <a href="\{{article.url}}" ><img  itemprop="url" src="\{{article.featured_image}}?size={{other_image_size}}&crop" class="img-responsive"></a>
+                \{{else}}
+                     <a href="\{{article.url}}" ><img  itemprop="url" src="\{{blog_config.rows.article_default_image}}?size={{other_image_size}}&crop" class="img-responsive"></a>
+                \{{endif}}  
+                <meta itemprop="height" content="600">
+                <meta itemprop="width" content="930">
+            </div>
+      
+            <!--
+            <div style="position:relative">
+                \{{ucfirst(datetime(lg:"{{lg.rows.lg}}",date:article.date_article, format:"%d %B %Y"))}}
+                \{{if article.allow_comments eq "yes" then}}
+                <a href="\{{article.url}}#comment_box" class="noblue comment_bubble">
+                    <span class="fa-stack s_col-sm-right" style="color:#D4D4D4;">
+                        <i class="fa fa-comment fa-stack-2x" aria-hidden="true"></i>
+                        <span class="fa-stack-1x fa-stack-text masonry_comment_count">\{{article.comment_count}}</span>
+                    </span>
+                </a>     
+                \{{endif}}                          
+            </div>
+            <div>
+                -
+            </div>
+            <div class="blog_brand mt-20">
+                \{{article.surtitle}}
+            </div>
+            -->
+            <div class="blog_title" >
+                <a href="\{{article.url}}" itemprop="mainEntityOfPage"><h2 itemprop="headline">\{{article.title}}</h2></a>
+            </div>             
+
+          <!--  <div class="blog_title">
+                <h2   itemprop="headline" >\{{article.title}} </h2>
+            </div>
+            mod bd add link
+          -->  
+            
+            <div class="mb-20 blog_category " itemprop="articleSection" >
+                    \{{ for category sql("SELECT uid, url, name FROM sed_blog_category WHERE find_in_set(uid, '?') AND language='?'",article.category, "{{lg.rows.lg}}") do}}
+                        <a class="noblue"  href="javascript:void(0)" onclick="location.replace('\{{category.rows.url}}');">#\{{category.rows.name}}</a>    
+                    \{{ endfor }}
+            </div>   
+            <div class="two_column_brief_other blog_brief_text" itemprop="text">
+                \{{ 
+                if article.brief_text ne '' then 
+                    article.brief_text;
+                else
+                    text_plain=esc(filter:"cleanhtml",article.full_text);
+                    text_part=strsub(start:0,finish:150,endblank:true,text_plain) ;
+                    text2=text_part.resub("<strong>","","gi");
+                    text_final= text2.resub("</strong>","","gi");
+                    text_final; "...";
+                endif
+                }}
+                <a href="\{{article.url}}" class="read_more" itemprop="mainEntityOfPage">{{sn_ct("Read more",edit:false)}}</a>
+            </div> 
+            <!--
+            <div class="two_column_author_other">
+                <i class="fa fa-pencil s_col-sm-left" aria-hidden="true"></i>
+                <a class="noblue" href="javascript:void(0)" onclick="$('#author').val('\{{article.author}}'); $('#sed_blog_form').submit();">\{{article.firstname}} \{{article.lastname}}</a>
+            </div>
+            -->
+            <div style="display:none" itemprop="interactionStatistic" itemscope itemtype="http://schema.org/InteractionCounter">
+            <meta itemprop="interactionType" content="http://schema.org/CommentAction"/>
+            <meta itemprop="userInteractionCount" content="\{{article.comment_count}}" />     
+        </div>
+        </div>    
+        
+\{{ endfor }}
+    </div>
+
+<!-- end display all other article -->
+
+<!-- Footer / Pagination -->
+<div class="row no-margins">
+    \{{if cgidata.orderby eq "DESC" || cgidata.orderby eq "" then}}
+        \{{if page_index > 1 then}}
+            <div class="s_col-sm-right mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index-1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                    {{sn_ct("blog SHOW NEWER POSTS",edit:true)}}
+                </a>
+            </div>
+        \{{endif}}
+        \{{if page_index < ceil((float)article_count.nbrows/items_per_page) then}}
+            <div class="s_col-sm-left mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index+1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                    {{sn_ct("blog SHOW OLDER POSTS",edit:true)}}
+                </a>
+            </div>
+        \{{endif}}
+    \{{else}}
+            \{{if page_index > 1 then}}
+            <div class="s_col-sm-right mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index-1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                   {{sn_ct("blog SHOW OLDER POSTS",edit:true)}}
+                </a>
+            </div>
+        \{{endif}}
+        \{{if page_index < ceil((float)article_count.nbrows/items_per_page) then}}
+            <div class="s_col-sm-left mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index+1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                    {{sn_ct("blog SHOW NEWER POSTS",edit:true)}}
+                </a>
+            </div>
+        \{{endif}}
+    \{{endif}}
+</div>
+<!-- end footer / pagination -->
+
+<!-- SCRIPTS -->
+
+
+<!-- Script for add this -->
+{{/*hub_config.rows.code_addthis*/}}
+
+
+
+<!-- end scripts-->

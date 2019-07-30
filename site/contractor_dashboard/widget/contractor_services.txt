@@ -1,0 +1,137 @@
+<html>
+<head>
+<link rel="stylesheet" href="http://necolas.github.com/normalize.css/2.0.1/normalize.css">
+<link rel="stylesheet" href="style.css" />
+<script src="http://code.jquery.com/jquery-1.8.2.js"></script>
+<script src="http://code.jquery.com/ui/1.9.1/jquery-ui.js"></script></head>
+<body>
+<style>
+
+
+.all_services{
+	width: 300px;
+	max-width: 500px;
+	max-height: 300px;
+	float:left;
+	overflow:scroll;
+}
+
+.approved_services{
+	width: 300px;
+	max-width: 500px;
+	max-height: 300px;
+	float:left;
+	overflow:scroll;
+}
+
+.pending_services{
+	width: 300px;
+	max-width: 500px;
+	max-height: 300px;
+	float:left;
+	overflow:scroll;
+}
+
+
+
+.service_group{
+	width:80%;
+	height:auto;
+}
+
+.subservices{
+	width:80%;
+	max-width:200px;
+	height:auto;
+}
+
+.subservices span{
+	padding-right:10px;
+}
+
+
+.subservices:hover{
+	background-color:#FC3;
+}
+
+li.selected {
+	background-color:#FC3;
+}
+
+.psubservices{
+	width:80%;
+	max-width:200px;
+	height:auto;
+}
+
+.psubservices span{
+	padding-right:10px;
+}
+
+
+.psubservices:hover{
+	background-color:#FC3;
+}
+
+
+
+</style>
+
+<div class="all_services">
+ <h4>Amenagement Paysager</h4>
+        <ul id="services" class='services'>
+            <li id="sub_1" class="subservices">Item 1</li>
+            <li id="sub_2" class="subservices">Item 2</li>
+            <li id="sub_3" class="subservices">Item 3</li>
+            <li id="sub_4" class="subservices">Item 4</li>
+            <li id="sub_5" class="subservices">Item 5</li>
+        </ul>
+</div>
+
+<div class="pending_services">
+<h4>Amenagement Paysager</h4>
+    <ul id="pendings" class='pendings'>
+        <li id="psub_1" class="psubservices">Item 1</li>
+        <li id="psub_2" class="psubservices">Item 2</li>
+        <li id="psub_3" class="psubservices">Item 3</li>
+    </ul>
+
+</div>
+
+
+</body>
+</html>
+<script>
+$(function() {
+	
+	
+        $( "#pendings" ).sortable({
+            revert: true,
+		});
+		
+		$("ul").on('click', 'li', function (e) {
+			if (e.ctrlKey || e.metaKey) {
+				$(this).toggleClass("selected");
+			} else {
+				$(this).addClass("selected").siblings().removeClass('selected');
+			}
+		});
+				
+		$("li").draggable({
+            connectToSortable: "#pendings",
+            helper: "clone",
+            revert: "invalid",
+			start: function() {
+				var el1 = $(this).attr('id');
+				var el2 = $('#pendings');
+				
+				if(el2.children('#p' + el1).attr('id') == 'p' + el1){
+					return false;
+				}
+			}
+		});
+		
+		
+        $( "ul, li" ).disableSelection();
+});
+</script>

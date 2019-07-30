@@ -1,0 +1,101 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    use lg;
+}}
+\{{
+    site = sql(single:true,"select url_prod from sn_configs"); 
+    site = site.rows.url_prod;
+}}
+</td>
+                        </tr>
+                         <tr>
+                        	<td bgcolor="#f4f4f4" valign="top" style="padding-top:20px ;padding-bottom:20px;background:#f4f4f4;text-align:center;font-size:14px; color:#616361;" width="600">
+                        		<center>
+                        			<div style="width:500px;">
+                        				<span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+	                        				<img src="https://xpertsource.com/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png" alt='{{sn_ct("standard_email_template SoumissionRenovations.ca", edit:false)}}' width="200"/>
+	                        			</span>
+                        			</div>
+                        		</center>	
+                        	</td>
+                        </tr>
+                        <tr>
+                        	<td bgcolor="#f4f4f4" valign="top" style="padding-top:20px ;padding-bottom:20px;background:#f4f4f4;text-align:center;font-size:14px; color:#616361;" width="600">
+                        		<center>
+                        			<br>
+                        			<br>
+                        			<span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+                        				<span class="font-size:11px;">
+                        					© 2018 {{sn_ct("standard_email_template SoumissionRenovations.ca Tous droits réservés.")}}
+                        				</span>		
+                        			</span>
+                        		</center>	
+                        	</td>
+                        </tr>
+                        <tr>
+                        	<td bgcolor="#f4f4f4" valign="top" style="padding-top:20px ;padding-bottom:20px;background:#f4f4f4;text-align:center;font-size:14px; color:#616361;" width="600">
+                        		<table cellpadding="0" cellspacing="0" width="600">
+                        			<tr>
+                        				<td style="border-top:6px #dfdfdf solid;padding:15px 15px 0 20px;color:#669eb9;text-align:left;" width="300">
+                        					<span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+			                        		<span style="font-weight: bold;color:#00517e;font-size:16px;">{{sn_ct("standard_email_template Pour nous joindre")}}</span>
+			                        		<br><br>
+			                        		<span>6750 De l'Esplanade #240,<br>
+											{{sn_ct("Montréal",edit:false)}}, {{sn_ct("Québec",edit:false)}} H2V 4M1<br>
+											Canada<br>
+											<a href="tel:{{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}" style="text-decoration:none;">
+											    {{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}
+											    </a>
+											</span>
+											</span>	
+                        				</td>
+                        				<td style="border-top:6px #dfdfdf solid;padding:15px 20px 0 0;text-align:right;" width="300">
+                        					<!--<div style="border-bottom:2px #f4f4f4 solid;">-->
+                        					<!--	<a href="{{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}" style="text-decoration:none;">-->
+	                        				<!--		<img width="250" src="\{{site}}/sn_uploads/email/btn_tel.png" alt=""/>-->
+	                        				<!--	</a>-->
+	                        				<!--	<br>-->
+                        					<!--</div>-->
+                        					<div style="border-bottom:2px #f4f4f4 solid;">
+                        						<a href="\{{site}}{{pages("accueil", lg.rows.lg,table:"pages")}}#sr_client_form" style="text-decoration:none;">
+	                        						<img width="250" src="\{{site}}/sn_uploads/email/btn_quote-{{lg.rows.lg}}.png" alt=""/>
+	                        					</a>
+	                        					<br>
+                        					</div>
+                        					<!--<div style="border-bottom:2px #f4f4f4 solid;">-->
+                        					<!--	<a href="\{{site}}{{pages("accueil_contractor", lg.rows.lg,table:"pages")}}" style="text-decoration:none;">-->
+	                        				<!--		<img width="250" src="\{{site}}/sn_uploads/email/btn_business-{{lg.rows.lg}}.png" alt=""/>-->
+	                        				<!--	</a>-->
+	                        				<!--	<br>-->
+                        					<!--</div>-->
+                        				</td>
+                        			</tr>
+                        		</table>
+                        	</td>
+                        </tr>
+                        <tr>
+                        	<td bgcolor="#f4f4f4" valign="top" style="background:#f4f4f4;text-align:center;font-size:14px; color:#616361;text-align:left;padding:20px;border-top:6px #dfdfdf solid;" width="600">
+                        		<table cellpadding="0" cellspacing="0">
+                        			<tr>
+                        				<td width="300" style="text-align:right;">
+                        					<span style="font-family:Open Sans, Arial, Helvetica, sans-serif;"><span style="font-style:12px;">{{sn_ct("standard_email_template Suivez-nous")}} :</span></span>&nbsp;&nbsp;
+                        				</td>
+                        				<td width="300">
+                        					<a href="https://www.facebook.com/xpertsource/"><img src="\{{site}}/sn_uploads/email/btn_fb.png" alt="Facebook" style="height:22px;" height="22"/></a>&nbsp;
+			                        		<!--<a href="{{sn_ct("email_footer Google Plus",edit:false)}}"><img src="\{{site}}/sn_uploads/email/btn_gplus.png" alt="Google plus" style="height:22px;" height="22"/></a>&nbsp;-->
+			                        		<a href="https://www.linkedin.com/company/xpert-source/"><img src="\{{site}}/sn_uploads/email/btn_linkedin.png" alt="Linkedin" style="height:22px;" height="22"/></a>&nbsp;
+			                        		<!--<a href="https://www.youtube.com/channel/UCDGPAHJV4fwc1HX-u25I7PQ"><img src="\{{site}}/sn_uploads/email/btn_yt.png" alt="Youtube" style="height:22px;" height="22"/></a>&nbsp;-->
+			                        		<!--<a href="https://www.pinterest.com/soumissionrenov/"><img src="\{{site}}/sn_uploads/email/btn_pint.png" alt="Pinterest" style="height:22px;" height="22"/></a>-->
+                        				</td>
+                        			</tr>
+                        		</table>	
+                        	</td>
+                        </tr>
+                    </table>
+                
+            </td>
+        </tr>
+    </table>
+        
+    </body>
+</html>

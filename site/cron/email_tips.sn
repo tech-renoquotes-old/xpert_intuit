@@ -1,0 +1,48 @@
+{{%include '/site/package/all.sn';}}
+
+\{{
+
+//1st tip after 5 days
+contractors = sql("SELECT contact_email, contact_lg FROM sr_contractor WHERE (stop_emails_tip is null OR stop_emails_tip <> 'yes') AND date(sn_cdate) = DATE(NOW() - INTERVAL 5 DAY) AND active = 'yes' AND verified = 'yes'");
+
+for c in contractors.rows do
+	automail::contractor_tip1(c.contact_email, c.contact_lg);
+endfor
+
+//2nd tip after 9 days
+contractors = sql("SELECT contact_email, contact_lg FROM sr_contractor WHERE (stop_emails_tip is null OR stop_emails_tip <> 'yes') AND date(sn_cdate) = DATE(NOW() - INTERVAL 9 DAY) AND active = 'yes' AND verified = 'yes'");
+
+for c in contractors.rows do
+	automail::contractor_tip2(c.contact_email, c.contact_lg);
+endfor
+
+//3rd tip after 14 days
+contractors = sql("SELECT contact_email, contact_lg FROM sr_contractor WHERE (stop_emails_tip is null OR stop_emails_tip <> 'yes') AND date(sn_cdate) = DATE(NOW() - INTERVAL 14 DAY) AND active = 'yes' AND verified = 'yes'");
+
+for c in contractors.rows do
+	automail::contractor_tip3(c.contact_email, c.contact_lg);
+endfor
+
+//4th tip after 18 days
+contractors = sql("SELECT contact_email, contact_lg FROM sr_contractor WHERE (stop_emails_tip is null OR stop_emails_tip <> 'yes') AND date(sn_cdate) = DATE(NOW() - INTERVAL 18 DAY) AND active = 'yes' AND verified = 'yes'");
+
+for c in contractors.rows do
+	automail::contractor_tip4(c.contact_email, c.contact_lg);
+endfor
+
+//5th tip after 22 days
+contractors = sql("SELECT contact_email, contact_lg FROM sr_contractor WHERE (stop_emails_tip is null OR stop_emails_tip <> 'yes') AND date(sn_cdate) = DATE(NOW() - INTERVAL 22 DAY) AND active = 'yes' AND verified = 'yes'");
+
+for c in contractors.rows do
+	automail::contractor_tip5(c.contact_email, c.contact_lg);
+endfor
+
+//6th tip after 26 days
+contractors = sql("SELECT contact_email, contact_lg FROM sr_contractor WHERE (stop_emails_tip is null OR stop_emails_tip <> 'yes') AND date(sn_cdate) = DATE(NOW() - INTERVAL 26 DAY) AND active = 'yes' AND verified = 'yes'");
+
+for c in contractors.rows do
+	automail::contractor_tip6(c.contact_email, c.contact_lg);
+endfor
+
+}}
+            

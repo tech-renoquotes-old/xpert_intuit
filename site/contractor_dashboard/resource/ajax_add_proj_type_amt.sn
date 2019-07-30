@@ -1,0 +1,52 @@
+{{
+    /*
+        @title ajax_add_proj_type_amt  based onajax_add_project
+        Description: Links a project to a contractor.
+        
+        @author bbduc@yahoo.com
+        
+        @version 1.0 2016-11-07
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    cgidata = cgidata();  
+    connection = connection();
+ 
+    use extranet_user;
+    project_types = sql("SELECT  uid, name_{{lg.rows.lg}} as project_type_name
+        FROM    sr_project_type        
+        WHERE  active='yes'
+    ");
+
+        time = time();
+        token = hash(algo:"sha512", cgidata.uid .+ extranet_user.uid .+ time.secs .+ time.usecs .+ random(min:1, max:999999));
+        contractor = update(
+            uid:extranet_user.uid,
+            tables:"sr_contractor",
+            fields:{
+                 "amount_min":cgidata.amount_min,
+                 "amount_max":cgidata.amount_max
+            }
+        );
+
+    // keep only the one checked 
+    void sql("DELETE  from sr_project_type_contractor WHERE  uid_contractor = '?' ", extranet_user.uid);
+
+    for i in explode(",", cgidata.project_type_uid) do
+        if i >0 then
+            void sql("INSERT INTO sr_project_type_contractor  (uid_contractor, uid_project_type) VALUES ('?','?')", extranet_user.uid, i );
+        endif
+    endfor
+
+    headers_out("X-success", "1");
+    
+ 
+}}

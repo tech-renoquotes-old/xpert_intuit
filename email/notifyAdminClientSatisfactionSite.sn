@@ -1,0 +1,25 @@
+{{
+    /*
+        @title 			notifyAdminClientSatisfactionSite
+        Description		Sends an email to the administrator when a client rate site
+        
+        @author 		bbduc@yahoo.com
+        
+		@version		1.0 2016-11-17
+    */
+    
+    use lg;
+    use email;  
+}}
+
+\{{
+    use project_info;
+    uid_project = project_info.uid_project;
+    client_satisfaction = project_info.client_satisfaction;
+    comment_satisfaction = project_info.comment_satisfaction;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

@@ -1,0 +1,24 @@
+
+{{
+    cgidata = cgidata();  
+    connection = connection();
+    
+    use extranet_user;
+    
+    if cgidata.uid_project ne "" then
+        exists = sql("SELECT uid FROM sr_project_contractor WHERE uid_contractor='?' AND uid_project='?'", extranet_user.uid, cgidata.uid_project);
+        if exists.nbrows > 0 then
+            void sql("
+                UPDATE sr_project_contractor SET hidden='yes' WHERE uid_contractor='?' AND uid_project='?'", extranet_user.uid, cgidata.uid_project
+            );
+        else
+            void sql("  
+                INSERT INTO sr_project_contractor 
+                (uid_contractor, uid_project, hidden, ip)
+                VALUE('?','?','?','?')"
+                , extranet_user.uid, cgidata.uid_project, 'yes', connection.client_ip
+            );
+        endif
+    endif
+
+}}

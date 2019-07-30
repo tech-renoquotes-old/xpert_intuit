@@ -1,0 +1,242 @@
+{{
+    /*
+        @title client_form
+        Description: This widget is the form used to register additional and non-obligatory from a client.
+        
+        @author louis.jhonny@sednove.com
+        
+        @version 1.0 2017-04-18
+        @version 1.1 2017-09-26 : send a free quote to contractor.
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    %include "/site/package/all.sn";
+    %include "/extenso/functions/sessions.snc"; 
+}}
+
+
+<!-- confirmation header -->
+\{{
+       
+        //Cherche les adwors dans les cookies
+        cookies = cookies();
+        cookie_data = unstringnify(cookies.soumissionrenovation);
+    
+    
+    //organize sn_uploads directory
+    current_month = datetime(format:"%m");
+    current_day = datetime(format:"%d");
+    current_year = datetime(format:"%Y");
+    
+    destination = "/sn_uploads/projects/prj_" .+ current_year .+ "_" .+ current_month .+ "/";
+    
+    if !(-e destination) then
+        mkdir(owner:"rwx",group:"rwx",other:"x",destination);
+    endif
+    
+    if-e destination then
+        a = stat(destination);
+    else
+        destination = "/sn_uploads";
+    endif
+    //finish organizing
+    
+    cgidata = cgidata(disable_upload:false, directory:destination);  
+    connection = connection();
+    
+    
+    // include the validator for client_form
+    %include "/site/client_form/include/validator_slim.sn";
+
+
+    void insert(table:'sr_debug', fields:{'description':'ajax_client_form before validation - from ' .+ cookies.first_visited,'text':cgidata});
+
+    // validate server side
+    if (validator.validate(data:cgidata) || cgidata.freeQuote eq 'yes' || cgidata.affiliate eq 'yes') then
+    headers_out("X-debug", cgidata);
+    
+    void insert(table:'sr_debug', fields:{'description':'ajax_client_form after validation - from ' .+ cookies.first_visited,'text':cgidata});
+        
+        // check if an email has been submitted for this client
+        if(cgidata.email.length() <= 0) then
+            client = insert(
+            table:"sr_client",
+            fields:{
+            "firstname":cgidata.name,
+            "address":cgidata.address,
+            "lang":"{{lg.rows.lg}}",
+            "languages": '3',
+            "to_qualify": 'yes',
+            'ip': connection.client_ip
+            });
+            
+        else
+        
+        // Check for existing client in the database and merge it. 
+            existing = sql(single:true,"SELECT c.uid FROM sr_client c INNER JOIN sr_address a ON a.uid_client = c.uid 
+                            WHERE c.email = '?' OR (a.phone1 = '?' AND a.zip = '?')", cgidata.email, cgidata.phone, cgidata.postal_code);
+                            
+            if (existing.nbrows > 0) then
+                client = existing.rows;
+
+                u = update(tables: "sr_client", fields: {
+                    'address': cgidata.address,
+                    'email' : cgidata.email,
+                    'to_qualify': 'yes',
+                    'ip': connection.client_ip
+                }, uid: client.uid);
+                
+                
+            else
+                client = insert(
+                    table:"sr_client",
+                    fields:{
+                        "firstname":cgidata.name,
+                        "email":cgidata.email,
+                        "address":cgidata.address,
+                        "lang":"{{lg.rows.lg}}",
+                        "languages": '3',
+                        "to_qualify": 'yes',
+                        'ip': connection.client_ip
+                    }
+                );
+            endif
+        endif
+        
+        if(cgidata.ext1 ne '') then
+            phone1 = cgidata.phone .+ ' ext:' .+ cgidata.ext1;
+        else
+            phone1 = cgidata.phone;
+        endif
+        
+        if(cgidata.ext2 ne '') then
+            phone2 = cgidata.phone2 .+ ' ext:' .+ cgidata.ext2;
+        else
+            phone2 = cgidata.phone2;
+        endif
+        
+        cityinfo = project::zipToCity(cgidata.postal_code, "{{lg.rows.lg}}");
+        cuid = cityinfo.rows.uid_city;
+        cname = (cityinfo.rows.name ne "")?cityinfo.rows.name:cgidata.locality;
+        
+        address = insert(
+            table:"sr_address",
+            fields:{
+                "uid_client":client.uid,
+                "city":cname,
+                "uid_city":cuid,
+                "street_no":cgidata.street_number,
+                "street":cgidata.route,
+                "zip":cgidata.postal_code,
+                "province":cgidata.administrative_area_level_1,
+                "country":cgidata.country,
+                "phone1": phone1,
+                "phone2": phone2
+            }
+        );
+
+        adwords = parse_query_string(cookie_data.adwords); 
+        first_page_visited = cookie_data.url;
+        first_visited = cookies.first_visited;// not necessarely with adword
+        
+        src = unstringnify(cookies());
+        campaignID = (src.source ne "")? src.source: adwords.campaignid;
+        if cgidata.source ne '' then
+            campaignID = cgidata.source;
+        endif
+        
+        void insert(table:'sr_debug', fields:{'description':'test_cre  photo arg','text':request.args});
+
+        configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+        site = configs.rows.url_prod;
+        
+        //v1.02
+        description = cgidata.description;
+        description = html2text(description);//empêche script de passer
+        adwords_data = (cookies_data.source ne "")? cookies_data.source: adwords.campaignid;
+
+            project = insert(
+                table:"sr_project",
+                fields:{
+                    "uid_client":client.uid, 
+                    "description":description,
+                    "file1": (cgidata.file1.sn_fullname ne '') ? site.+cgidata.file1.sn_fullname : '' ,
+                    "link1": '<a href="'.+site.+cgidata.file1.sn_fullname.+'"  target="_blank">'.+cgidata.file1.sn_fullname.+'</a>',
+                    "file2": (cgidata.file2.sn_fullname ne '') ? site.+cgidata.file2.sn_fullname : '' ,
+                    "link2": '<a href="'.+site.+cgidata.file2.sn_fullname.+'"  target="_blank">'.+cgidata.file2.sn_fullname.+'</a>',
+                    "file3": (cgidata.file3.sn_fullname ne '') ? site.+cgidata.file3.sn_fullname : '' ,
+                    "link3": '<a href="'.+site.+cgidata.file3.sn_fullname.+'"  target="_blank">'.+cgidata.file3.sn_fullname.+'</a>',
+                    "file4": (cgidata.file4.sn_fullname ne '') ? site.+cgidata.file4.sn_fullname : '' ,
+                    "link4": '<a href="'.+site.+cgidata.file4.sn_fullname.+'"  target="_blank">'.+cgidata.file4.sn_fullname.+'</a>',
+                    "file5": (cgidata.file5.sn_fullname ne '') ? site.+cgidata.file5.sn_fullname : '' ,
+                    "link5": '<a href="'.+site.+cgidata.file5.sn_fullname.+'"  target="_blank">'.+cgidata.file5.sn_fullname.+'</a>',
+                    "uid_address":address.uid,
+                    "max_quotes": configs.rows.number_of_quotes,
+                    "status": "new",
+                    "adwords_pos": adwords.pos,
+                    "adwords_net": adwords.net,
+                    "adwords_ad": adwords.ad,
+                    "adwords_kw": adwords.kw,
+                    "adwords_url": first_page_visited,
+                    "adwords_region": adwords.region,
+                    "adwords_adgroup": adwords.adgroupid,
+                    "adwords_campaign": campaignID,
+                    "adwords_cre": adwords.cre,
+                    "due_date": "Flexible",
+                    "first_url": first_visited,
+                    "ip": connection.client_ip,
+                    "navigator": cgidata.browser
+                }
+            );
+        
+        headers_out("X-debug",project);
+        //rename the uploaded files
+        client_file = destination .+ 'prj' .+ project.uid;
+        //update each renamed file into the project table
+        for (nf=1;nf<=5;nf++) do
+            oldFile = cgidata{'file' .+ nf}.sn_fullname;
+            ext = substr(oldFile, strrpos(oldFile, '.') + 1, length(oldFile));
+            
+            newFile = client_file .+ "_f" .+ nf .+ '.' .+ ext;
+            
+            if (oldFile ne "") then
+                mv(oldFile, newFile);
+                void sql("UPDATE sr_project SET file? = '?' WHERE uid = '?'",nf, newFile, project.uid);
+            endif
+        endfor
+        
+        
+        if(cgidata.freeQuote eq 'yes') then
+            project::connectFreeProjectContractor(project.uid, cgidata.cuid);
+            if(cgidata.more_quotes ne "on") then
+                void update(tables:'sr_project', fields: {
+                    'status': 'free'
+                }, uid: project.uid);
+            else
+                automail::quoteRequestToClient(project.uid);
+                //automail::quoteRequestToAdmin(project.uid);
+            endif
+        else
+            automail::quoteRequestToClient(project.uid);
+            //automail::quoteRequestToAdmin(project.uid);
+        endif   
+
+        void insert(table:'sr_debug', fields:{'description':'Client confirmation uid='.+' ','text':project.uid.+ '  first_url='.+first_visited});
+        if cgidata.affiliate eq 'yes' then
+            website = sql(single:true, "SELECT website FROM sr_affiliate WHERE api_key = '?'", cgidata.api_key);
+            headers_out("Access-Control-Allow-Origin", website.rows.website, 'X-res', md5(project.uid .+ md5('234502')));
+        else
+            headers_out('X-res', md5(project.uid .+ md5('234502')));
+        endif
+    else
+        validator.errors;
+        stop();
+    endif
+    
+}}

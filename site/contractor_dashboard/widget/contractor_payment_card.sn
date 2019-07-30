@@ -1,0 +1,444 @@
+{{
+    /*
+        @title contractor_payment_card
+        Description: This widget use the card information to make the payment.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    col_label = ' col-md-4';
+    col_input = 'col-md-8';
+    
+    %include "/site/package/all.sn";
+}}
+\{{
+    use hide_payment;
+    // if !hide_payment then
+}}
+<style>
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+
+    .wtooltip {
+        display: none;
+        min-width: 200px;
+
+    }
+
+.ui-widget.info-dialog {
+    font-family: Verdana,Arial,sans-serif;
+    font-size: .8em;
+}
+
+.ui-widget-content.info-dialog {
+    background: #F9F9F9;
+    border: 1px solid #2b84c1;
+    color: #222222;
+}
+
+.ui-dialog.info-dialog {
+    outline: 0 none;
+    padding: 0 !important;
+    position: absolute;
+}
+
+.ui-dialog.info-dialog .ui-dialog-content {
+    background: none repeat scroll 0 0 transparent;
+    border: 0 none;
+    overflow: auto;
+    position: relative;
+    padding: .8em;
+    margin: 0;
+}
+
+.ui-dialog.info-dialog .ui-widget-header {
+    background: #2b84c1;
+    border: 0;
+    color: #fff;
+    font-weight: normal;
+
+}
+
+.ui-dialog.info-dialog .ui-dialog-titlebar {
+    padding: 0.1em .5em;
+    position: relative;
+    font-size: 2em;
+    margin-bottom:10px;
+}
+
+.loader1
+    {
+        height:100%;
+        width:100%;
+        position:absolute;
+        left: 0;
+        bottom:0px;
+        filter: alpha(opacity=40);
+        opacity: 0.4;
+        -moz-opacity: 0.4;
+        background-color:#000;
+        border-radius:10px;
+        overflow:hidden;
+        z-index: 2;
+    }
+    
+.loader1 img{
+    filter: alpha(opacity=30);
+    opacity: 0.3;
+    -moz-opacity: 0.3;
+    line-height:50%;
+    
+}
+
+.loader1_center{
+    margin-top:50%;
+    margin-left:40%;
+}
+
+
+</style>
+
+\{{
+    cgidata = cgidata();
+    
+    cc_types = sql(single:true,"
+        SELECT  addoptions_{{lg.rows.lg}} AS addoptions,
+                addvalues 
+        FROM sn_fields
+        WHERE field_name='type'
+            AND uid_sn_tables=(SELECT uid FROM sn_tables WHERE table_name='sr_cc' LIMIT 1)"
+    );    
+    cc_type_values = explode(",",cc_types.rows.addvalues);
+    cc_type_options = explode(",",cc_types.rows.addoptions);
+    amount = contractor::getCurrentBillingTotal(extranet_user.uid);
+    amount = number_format(amount,2);
+    amount = str_replace(',','.',amount);
+    
+    language = "{{lg.rows.lg}}";
+
+}}
+
+<div id="ajax_save_cc_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_payment_ref Erreur lors de la sauvegarde de votre carte de crédit, vérifiez les informations", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div id="ajax_payment_card_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_payment_ref Erreur lors du paiement, vérifiez les informations", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div id="ajax_payment_card_success" class="alert alert-success" style="display:none"> 
+    {{sn_ct("contractor_payment_ref Merci! Nous avons reçu votre paiement.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_payment_ref Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+
+<div data-hide_after_payment>
+    <h2>
+        {{sn_ct("contractor_payment_card Paiement", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </h2>
+    <div class="well custom-well">
+        <div class="loader1" style="display:none"><div class="loader1_center"><img alt="" src="/sn_uploads/icon/loading3.gif" /></div></div>
+        <form class="form-horizontal" action="{{ sn_pages('ajax_make_payment_card', lg.rows.lg, table:'ressources')}}" id="make_payment_card" name="make_payment_card" method="POST">
+            <input type="hidden" id="language" value="\{{language}}" />
+            <fieldset class="form-group">
+                <label for="type" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_add_credit_card Type de carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                </label>
+                <div class="{{col_input;}}">
+                    <select name="type" class="form-control">
+                        <option value=""> {{sn_ct(edit:false,"contractor_add_credit_card Choisir une carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                        \{{for cc_type in cc_type_values do}}
+                            <option value="\{{cc_type}}">\{{cc_type_options[sn_nb]}}</option>  
+                        \{{endfor}}
+                    </select>
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="type"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <label for="name" class="control-label{{col_label;}}">
+                    {{sn_ct("contractor_add_credit_card Nom du détenteur", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                </label>
+                <div class="{{col_input;}}">
+                    <input class="form-control" type="text" name="name" id="name" value="">
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="name"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <label for="card_number" class="control-label{{col_label;}}">
+                    {{sn_ct("contractor_add_credit_card Numéro de carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                </label>
+                <div class="{{col_input;}}">
+                    
+                    <input class="form-control" type="text" name="card_number" id="card_number" value="">
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="card_number"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <label for="exp" class="control-label{{col_label;}}">
+                    {{sn_ct("contractor_add_credit_card Expiration", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                </label>
+                <div class="{{col_input;}}">
+                    <div class="row">
+                        <div class="col-md-4">
+                            
+                            <select name="exp_year" class="form-control">
+                                <option value="">{{sn_ct(edit:false,"contractor_add_credit_card Année", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                \{{current_year = datetime(format:"%Y")}}
+                                \{{for (i=0;i<10;i++) do}}
+                                    <option value="\{{resub(current_year + i, "^(\d{2})(\d{2})$", "$2")}}">\{{current_year + i}}</option>  
+                                \{{endfor}}
+                            </select>  
+                            <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="exp_year"></span>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            
+                            <select name="exp_month" class="form-control">
+                                <option value="">{{sn_ct(edit:false,"contractor_add_credit_card Mois", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="01">01 - {{sn_ct(edit:false,"Janvier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="02">02 - {{sn_ct(edit:false,"Février", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="03">03 - {{sn_ct(edit:false,"Mars", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="04">04 - {{sn_ct(edit:false,"Avril", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="05">05 - {{sn_ct(edit:false,"Mai", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="06">06 - {{sn_ct(edit:false,"Juin", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="07">07 - {{sn_ct(edit:false,"Juillet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="08">08 - {{sn_ct(edit:false,"Août", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="09">09 - {{sn_ct(edit:false,"Septembre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="10">10 - {{sn_ct(edit:false,"Octobre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="11">11 - {{sn_ct(edit:false,"Novembre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="12">12 - {{sn_ct(edit:false,"Décembre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            </select>
+                            <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="exp_month"></span>
+                        </div>
+                    </div>
+                </div>
+                
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <label for="cvv" class="control-label{{col_label;}}  ">
+                    {{sn_ct("contractor_add_credit_card CVV", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+        		        <a href="javascript:void(0);" onclick="show_tooltip(this);" class="badge" id="badge" ><i class="fa fa-question" ></i></a>
+                        <div class="wtooltip" title="CVV">
+        		            <p>{{sn_ct("contractor_add_credit_card CVV help", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                        </div>
+                </label>
+                
+                <div class=" {{col_input;}}">
+                    <input class="form-control" type="text" name="cvv" id="cvv" value="">
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="cvv"></span>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-group">
+                <div class="{{col_label;}}">
+                    
+                </div>
+                <div class="{{col_input;}}">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" name="new_amount" id="new_amount"> {{sn_ct("contractor_payment_card Modifier le montant", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                    </div>
+                </div>
+                <label for="custom_amount" class="control-label{{col_label;}}  ">
+                </label>
+                <div class=" {{col_input;}}">
+                    <input type="hidden" id="default_amount" name="default_amount" value="\{{amount}}"/>
+                    <input class="form-control" type="text" name="custom_amount" id="custom_amount" value="\{{amount}}" disabled="disabled">
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="custom_amount"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <div class="{{col_label;}}">
+                    
+                </div>
+                <div class="{{col_input;}}">
+                    <div class="checkbox">
+                        <label>
+                            <input type="checkbox" name="save_cc" id="save_cc" value="yes"> {{sn_ct("contractor_payment_card Enregistrer ma carte de crédit", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </label>
+                        <a href="javascript:void(0);" onclick="show_tooltip(this);" class="badge"><i class="fa fa-question" ></i></a>
+                        <div class="wtooltip" id="" title="{{sn_ct(edit:false,"Enregistrer carte de crédit")}}">
+        		            <p>{{sn_ct("contractor_add_credit_card Enregistrer carte de crédit help", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                        </div>
+
+                    </div>
+                </div>
+            </fieldset>
+            <div class="form-group">
+                <div class="{{col_label;}}">
+                
+                </div>
+                <div class="{{col_input;}}">
+                    <input type="submit" class="btn btn-primary" value="{{sn_ct(edit:false,"contractor_payment_card Payer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+                </div>
+            </div>
+            
+        </form>
+    </div>
+</div>
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_cc_validator.sn";
+    // validate client side
+    validator.validateJS(form:'make_payment_card');
+}}
+
+<script>
+function show_tooltip(bo){
+    
+   var t=$(bo).next('.wtooltip');
+    
+    if(t.length){//
+       // console.log("Creating dialog");
+        console.log(t);
+        $(bo).data('wtooltip',t);
+        t.dialog({//
+            dialogClass:'info-dialog',
+            width:'auto',
+            height:'auto',
+            resizable:false,
+            position:{//
+                my: 'left top',
+                at: 'right top',
+                of: bo
+            },
+            close:function(){//
+                $(this).dialog('destroy');
+            }
+        });
+    }else{//
+        $(bo).data('wtooltip').dialog('close');
+    }
+}
+</script>
+
+<script>
+    $('#new_amount').change(function(){
+        if($(this).is(':checked')){
+            $('#custom_amount').removeAttr('disabled');
+        }else{
+            var a_custom = $('#custom_amount').val();
+            var a_default = 1;
+            
+            if(a_custom < a_default){
+                $('#custom_amount').val(1);
+            }
+            $('#custom_amount').attr('disabled','disabled');
+
+        }
+    });
+    
+    $('#custom_amount').blur(function(){
+            var a_custom = $('#custom_amount').val();
+            var a_default = 1;
+
+        if(parseFloat(a_custom) < parseFloat(a_default)){
+            $('#custom_amount').val(1);
+        }
+    })
+</script>
+
+
+<script>
+    // Bind add_client form to ajaxform plugin to send the form via ajax
+    $('form[name=make_payment_card]').ajaxForm({
+        beforeSubmit:function(){
+            $("input[type='submit']").prop('disabled', true);
+            
+            var custom = $('#custom_amount').val();
+            var df = $('#default_amount').val();
+            
+            if($('#language').val() == 'fr'){
+                var msg1 = "Vous avez dépassé la limite de transaction autorisé (999 $)";
+                var msg2 = "êtes vous sure de payer " + custom + " $ pour cette facture?"
+                var msg3 = "les paiements acceptés sont entre 5$ CAN et plus";
+            }else{
+                var msg1 = "This transaction is above the authorized limit (999 $)";
+                var msg2 = "Are you sure you want to pay " + custom + "for this transaction?" ;
+                var msg3 = "we accept payment between $5 CAN and more";
+            }
+            
+            if( parseFloat(custom) >= 1000 && !$('#custom_amount').is(':disabled')){
+                alert(msg1);
+                $("input[type='submit']").prop('disabled', false);
+                return false;
+            }
+            
+            
+            if( parseFloat(custom) < 5 && !$('#custom_amount').is(':disabled')){
+                alert(msg3);
+                $("input[type='submit']").prop('disabled', false);
+                return false;
+            }
+
+            
+            if(parseFloat(custom) > parseFloat(df) && !$('#custom_amount').is(':disabled')){
+                cf = window.confirm(msg2);
+                if(!cf){
+                    $("input[type='submit']").prop('disabled', false);
+                    return false;
+                }
+            }
+            
+            $('.loader1').show();
+
+        },
+        
+        success:function(data, statusText, xhr){
+            $("#ajax_payment_card_error,#ajax_save_cc_error,#ajax_payment_ref_error").hide("swing"); // Hide old error messages
+            if(xhr.getResponseHeader("X-payment_card_success")){
+                $('form[name=make_payment_card]').resetForm();
+                $("div[data-hide_after_payment]").hide("swing", function(){ 
+                    $("#ajax_payment_card_success").show();
+                    \{{ if cgidata.token ne "" && cgidata.accepted eq 'yes' then}}
+                        setTimeout(function(){
+                            location.replace("{{pages('sr_confirmation_accept_project', lg.rows.lg, table:'pages')}}?accepted=yes&token=\{{cgidata.token}}");
+                        }, 2000);
+                    \{{ endif}}
+                });
+            }
+            
+            if (xhr.getResponseHeader("X-save_cc_error")){
+                $("#ajax_save_cc_error").show();
+            }
+            if (xhr.getResponseHeader("X-payment_card_error")){
+                $("#ajax_payment_card_error").show();
+            }
+            
+            $("input[type='submit']").prop("disabled", false);
+            
+        },
+        
+        complete: function(data) {
+            $('.loader1').hide();
+        }
+    });
+    
+    $(".close").on("click", function(){
+        $(this).parents(".alert").hide(); 
+    });
+    
+</script>
+\{{
+// endif
+}}

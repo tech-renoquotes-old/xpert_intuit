@@ -1,0 +1,54 @@
+{{
+    /*
+        @title 			contractorAccountBlocked
+        Description		Email for the contractor when his account gets blocked. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/extenso/functions/sn_ct.snc";
+    use email;
+    use lg;
+    
+	   //url = sql(single:true, "SELECT url_prod FROM sn_configs");
+
+    
+    
+}}
+
+\{{
+	use contractor;
+   
+    url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
+    url = url.rows.url_prod;
+
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if contractor.rows.contact_gender eq "f" then
+    	titre = mme;
+    elseif contractor.rows.contact_gender eq "m" then
+    	titre = mr;
+    endif
+    
+    uid_contractor = contractor.rows.uid;
+    nom = contractor.rows.contact_lastname;
+    prenom = contractor.rows.contact_firstname;
+    //page_login = "{{url}}" .+ "{{ pages('sr_contractor_dashboard', lg.rows.lg, table:pages); }}";
+    page_login = url .+ "{{ pages('sr_contractor_dashboard', lg.rows.lg, table:pages); }}";
+
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

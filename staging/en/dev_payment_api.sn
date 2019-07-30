@@ -1,0 +1,34 @@
+{{
+
+cgidata = cgidata();
+configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+//if(cgidata.idc) then
+    if(cgidata.action eq 'save') then
+        contractor = sql(single:true, contractor::getAllContractorsCurrentBillingTotalsQuery().+" 
+        WHERE c.uid = '?'
+        AND c.active = 'yes'
+        AND c.credit_cards = 'yes'
+        AND IFNULL(c.balance,0) + IFNULL((
+            SELECT sum(i.amount) 
+            FROM sr_invoice i 
+            INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+            WHERE pc.uid_contractor = c.uid
+            AND (i.completed is null OR i.completed != 'yes')
+        ),0) >= '?'
+        AND EXISTS (SELECT null FROM sr_cc cc WHERE cc.uid_contractor = c.uid LIMIT 1)
+        HAVING (balance + invoices_total - credits_total - transactions_total) >= '?'
+        ", cgidata.idc,configs.rows.min_amount_debit, configs.rows.min_amount_debit);
+
+        subtotal = contractor.rows.invoices_total - contractor.rows.credits_total;
+        taxes = contractor::calculateTaxesByProv(subtotal, contractor.rows.uid_contractor);
+        //taxes = contractor::calculateTaxes(subtotal);
+        amount = contractor.rows.balance + taxes.total - contractor.rows.transactions_total;
+        uid_transaction = contractor::debit_charge(contractor.rows.uid_contractor, amount);
+        void insert(table:'sr_log', fields:{'type':'pivotal from mobile','uid_project_contractor':contractor.rows.uid_contractor,'uid_project':'', 'email_to': 'contact_email'  ,'description':'uid_transaction= '.+ uid_transaction.+'   amount','value':amount});
+    else
+        r = curl(sslversion:6, url:'https://soumissionrenovation.ca/dev_payment.xml', header: 'Content-type: application/xml');
+        r.body;
+    endif
+//endif
+}}

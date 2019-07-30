@@ -1,0 +1,359 @@
+<style>.async-hide { opacity: 0 !important} </style>
+<script>(function(a,s,y,n,c,h,i,d,e){s.className+=' '+y;h.start=1*new Date;
+h.end=i=function(){s.className=s.className.replace(RegExp(' ?'+y),'')};
+(a[n]=a[n]||[]).hide=h;setTimeout(function(){i();h.end=null},c);h.timeout=c;
+})(window,document.documentElement,'async-hide','dataLayer',4000,
+{'GTM-N4VGD55':true});</script>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-46921779-3', 'auto');
+  ga('require', 'GTM-N4VGD55');
+  ga('send', 'pageview');
+</script>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-PRQ9Z2F');</script>
+<!-- End Google Tag Manager -->
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+\{{
+    use page;
+    
+    // save a cookie with the first site visited
+    request = request();
+    cookies = cookies();
+    if cookies.first_visited == undefined then
+	//	expiry=datetime(extended:true,op:"+1d",format:"%Sednove2");
+		expiry=datetime(extended:true,op:"+3h",format:"%Sednove2");
+		cookies(name:"first_visited",value:request.hostname .+ request.uri,path:"/",expiry:expiry);
+    endif
+}}
+\{{
+    %include "/package/sn_util.sn";
+    reqdata = sn_util::reqdata();
+
+    // For articles, use the article information as metadata
+    PAGE_TITLE = reqdata.PAGE_TITLE;
+    if (PAGE_TITLE eq '') then
+        PAGE_TITLE = "{{ page.rows{"meta_title_" .+ lg.rows.lg};}}"; 
+    endif
+
+    if ((lg ne "") && (reqdata.PAGE_TITLE eq '')) then
+        PAGE_TITLE = "{{contractor.company_name}} | Xpert Source";
+    endif
+    
+}}
+<title>\{{PAGE_TITLE}}</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!--[if lt IE 9]>
+   <script>
+      document.createElement('header');
+      document.createElement('nav');
+      document.createElement('section');
+      document.createElement('article');
+      document.createElement('aside');
+      document.createElement('footer');
+   </script>
+<![endif]-->
+
+<meta name="sednove_lg" content="{{lg.rows.lg}}">
+<meta name="sednove_uid" content="{{page.rows.uid}}">
+<meta name="sednove_url" content="{{pageurl}}">
+<meta name="sednove_section" content="{{page.rows.section}}">
+<meta name="sednove_date" content="{{datetime(format:"%Y-%m-%d")}}">
+
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+<link href="/css/{{lg.rows.lg}}/styles.css" rel="stylesheet">
+
+
+
+\{{
+    url_prod_en = "https://xpertsource.com";
+    sn_configs = sql(single:true,"SELECT * FROM sn_configs");
+    url_prod_fr = sn_configs.rows.url_prod;
+    //url_prod = ("{{lg.rows.lg}}" eq "en") ? url_prod_en : sn_configs.rows.url_prod ;   //mod v1.1
+    //url_prod = {{(lg.rows.lg eq 'en') ? 'url_prod_en' : 'sn_configs.rows.url_prod'}};  //executé statiquement
+    url_prod = url_prod_{{lg.rows.lg}};
+}}
+
+\{{alternates = unstringnify(reqdata.ALTERNATE);}}
+\{{
+    if (reqdata.ALTERNATE eq '') then
+        alternates = page;
+    endif
+}}
+
+
+
+<!-- Modified by louis.jhonny@gmail.com On 2018-12-21 : to include links and meta for the static profile page-->
+\{{if((lg ne "") && (reqdata.CANONICAL eq '')) then}}
+    \{{if lg eq 'en' then}}
+        <link rel="alternate" hreflang="fr-CA" href="https://xpertsource.com/expert/{{contractor.seo}}?lg=fr">
+        <link rel="alternate" hreflang="en-CA" href="https://xpertsource.com/expert/{{contractor.seo}}">
+        <link rel="canonical" href="https://xpertsource.com/expert/{{contractor.seo}}\{{if lg eq 'fr' then '?lg=fr'; endif}}">
+        <meta name="description" content="Find all the useful information about {{contractor.company_name}} - Verified customer reviews, phone number, address, services offered and much more!" />
+    \{{else}}
+        <link rel="alternate" hreflang="fr-CA" href="https://xpertsource.com/expert/{{contractor.seo}}">
+        <link rel="alternate" hreflang="en-CA" href="https://xpertsource.com/expert/{{contractor.seo}}?lg=en">
+        <link rel="canonical" href="https://xpertsource.com/expert/{{contractor.seo}}\{{if lg eq 'en' then '?lg=en'; endif}}">
+        <meta name="description" content="Trouvez toutes les informations à propos de {{contractor.company_name}} - Des commentaires vérifiés de clients, numéro de téléphone, adresse, services et bien plus!" />
+    \{{endif}}
+    
+    <meta name="robots" content="index, follow">
+    {{ og_title = page.rows{"meta_title_fr"} }}
+    
+\{{else}}
+
+    \{{if (alternates.url_fr ne '') then}}
+        <link rel="alternate" hreflang="fr-CA" href="\{{url_prod_fr.+alternates.url_fr}}">
+    \{{endif}}
+    
+    \{{if (alternates.url_en ne '') then}}
+        <link rel="alternate" hreflang="en-CA" href="\{{url_prod_en.+alternates.url_en}}">
+    \{{endif}}
+    \{{
+        canonical = reqdata.CANONICAL;
+        if (canonical eq '') then
+            canonical = page.url_{{lg.rows.lg}};
+        endif
+    }}
+    <link rel="canonical" href="\{{url_prod.+canonical}}">
+    
+    
+    
+    {{ seo = sql(single:true,"select * from sn_configs"); }}
+    
+    
+    {{ 
+        if page.rows{"meta_title_" .+ lg.rows.lg} ne "" then
+            og_title = page.rows{"meta_title_" .+ lg.rows.lg} ;
+        endif
+        
+        if page.rows{"meta_description_" .+ lg.rows.lg} ne "" then
+            meta_description = page.rows{"meta_description_" .+ lg.rows.lg} ;
+        else
+            meta_description = seo.rows{"meta_description_" .+ lg.rows.lg} ;
+        endif
+    }}
+    
+    {{  if page.rows{"meta_keywords_" .+ lg.rows.lg} ne "" then
+            meta_keywords = page.rows{"meta_keywords_" .+ lg.rows.lg} ;
+        else
+            meta_keywords = seo.rows{"meta_keywords_" .+ lg.rows.lg} ;
+        endif
+    }}
+    
+    {{  if page.rows{"meta_generator_" .+ lg.rows.lg} ne "" then
+            meta_generator = page.rows{"meta_generator_" .+ lg.rows.lg} ;
+        else
+            meta_generator = seo.rows{"meta_generator_" .+ lg.rows.lg} ;
+        endif
+    }}
+    
+    {{  if page.rows{"meta_author_" .+ lg.rows.lg} ne "" then
+            meta_author = page.rows{"meta_author_" .+ lg.rows.lg} ;
+        else
+            meta_author = seo.rows{"meta_author_" .+ lg.rows.lg} ;
+        endif
+    }}
+    
+    {{  if page.rows{"meta_robots_" .+ lg.rows.lg} ne "" then
+            meta_robots = page.rows{"meta_robots_" .+ lg.rows.lg} ;
+        else
+            meta_robots = seo.rows{"meta_robots_" .+ lg.rows.lg} ;
+        endif
+    }}
+    
+    {{  if page.rows{"google_site_verification_" .+ lg.rows.lg} ne "" then
+            google_site_verification = page.rows{"google_site_verification_" .+ lg.rows.lg} ;
+        else
+            google_site_verification = seo.rows{"google_site_verification_" .+ lg.rows.lg} ;
+        endif
+    }}
+    
+    
+    
+    <meta name="description" content="\{{if reqdata.DESCRIPTION ne "" then reqdata.DESCRIPTION; else "{{meta_description}}"; endif }}"  />
+    <meta name="keywords" content="\{{if reqdata.KEYWORDS ne "" then reqdata.KEYWORDS; else "{{meta_keywords}}"; endif }}" />
+    <meta name="generator" content="{{ meta_generator; }}" />
+    <meta name="author" content="{{ meta_author; }}"> 
+    <meta name="robots" content="{{ meta_robots; }}"> 
+    <meta name="google-site-verification" content="{{ google_site_verification; }}"/>
+\{{endif}}
+
+<!-- GEO LOCALISATION -->
+
+{{  if page.rows{"DC_title_" .+ lg.rows.lg} ne "" then
+        DC_title = page.rows{"DC_title_" .+ lg.rows.lg} ;
+    else
+        DC_title = seo.rows{"DC_title_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"geo_region_" .+ lg.rows.lg} ne "" then
+        geo_region = page.rows{"geo_region_" .+ lg.rows.lg} ;
+    else
+        geo_region = seo.rows{"geo_region_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"geo_placename_" .+ lg.rows.lg} ne "" then
+        geo_placename = page.rows{"geo_placename_" .+ lg.rows.lg} ;
+    else
+        geo_placename = seo.rows{"geo_placename_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"geo_position_" .+ lg.rows.lg} ne "" then
+        geo_position = page.rows{"geo_position_" .+ lg.rows.lg} ;
+    else
+        geo_position = seo.rows{"geo_position_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"icbm_" .+ lg.rows.lg} ne "" then
+        icbm = page.rows{"icbm_" .+ lg.rows.lg} ;
+    else
+        icbm = seo.rows{"icbm_" .+ lg.rows.lg} ;
+    endif
+}}
+
+<meta name="DC.title" content="{{ DC_title; }}" /> 
+<meta name="geo.region" content="{{ geo_region; }}" />
+<meta name="geo.placename" content="{{ geo_placename; }}" /> 
+<meta name="geo.position" content="{{ geo_position; }}" /> 
+<meta name="ICBM" content="{{ icbm; }}" /> 
+
+<!-- OPEN GRAPH -->
+
+{{  if page.rows{"og_site_name_" .+ lg.rows.lg} ne "" then
+        og_site_name = page.rows{"og_site_name_" .+ lg.rows.lg} ;
+    else
+        og_site_name = seo.rows{"og_site_name_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_description_" .+ lg.rows.lg} ne "" then
+        og_description = page.rows{"og_description_" .+ lg.rows.lg} ;
+    else
+        og_description = seo.rows{"og_description_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_url_" .+ lg.rows.lg} ne "" then
+        og_url = page.rows{"og_url_" .+ lg.rows.lg} ;
+    else
+        og_url = seo.rows{"og_url_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_" .+ lg.rows.lg} ne "" then
+        og_image = page.rows{"og_image_" .+ lg.rows.lg} ;
+    else
+        og_image = seo.rows{"og_image_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_type_" .+ lg.rows.lg} ne "" then
+        og_image_type = page.rows{"og_image_type_" .+ lg.rows.lg} ;
+    else
+        og_image_type = seo.rows{"og_image_type_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_width_" .+ lg.rows.lg} ne "" then
+        og_image_width = page.rows{"og_image_width_" .+ lg.rows.lg} ;
+    else
+        og_image_width = seo.rows{"og_image_width_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_height_" .+ lg.rows.lg} ne "" then
+        og_image_height = page.rows{"og_image_height_" .+ lg.rows.lg} ;
+    else
+        og_image_height = seo.rows{"og_image_height_" .+ lg.rows.lg} ;
+    endif
+}}
+
+
+
+
+{{ if og_site_name ne "" then }}
+<meta property="og:site_name" content="{{ og_site_name; }}" /> 
+{{ endif }}
+{{ if og_title ne "" then }}
+<meta property="og:title" content="\{{if reqdata.PAGE_TITLE ne "" then reqdata.PAGE_TITLE; else "{{og_title}}"; endif }}"/> 
+{{ endif }}
+{{ if og_description ne "" then }}
+<meta property="og:description" content="\{{if reqdata.DESCRIPTION ne "" then reqdata.DESCRIPTION; else "{{og_description}}"; endif }}" />
+{{ endif }}
+{{ if og_url ne "" then }}
+<meta property="og:url" content="\{{if reqdata.URL ne "" then reqdata.URL; else "{{og_url}}"; endif }}" /> 
+{{ endif }}
+{{ if og_image ne "" then }}
+<meta property="og:image" content="\{{if reqdata.IMAGE ne "" then reqdata.IMAGE; else "{{og_image}}"; endif }}"/> 
+{{ endif }}
+{{ if og_image_type ne "" then }}
+<meta property="og:image:type" content="{{ og_image_type; }}" /> 
+{{ endif }}
+{{ if og_image_width ne "" then }}
+<meta property="og:image:width" content="\{{if reqdata.IMAGE ne "" then "930"; else "{{og_image_width;}}"; endif }}" /> 
+{{ endif }}
+{{ if og_image_height ne "" then }}
+<meta property="og:image:height" content="\{{if reqdata.IMAGE ne "" then "600"; else "{{og_image_height;}}"; endif }}" /> 
+{{ endif }}
+
+<!-- TWITTER CARD ================ -->
+<meta name="twitter:card" content="summary" />
+{{ if og_url ne "" then }}
+    <meta name="twitter:site" content="\{{if reqdata.URL ne "" then reqdata.URL; else "{{og_url}}"; endif }}" />
+{{endif}}
+{{ if og_title ne "" then }}
+    <meta name="twitter:title" content="\{{if reqdata.PAGE_TITLE ne "" then reqdata.PAGE_TITLE; else "{{og_title}}"; endif }}" />
+{{endif}}
+{{ if og_description ne "" then }}
+    <meta name="twitter:description" content="\{{if reqdata.DESCRIPTION ne "" then reqdata.DESCRIPTION; else "{{og_description}}"; endif }}" />
+{{endif}}
+{{ if og_image ne "" then }}
+    <meta name="twitter:image" content="\{{if reqdata.IMAGE ne "" then reqdata.IMAGE; else "{{og_image}}"; endif }}" />
+{{endif}}
+
+<!-- Others metas -->
+{{ 
+for (m=1;m<=5;++m) do
+	if page.rows{"meta_name" .+ m} ne "" && page.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg} ne "" then 
+		}}<meta name="{{ page.rows{"meta_name" .+ m}; }}" content="{{ page.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg}; }}"/>{{
+	elseif seo.rows{"meta_name" .+ m} ne "" && seo.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg} ne "" then 
+		}} <meta name="{{ seo.rows{"meta_name" .+ m}; }}" content="{{ seo.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg}; }}"/>{{
+	endif
+endfor
+}}
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+<script src="/js/{{lg.rows.lg}}/site.js"></script>
+<script src="//oss.maxcdn.com/jquery.form/3.50/jquery.form.min.js"></script>
+
+
+
+<meta name="sednove_lg" content="{{lg.rows.lg}}">
+<meta name="sednove_uid" content="{{page.rows.uid}}">
+<meta name="sednove_url" content="{{pageurl}}">
+<meta name="sednove_section" content="{{page.rows.section}}">
+<meta name="sednove_date" content="{{datetime(format:"%Y-%m-%d")}}">
+\{{
+	r = request();
+   	void sql("INSERT DELAYED INTO sn_search_siteindex (sn_cdate,sn_mdate,url,nbhit,page,date_publication,lg,nbref,section) values 
+		(NOW(), NOW(),'?','1','?',NOW(),'{{lg.rows.lg}}',0, '?') 
+   		on duplicate key update nbhit = nbhit + 1,date_publication=NOW()",r.uri,"{{pageurl}}","{{page.rows.section}}");
+}}

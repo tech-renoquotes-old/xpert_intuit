@@ -1,0 +1,13 @@
+{{
+%include '/site/package/all.sn';
+}}
+
+\{{// Every 45 minutes
+
+/*
+@description: generate neverbounce access token and save the value to sr_neverbounce table.
+@version 1.00 2017-08-31
+*/
+
+automail::connect_neverbounce('pXl9NQFz', 'gB5LRKElQ#0QX3c');
+}}

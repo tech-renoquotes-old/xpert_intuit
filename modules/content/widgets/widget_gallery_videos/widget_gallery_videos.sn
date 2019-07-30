@@ -1,0 +1,81 @@
+<script type="text/javascript" src="/assets/fancybox/source/jquery.fancybox.js?v=2.1.5"></script>
+<link rel="stylesheet" type="text/css" href="/assets/fancybox/source/jquery.fancybox.css?v=2.1.5" media="screen" />
+<style>
+.fancybox-nav{height:50%;}
+.fancybox-nav span{top:100%;}
+.w-box {
+    height: 140px;
+    margin-bottom: 10px;
+    cursor: default;
+    margin: 0 0 15px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s linear 0s;
+}
+
+.w-box:before, .w-box:after {
+    content: "";
+    display: table;
+}
+
+.w-box:after {
+    clear: both;
+}
+</style>
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+	use widget;
+	use lg;
+}}
+\{{	
+	config=config();
+	cgi=cgidata();
+	production_select= "";
+	if config.site ne "staging" then production_select .+= " and production='oui'"; endif	
+}}
+<div class="w-section inverse shop">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-12">
+				<h3 class="section-title">Liste de white papers</h3>
+				<div class="row">
+				\{{ 
+					for video sql("select * from sn_widget_video where uid_widget = '?' and actif='oui' ".+ production_select .+ " ORDER BY sn_custom ;", {{widget.rows.uid_widget_list}}) do
+				}}
+					<div class="col-md-3">
+						<div class="w-box">
+							<a 
+								class="ext-source" 
+								id="slider-item\{{video.rows.uid}}" 
+								href="\{{video.rows.video_{{lg.rows.lg}};}}"
+								data-fancybox-group="video_gallery{{widget.rows.uid_widget_list}}"
+								data-fancybox-type="video"
+								title="\{{esc(filter:'html',video.rows{'alt_'.+lg.rows.lg});}}"
+							>
+								<img class="img-responsive" src="\{{video.rows.image}}" data-gallery="{{widget.rows.uid_widget_list}}" data-galleryid="\{{video.rows.uid}}" 
+								/>
+							</a>
+						</div>
+					</div>
+				\{{endfor}}
+				</div>							
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<script>
+$(document).ready(function(){//
+	$('.ext-source').fancybox({//
+		'transitionIn'		: 'none',
+		'transitionOut'		: 'none',
+		'autoScale'     	: false,
+		'type'				: 'iframe',
+		'width'				: '50%',
+		'height'			: '60%',
+		'scrolling'   		: 'no'
+	});	
+
+});
+</script>

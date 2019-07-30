@@ -1,0 +1,1045 @@
+{{ 
+	//
+	// Name:		header : Display header of the page
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	// @Version     1.01   
+	// @Version     1.02  add url for research
+	// @Version     1.03  add Return for search
+	
+	// @lastModified by louis.jhonny@gmail.com
+	// @Version     1.04  delay menu display
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+
+	use lg;
+	use ressource;
+	use page;
+}}
+\{{	
+    use alternates;
+    request = request();
+    // cgidata = cgidata();
+    config = config();
+}}
+
+{{ // CALL FOR THE THEME COLOR CHOSEN BY THE CLIENT
+theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'")}}
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PRQ9Z2F"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<style>
+     /* COLOR FOR THE TOP MENU - Wrapper width*/
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    
+    /* menu top full */
+    .cs .menu-top-full {
+        padding: 0 8px;
+        border-bottom: 1px solid #E7E7E7;
+    }
+    
+    /* menu top - wrapper */
+    .cs .menu-top-wrapper {
+        
+    }
+    /*align vertical middle code*/
+    .cs .top_header_h{
+        height:35px;
+        line-height:35px;
+    }
+    .cs .top_header_h nav{
+        height:100%;
+        line-height:initial;
+        display:table;
+    }
+    .cs .top_header_h nav a{
+        vertical-align:middle;
+        padding-left:20px;
+        display:table-cell;
+        font-size:15px;
+        font-weight:bold;
+    }
+    .cs .top_header_h nav a:hover{
+        text-decoration:underline;
+    }
+    .cs .top_header_h .login{
+        padding:0 0 0 30px;
+        position:relative;
+    }
+    
+    .cs .top_header_h .login:hover:before{
+        background-position:bottom;
+    }
+    .cs .cities_enum{
+        background:#00517e;
+        padding:7px 0;
+        font-size:15px;
+        font-weight:bold;
+        text-align:center;
+        color:#5896B4;
+        display:none;
+    }
+    .cs .header .model-2{
+        /*border-bottom:6px #f9b842 solid;*/
+        background:#FFF;
+        box-shadow: 0px 2px 5px 0px rgba(0,0,0,0.25);
+    }
+    /*-----------------------------*/
+    /* menu top */
+    .cs .menu-top {
+        float: right;
+    }
+
+
+    .cs .menu-top a,
+    .cs .menu-top a:focus {
+        outline: 0;
+    }
+    /* menu top - level 1 */
+
+    /*.cs .menu-top .item-link {
+        float: left;
+        color: #666666;
+        padding: 5px 8px;
+        font-size: 13px;
+        line-height: 16px;
+        text-decoration: none;
+    }*/
+
+    .cs .menu-top .item-link.on, .cs .menu-top > .item-link:hover {
+        text-decoration: none;
+        color: #999999;
+    }
+
+    @media screen and (max-width: 997px) {
+        .menu-top-full {
+            display: none;
+        }
+        /*.cs .menu-top .item-link {
+            display: inline;
+            float: left;
+            margin: 0px 1% 1% 0px !important;
+            color: #666666;
+            padding: 5px 10px;
+            width: 49%;
+            font-size: 12px;
+            line-height: 16px;
+            text-decoration: none;
+            background-color: rgba(0, 0, 0,0.08);
+        }*/
+        .cs .menu-top {
+            float: none;
+            padding: 0 0 0 1%;
+        }
+        .cs .menu-top-wrapper {
+            padding: 0px;
+        }
+        .cs .menu-top-full .container-fluid {
+            padding-right: 0px;
+            padding-left: 0px;
+            padding-bottom:0px;
+            padding-top:0px;
+        }
+        .cs .menu-top-full {
+            padding: 0px;
+        }
+    }
+    @media screen and (min-width: 998px) {
+        .menu-top-full {
+            display: block!important;
+        }
+    }
+    /* ==============================================
+    CSS FOR THE MAIN NAV
+    is a temporrary class to protect menu style
+    ============================================== */
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    /* logo-1 */
+
+    .cs .logo-1 {
+        display: inline-block;
+        margin: 5px 0 16px 10px;
+        vertical-align: bottom;
+        max-width: 200px;
+        max-height: 40px;
+        margin-top: 17px;
+    }
+    
+    .logo-mobile .logo {
+        max-width: 240px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .logo-1 {
+            display: none;
+        }
+        .cs .container-full.header .col-md-4,.cs .container-full.header .col-md-8{
+            float:none;
+            width:100%;
+        }
+    }
+    /* menu main - mobile control */
+
+    .cs .menu-main-mobile-control {
+        display: none;
+        padding: 10px 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn {
+        display: inline-block;
+        margin: 0 10px 0 0;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 6px 9px;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover {
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn,
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:focus {
+        outline: 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn .fa {
+        font-size: 24px;
+        color: #4d4d4d;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover .fa {
+        color: #417bad;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main-mobile-control {
+            display: block;
+        }
+    }
+
+    .cs .logo-2 {
+        vertical-align: bottom;
+        width: 100%;
+        max-width: 160px;
+        max-height: 70px;
+        margin: 0;
+    }
+    /* menu main - wrapper */
+
+    .cs .menu-main-wrapper {
+        min-height: 75px;
+        padding-top: 15px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs.model-2 {
+            padding: 0;
+        }
+        .cs .menu-main-wrapper {
+            display: none;
+            padding-top: 0px;
+            /*position: absolute;*/
+            right: 0;
+            left: 0;
+            padding: 0;
+            z-index: 600;
+        }
+        .cs .container-full.header .col-menu{
+            padding:0;
+        }
+        .cs .menu-main-wrapper.on-js {
+            display: block;
+            background-color: #fff;
+        }
+    }
+    /* menu main */
+
+    .cs .menu-main {
+        padding: 5px 0 0 15px;
+        float: left;
+    }
+
+    .cs .menu-main-wrapper .container-fluid {
+        padding: 0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main {
+        	padding-top: 0;
+            padding-left: 0;
+            padding-right: 0;
+            float: none;
+        }
+    }
+
+    .cs .menu-main a,
+    .cs .menu-main a:focus {
+        outline: 0;
+    }
+    /* menu main - level 1 */
+
+    .cs .menu-main > .item {
+        float: left;
+        position: relative;
+        margin: 0 5px 5px 0;
+    }
+
+    .cs .menu-main > .item.separator {
+        border-left: 1px solid #7d7d7d;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item {
+            float: none;
+            position: static;
+            margin: 0;
+        }
+    }
+
+    .cs .menu-main > .item:last-child {
+        margin-right: 0;
+    }
+
+    .cs .menu-main > .item > .item-link {
+        display: block;
+        margin: 0 0 0 15px;
+        padding: 10px 0;
+        font-size: 14px;
+        line-height: 18px;
+        text-decoration: none;
+        color: #666666;
+        font-weight:bold;
+    }
+
+    .cs .menu-main > .item.on-js > .item-link {
+        color: #000000;
+    }
+
+    .cs .menu-main > .item > .item-link:hover {
+        text-decoration: none;
+        color: #{{theme_color.rows.header_highlight_color}};
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-link {
+            background: #f8f8f8;
+            margin: 0;
+            padding: 10px 14px;
+            border-bottom: none;
+        }
+        .cs .menu-main > .item.on > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item.on-js > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item > .item-link:hover {
+            background: #e0e0e0;
+            border-bottom: none;
+        }
+    }
+    /* menu main - level 2 */
+
+    .cs .menu-main > .item > .item-children {
+        display: none;
+        position: fixed;
+        z-index: 600;
+        left: -50%;
+        width:200px;
+        border-bottom: none;
+        background: #e0e0e0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-children {
+            position: static;
+            width: auto;
+            border-bottom: 0;
+            border-top: 0px solid #ffffff;
+        }
+        .cs .item-group .item-link {
+            padding-right: 20px;
+        }
+        .cs .item-group > .item-link::after {
+            content: "+";
+            float: right;
+            color: #{{theme_color.rows.header_highlight_color}};
+        }
+        .cs .menu-main > .item.on-js > .item-link::after {
+            content: "-";
+            color: #{{theme_color.rows.header_highlight_color}};
+        }
+    }
+
+
+    @media screen and (min-width: 501px) {
+        /*.cs .menu-main > .item:hover > .item-children {display:block;}*/
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link {
+        display: block;
+        border-top: 1px solid #cccccc;
+        padding: 7px 14px 7px 25px;
+        font-size: 14px;
+        line-height: 18px;
+        color: #4d4f53;
+        text-decoration: none;
+    }
+
+    .cs .menu-main > .item > .item-children > .item:first-child > .item-link {
+        border-top:0;
+        border-bottom: 1px solid #0d5f91;
+        border-top: 1px solid #0d5f91;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link.on {
+        border-bottom: 1px solid #0d5f91;
+        background: #d8d8d8;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link:hover {
+        text-decoration: none;
+      	color:#ffffff;
+        background: #{{theme_color.rows.header_highlight_color}};
+    }
+    /* Underline From Left ======================================  */
+
+    .menu-main > .item>.item-link {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -moz-osx-font-smoothing: grayscale;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .cs .menu-main > .item > .item-link > .item-children {
+        opacity: 0;
+    }
+
+    
+
+    .menu-main>.item>.item-link:before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: 0;
+        right: 100%;
+        bottom: 0;
+        background: #{{theme_color.rows.header_highlight_color}};
+        height: 2px;
+        -webkit-transition-property: right;
+        transition-property: right;
+        -webkit-transition-duration: 0.5s;
+        transition-duration:.5s;
+        -webkit-transition-timing-function: ease-out;
+        transition-timing-function: ease-out;
+    }
+    
+
+
+    .menu-main>.item>.item-link:hover:before,
+    .menu-main>.item>.item-link:focus:before,
+    .menu-main>.item>.item-link:active:before,
+    .menu-main>.item.on>.item-link:before{
+        right: 0;
+    }
+
+	/* SOCIAL MEDIA LIST ========== =*/
+
+      /* ======= Color for the text link */
+      {{ if theme_color.rows.menu_top_link_color ne "" then}}
+      .cs .menu-top-full .social-media-list a {
+          color:#{{theme_color.rows.menu_top_link_color}};
+      }
+      {{endif}}
+
+      /* ======= Color for the hover text link */
+      {{ if theme_color.rows.menu_top_link_color_hover ne "" then}}
+      .cs .menu-top-full .social-media-list a:hover {
+          color:#{{theme_color.rows.menu_top_link_color_hover}};
+      }
+      {{endif}}
+        
+        .cs .menu-main-mobile-control .menu-main-mobile-btn{background:none;float:left;}
+        .cs .logo-mobile{float:left;display:block;}
+        
+        /* Sub nav CSS
+        ***********************/
+        .cs .menu-main > .item > .item-link{
+            margin:0;
+            
+        }
+        .cs .menu-main > .item {
+            margin: 0 25px 5px 0;
+        }
+        .cs .item.item-group{
+            position:initial;
+        }
+        
+
+        
+        .cs .item.item-group .item-children{
+            /*animation-name: submenu_anim;*/
+            /*animation-timing-function: cubic-bezier(0.64, 0.57, 0.67, 1.53);*/
+            /*animation-duration: .5s;*/
+            width:300px;
+            /*width:20%;*/
+            left:0;
+            padding:30px 0;
+            background:#044e7c;
+            border:1px solid #0d5f91;
+            box-shadow:rgba(0, 0, 0, 0.5) 0 4px 8px 0,  0 6px 20px 0 rgba(0, 0, 0, 0.4);
+            border-radius: 0px 0px 5px 5px;
+            
+        }
+        
+        @keyframes submenu_anim{
+            0%   {opacity:0;}
+            100% {opacity:1;}
+        }
+        
+
+        .cs .item.item-group:hover .item-children{
+            /*opacity:1;
+            display:block;
+            */
+            
+        }
+
+
+        .cs .item.item-group>a{
+            position:relative;
+            overflow: visible;
+        }
+
+        .cs .model-2{
+            position:relative;
+        }
+        .cs .pt.model-2 .container-fluid{
+            position:initial;
+        }
+        .cs .col-md-8.col-menu{
+            position:initial;
+        }
+        
+        .cs .menu-main > .item > .item-children > .item > .item-link{
+            width:100%;
+            float:left;
+            border-bottom: 1px solid #0d5f91;
+            border-top: none;
+            color:#FFF;
+        }
+        @media (max-width:997px){
+            .cs .menu-main .item.on-js > .item-children {
+                display: block;
+            }
+            .cs .menu-main-wrapper{
+                border-top:1px #eeeeee solid;
+            }
+            .cs .menu-main > .item {
+                margin: 0;
+            }
+            .cs .item.item-group:hover .item-children{
+                display:none;
+            }
+            .cs .item.item-group.on-js .item-children{
+                display:block;
+            }
+            .cs .menu-main > .item > .item-link{
+                background:#FFF;
+            }
+            .cs .menu-main > .item > .item-children > .item > .item-link{
+                width:100%;
+                float:none;
+                border:none;
+                color:#FFF;
+            }
+            .cs .item.item-group>a:hover:after{
+                border:none;
+                height:auto;
+                width:auto;
+                left:initial;
+                top:initial;
+                content: "+";
+                float: right;
+                color: #007ed9;
+                position: relative;
+                z-index: 1;
+
+            }
+            .cs .item.item-group .item-children{
+                padding:5px 0;
+            }
+            .cs .js_mobile_sticky .sticky{
+                max-height:100%;
+                overflow:auto;
+            }
+        }
+        /**********************/
+        
+      .cs .menu-top-full .social-media-list {
+          float: left;
+          margin-left: 10px;
+      }
+      .cs .menu-top-full .phone {
+          float: left;
+          font-size:17px;
+          display:block;
+          text-decoration:none;
+          color:#fac45f;
+      }
+
+      .cs .menu-top-full .social-media-list a {
+          margin-left: 5px;
+          font-size: 22px;
+          text-decoration:none;
+      }
+
+      @media screen and (max-width: 997px) {
+          .cs .menu-top-full .social-media-list {
+              float: none;
+              width: 100%;
+              margin-left: 0px;
+              text-align: center;
+              margin-bottom: 5px;
+          }
+          .cs .menu-top-full .social-media-list a {
+              margin-left: 5px;
+              margin-right: 5px;
+              font-size: 22px;
+          }
+      }
+      
+      .cs .menu-top-wrapper .col-nb1{
+          width:30%;
+      }
+      .cs .menu-top-wrapper .col-nb2{
+          width:28%;
+          float:right;
+      }
+      .cs .menu-top-wrapper .col-nb3{
+          width:42%;
+          text-align:center;
+      }
+      @media (max-width:1170px){
+          .cs .menu-top-wrapper .col-nb1{
+              width:50%;
+          }
+          .cs .menu-top-wrapper .col-nb2{
+              width:50%;
+              float:right;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              float:right;
+          }
+          .cs .menu-top-wrapper .col-nb3{
+              clear:both;
+              width:100%;
+          }
+          .cs .row-col-nb{
+              margin:0;
+          }
+      }
+      @media (max-width:768px){
+          .cs .menu-top-wrapper .col-nb1 .social-media-list{
+              display:none;
+          }
+    
+      }
+      @media (max-width:560px){
+          .cs .menu-top-wrapper .col-nb1{
+              width:100%;
+              text-align:center;
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb1 .phone{
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2{
+              width:100%;
+              text-align:center;
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              margin:auto;
+          }
+          .cs .menu-top-wrapper .col-nb3{
+              height:auto;
+              float:none;
+          }
+      }
+      </style>
+
+
+    
+<!-- MENU-TOP ============================================= -->
+<div class="js_mobile_sticky">
+    <div>
+        <!--<div class="container-full menu-top-full">-->
+        <!--  	<div class="pt clearfix container-fluid">-->
+        		<!--<div class="menu-top-wrapper clearfix">-->
+        		    <!--<div class="row row-col-nb">-->
+        		        <!--<div class="col-xs-4 top_header_h col-nb1">-->
+        		        <!--    <a class="phone" href="tel:{{sn_ct(edit:false,"Header 1-855-239-7836", publish:"/publish/ressources.sn", uids:ressource.rows.uid)}}">-->
+        		        <!--        <i class="fa fa-comment" aria-hidden="true"></i> {{sn_ct(edit:false,"Header 1 855 239-7836", publish:"/publish/ressources.sn",  uids:ressource.rows.uid)}}-->
+        		        <!--    </a>-->
+        		        <!--     {{ %include "/includes/call_social_media_list.sn"; }}-->
+        		        <!--</div>-->
+        		        <!--<div class="col-xs-3 top_header_h col-nb2">-->
+        		            {{ 
+            		        //%include "/includes/menu_haut.sn"; 
+            		        }}
+        		        <!--</div>-->
+        		        <!--<div class="col-md-5 top_header_h col-nb3">-->
+        		        <!--    <a href="{{pages("accueil", lg.rows.lg,table:"pages")}}#sr_client_form" class="btn btn-highlight btn-sm"    id="btn_client_form">-->
+        		        <!--        {{sn_ct("Demande de soumissions", publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}-->
+        		        <!--    </a>-->
+        		        <!--    <a href="{{pages("accueil_contractor", lg.rows.lg,table:"pages")}}" class="btn btn-focus btn-sm">-->
+        		        <!--        {{sn_ct("Êtes-vous une entreprise?", publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}-->
+        		        <!--    </a>-->
+        		        <!--</div>-->
+        		    <!--</div>-->
+        			
+              	<!--</div>-->
+        <!--    </div>-->
+        <!--</div>-->
+<!-- END MENU TOP-->
+        
+        
+        
+<!-- MENU-PRINCIPAL ============================================= -->
+        <div class="container-full header">
+            <div class="js_desk_sticky">
+            	<div class="pt model-2 clearfix">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <!-- CLIENT LOGO AREA ======================= -->
+                            <div class="col-md-2">
+                                {{ // Call for the logo
+                                logo_client = sql(single:true,"select * from sn_configs where uid = '1'");
+                                
+                                }}
+                                <div>
+                                <a href="{{pages('accueil',lg.rows.lg,table:"pages")}}">
+                                    <img src="{{logo_client.rows{"logo_" .+lg.rows.lg};}}?maxw=500" alt="{{logo_client.rows{'DC_title_'.+lg.rows.lg};}}" class="logo-1"></a>
+                                </div>
+                                 
+                                <!-- MOBILE LOGO AND MENU ICON ====================-->
+                                <div class="menu-main-mobile-control clearfix">
+                                    <a href="javascript:void(0);" class="menu-main-mobile-btn" onclick="menu_main_toggle_mobile('.menu-main-wrapper');">
+                                    	<i class="fa fa-bars"></i>
+                                    </a>
+                                    <a href="{{pages('accueil',lg.rows.lg,table:"pages")}}" class="logo-mobile">
+                                        <img src="{{logo_client.rows{"logo_" .+lg.rows.lg};}}" alt="{{logo_client.rows{'DC_title_'.+lg.rows.lg};}}" class="logo">
+                                        <!--<img src="{{logo_client.rows{"logo_" .+lg.rows.lg};}}?maxw=500" alt="{{logo_client.rows{'DC_title_'.+lg.rows.lg};}}" class="logo">-->
+                                    
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- END Client logo area -->
+                            
+                            <div class="col-md-10 col-menu "> 
+                               <div class="menu-main-wrapper clearfix"> 
+                                    <div class="container-fluid">
+                                         <nav class="menu-main clearfix">
+                                            {{ // ===================== INCLUDE FOR THE MAIN NAV
+                                        
+                                            %include "/includes/call_main_nav.sn";}}
+                                            
+                                            
+                                            <!--   Search input  -->
+                                                <div class="input-group" style="max-width:250px; float:left;">
+                                                    <span class="input-group-addon" href="javascript:void(0)" onclick="openInNewTab('https://search.yahoo.com/search?p=site%3Axpertsource.com+' + $('#txtsearch').val())" id="btnsearch" ><i class="fa fa-search" ></i></span> 
+                                                    <input type="text" class="form-control" style="width:200px;" name="txtsearch" id="txtsearch" placeholder="{{(lg.rows.lg eq 'fr') ? 'Recherche' : 'Search';}}">
+                                                </div>
+                                            <!--End of search input-->
+
+                                		    {{      
+                                            // Implement language change
+                                			for l sql("select * from sn_languages where active = 'yes' and lg != '?'", lg.rows.lg) do
+                                				}}\{{
+                                				if page.code eq "blog_detail" then
+                                            		blogartact = sql(single:true,"SELECT uid FROM sed_blog_article WHERE url='?'",request.uri);
+                                            		blogarttra = sql(single:true,"SELECT uid_article_{{l.rows.lg}} FROM sed_blog_article_translation WHERE uid_article_{{lg.rows.lg}}='?'",blogartact.rows.uid);
+                                            		blogartopp = sql(single:true,"SELECT url FROM sed_blog_article WHERE uid='?'",blogarttra.rows.uid_article_{{l.rows.lg}});
+                                            	endif
+                                				if blogartopp.rows.url ne "" || page{"url_{{l.rows.lg }}"} ne "" then}}
+                                				<div class="item" style="float:right">
+                                				<a class="item-link" style="font-weight:normal" href="\{{
+                                				    if config.site ne "staging" then
+                            				            "https://xpertsource.com";
+                            				        else
+                            				            "https://sxpert.sednove.com";
+                                				    endif
+                                				if blogartopp.rows.url ne "" then
+                                				    blogartopp.rows.url;
+                                				else
+                                				    if "{{l.rows.lg}}" eq 'en' then
+                                				        alternates.url_en;
+                                				    else
+                                				        alternates.url_fr;
+                                				    endif
+                                				endif}}">{{uc(l.rows.lg)}}</a></div>\{{endif}}{{
+                                			endfor
+                                			}}
+                                			
+                                        <!--</nav>-->
+                                        <!--menu-main-->
+                                    </div><!--container-fluid-->
+                                </div><!--menu-main-wrapper-->
+                            </div><!--end col-md-8-->
+                            
+                        </div><!--end row-->
+                        
+                    </div><!--container-fluid-->
+                </div><!--end model-2-->
+            </div>
+            
+        </div><!--/.container-full-->
+        <!-- END MENU PRINCIPAL -->
+    </div>
+</div>
+<div class="cities_enum">
+    <div class="container">
+        {{sn_ct("headerMontréal — Québec — Gatineau — Sherbrooke — Trois-Rivières", publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}
+    </div>
+</div>
+
+
+<style>
+.menu-main-mobile-btn{
+    float:right!important;
+}
+</style>
+
+<!-- JS FOR THE NAV ============================================= -->
+<script>
+$(document).ready(function(){
+    var timer;
+    
+    $('.cs .item.item-group').hover(
+				
+        function () {
+            var pos = $(this).position();
+            var width = $(this).outerWidth();
+            $(this).children('.item-children').stop(true, true).css({position:'absolute',top: (pos.top + $(this).outerHeight()) + 'px', left: pos.left + "px"}).show();
+        }, 
+				
+        function () {
+            $(this).children('.item-children').stop(true,true).delay(100).fadeOut();
+        }
+    ); 
+})
+
+
+	/* main menu : when click on an item of level 1, show/hide level 2 ........................................*/
+	function menu_main_toggle_children(bo){
+		$(bo).parent().siblings().removeClass("on-js").end().toggleClass("on-js");
+	}
+
+    /* main menu : mobile view : show/hide */
+            function menu_main_toggle_mobile(sel) {
+                $(sel).toggleClass("on-js");
+                $(".cs .menu-top-full").slideToggle("slow");
+            }
+    
+    //fix to allow opening the menu even on custom elements that are not group  
+    $('.menu-main > .item > a').on('click',function(event){
+        if(window.innerWidth < 997 && $(this).siblings('.item-children').length > 0){
+            event.preventDefault();
+            $(this).parent().toggleClass('on-js');
+        }
+    });
+            
+    /*JS FOR FIXED NAV (DESKTOP)
+    ============*/
+    
+    $(window).bind("scroll.sticky_desktop", function(){
+       stickyThis($('.js_desk_sticky'));
+    });
+    $(window).bind("scroll.sticky_mobile", function(){
+       stickyThis($('.js_mobile_sticky'));
+       hideOnScroll($('.js_mobile_sticky'));
+    });
+    
+    var lastScrollTop = 0;
+    function hideOnScroll(target){
+        var st = $(window).scrollTop();
+        if (st > lastScrollTop){
+           target.children('div:first').css('top','-'+target.children('div:first').height()+'px');
+        } else {
+          target.children('div:first').css('top','0px');
+        }
+        lastScrollTop = st;
+    }
+    /*
+     * Sticky the element if the top of the element is out of the window
+     */
+    function stickyThis(target){
+    	var target_top = target.position().top+target.height();
+    	if(target_top < $(window).scrollTop()){
+    	   target.css('height',target.height()+'px');
+    	   target.children('div:first').addClass('sticky');
+    	}
+    	else{
+    	    target.children('div:first').removeClass('sticky');
+    	    target.removeAttr('style');
+    	}
+    }
+    
+    win_url = '';
+    function openInNewTab(url) {
+        //console.log("test-"+$('#txtsearch').val());
+        add_recherche();
+        var win = window.open(url, '_blank');
+        win.focus();
+    }
+    
+    $("#txtsearch").keyup(function(e){
+        if (e.key == "Enter") {
+        	openInNewTab('https://search.yahoo.com/search?p=site%3A{{site1}}+' + $('#txtsearch').val());
+        	console.log(e);
+        }
+    } );
+
+    // add research in table
+	function add_recherche(){
+       //	if (confirm("Êtes-vous certain ?")){
+            var d = new Date();
+            loc = "";
+            url = "\{{request.hostname .+ request.uri}}";
+            //url = "{{url.page}}";
+            //getLocation();
+            $.ajax({
+                type: "post",
+                data:{
+                	"uid"   : 0, 
+                    "mots": $('#txtsearch').val(),
+                    "comment":d.toString() + ' - '+loc,
+                    "url":url
+                },
+                url: "{{ sn_pages('ajax_add_recherche', 'fr', table:'ressources')}}",
+                success:function(result){
+                //    console.log(result);
+                //    alert("La recherche est ajoutée");
+                //request.hostname .+ request.uri
+                }
+            });  
+       // }
+  	}
+  /*	
+    // enregistre avec return
+    $('form[name=recherche_site_sr]').ajaxForm({
+                type: "post",
+                data:{
+                	"uid"   : 0, 
+                    "mots": $('#txtsearch').val(),
+                    "comment":"CR",
+                    "url":"\{{request.hostname .+ request.uri}}";
+                },
+                url: "{{ sn_pages('ajax_add_recherche', 'fr', table:'ressources')}}",
+                success:function(result){
+                    url = 'https://search.yahoo.com/search?p=site%3A{{site1}}+' + $('#txtsearch').val());
+                    var win = window.open(url, '_blank');
+                    win.focus();
+
+                }
+    });  
+*/
+
+/*    $('#txtsearch').keydown(function(e) {                      
+        var key = e.which;
+        console.log(key);
+        if (key == 13) {  // return key
+       // $("#btnsearch").focus();
+       //$("#txtsearch").focus();
+      // console.log ($('#txtsearch').val());
+        openInNewTab('https://search.yahoo.com/search?p=site%3A{{site1}}+' + $('#txtsearch').val());
+    }
+    });
+*/    
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition);
+        } else { 
+            loc ="";
+        }
+    }
+    
+    function showPosition(position) {
+        loc  = "Latitude: " + position.coords.latitude + 
+        ", Longitude: " + position.coords.longitude;
+    }
+
+
+    //--->
+</script>
+<style>
+    /*Sticky css*/
+    .js_desk_sticky>.sticky{
+        position:fixed;
+        top:0;
+        left:0;
+        right:0;
+        z-index:9;
+    }
+    @media(max-width:997px){
+        .cs .js_desk_sticky>.sticky{
+            position:relative;
+        }
+        .cs .js_desk_sticky{
+            height:auto!important;
+        }
+        .cs .js_mobile_sticky{
+            position:relative;
+            z-index:9;
+        }
+        .cs .js_mobile_sticky>.sticky{
+            position:fixed;
+            top:0;
+            left:0;
+            right:0;
+            -webkit-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            -moz-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            -o-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1);
+        }
+    }
+</style>
+
+<style>
+</style>

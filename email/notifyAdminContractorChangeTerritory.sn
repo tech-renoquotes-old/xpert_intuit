@@ -1,0 +1,26 @@
+{{
+    /*
+        @title 			notifyAdminClientSatisfactionSite
+        Description		Sends an email to the administrator when a client do an evalution of the site.
+        
+        @author 		bbduc@yahoo.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+    use contractor_info;
+    entrepreneur = contractor_info.company_name;
+    id_entrepreneur = contractor_info.uid_contractor;
+    territoires = contractor_info.territories;
+    
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

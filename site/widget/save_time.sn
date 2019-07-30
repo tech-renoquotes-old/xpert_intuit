@@ -1,0 +1,177 @@
+{{  
+    // --------------------------------------------------------------------------
+    // Name:        How does it work
+    //
+    // Description: Displays how our service works in 3 steps
+    //
+    // Version:      1.0 2018-01-09 15:20 Michel Jodoin
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    
+    use lg;
+    use widget;
+}}
+
+<style> 
+#inner {
+    margin: 0 auto; 
+}
+  .widget-image-text-ck {margin:0 0 30px 0;}
+  .widget-image-text-ck > .box {text-align:center;padding-top:20px;}
+  .widget-image-text-ck > .box img {display:block; margin:0 auto;}
+  .widget-image-text-ck > .box h4 {margin:16px 0 4px 0;}
+  
+  @media screen and (max-width :640px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:left;}
+  }
+   @media screen and (max-width :991px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:none;}
+      .widget-image-text-ck > .box:nth-child(3n+1) {clear:left;}
+      .widget-image-text-ck > .box:last-child{
+          float:none;
+          margin:auto;
+          clear:both;
+      }
+  }
+  
+      .img-circle {
+        border-radius: 50%;
+    }
+    .btn_centered {
+        text-align: center;
+    }
+
+    .btn_right {
+        text-align: right;
+    }
+
+    .btn_left {
+        text-align: left;
+    }
+    
+    .widget-image-text-ck h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .widget-image-text-ck p{
+        margin:15px 0 5px 0;
+    }
+    .widget-image-text-ck .wdg_image{
+        min-height:150px;
+        display:table;
+        width:100%;
+    }
+    .widget-image-text-ck .wdg_image_container{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .wdg_spotlight_container{
+        position:relative;
+    }
+    /*.row .wdg_spotlight_container .container{
+        padding:0;
+        max-width:initial;
+        width:auto;
+    }*/
+    .wdg_spotlight_container .mask{
+        background-size:cover;background-repeat:no-repeat;background-position:center;background-attachment:fixed;
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+    }
+    .wdg_spotlight_container .single_box{
+        max-width:600px;
+        margin:auto;
+        float:none;
+    }
+    .wdg_spotlight_container .wdg_title{
+        text-align:center;
+        position:relative;
+        top:0;
+    }
+    .wdg_spotlight_container .wdg_title h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .wdg_spotlight_container .wdg_title>*{
+        margin:10px 0;
+    }
+    @media (max-width:768px){
+        .wdg_spotlight_container{
+            /*this remove the user padding in mobile*/
+            padding:0!important;
+         }
+        .wdg_spotlight_container .wdg_title{
+            top:0px;
+        }
+    }
+</style>
+
+<div class="clearfix"></div>
+
+<div class="wdg_spotlight_container" style="background-color:#ffffff;">
+    
+    
+    <div class="container" style="background-color:#ffffff;">
+        
+        
+        <div class="row widget-image-text-ck">
+            
+                    <div class="col-xs-12 col-sm-6 col-md-4 box">
+                    <div class="wdg_image"><div class="wdg_image_container"><img class="img-responsive" src="/sn_uploads/80819607-icoune-de-temps-Element-de-conception-de-logo_2.jpg" style="height:120px;" alt="ICÔNE SAUVEZ DU TEMPS"></div></div>
+                        
+                        <div id="inner">
+                            <style> .typed-cursor{display:none;}</style>
+                            <h5 class="widget-image-text-ck-title">
+                                <span style="color:#2C7FC1;">{{sn_ct("SAUVEZ DU TEMPS")}}</span><br>&nbsp;<span id="typing_arr" style="color:#00517e;"></span>
+                                
+                            </h5>
+                        </div>
+
+                        <div><p>{{sn_ct("Les professionnels d'XpertSource.com sont", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</p>
+</div>
+                        
+                    </div><!-- /.box -->
+            
+                    <div class="col-xs-12 col-sm-6 col-md-4 box">
+                    <div class="wdg_image"><div class="wdg_image_container"><img class="img-responsive" src="/sn_uploads/money-box.png" style="height:120px;" alt="ICÔNE SAUVEZ DE L'ARGENT"></div></div>
+                        
+                        <div id="inner">
+                            <style> .typed-cursor{display:none;}</style>
+                            <h5 class="widget-image-text-ck-title">
+                                <span style="color:#2C7FC1;">{{sn_ct("SAUVEZ DE L'ARGENT")}}</span><br>&nbsp;<span id="typing_arr" style="color:#00517e;"></span>
+                                
+                            </h5>
+                        </div>
+                        
+                        <div><p>{{sn_ct("Vous recevrez différentes propositions", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</p>
+</div>
+                        
+                    </div><!-- /.box -->
+            
+                    <div class="col-xs-12 col-sm-6 col-md-4 box">
+                    <div class="wdg_image"><div class="wdg_image_container"><img class="img-responsive" src="/sn_uploads/LogoXpertSource_Carre_Coul-2x_2.jpg" style="height:120px;" alt="ICÔNE CONTRÔLE DE LA QUALITÉ"></div></div>
+                        
+                        <div id="inner">
+                            <style> .typed-cursor{display:none;}</style>
+                            <h5 class="widget-image-text-ck-title">
+                                <span style="color:#2C7FC1;">{{sn_ct("CONTRÔLE DE LA QUALITÉ")}}</span><br>&nbsp;<span id="typing_arr" style="color:#00517e;"></span>
+                                
+                            </h5>
+                        </div>
+                        
+                        <div><p>{{sn_ct("Les professionnels de notre réseau possèdent", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</p>
+</div>
+                        
+                    </div><!-- /.box -->
+            
+        </div><!-- /.widget-image-text-ck -->
+        
+    </div>
+</div>
+<div class="clearfix"></div>

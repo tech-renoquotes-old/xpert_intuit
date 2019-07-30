@@ -1,0 +1,134 @@
+{{
+	%include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc";
+
+	use widget;
+	use lg;
+	use page;
+}}
+<link href="/css/magnific-popup.css" media="all" rel="stylesheet" />
+<style type="text/css" media="screen">
+.cs .vbox {
+    float: left;
+    padding: 10px;
+}
+
+.cs .vbox-wrap {
+    width: 100%;
+    margin: 10px auto;
+    overflow: hidden;
+}
+
+.cs .vbox img {
+    max-width: 250px;
+}
+
+.cs .lbox {
+    float: left;
+    padding: 20px;
+	text-align: center;
+}
+
+.cs .lbox img{
+    max-width: 230px;
+}
+
+.cs .vbox .bt_play {
+	position: relative;
+	width: 50px;
+	heigth: 50px;
+	left: 45%;
+	top: 40%;
+	cursor:pointer;
+	z-index: 3;
+}
+
+.cs .vbox a.popup-media-type-video{position:relative;display:block;}
+.cs .vbox a.popup-media-type-video:before{ content:""; height:100%; width:100%; background: url(/images/bt_play.png) no-repeat center center; background-size:64px auto; position:absolute; top:0; left:0; opacity:.7; transition: opacity 0.5s ease-in-out;}
+.cs .vbox a.popup-media-type-video:hover::before{opacity:1;}
+</style>
+
+<script type="text/javascript" src="/js/jquery.magnific-popup.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+	$('.popup-youtube, .popup-vimeo, .popup-gmaps').magnificPopup({
+		disableOn: 700,
+		type: 'iframe',
+		mainClass: 'mfp-fade',
+		removalDelay: 160,
+		preloader: false,
+
+		fixedContentPos: false
+	});
+	
+	$('.popup-gallery').magnificPopup({
+		delegate: 'a',
+		type: 'image',
+		tLoading: 'Loading image #%curr%...',
+		mainClass: 'mfp-img-mobile',
+		gallery: {
+			enabled: true,
+			navigateByImgClick: true,
+			preload: [0,1] // Will preload 0 - before current, and 1 after the current image
+		},
+		image: {
+			tError: '<a href="%url%">The image #%curr%</a> could not be loaded.',
+			titleSrc: function(item) {
+				return item.el.attr('title');
+			}
+		}
+	});
+});
+</script>
+
+<div class="site-width">    
+  <h4>{{sn_ct("Installation" , publish:"/extenso/publish/pages.sn", edit:"true",uids:page.rows.uid, module:"sed_media_gallery");}}</h4>
+  <div class="product-filter-result grid">
+    <div class="vbox-wrap">
+    {{
+        for media sql("select *,
+						IF(media_video_code_en <> '',media_video_code_en,media_video_code_fr) AS media_video_code_en,
+						IF(media_video_code_fr <> '',media_video_code_fr,media_video_code_en) AS media_video_code_fr
+						from sed_media_list where uid_widget = '?' and actif = 'oui'", widget.rows.uid_widget_list) do
+						
+						if media.rows.media_video_source eq "youtube" then
+							embed_link = "//youtube.com/watch?v=" .+ media.rows{'media_video_code_'.+lg.rows.lg} .+ "?rel=0";
+						elseif media.rows.media_video_source eq "vimeo" then
+							embed_link = "//player.vimeo.com/video/" .+ media.rows{'media_video_code_'.+lg.rows.lg} .+ "?color=1f3340&title=0&byline=0&portrait=0";
+						else
+							embed_link = "https://maps.google.com/maps?q=" .+ media.rows.media_gmap_code;
+						endif
+    }}
+	{{
+		if media.rows.media_type eq 'video' || media.rows.media_type eq 'gmaps' then ;
+			// define classname to change the behaviour between gmaps and videos content
+			if media.rows.media_type eq 'video' then
+				popup = media.rows.media_video_source;
+			else
+				popup = media.rows.media_type;
+			endif
+ 	}}
+            <div class="vbox">
+                    <a href="{{embed_link}}" class="popup-media-type-{{ media.rows.media_type }} popup-{{ popup }}">
+                        <img title="{{ media.rows{'media_title_'.+lg.rows.lg} }}" alt="{{ media.rows{'media_title_'.+lg.rows.lg} }}" src="{{ media.rows.image_preview }}">
+						<!-- <img src="/images/bt_play.png" class="bt_play bt_play_{{media.rows.uid}}" onclick="play_video_cas(this,'{{media.rows.uid}}');" /> -->
+                    </a>
+                <p>{{ media.rows{'media_title_'.+lg.rows.lg} }}</p>
+            </div>
+    {{ 
+		elseif media.rows.media_type eq 'image' then
+	}}
+	        <div class="vbox popup-gallery">
+                    <a href="{{ media.rows.image }}" title="{{ media.rows{'media_title_'.+lg.rows.lg} }}">
+                        <img title="{{ media.rows{'media_title_'.+lg.rows.lg} }}" alt="{{ media.rows{'media_title_'.+lg.rows.lg} }}" src="{{ media.rows.image_preview }}">
+                    </a>
+                <p>{{ media.rows{'media_title_'.+lg.rows.lg} }}</p>
+            </div>
+	{{
+		endif
+        endfor
+    }}
+  	</div>
+  </div>
+
+</div>

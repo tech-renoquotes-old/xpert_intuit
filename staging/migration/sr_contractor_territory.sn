@@ -1,0 +1,20 @@
+{{
+    table_dest = 'sr_contractor_territory';
+    table_from = 'tbl_territoire_entrepreneurs';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idtbl_territoire_entrpereneurs',
+        'uid_contractor': 'ID_Entrepreneur',
+        'uid_territory' : 'ID_Territoire'
+
+    };
+    
+    %include 'migration.sn';
+    

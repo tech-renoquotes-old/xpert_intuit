@@ -1,0 +1,146 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    //@version V1.02  avec taxes des provinces
+    //@version V1.03  reduce description
+    //@version V1.04    bbduc@yahoo.com   change package + permet plusieurs pages
+    //@version V1.05    bbduc@yahoo.com   remettre description complete 
+    
+    use billing;
+    use billing_footer;
+    use contractor;
+    use contractor_address;
+    use lg;
+    use tmpfilename;
+    
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+}}
+\documentclass[8pt]{article}
+
+\usepackage[utf8x]{inputenc}
+
+\usepackage{longtable}
+%\usepackage[margin=0.2in]{geometry}
+{{if billing.length() > 8 then}}
+    \usepackage[paperwidth=8.5in,paperheight=11in,margin=0.2in]{geometry}
+{{else}}    
+    \usepackage[paperwidth=8.5in,paperheight=11in,margin=0.2in]{geometry}
+{{endif}}
+
+\usepackage[T1]{fontenc}
+\usepackage{txfonts}
+\usepackage[francais]{babel}
+%\usepackage{changepage}
+\usepackage{makecell}
+\usepackage{graphicx}
+
+
+\begin{document}
+\renewcommand*{\arraystretch}{1.4} 
+
+\DeclareUnicodeCharacter{9702}{-}
+
+\begin{center}
+\includegraphics[scale=0.3]{/usr/local/website/srv1/sn_uploads/logo_{{lg}}.png}
+\end{center}
+
+\vspace*{.5cm}
+
+
+%\title{ Report}
+%\flushright{...}
+%\date{ {{datetime()}} } 
+%\author{SoumissionRenovation.ca - RenoQuotes.com}
+
+
+
+NO: {{esc(utf8:true,filter:"tex", tmpfilename)}}   
+
+\vspace*{.5cm}
+
+{{str_replace('  ',"\n\n",sn_ct(edit:false, lg:lg, "SoumissionRenovation.ca  7275 St-Urbain B-01  Montréal, Qc  H2R 2Y5"))}}\\
+
+\vspace*{.5cm}
+
+
+{{esc(utf8:true,filter:"tex", contractor.rows.company_name)}}
+
+{{esc(utf8:true,filter:"tex", contractor_address.rows.street_no)}} {{esc(utf8:true,filter:"tex", contractor_address.rows.street)}}
+
+{{esc(utf8:true,filter:"tex", (contractor_address.rows.city_name ne '') ? contractor_address.rows.city_name .+ ',' : '' )}} {{esc(utf8:true,filter:"tex", contractor_address.rows.province)}}
+
+{{ if (contractor_address.rows.zip ne '') then }}
+    {{esc(utf8:true,filter:"tex", contractor_address.rows.zip)}} \\
+{{ endif }}
+
+\vspace*{.5cm}
+%end{adjustwidth}
+
+\begin{center}
+\begin{tabular}{| l l l r |}
+%\rowstyle{\bfseries}
+
+\hline
+\textbf{ID} & \textbf{ {{sn_ct("Description", lg:lg, edit:false)}} } & \textbf{ {{sn_ct("Adresse", lg:lg, edit:false)}} } & \textbf{ {{sn_ct("Frais", lg:lg, edit:false)}} }\\ 
+\hline
+
+\hline
+
+{{i1=0;}}
+
+{{for row in billing do}}
+    {{if row.type ne 'transaction' && row.type ne 'balance' then}}
+
+        {{ i1 = i1+1;  }}
+        {{  //if  i1 <= 8 then}}
+            {{row.id}} & 
+            \makecell*{{'[{{ p{13cm} }}]';}}{ {{esc(utf8:true,filter:"tex", resub(str_replace(["é","î","à"],["é","î","à"],row.description),"(\n(\s*)\n)+","\n","g") ) }} } & 
+            \makecell*{{'[{{ p{3cm} }}]';}}{ {{esc(utf8:true,filter:"tex", row.address)}} } & 
+            {{esc(utf8:true,filter:"tex", money_format(row.amount, lg))}} \\
+        {{// endif}}
+        {{  if  i1 % 4 == 0 then}}
+            \hline
+            \end{tabular}
+
+            \begin{tabular}{| l l l r |}
+            %\rowstyle{\bfseries}
+            \hline
+
+        {{ endif}}
+        
+    {{endif}}
+{{endfor}}
+
+
+
+
+\hline
+
+& {{sn_ct("Sous-Total (excluant les transactions)", lg:lg, edit:false)}} & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.subtotal, lg))}} \\
+& {{billing_footer.tps_name}} \#{{configs.rows.tax_tps}} & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.tps, lg))}} \\
+{{if (billing_footer.tvp_name ne '') then}}
+    & {{billing_footer.tvp_name}} \#{{billing_footer.tvp_taxe_no}} & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.tvq, lg))}} \\
+{{endif}}
+& Total & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.total, lg))}} \\ 
+
+\hline
+
+{{for row in billing do}}
+    {{if row.type eq 'transaction' then}}
+        {{row.id}} & 
+        \makecell*{{'[{{ p{13cm} }}]';}}{ {{esc(utf8:true,filter:"tex", row.description)}} {{esc(utf8:true,filter:"tex", money_format(row.amount, lg))}} } & 
+         & 
+         \\
+    {{endif}}
+{{endfor}}
+
+\hline
+
+& {{sn_ct("Ajustement", lg:lg, edit:false)}} & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.balance, lg))}} \\ 
+& {{sn_ct("Montant payé", lg:lg, edit:false)}} & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.paid, lg))}} \\  
+& {{sn_ct("Nouveau solde", lg:lg, edit:false)}} & & {{esc(utf8:true,filter:"tex", money_format(billing_footer.solde, lg))}} \\  
+
+
+\hline
+\end{tabular}
+\end{center}
+\end{document}

@@ -1,0 +1,6 @@
+{{
+    %include '/package/image_processor.sn';
+    
+     sed_image_processor::src("/sn_uploads/images/patate.png?size=123x123&crop");
+    
+    

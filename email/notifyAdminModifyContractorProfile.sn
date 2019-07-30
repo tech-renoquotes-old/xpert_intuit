@@ -1,0 +1,73 @@
+{{
+    /*
+        @title 			notifyAdminModifyContractorProfile
+        Description		Sends an email to the administrator when a contractor modify his profile. 
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+        @version		1.1 2016-08-04 madupuis@sednove.com
+
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+
+	use before_info; 
+    use after_info;
+
+    avant_prenom = before_info.contact_firstname;
+    avant_nom = before_info.contact_lastname;
+    avant_telephone = before_info.contact_phone;
+    avant_courriel = before_info.contact_email;
+    avant_position =	before_info.contact_title;
+    avant_numeroRue = before_info.street_no;
+    avant_rue = before_info.street;
+    avant_codePostal = before_info.zip;
+    avant_province = before_info.province;
+    avant_ville = before_info.city;
+    avant_siteInternet = before_info.website;
+    avant_fbsite = before_info.fbsite;
+    avant_assureur = before_info.insurance_company;
+    avant_police = before_info.insurance_number;  
+    avant_compta = before_info.email_accounting;
+    avant_destinataire = before_info.email;
+    avant_cc = before_info.email_cc;
+    avant_enable_vacation = before_info.enable_vacation;
+    avant_deactivate_date = before_info.deactivate_date;
+    avant_deactivate_reason = before_info.deactivate_reason;
+    avant_reactivate_date = before_info.reactivate_date;
+    avant_reactivate_reason = before_info.reactivate_reason;
+
+    
+    apres_prenom = after_info.contact_firstname;
+    apres_nom = after_info.contact_lastname;
+    apres_telephone = after_info.contact_phone;
+    apres_courriel = after_info.contact_email;
+    apres_position =	after_info.contact_title;
+    apres_numeroRue = after_info.street_no;
+    apres_rue = after_info.street;
+    apres_codePostal = after_info.zip;
+    apres_province = after_info.province;
+    apres_ville = after_info.city;
+    apres_siteInternet = after_info.website;
+    apres_fbsite = after_info.fbsite;
+    apres_assureur = after_info.insurance_company;
+    apres_police = after_info.insurance_number;  
+    apres_compta = after_info.email_accounting;
+    apres_destinataire = after_info.email;
+    apres_cc = after_info.email_cc;
+    apres_enable_vacation = after_info.enable_vacation;
+    apres_deactivate_date = after_info.deactivate_date;
+    apres_deactivate_reason = after_info.deactivate_reason;
+    apres_reactivate_date = after_info.reactivate_date;
+    apres_reactivate_reason = after_info.reactivate_reason;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

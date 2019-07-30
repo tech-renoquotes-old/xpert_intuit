@@ -1,0 +1,455 @@
+{{
+    /*
+        @title contractor_form
+        Description: This widget is the form used to register a new contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-11
+        @mod  bbduc@yahoo.com     2016-11-11   ajout possiblité d'annuler les prochains courriels.
+        http://ssr.sednove.ca/fr/formulaire-entrepreneur      
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    //http://ssr.sednove.ca/extenso/extranet/ide/#
+    use page; 
+    use lg;
+}}
+\{{ 
+    cgidata = cgidata();
+}}
+<style>
+    .clonable{
+        display:none!important;
+    }
+    .region_label{
+        display:inline-block;
+        margin:0px 5px 15px;
+    }
+    .label.label-default{
+        display:inline-block;
+        font-size:90%;
+        padding: .6em;
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    #confirmation{
+        text-align:center;
+        margin: 30px 0;
+    }
+</style>
+\{{
+    if (cgidata.id ne '') then
+        appel_entrepreneur = sql(single:true, "SELECT * FROM tbl_appels_entrepreneurs WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id);
+        remove_me = false;
+        // remove me from the list
+    if(cgidata.enlever eq 'oui')then
+            remove_me = true;
+            //void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 15 WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id);
+        endif
+    endif
+}}
+\{{ if remove_me then}}
+<div id="annulation" class="alert alert-info" style="display:none1"> 
+    <h2> {{sn_ct(edit:true,"contractor_form Vous êtes maintenant désabonné", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2> <br>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close"   onclick="this.parentElement.style.display='none'"      >&times;</a>
+</div>
+
+<div id="ajax_add_service_success" class="alert alert-info" style="display:none1"> 
+    {{sn_ct("contractor_services Un administrateur devrait confirmer vos nouveaux services sous peu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_services Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+<button id="annuler_message"  onclick="Alert('Merci!)">Cliquer pour annuler les prochains messages</button>
+
+
+
+
+
+<script>
+function annulerMessages(){
+      //    if (confirm("{{sn_ct(edit:false,"contractor_services Êtes-vous certain de vouloir mettre à jour ces services ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){ 
+   
+     $("#annulation").show();
+
+}   </script>
+
+\{{else}}
+
+<div id="inscription">
+    <form action="{{ sn_pages('ajax_add_contractor', lg.rows.lg, table:'ressources')}}" id="add_contractor" name="add_contractor" method="POST">
+        <input type="hidden" name="id_tbl_appels_entrepreneurs" value="\{{cgidata.id}}">
+        <div class="row">
+            <div class="col-md-6">
+                
+                <fieldset class="form-group">
+                    <label for="contact_name" class="control-label">
+                        {{sn_ct("contractor_form Personne contact dans l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="contact_name" id="contact_name" value="\{{appel_entrepreneur.rows.Personne_Contact}}">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid contact_name")}}" data-validator-error="contact_name"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_phone" class="control-label">
+                        {{sn_ct("contractor_form Téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="contact_phone" id="contact_phone" value="\{{appel_entrepreneur.rows.Telephone}}"> 
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid contact_phone")}}" data-validator-error="contact_phone"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_email" class="control-label">
+                        {{sn_ct("contractor_form Courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="contact_email" id="contact_email" value="\{{appel_entrepreneur.rows.Courriel}}">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid contact_email")}}" data-validator-error="contact_email"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_title" class="control-label">
+                        {{sn_ct("contractor_form Votre position dans l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label> 
+                    
+                    <input class="form-control" type="text" name="contact_title" id="contact_title" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid contact_title")}}" data-validator-error="contact_title"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="company_name" class="control-label">
+                        {{sn_ct("contractor_form Nom de l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>   
+                    
+                    <input class="form-control" type="text" name="company_name" id="company_name" value="\{{appel_entrepreneur.rows.Entreprise}}">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid company_name")}}" data-validator-error="company_name"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="address" class="control-label">
+                        {{sn_ct("contractor_form Adresse postale", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                    <input class="form-control" type="text" name="address" id="address" value="" onFocus="geolocate()" placeholder="">
+                    <input type="hidden" class="field" id="street_number" name="street_number" disabled="true"></input>
+                    <input type="hidden" class="field" id="route" name="route" disabled="true"></input>
+                    <input type="hidden" class="field" id="locality" name="locality" disabled="true"></input>
+                    <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" disabled="true"></input>
+                    <input type="hidden" class="field" id="postal_code" name="postal_code" disabled="true"></input>
+                    <input type="hidden" class="field" id="country" name="country" disabled="true"></input>
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid address")}}" data-validator-error="address"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="company_phone" class="control-label">
+                        {{sn_ct("contractor_form Téléphone de l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                    <input class="form-control" type="text" name="company_phone" id="company_phone" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid company_phone")}}" data-validator-error="company_phone"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="rbq" class="control-label">
+                        {{sn_ct("contractor_form Numéro de licence RBQ (si au Québec)", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label> 
+                    
+                    <input class="form-control" type="text" name="rbq" id="rbq" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid rbq")}}" data-validator-error="rbq"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="company_number" class="control-label">
+                        {{sn_ct("contractor_form Numéro d'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>  
+                    
+                    <input class="form-control" type="text" name="company_number" id="company_number" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid company_number")}}" data-validator-error="company_number"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="insurance_company" class="control-label">
+                        {{sn_ct("contractor_form Assureur responsabilité civile", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                    <input class="form-control" type="text" name="insurance_company" id="insurance_company" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid insurance_company")}}" data-validator-error="insurance_company"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="insurance_number" class="control-label">
+                        {{sn_ct("contractor_form Numéro de police", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                    <input class="form-control" type="text" name="insurance_number" id="insurance_number" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid insurance_number")}}" data-validator-error="insurance_number"></span>
+                </fieldset>
+                
+            </div>
+            <div class="col-md-6">
+                
+                <!--<fieldset class="form-group">-->
+                <!--    <label for="province" class="control-label">-->
+                <!--        {{sn_ct("contractor_form Province ou territoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--    </label>    -->
+                    
+                <!--    <select class="form-control" name="province" id="province">-->
+                <!--        <option value="">{{sn_ct(edit:false,"contractor_form Choisir une province", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>-->
+                <!--        	<option value="AB">Alberta</option>-->
+                <!--        	<option value="BC">British Columbia</option>-->
+                <!--        	<option value="MB">Manitoba</option>-->
+                <!--        	<option value="NB">New Brunswick</option>-->
+                <!--        	<option value="NL">Newfoundland and Labrador</option>-->
+                <!--        	<option value="NS">Nova Scotia</option>-->
+                <!--        	<option value="ON">Ontario</option>-->
+                <!--        	<option value="PE">Prince Edward Island</option>-->
+                <!--        	<option value="QC">Quebec</option>-->
+                <!--        	<option value="SK">Saskatchewan</option>-->
+                <!--        	<option value="NT">Northwest Territories</option>-->
+                <!--        	<option value="NU">Nunavut</option>-->
+                <!--        	<option value="YT">Yukon</option>-->
+                <!--    </select>-->
+                <!--    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid province")}}" data-validator-error="province"></span>-->
+                <!--</fieldset>-->
+                
+                <fieldset class="form-group">
+                    <label for="region_selector" class="control-label">
+                        {{sn_ct("contractor_form Régions", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label> 
+                    
+                    <!--<select class="form-control" id="region_selector" data-validator-name="territory">12345-->
+                    <!--    <option value="">{{sn_ct(edit:false,"contractor_form Choisir une région", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>-->
+                    <!--    {{for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name FROM sr_territory WHERE active='yes'  ORDER BY name_".+lg.rows.lg.+" ASC") do}}-->
+                    <!--        <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>-->
+                    <!--    {{endfor}}-->
+                    <!--</select>-->
+                    
+                <div class="PP">
+                    <select  class="form-control" id="region_selector" data-validator-name="territory">
+                        {{  last_province = ""; start = true;
+        //                    for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name,uid_province   FROM sr_territory WHERE active='yes'   ORDER BY uid_province, name_".+lg.rows.lg.+"  ASC") do
+                            for territory sql("SELECT t.uid, t.name_".+lg.rows.lg.+" as name, t.uid_province,  p.name_".+lg.rows.lg.+" as province  
+                                                   FROM sr_territory t inner join sr_province p
+                                                    ON t.uid_province = p.uid
+                                                    WHERE active='yes'   
+                                                    ORDER BY p.name_".+lg.rows.lg.+"  , t.name_".+lg.rows.lg.+ " ASC
+                                " )do
+                                                
+                                                
+                                if last_province ne territory.rows.province && !start then
+                                    '</optgroup>';
+                                     start = true;
+                                endif
+                                if last_province ne territory.rows.uid_province &&  start then
+                                    '<optgroup label = "'.+ territory.rows.province .+'">';
+                                    start = false;
+                                    last_province = territory.rows.province;
+                                endif    
+                        }}
+                                    <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                        {{
+                                
+                            endfor
+                            '</optgroup>';
+                        }}
+        
+                    </select>
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="territory"></span>
+                </div>
+                    <script>
+                        // display clicked regions in a label, remove the region from the select
+                        $("#region_selector").on("change", function(){
+                            // get the region value
+                            var region_id = $(this).val();
+                            var region_text = $("#region_selector option:selected" ).text();
+                            // if a region is selected
+                            if (region_id){
+                                $(this).children("option").filter(":selected").appendTo("#region_temp");
+                                // check if region is already added
+                                if ($("#selected_regions").find("div."+region_id).length == 0){
+                                    
+                                    // clone the region skeleton
+                                    var new_region = $("div.clonable").clone();
+                                    new_region.removeClass("clonable");
+                                    
+                                    // add class to prevent adding same region multiple times
+                                    new_region.addClass(region_id);
+                                    
+                                    // put the region text in the labe;
+                                    new_region.find("span").prepend(region_text);
+                                    
+                                    // put the region value in the input
+                                    new_region.find("input").val(region_id);
+                                    
+                                    //append the region label to the region division
+                                    $("#selected_regions").append(new_region);
+                                }
+                            }
+                        });
+                </script>
+                </fieldset>
+                
+                <div id="selected_regions"></div>
+                
+                <!-- temporary select where regions are moved when labeled -->
+                <select id="region_temp" style="display:none"></select>   
+                
+                <fieldset class="form-group">
+                    <label for="service" class="control-label">
+                        {{sn_ct("contractor_form Services offerts par votre entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                    <textarea class="form-control" id="service" name="service" rows="5"></textarea>
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Invalid service")}}" data-validator-error="service"></span>
+                </fieldset>
+                
+                <div class="checkbox">
+                    <label for="terms" class="control-label">
+                        <input type="checkbox" id="terms" name="terms">
+                        {{sn_ct("contractor_form J'ai lu et j'accepte les termes et conditions", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                </div>
+                <div>
+                    <button id="submit_add_contractor" type="submit" class="btn btn-primary btn-block" disabled>
+                        {{sn_ct(edit:false,"contractor_form Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+    
+        <!-- region skeleton -->
+    <div class="clonable region_label">
+        <span class="label label-default">&nbsp;<i class="fa fa-times" aria-hidden="true" onclick="delete_label(this);"></i></span>    
+        <input type="hidden" name="territory">
+    </div>
+    
+</div> <!-- inscription -->
+
+<div id="confirmation"  style="display:none">
+    <h2>
+         {{sn_ct(edit:true,"contractor_form Votre demande a bien été reçue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </h2>
+    <p>
+         {{sn_ct(edit:true,"contractor_form Vous recevrez un courriel pour confirmer votre inscription", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </p>
+</div>
+
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_form/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_contractor');
+}}
+    
+ 
+<script>
+    // only make submit clickable when terms are accepted
+    var terms = $("#terms");
+    terms.on("change", function(){
+        $("#submit_add_contractor").attr("disabled", !$(this).prop("checked")); 
+    });
+    
+    // Bind add_client form to ajaxform plugin to send the form via ajax
+    $('form[name=add_contractor]').ajaxForm({
+        resetForm:true, // to reset the form once it is sent
+        success:function(data){
+            $("#inscription").hide();
+            $("#confirmation").show();
+        }
+    });  
+      
+    // function to delete a region label and reput the region in the select
+    function delete_label(elem){
+        $("#region_temp option[value="+$(elem).parents(".region_label").find("input").val()+"]").appendTo("#region_selector");
+        $("#region_selector").val("");
+        $(elem).parents(".region_label").remove();
+        validator_revalidate("add_contractor", "territory");
+    }
+    
+    remove_me = false;   //  \{{remove_me}};
+    if (remove_me){
+        //$("#inscription").hide();
+        $("#annulation").show(); 
+    }
+            //http://ssr.sednove.ca/fr/formulaire-entrepreneur?id=4507&enlever=oui   pour tests
+</script>
+
+<!-- Google map api for addresses -->
+<script>
+// This example displays an address form, using the autocomplete feature
+// of the Google Places API to help users fill in the information.
+
+var placeSearch, autocomplete;
+var componentForm = {
+  street_number: 'short_name',
+  route: 'long_name',
+  locality: 'long_name',
+  administrative_area_level_1: 'short_name',
+  country: 'long_name',
+  postal_code: 'short_name'
+};
+
+function initAutocomplete() {
+  // Create the autocomplete object, restricting the search to geographical
+  // location types.
+  autocomplete = new google.maps.places.Autocomplete(
+      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      {types: ['geocode']});
+
+  // When the user selects an address from the dropdown, populate the address
+  // fields in the form.
+  autocomplete.addListener('place_changed', fillInAddress);
+}
+
+// [START region_fillform]
+function fillInAddress() {
+  // Get the place details from the autocomplete object.
+  var place = autocomplete.getPlace();
+
+  for (var component in componentForm) {
+    document.getElementById(component).value = '';
+    document.getElementById(component).disabled = false;
+  }
+
+  // Get each component of the address from the place details
+  // and fill the corresponding field on the form.
+  for (var i = 0; i < place.address_components.length; i++) {
+    var addressType = place.address_components[i].types[0];
+    if (componentForm[addressType]) {
+      var val = place.address_components[i][componentForm[addressType]];
+      document.getElementById(addressType).value = val;
+    }
+  }
+}
+// [END region_fillform]
+
+// [START region_geolocation]
+// Bias the autocomplete object to the user's geographical location,
+// as supplied by the browser's 'navigator.geolocation' object.
+function geolocate() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      var geolocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      var circle = new google.maps.Circle({
+        center: geolocation,
+        radius: position.coords.accuracy
+      });
+      autocomplete.setBounds(circle.getBounds());
+    });
+  }
+}
+// [END region_geolocation]
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8" async defer></script>
+
+\{{endif}}

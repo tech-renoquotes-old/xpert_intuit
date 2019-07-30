@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+{{ 
+    use lg;         // Function publish use context lg
+    use page;       // Function publish use context page for the content of the page
+    use user;       // From sn_preload
+  
+
+    %include "/extenso/functions/sn_ct.snc"; 
+}}
+<html lang="{{lg.rows.lg}}">
+    <head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1">    
+		<title>{{page.rows{"meta_title_fr"};}}</title>
+		<meta property="og:site_name" content="{{page.rows{"og_site_name_fr"};}}"/> 
+		<meta property="og:title" content="{{page.rows{"meta_title_fr"};}}"/> 
+		<meta property="og:description" content="{{page.rows{"meta_description_fr"};}}" />
+		<meta property="og:url" content="{{page.rows{"og_url_" .+ lg.rows.lg};}}" /> 
+		<meta property="og:image" content="{{page.rows{"og_image_" .+ lg.rows.lg};}}"/> 
+		<meta property="og:image:type" content="{{page.rows{"og_image_type_fr"};}}" /> 
+        <meta property="og:image:width" content="{{page.rows{"og_image_width_fr"};}}" /> 
+        <meta property="og:image:height" content="{{page.rows{"og_image_height_fr"};}}" /> 
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    </head>
+    <body class="site-body">
+			  <SCRIPT LANGUAGE="JavaScript" type="text/javascript">
+				  var language = (navigator.language) ? navigator.language : navigator.userLanguage;
+
+				  if (language.indexOf('fr') > -1){document.location.href = "/fr/index.snc";}
+				  else {document.location.href = "/en/index.snc";}
+			  </SCRIPT>
+
+			  <NOSCRIPT>
+
+				  <p>Le support de Javascript est essentiel pour ce site.</p>
+				  <p>Javascript support is essential for this site</p>
+
+			  </NOSCRIPT>
+    </body>
+</html>

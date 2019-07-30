@@ -1,0 +1,23 @@
+{{
+    /*
+        @title sr_test_form_email_client
+        Description : Confirmation E-mail for when a client suscribes.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-21
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    name = "richard";
+    title = "M.";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

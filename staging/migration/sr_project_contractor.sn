@@ -1,0 +1,63 @@
+{{
+    
+    // From PROJET_ENTREPRENEUR
+    
+    table_dest = 'sr_project_contractor';
+    table_from = 'tbl_projet_entrepreneur';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid_contractor'    : 'ID_Entrepreneur',
+        'uid_project'       : 'ID_Projet',
+        'expected_date'     : 'Date_Prevue',
+        'client_satisfaction' : "Satisfaction,Satisfaction::IF('?' = '', NULL, '?')",
+        'accepted_date'     : 'Date_Envoie',
+        'comments'          : 'Commentaires',
+        'amount_contract_report' : 'montant_contrat_rapport',
+        'hidden'            : "Cacher_Client::IF('?', 'yes', 'no')",
+        'lead_price'        : 'Pro_PrixLead',
+        'client_comment'    : 'Commentaire_Client',
+        'accepted'          : "'yes'",
+        'quote'             : 'SoumissionFaite_EnAttente'
+    };
+    
+    %include 'migration.sn';
+    
+    
+    // From ENTREPRENEUR_CONTACTE
+    
+    table_dest = 'sr_project_contractor';
+    table_from = 'tbl_entrepreneur_contacte';
+
+    select_query_from_src = "
+        SELECT 
+            ID_Entrepreneur, 
+            ID_Projet,
+            rabais,
+            IP
+        FROM `".+table_from.+"` 
+        WHERE Contacte IS NOT NULL 
+            AND yes IS NULL 
+            AND `timestamp` > '2016-08-01'
+    ";
+    
+    truncate_dest = false;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid_contractor'    : 'ID_Entrepreneur',
+        'uid_project'       : 'ID_Projet',
+        'accepted_rebate'   : 'rabais',
+        'ip'                : 'IP'
+    };
+    
+    %include 'migration.sn';
+    

@@ -1,0 +1,76 @@
+{{
+    table_dest = 'sed_blog_article';
+    table_from = 'wp_posts';
+
+    select_query_from_src = "
+        SELECT 
+        	ID, post_author, post_date, post_modified, post_title, post_content, post_name,
+        	(
+        		SELECT language_code
+        		FROM wp_icl_translations
+        		WHERE element_type = 'post_post'
+        		AND element_id = wp_posts.ID
+        		LIMIT 1
+        	) as lang,
+            (
+        		SELECT GROUP_CONCAT(term_id)
+        		FROM wp_term_relationships
+        		INNER JOIN wp_term_taxonomy ON taxonomy = 'category' AND wp_term_relationships.term_taxonomy_id = wp_term_taxonomy.term_taxonomy_id
+        		WHERE object_id IN (SELECT ID FROM wp_posts WHERE post_status = 'publish' AND post_type = 'post')
+        		AND object_id = wp_posts.ID
+        		GROUP BY object_id
+        		LIMIT 1
+            ) as categories,
+            (
+                SELECT p2.guid FROM wp_postmeta
+    			INNER JOIN wp_posts p2 ON wp_postmeta.meta_value = p2.ID
+    			WHERE wp_postmeta.post_id = wp_posts.ID
+    			AND meta_key = '_thumbnail_id'
+            ) as image,
+            (
+                SELECT pm.meta_value FROM wp_postmeta pm
+    			WHERE pm.post_id = wp_posts.ID
+    			AND meta_key = '_yoast_wpseo_title'
+                LIMIT 1
+            ) as meta_title,
+            (
+                SELECT pm.meta_value FROM wp_postmeta pm
+    			WHERE pm.post_id = wp_posts.ID
+    			AND meta_key = '_yoast_wpseo_metadesc'
+                LIMIT 1
+            ) as meta_desc
+        FROM wp_posts 
+        WHERE post_status = 'publish' 
+        AND post_type = 'post'
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid' : "ID",
+        'active' : "'yes'",
+        'prod_active' : "'yes'",
+        'category' : "categories",
+        'language' : "lang",
+        'author' : "post_author::?+100",
+        'date_article' : "post_date",
+        'sn_cdate' : "post_date",
+        'sn_mdate' : "post_modified",
+        'allow_comments' : "'yes'",
+        'show_social_bookmark' : "'yes'",
+        'title' : "post_title",
+        'surtitle' : "NULL",
+        'featured_image' : "image::REPLACE(REPLACE('?', 'http://soumissionrenovation.ca/wp-content/uploads/', '/sn_uploads/'), 'https://soumissionrenovation.ca/wp-content/uploads/', '/sn_uploads/')",
+        'image_legend' : "NULL",
+        'full_text' : "post_content",
+        'url' : "post_name::CONCAT('/', '?')",
+        'approve_comment' : "'yes'",
+        'meta_title': "meta_title",
+        'meta_desc': "meta_desc"
+    };
+    
+    %include 'migration.sn';
+    

@@ -1,0 +1,4 @@
+{{
+	%include "/functions/search.sn";
+    search();
+}}

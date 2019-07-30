@@ -1,0 +1,87 @@
+{{
+    /*
+    	@title	Template default_template
+    	
+    	Use to display the newletters content
+    
+    	
+    	@author gamila@sednove.com
+    	
+    	@version 1.0 2016-06-02 10:00:00 Version initial
+    	@version 1.1 2016-06-03 10:00:00 Ajustements pour la version publiée (fullpage)
+
+    */
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+    use code;
+    use user;
+    use curcampaign;
+    
+    site_config = sql(single:true,"select * from sn_configs");
+    base_config = sql(single:true,"SELECT * FROM sed_directmail_base_conf");
+    theme_config = sql(single:true,"
+        SELECT theme.heading_font_color heading_color, theme.content_font_color content_color, theme.btn_primary_text_color btn_text_color, 
+        theme.btn_primary_bck_color btn_bg_color, font.value content_font, font2.value heading_font, content_link_color link_color
+        FROM sn_theme_color theme 
+        JOIN sn_fonts font ON theme.content_font_familly = font.uid
+        JOIN sn_fonts font2 ON theme.heading_font_familly = font2.uid
+        WHERE theme.uid = '1'
+    ");
+    
+
+    function urltrack(url)
+        use urltrack;
+        return urltrack .+ urlencode(url);
+    endf  
+    
+    cgidata = cgidata();
+    status = sql(single:"true","SELECT * FROM sed_directmail_status WHERE uid='?'",cgidata.uid_status);
+    campaign = sql(single:"true","SELECT * FROM sed_directmail_campaign WHERE uid='?'",status.rows.uid_campaign);
+    if campaign.nbrows == 0 then
+        campaign = curcampaign;
+    endif
+    content = sql("SELECT a.*, b.display FROM sed_directmail_content_bloc a JOIN sed_directmail_bloc_type b ON a.bloc_type_code = b.code WHERE uid_campaign = '?' ORDER by sn_custom", campaign.rows.uid);
+}}<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>{{ if user.lg eq "fr" then }}Infolettre {{ else }}Newletter {{ endif }}</title>
+	</head>
+    <body style="margin:0;padding:0;border:0;color:#{{theme_config.rows.content_color}};background-color:#DDDDDD;font-family:{{theme_config.rows.content_font}};">
+        <center>
+            <table border="0" cellpadding="0" cellspacing="0" width="600">
+                <!-- HEADER -->
+                {{%include "/module/sed/directmail/includes/header.sn"}}
+                
+                 <!-- BLOCS -->
+                {{
+                for bloc in content.rows do
+                    read(bloc.display);
+                endfor  
+                }}
+                
+                 <!-- FOOTER -->
+                {{%include "/module/sed/directmail/includes/footer.sn"}}
+                
+            </table>   
+        </center>
+        {{ 
+		// Use to implement fullpage in staging
+      	use published_newsletter;
+		if published_newsletter eq 'yes' then
+			}}
+			<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+			<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+			<script src="{{site_config.rows.url_prod}}/js/{{lg.rows.lg}}/site.js"></script>
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+			<link href='https://fonts.googleapis.com/css?family=Asap' rel='stylesheet' type='text/css'>
+			\{{
+			client_has_bootstrap = false; 
+			if user.lg ne "" then
+				include("/extenso/html/extranet/" .+ user.lg .+ "/fullpage.snc");
+			else
+				include("/extenso/html/extranet/fr/fullpage.snc"); 
+			endif}}
+	  {{ endif }}
+    </body>
+</html>

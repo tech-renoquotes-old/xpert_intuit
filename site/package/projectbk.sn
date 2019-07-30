@@ -1,0 +1,124 @@
+\{{
+    /*
+        @title project package
+        
+        @author olivier@sednove.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    package project;
+        
+        function activateProject(uid)
+            project = sql(single:true, "SELECT * FROM sr_project WHERE uid = '?'", uid);
+            if (project.nbrows > 0) then
+                client = sql(single:true, "SELECT * FROM sr_client WHERE uid = '?'", project.rows.uid_client);
+                if (client.nbrows > 0) then
+                    void sql("UPDATE `sr_project` SET `active_date` = NOW() WHERE `uid` = '?'", project.rows.uid);
+                    automail::projectActivatedClient(project.rows.uid);
+                    automail::projectActivatedAdmin(project.rows.uid);
+                    // Refresh client qualification status
+                    project::qualifyClient(client); 
+                endif
+            endif
+        endf
+        
+        function qualifyClient(client)
+            if (type(client) ne 'context' && client ne '') then
+                client = sql(single:true, "SELECT * FROM sr_client WHERE uid = '?'", client);
+            endif
+            if (client ne '' && client.nbrows > 0 && client.rows.to_qualify eq 'yes') then
+                projects_to_qualify = sql("SELECT uid FROM sr_project WHERE uid_client = '?' AND status = 'new'", client.rows.uid);
+                if (projects_to_qualify.nbrows == 0) then
+                    void update(tables: 'sr_client', fields:{
+                        'to_qualify': 'no'
+                    }, uid:client.rows.uid);
+                endif
+            endif
+        endf
+        
+        function completeProject(uid_project)
+            void update(tables:'sr_project', fields: {
+                'status': 'completed'
+            }, uid: uid_project);
+        endf
+        
+        function incompleteProject(uid_project)
+            void update(tables:'sr_project', fields: {
+                'status': 'inactive-incomplete'
+            }, uid: uid_project);
+        endf
+        
+        function acceptProjectContractor(uid_project_contractor, lead_price)
+            // Update project_contractor link
+            void update(tables:'sr_project_contractor', fields: {
+                'accepted': 'yes',
+                'lead_price': lead_price,
+                "accepted_date":datetime()
+            }, uid: uid_project_contractor);
+            // Check for existing invoice
+            invoice = sql(single:true,"SELECT uid FROM sr_invoice WHERE uid_project_contractor='?'", uid_project_contractor);
+            if invoice.nbrows == 0 then
+                // Create invoice
+                void insert(table:'sr_invoice', fields:{
+                    'uid_project_contractor': uid_project_contractor,
+                    'amount': lead_price
+                });
+                // Send emails
+                automail::sendContractorToClient(uid_project_contractor);
+                automail::notifyContractorWinProject(uid_project_contractor);
+                automail::notifyAdminContractorAcceptQuoteProject(uid_project_contractor);
+            endif
+        endf
+        
+        function generateProjectContractorToken(uid_project, uid_contractor)
+            time = time();
+            token = hash(algo:"sha512", uid_project .+ uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:999999));
+            doublon = sql(single:true, "select uid_project, uid_contractor  from sr_project_contractor  where uid_project = '?' and  uid_contractor = '?'", uid_project, uid_contractor);
+            if doublon.nbrows > 0 then
+                if (doublon.rows.token ne '') then
+                    token = doublon.rows.token;
+                else
+                    void sql("UPDATE sr_project_contractor SET token = '?' WHERE uid_contractor = '?' AND uid_project = '?'", token, uid_contractor, uid_project);
+                endif
+            else
+                void insert(table:'sr_project_contractor', fields:{
+                    'uid_contractor': uid_contractor,
+                    'uid_project': uid_project,
+                    'token': token
+                });
+            endif
+            return token;
+        endf
+        
+        function connectProjectContractor(uid_project, uid_contractor)
+            token = project::generateProjectContractorToken(uid_project, uid_contractor);
+            automail::suggestProjectToContractor(token);
+        endf
+        
+        function findContractorsForProject(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+            return sql("
+                    SELECT c.* 
+                    FROM sr_contractor c
+                    WHERE   c.active = 'yes'
+                        AND languages & '?' > 0
+                        AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid)
+                        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                        AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid)
+                    ORDER BY (note_global + IF(uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT ?
+                ", project.rows.languages, project.rows.uid_service, project.rows.uid, project.rows.uid_territory, project.rows.uid_territory, limit);
+        endf
+        
+    endp
+}}

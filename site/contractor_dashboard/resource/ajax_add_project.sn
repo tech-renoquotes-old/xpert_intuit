@@ -1,0 +1,29 @@
+{{
+    /*
+        @title ajax_add_project
+        Description: Links a project to a contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-02
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    cgidata = cgidata();  
+    connection = connection();
+    
+    use extranet_user;
+
+    if cgidata.uid_project ne "" then
+        token = project::generateProjectContractorToken(cgidata.uid_project, extranet_user.uid);
+        headers_out("X-token", token);
+    endif
+}}

@@ -1,0 +1,104 @@
+{{
+// Definitions for files functions
+%define FILE_SOURCE_PERMS			0x1000;				// Copy source file's permissions
+
+// Definitions for set file permissions
+%define USETID						0x8000;					/* Set user id */
+%define UREAD						0x0400;					/* Read by user */
+%define UWRITE						0x0200;					/* Write by user */
+%define UEXECUTE					0x0100;					/* Execute by user */
+
+%define GSETID						0x4000;					/* Set group id */
+%define GREAD						0x0040;					/* Read by group */
+%define GWRITE						0x0020;					/* Write by group */
+%define GEXECUTE					0x0010;					/* Execute by group */
+
+%define WSTICKY						0x2000;					/* Sticky bit */
+%define WREAD						0x0004;					/* Read by others */
+%define WWRITE						0x0002;					/* Write by others */
+%define WEXECUTE					0x0001;					/* Execute by others */
+
+%define OS_DEFAULT					0x0FFF;					/* use OS's default permissions */
+
+// Definitions for APACHE
+
+%define HTTP_DECLINED				-1;
+%define HTTP_OK						0;
+%define HTTP_CONTINUE                      100;
+%define HTTP_SWITCHING_PROTOCOLS           101;
+%define HTTP_PROCESSING                    102;
+%define HTTP_OK                            200;
+%define HTTP_CREATED                       201;
+%define HTTP_ACCEPTED                      202;
+%define HTTP_NON_AUTHORITATIVE             203;
+%define HTTP_NO_CONTENT                    204;
+%define HTTP_RESET_CONTENT                 205;
+%define HTTP_PARTIAL_CONTENT               206;
+%define HTTP_MULTI_STATUS                  207;
+%define HTTP_MULTIPLE_CHOICES              300;
+%define HTTP_MOVED_PERMANENTLY             301;
+%define HTTP_MOVED_TEMPORARILY             302;
+%define HTTP_SEE_OTHER                     303;
+%define HTTP_NOT_MODIFIED                  304;
+%define HTTP_USE_PROXY                     305;
+%define HTTP_TEMPORARY_REDIRECT            307;
+%define HTTP_BAD_REQUEST                   400;
+%define HTTP_UNAUTHORIZED                  401;
+%define HTTP_PAYMENT_REQUIRED              402;
+%define HTTP_FORBIDDEN                     403;
+%define HTTP_NOT_FOUND                     404;
+%define HTTP_METHOD_NOT_ALLOWED            405;
+%define HTTP_NOT_ACCEPTABLE                406;
+%define HTTP_PROXY_AUTHENTICATION_REQUIRED 407;
+%define HTTP_REQUEST_TIME_OUT              408;
+%define HTTP_CONFLICT                      409;
+%define HTTP_GONE                          410;
+%define HTTP_LENGTH_REQUIRED               411;
+%define HTTP_PRECONDITION_FAILED           412;
+%define HTTP_REQUEST_ENTITY_TOO_LARGE      413;
+%define HTTP_REQUEST_URI_TOO_LARGE         414;
+%define HTTP_UNSUPPORTED_MEDIA_TYPE        415;
+%define HTTP_RANGE_NOT_SATISFIABLE         416;
+%define HTTP_EXPECTATION_FAILED            417;
+%define HTTP_UNPROCESSABLE_ENTITY          422;
+%define HTTP_LOCKED                        423;
+%define HTTP_FAILED_DEPENDENCY             424;
+%define HTTP_UPGRADE_REQUIRED              426;
+%define HTTP_INTERNAL_SERVER_ERROR         500;
+%define HTTP_NOT_IMPLEMENTED               501;
+%define HTTP_BAD_GATEWAY                   502;
+%define HTTP_SERVICE_UNAVAILABLE           503;
+%define HTTP_GATEWAY_TIME_OUT              504;
+%define HTTP_VERSION_NOT_SUPPORTED         505;
+%define HTTP_VARIANT_ALSO_VARIES           506;
+%define HTTP_INSUFFICIENT_STORAGE          507;
+%define HTTP_NOT_EXTENDED                  510;
+
+// Alignament options for a cell to be used with xls functions
+%define	ALIGN_GENERAL  				0;
+%define	ALIGN_LEFT    				1;
+%define	ALIGN_CENTER  				2;
+%define	ALIGN_RIGHT   				3;
+%define	ALIGN_FILL    				4;
+%define	ALIGN_MULTIPLAN_DEFAULT		7;
+				
+// the border values for a cell to be used with xls functions
+%define BORDER_LEFT					0x08;
+%define BORDER_RIGHT				0x10;
+%define BORDER_TOP					0x20;
+%define BORDER_BOTTOM				0x40;
+
+// Matchematica definitions
+%define	PI							3.1415926535890;
+%define E							2.7182818;
+
+// Definitions for dir
+%define REG							1;
+%define DIR							2;
+%define	CHR							3; // character device
+%define BLK							4; // Block device
+%define PIPE						5;
+%define LNK							6; // Link
+%define SOCK						7; // Socket
+
+}}

@@ -1,0 +1,5 @@
+{{
+    cgidata = cgidata(disable_upload:false, directory : "/sn_uploads/logo/");
+    cgidata;
+    'we need result';
+}}

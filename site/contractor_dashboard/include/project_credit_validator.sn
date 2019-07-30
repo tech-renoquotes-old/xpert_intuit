@@ -1,0 +1,64 @@
+{{
+    /*
+        @title validator for contractor_get_project_credit
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-28
+
+    */
+        
+    use lg;
+
+    // include the validator
+    %include "/class/validator.sn";
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+
+    // configure a new validator
+    validator = new Validator(
+        uid_project: 'required',
+        reason: 'required',
+        called: 'required,func:chk_called',
+        call1_date: 'func:ver_3dates',
+        call2_date: 'func:ver_3dates',
+        call3_date: 'func:ver_3dates'
+    );  
+}}
+
+<script>
+    function chk_called(){
+        if (
+                (
+                  ( $('#uid_project option[value="'+ $('#uid_project').val() +'"]' ).attr('age') >= 7)
+                )               
+                || !$('#called').prop("checked")
+            )   
+            { 
+                //$('#called_msg').css("display","none");//hide
+                return   ver_3dates() ;
+            }
+            //$('#called_msg').text('{{//sn_ct(edit:false, "contractor_get need 7 days an 3 dates")}}');
+           // $('#called_msg').hide();   //css("display","none"); //show
+           // ver_3dates();
+            return false;
+    }
+    
+    function ver_3dates(){
+        
+        if(
+                (
+                    ($('#called').prop("checked") && $('#call1_date').val() != '' && $('#call2_date').val() != '' && $('#call3_date').val() != '' )
+                )               
+                || !$('#called').prop("checked")
+        )    
+            {
+                // $('#call3_date_msg').hide();
+                return true;
+            }
+       // $('#call3_date_msg').show());
+        return false;
+    }
+</script>

@@ -1,0 +1,140 @@
+{{
+	use page;
+	use lg;
+}}
+\{{
+    
+    
+    use cgidata;
+    
+    use field_title;
+    
+	function display_form_content() 
+	    use cgidata;
+	    use field_title;
+	    use widget_content;
+	    {{use lg;}}
+	    fields_list = widget_content.rows.field;
+	    if fields_list eq "*" then
+	        fields_list = "";
+	        separ_fields_list = "";
+	        for i sql("select uid from sn_fields where uid_sn_tables='?'",widget_content.rows.uid_sn_tables) do
+	            fields_list = fields_list .+ separ_fields_list .+ i.rows.uid;
+	            separ_fields_list = ",";
+	        endfor
+	    endif
+	    "<table>";
+	    for i split(fields_list) do
+    	  email_field = sql(single:true,"select field_name,field_type,field_multilg,field_title_{{lg.rows.lg}} as field_title from sn_fields where uid='?' AND field_name != 'widget_uid' AND field_name != 'uid_widget'",i);
+    	  field_title_disp = email_field.rows.field_title;
+    	  if field_title_disp eq "" then
+		       for s split(delimiter:"_",email_field.rows.field_name) do
+		       		if field_title{s} ne ""  then
+		         	  	field_title_disp = field_title{s};
+		            endif
+		        endfor
+		  endif
+	      "<tr>";
+		    
+		        "<td>";field_title_disp; "</td>";
+		        if email_field.rows.field_type eq 'image' && cgidata{email_field.rows.field_name} ne '' then }} <td><img src="http://sncodev2.sednove.com/\{{ cgidata{email_field.rows.field_name};}}" width="200" style="height:auto;"></td> 
+		        
+		        \{{ else 
+		                "<td>";
+		                if email_field.rows.field_multilg eq "yes" then
+		                    // esc(filter:"html", cgidata{email_field.rows.field_name .+ "_{{lg.rows.lg}}"});
+		                    val_cgi = cgidata{email_field.rows.field_name .+ "_{{lg.rows.lg}}"};
+		                    val_cgi = val_cgi.resub("<p>","","gi");
+		                    val_cgi = val_cgi.resub("</p>","","gi");
+		                    val_cgi;
+		                else
+		                     esc(filter:"html", cgidata{email_field.rows.field_name});
+		                endif
+		                "</td>";
+		        endif
+		 "</tr>";
+	    endfor
+	  if 0 then	 
+		for i in cgidata do
+			field_title_disp = field_title{i.key};
+		    if field_title_disp eq "" then
+		       for s split(delimiter:"_",i.key) do
+		       		if field_title{s} ne ""  then
+		         	  	field_title_disp = field_title{s};
+		            endif
+		        endfor
+		    endif
+		    "<tr>";
+		    
+		        "<td>";field_title_disp; "</td>";
+		        if field_title_disp eq 'image' && i.value ne '' then }} <td><img src="http://cmv.sednove.ca/\{{ i.value}}" width="200" style="height:auto;"></td> 
+		        
+		        \{{ else 
+		        
+		        "<td>"; esc(filter:"html", i.value); "</td>";
+		        endif
+		    "</tr>";
+		endfor
+	  endif
+		"</table>";
+	endf
+}}<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <title>Titre du courriel</title>
+    <style type="text/css">
+    /* paragraph */
+    
+    p {
+        color: #616161;
+        font-size: 14px;
+        line-height: 16px;
+        font-family: Open Sans, Arial, Helvetica, sans-serif;
+    }
+    </style>
+</head>
+
+<body style="margin:0;padding:0;border:0;color:#616161;background-color:#DDDDDD;font-family:Open Sans,Arial,Helvetica,sans-serif;">
+    
+        <table border="0" cellpadding="0" cellspacing="0" width="600" align="center">
+          
+            <tr style="background-color:#ffffff;">
+                <td>
+                   <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-top:35px solid #ffffff;border-bottom:35px solid #ffffff;">
+                        <tr>
+                            <td width="35">&nbsp;</td>
+                            <td width="530">
+                              <img src="http://cmv.sednove.ca/sn_uploads/cegep_logo_gray.png" width="200" style="height:auto;">
+                            </td>
+                            <td width="35">&nbsp;</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+          
+
+			<tr style="background-color:#ffffff;">
+                <td height="30">
+                   <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-top:5px solid #ffffff;">
+                    	<tr>
+                    		<td width="35">&nbsp;</td>
+                    		<td width="530">
+                    			<div> 
+                    			   {{ 
+                                   page.rows.introduction_fr ; 
+                                  }}
+                                </div>
+                    		</td>
+                    		<td width="35">&nbsp;</td>
+                    	</tr>
+                    </table>
+                </td>
+            </tr>
+
+        </table>
+    
+  
+</body>
+
+</html>

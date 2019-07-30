@@ -1,0 +1,21 @@
+{{
+    /*
+        @title validator for contractor_add_credit_card
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-26
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        title: 'required',
+        photo: 'regex:^.+\.(PNG|GIF|JPE?G|gif|png|jpe?g)$'
+    );  
+}}
+

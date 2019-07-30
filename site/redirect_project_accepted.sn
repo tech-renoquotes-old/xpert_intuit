@@ -1,0 +1,27 @@
+\{{
+    %include "/extenso/functions/sn_pages.snc";
+    use lg;
+    cgidata = cgidata();
+    
+    if (cgidata.project_hash ne '' && cgidata.entrepreneur_hash ne '') then
+        accepted = (cgidata.accepted ne '')? cgidata.accepted : 'yes';
+        pc = sql(single: true, "
+            SELECT pc.uid, pc.token, c.contact_lg
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid = pc.uid_contractor AND c.token = '?'
+            INNER JOIN sr_project p ON p.uid = pc.uid_project AND p.token = '?'
+            LIMIT 1
+            ", cgidata.entrepreneur_hash, cgidata.project_hash);
+        if (pc.nbrows > 0) then
+            token = pc.rows.token;
+            if (token eq '') then
+                time = time();
+                token = hash(algo: 'sha512', cgidata.project_hash .+ cgidata.entrepreneur_hash .+ time.secs);
+                void update(tables: 'sr_project_contractor', fields: {
+                    'token': token
+                }, uid: pc.rows.uid);
+            endif
+            redirect(pages(table:'pages', 'sr_confirmation_accept_project', pc.rows.contact_lg).+"?token=".+token.+"&accepted=yes");
+        endif
+    endif
+}}

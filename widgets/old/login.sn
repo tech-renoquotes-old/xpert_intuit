@@ -1,0 +1,120 @@
+{{
+	// Name:		login
+	//
+	// Description:	Display login form and lost password form
+	//
+	// Version:		2014-11-08 16:40:17 laplante@sednove.com Initial Version
+
+    %include "/extenso/functions/sn_ct.snc"; 
+
+	use widget;
+	use lg;
+}}
+\{{
+    %include "/extenso/functions/sn_login.snc"; 
+	cgidata = cgidata();
+	use config;
+
+	message = "";
+	error = "";
+	if cgidata.action eq "login" then
+		if cgidata.username eq "" then
+			error .+= dq(({{ sn_ct("Widget login username is missing", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+		endif
+
+		if cgidata.password eq "" then
+			error .+= dq(({{ sn_ct("Widget login password is missing", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+		endif
+
+		if error eq "" then
+			user = sn_login(user_table:"users",login_table:"users_login",username:cgidata.username,password:cgidata.password);
+			if user == null then
+				error .+= dq(({{ sn_ct("Widget login incorrect login", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+				sleep(3);
+			else
+				replace(keep_variables: true, "/" .+ config.site .+ "/extranet");
+			endif
+		endif
+	endif
+
+	if cgidata.action eq "reset_password" then
+		if cgidata.email eq "" then
+			error .+= dq(({{ sn_ct("Widget login email is missing", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+		else
+			finduser = sql(single:true,"select * from users where email = '?' and active = 'yes'", cgidata.email);
+			if finduser.nbrows != 1 then
+				error .+= dq(({{ sn_ct("Widget login invalid email", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+				sleep(3);
+			else
+				email(from:"extenso@sednove.com",to:user.rows.email,
+					subject:dq(({{sn_ct(edit:false,"Widget login subject email reset password", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}})),
+					file:"/widgets/login/email_forget_password.sn");
+				message .+= dq(({{ sn_ct("Widget login an email has been send to reset your password", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+			endif
+		endif
+	endif
+}}
+
+\{{ if cgidata.action eq "forget" then }}
+<form class="form-horizontal" role="form" method="post" action="?">
+	<input type="hidden" name="action" value="reset_password">
+	<div class="form-group">
+		<label for="inputEmail3" class="col-sm-5 control-label">{{ sn_ct("Widget login Please enter your email", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+		<div class="col-sm-7">
+			<input type="email" class="form-control" id="email" name="email">
+		</div>
+	</div>
+	<div class="form-group">
+		<div class="col-sm-offset-5 col-sm-7">
+			<button type="submit" class="btn btn-gradient pull-right">
+				<i class="fa fa-check-circle left red"></i>{{ sn_ct("Widget login Submit", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+			</button>
+			<a class="btn btn-gradient pull-right" href="?">
+				<i class="fa fa-reply left"></i>{{ sn_ct("Widget login Cancel", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+			</a>                                                
+		</div>
+	</div>
+</form>
+\{{ else }}
+
+\{{ if message ne "" then }}
+<div class="alert-wrap">
+<div class="alert alert-success" role="alert">
+	<i class="fa fa-check-circle left"></i> \{{ message }}
+</div>
+</div>
+\{{ endif }}
+
+\{{ if error ne "" then }}
+<div class="alert-wrap">
+	<div class="alert alert-danger" role="alert">
+		<i class="fa fa-exclamation-triangle"></i> \{{ error }}
+	</div>
+</div>
+\{{ endif }}
+
+<!-- From -->
+<form class="form-horizontal" role="form" action="?" method="post">
+	<input type="hidden" name="action" value="login">
+	<div class="form-group">
+		<label for="inputEmail3" class="col-xs-4 control-label">{{ sn_ct("Widget login User", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+		<div class="col-xs-8">
+			<input type="text" class="form-control" id="username" name="username">
+		</div>
+	</div>
+	<div class="form-group has-error">
+		<label for="inputPassword3" class="col-xs-4 control-label">{{ sn_ct("Widget login Password", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+		<div class="col-xs-8">
+			<input type="password" class="form-control" id="password" name="password">
+		</div>
+	</div>
+	<div class="form-group">
+		<div class="col-sm-offset-4 col-sm-8">
+			<a class="password pull-left" href="?action=forget">{{ sn_ct("Widget login Forget your password ?", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</a>
+			<button id="btn_go" type="submit" class="btn btn-gradient pull-right">
+				<i class="fa fa-check-circle left red"></i>{{ sn_ct("Widget login Login", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+			</button>
+		</div>
+	</div>
+</form>
+\{{ endif }}

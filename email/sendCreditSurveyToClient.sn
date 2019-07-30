@@ -1,0 +1,155 @@
+{{
+    /*
+        @title 			sendSatisfactionSurveyToClient
+        Description		Sends a survey email to know the satisfaction of client. 
+        
+        @author 		louis.jhonny@gmail.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+	use client;
+}}
+
+\{{
+    use contractor;
+    use lg;
+    use gender;
+    
+    token = hash(contractor.rows.uid);
+    company = contractor.rows.company_name;
+    client_lastname = contractor.rows.lastname;
+    client_firstname = contractor.rows.firstname;
+	
+    
+    if(lg eq 'fr') then
+        service = contractor.rows.name_fr;
+        title = (gender eq 'f')? 'Mme.':'Mr.';
+    else
+        service = contractor.rows.name_en;
+        title = (gender eq 'f')? 'Mme.':'Sr.';
+    endif
+    
+/*if(contractor.rows.no_quote eq 'yes') then
+		quote_text = "{{sn_ct(edit:false,'il ne vous a pas donné de prix')}}";
+	else
+		quote_text = "{{sn_ct(edit:false,'il vous a donné un prix')}}";
+endif*/
+
+    if(contractor.rows.reason == 2 || contractor.rows.reason == 4) then
+		reason = "{{sn_ct(edit:false,'le projet est annulé ou donné')}}";
+	elseif(contractor.rows.reason == 3) then
+		reason = "{{sn_ct(edit:false,'vous avez déjà trop de soumission et n\'en voulez plus d\'autre')}}";
+	elseif(contractor.rows.reason == 1) then
+		reason = "{{sn_ct(edit:false,'il est impossible de vous rejoindre')}}";
+    endif
+    
+    url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
+	url = url.rows.url_prod;
+	//Il faut prendre le token de sr_project_contractor et non de sr_project
+	url_survey = url.+"{{pages('sr_credit_survey', lg.rows.lg, table:'pages')}}";
+
+	uid_client = client.rows.uid;
+
+}}
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+        </span>
+    </span>
+</div>
+<br>
+<table cellpadding="0" cellspacing="5" width="100%">
+    <tr>
+        <td width="100%">
+            <a href="\{{url_survey}}?token=\{{token}}&option=1" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:18px;text-align:center;margin-bottom:15px">
+                    {{sn_ct(edit:true,"a pu donner un prix mais le projet est annulé/donné")}}
+                </div>
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td width="100%">
+            <a href="\{{url_survey}}?token=\{{token}}&option=2" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:18px;text-align:center;margin-bottom:15px">
+                    {{sn_ct(edit:true,"n'a pas donner de prix et le projet est annulé/donné")}}
+                </div>
+            </a>
+        </td>
+    </tr>
+        
+    <tr>
+        <td width="100%">
+            <a href="\{{url_survey}}?token=\{{token}}&option=3" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:18px;text-align:center;margin-bottom:15px">
+                    {{sn_ct(edit:true,"n'a pas donner de prix mais le projet est toujours disponible")}}
+                </div>
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td width="100%">
+            <a href="\{{url_survey}}?token=\{{token}}&option=4" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:18px;text-align:center;margin-bottom:15px">
+                    {{sn_ct(edit:true,"a pu donner un prix et le projet est disponible")}}
+                </div>
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td width="100%">
+            <a href="\{{url_survey}}?token=\{{token}}&option=5" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:18px;text-align:center;margin-bottom:15px">
+                    {{sn_ct(edit:true,"Je souhaite ajouter une explication")}}
+                </div>
+            </a>
+        </td>
+    </tr>
+</table>
+
+<br>
+<br>
+<hr style="background:#2a769f;color:#2a769f;">
+<!--<br>-->
+<!--<br>-->
+<!--<table width="100%" border="0" cellspacing="0" cellpadding="0">-->
+<!--  <tr>-->
+<!--    <td>-->
+<!--      <table width="100%" border="0" cellspacing="0" cellpadding="0">-->
+<!--        <tr>-->
+<!--          <td align="center" style="font-weight:bold;-webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;" bgcolor="#2a769f"><a href="\{{url}}{{pages(table:'pages','client_share_satisfaction',lg.rows.lg)}}?n=not_evaluated" target="_blank" style="border-top:7px #2a769f solid;border-bottom:7px #2a769f solid;font-size: 14px; color: #ffffff; text-decoration: none; text-decoration: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;display: block;width:100%;"><span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je n'ai pas retenu les services de ces entrepreneurs",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span></a></td>-->
+<!--        </tr>-->
+<!--      </table>-->
+<!--    </td>-->
+<!--  </tr>-->
+<!--</table>-->
+
+<br>
+<br>
+<div style="font-size:16px;">
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+      	{{sn_ct(edit:false, "Cordialement,.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        <br><br>
+        {{sn_ct(edit:false, "PS: Si vous désirez émettre des commentaires additionnels, vous pouvez tout simplement répondre à ce courriel.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+    </span>
+</div>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

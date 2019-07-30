@@ -1,0 +1,11 @@
+Start Direct-Mail
+2015-12-15 15:56:52
+Mail from info@sednove.com
+format HTML/TEXT
+text file is /module/sed/directmail/template/best_wishes.txt
+html file is /module/sed/directmail/template/best_wishes.html
+Sending to chantal.ste.marie@sednove.com but change to ilya@sednove.com
+code=c-onbMsNeqf47Sp7vOhp2UXkMWYYUWL72w5bP13009on4AHmiso2NpES7ap4IhJXVkX8Qi0cOhuaCikgSAii188B9B9MYgV36rot3N6n8rZRVy-rF8OZLqWo
+{"errmsg":"","filename":"/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","cfile":"mail.c","errcode":0,"filefrom":";/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","line":68,"error":"","cline":709,"compileuid":99,"date":""}2015-12-15 15:56:53
+
+End of job

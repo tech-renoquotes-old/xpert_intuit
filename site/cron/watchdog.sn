@@ -1,0 +1,54 @@
+{{%include '/site/package/all.sn';}}
+\{{// Every x minutes
+
+/*     
+
+        @version 1.00 2017-03-28    bbduc@yahoo.com   
+
+*/
+
+configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+age = sql(single:true,"select  
+                (select TIMESTAMPDIFF(HOUR, max(sn_cdate), now()) as age  
+                from sr_invoice 
+                order by 1 desc
+                limit 1
+                )as age_last_invoice,
+                (select  TIMESTAMPDIFF(HOUR, max(sn_cdate), now()) as age 
+                from sr_project
+                order by 1 desc
+                limit 1
+                )as age_last_project,
+                (select  TIMESTAMPDIFF(HOUR, max(sn_cdate), now()) as age 
+                from sr_project_contractor
+                order by 1 desc
+                limit 1
+                )as age_last_project_contractor
+                from  sr_contractor
+                limit 1"
+            );
+
+
+// envoie courriel si ça plus d'une heure pour le dernier enregistrement 
+
+h = datetime(date:datetime(),format:"%H");  //preng l'heure actuelle
+minh = 5;
+maxh = 23;
+test = false;
+
+if (h >= minh  &&  h <= maxh)then
+    if (age.rows.age_last_invoice >0  ||
+    age.rows.age_last_project  > 0  ||
+    age.rows.age_last_project_contractor > 0  || test) then
+                
+            msg = "Derniere facture ".+age.rows.age_last_invoice.+ "heure, Dernier projet ".+age.rows.age_last_project
+            .+" heure, Dernier projet_entrepreneur=".+age.rows.age_last_project_contractor.+" heure.";
+            msg = msg.+ " \n Vérifier si tout est OK.";
+            automail::sendMessageAdminEmail("Message du Watchdog  CRON", msg, "Message du Watchdog");
+
+    endif
+endif   
+
+
+}}

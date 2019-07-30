@@ -1,0 +1,48 @@
+if (cgidata.uid ne '' && cgidata.status eq 'active') then
+    p = sql(single:true, "SELECT status FROM sr_project WHERE uid = '?'", cgidata.uid);
+    if (p.rows.status ne 'active') then
+        if (cgidata.uid_service eq '') then
+			//cgidata.status = p.rows.status;
+            '<div class="alert alert-danger">You must specify a service before activating the project</div>';
+        elseif (cgidata.uid_address eq '') then
+			//cgidata.status = p.rows.status;
+            '<div class="alert alert-danger">You must specify an address before activating the project</div>';
+			SEND_EMAIL_PROJECT_ACTIVATION = true;
+        elseif (cgidata.uid_project_type == 0) then
+			//cgidata.status = p.rows.status;
+			'<div class="alert alert-danger">You must specify an project type before activating the project - *****************NE PAS OUBLIER DE METTRE LE PROJET ACTIF******************</div>';
+			SEND_EMAIL_PROJECT_ACTIVATION = true;
+		else
+            address = sql(single:true, "SELECT uid_city, phone1 FROM sr_address WHERE uid = '?'", cgidata.uid_address);
+            if (address.nbrows == 0 || address.rows.uid_city eq '') then
+				//cgidata.status = p.rows.status;
+                '<div class="alert alert-danger">You must select a city in the address before activating the project</div>';
+				SEND_EMAIL_PROJECT_ACTIVATION = true;
+            elseif (address.nbrows == 0 || (address.rows.phone1 eq '' && address.rows.phone2 eq '' && address.rows.phone3 eq '')) then
+				'<div class="alert alert-danger">WARNING: There are no phone number attached to this client</div>';
+			else
+				// The email is sent in another trigger after the project is saved
+				SEND_EMAIL_PROJECT_ACTIVATION = true;
+            endif
+        endif
+	endif
+endif
+
+if ((cgidata.lead_price eq "" || cgidata.lead_price == 0) && cgidata.status eq "active") then
+	p = sql(single:true, "SELECT status FROM sr_project WHERE uid = '?'", cgidata.uid);
+	cgidata.status = p.rows.status;
+	'<div class="alert alert-danger">*****************LE PRIX DU PROJET DOIT ETRE SUPERIEUR A 0.00****************</div>';
+endif
+
+if (cgidata.status eq "") then
+	p = sql(single:true, "SELECT status FROM sr_project WHERE uid = '?'", cgidata.uid);
+	cgidata.status = p.rows.status;
+	'<div class="alert alert-danger">*****************VOUS DEVEZ CHOISIR UN STATUT****************</div>';
+endif
+
+if (cgidata.uid ne '' && cgidata.rewritten eq 'yes') then
+    p = sql(single:true, "SELECT rewritten FROM sr_project WHERE uid = '?'", cgidata.uid);
+    if (p.rows.rewritten ne 'yes') then
+		REWRITE_PROJECT = true;
+	endif
+endif

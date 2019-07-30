@@ -1,0 +1,17 @@
+{{ // ex1
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	for content sql("select * from widget_une_colonne where uid_widget = '?'", widget.rows.uid_widget_list) do
+	}}
+		<h1>{{ content.rows{"title_" .+ lg} }}</h1>
+		<div id="content-wrap">
+			<h2>{{ content.rows{"subtitle_" .+ lg} }} </h2>
+			{{ content.rows{"content_" .+ lg} }}
+		</div>
+	{{
+	endfor
+}}

@@ -1,0 +1,59 @@
+{{
+    /*
+        @title 			notifyLongWaitForQuote
+        Description		Email this template to the client in case his/her project delayed (72hrs)
+        @author 		madupuis@sednove.com
+        @version 		1.0 2017-08-12
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+}}
+
+\{{ 
+	use client;
+	use services;
+    
+    mr = (client.rows.lang eq "fr")? "M.": "Mr";
+    mme = (client.rows.lang eq "fr")? "Mme": "Ms";
+    titre = (client.rows.gender eq "f") ? mme : mr; 
+    uid_project = client.rows.uid;
+    uid_client = client.rows.uid_client;
+    firstname = client.rows.firstname;
+    name = client.rows.lastname;
+    service = services.rows.service_name;
+    description = client.rows.description;
+    
+    if(client.rows.lang eq 'fr') then
+        cancel_project_link = 'https://soumissionrenovation.ca/fr/annuler-un-projet?cl=' .+ uid_client .+ '&prj=' .+ hash(uid_project);
+    else
+        cancel_project_link = 'https://renoquotes.com/en/cancel-a-project?cl=' .+ uid_client .+ '&prj=' .+ hash(uid_project);
+    endif
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+<br />
+
+<span>
+    <h4>
+        \{{ if(client.rows.lang eq 'fr') then }} 
+            "Si vous souhaitez annuler ce projet, cliquez ici:" &nbsp;<a href="\{{cancel_project_link}}">Annuler mon projet </a>
+        \{{else}} 
+            "If you wish to cancel this project please, click here:" &nbsp;<a href="\{{cancel_project_link}}">Cancel my project </a>
+        \{{endif}}
+    </h4>
+</span>
+
+<p style="font-size: 8px;">\{{uid_lient}}</p>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

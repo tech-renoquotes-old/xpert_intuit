@@ -1,0 +1,23 @@
+\{{
+    /*
+        @title validator for create_login form
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+            username: 'minlen:6,word',
+            password: 'required,minlen:6,passwd_number,passwd_uppercase,passwd_lowercase',
+            password2: 'required,func:confirm_password',
+            token:'required'
+    );  
+}}
+

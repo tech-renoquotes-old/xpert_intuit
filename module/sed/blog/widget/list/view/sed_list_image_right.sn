@@ -1,0 +1,213 @@
+<link rel="stylesheet" href="/css/blog.css">
+{{
+    /*
+     * @title Widget blog_article_detail
+     * @Version 1.0 2016-05-10
+     * @author madupuis@sednove.ca
+     * 
+     * List of articles in the blog
+     */
+     meta_content=sql(single:true,"select * from sn_configs");
+}}  
+
+{{%include "/module/sed/blog/widget/list/include/sed_articles.sn"}}
+
+<style>
+    .cs .image_right_list .row{
+        padding:0 15px;
+        margin-bottom:10px;
+    }
+    .cs .image_right_list .row>div{
+        background:#e9e9e9;
+        vertical-align:top;
+        padding:15px 2.5%;
+        float:right;
+        width:50%;
+        height:300px;
+    }
+    
+    
+    
+    /*Class to offset the 15px from the right padding*/
+    .cs .image_right_list .blog_info{
+        position:relative;
+        left:7.5px;
+    }
+    .cs .image_right_list .blog_title h2{
+        margin:0;
+    }
+    .cs .image_right_list .blog_title{
+        margin:5px 0;
+    }
+    .cs .image_right_list .row .img_container{
+        padding:0;
+        padding-left:15px;
+    }
+    /*If param is set to alternate direction output this code*/
+    .cs .image_right_list:nth-child(2n+1) .row>div{
+        float:left;
+    }
+    .cs .image_right_list:nth-child(2n+1) .img_container{
+        padding-left:0;
+        padding-right:15px;
+    }
+    /*------------------------------------------------------>*/
+    .cs .image_right_list .row .img_container img{
+        height:300px;
+        position:relative;
+    }
+    .cs .image_right_list .row .img_container a{
+        display:block;
+        overflow:hidden;
+        text-align:center;
+    }
+    .cs .image_right_list .row .img_container a span{
+        margin:0 -800px;
+        text-align:center;
+        display:block;
+    }
+    .cs .image_right_list .text_section{
+        margin:10px 0;
+    }
+    .cs .image_right_list .text_section p{
+        display:inline;
+    }
+    .cs .more_link{
+       text-decoration:underline; 
+    }
+    @media(max-width:768px){
+        .cs .image_right_list .blog_info{
+            left:0;
+        }
+        .cs .image_right_list .row>div{
+            float:none;
+            width:100%;
+            height:auto;
+        }
+        .cs .image_right_list .row .img_container a span{
+            margin:0;
+        }
+        .cs .image_right_list .row .img_container{
+            padding:0!important;
+            height:auto;
+        }
+        .cs .image_right_list .row .img_container img{
+            display: block;
+            max-width: 100%;
+            height: auto;
+            left:0;
+        }
+    }
+</style>
+
+\{{
+// display all articles
+    for article in articles.rows do
+        categories = sql(single:true, "SELECT GROUP_CONCAT(name ORDER BY uid) as name FROM sed_blog_category WHERE find_in_set(uid, '?')",article.category); 
+}}
+<div class="image_right_list" itemscope itemtype="http://schema.org/Article">
+    
+    <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
+        <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+        <meta itemprop="url" content="{{meta_content.rows.url_prod}}/{{meta_content.rows{'logo_'.+lg.rows.lg};}}">
+        </div> 
+        <meta itemprop="name" content="{{meta_content.rows{'DC_title_'.+lg.rows.lg};}}">    
+    </div>
+    <div class="row">
+        <div class="img_container">
+            \{{if article.featured_image ne "" then}}
+                 <a href="\{{get_href_link(article)}}"><span><img itemprop="image" src="\{{article.featured_image}}?size=1440x600&crop"></span></a>
+            \{{else}}
+                 <a href="\{{get_href_link(article)}}"><span><img itemprop="image" src="\{{blog_config.rows.article_default_image}}"></span></a>
+            \{{endif}}
+        </div>
+        <div>
+            <div class="blog_info">
+                <div class="blog_brand">
+                    \{{article.surtitle}}
+                </div>
+                <div class="blog_title">
+                    <a href="\{{get_href_link(article)}}"><h2 itemprop="headline">\{{article.title}}</h2></a>
+                </div>             
+                <div class="blog_filter" itemprop="articleSection">
+                        \{{ for category sql("SELECT uid,name_{{lg.rows.lg}} AS name FROM sed_blog_category WHERE find_in_set(uid, '?')",article.category) do}}
+                            <a class="noblue"  href="javascript:void(0)" onclick="$('#category').val('\{{category.rows.uid}}'); $('#sed_blog_form').submit();">#\{{category.rows.name}}</a>    
+                        \{{ endfor }}
+                </div>    
+                <div class="text_section" itemprop="text">
+                    \{{ 
+                    if article.brief_text ne '' then 
+                        article.brief_text;
+                    else
+                        text_plain=esc(filter:"cleanhtml",article.full_text);
+                        text_part=strsub(start:0,finish:150,endblank:true,text_plain) ;
+                        text2=text_part.resub("<strong>","","gi");
+                        text_final= text2.resub("</strong>","","gi");
+                        text_final; 
+                    endif
+                }}
+                    <a href="\{{get_href_link(article)}}" class="more_link">Read more</a>
+                </div>                
+                <div>
+                    <span itemprop="datePublished">\{{ucfirst(datetime(lg:"{{lg.rows.lg}}",date:article.date_article, format:"%d %B %Y"))}} </span> | 
+                    <a class="noblue" href="javascript:void(0)" onclick="$('#author').val('\{{article.author}}'); $('#sed_blog_form').submit();" ><span itemprop="author" >\{{article.firstname}} \{{article.lastname}}</span></a> |
+                    <a class="noblue" href="\{{get_href_link(article)}}#comment_box">Comments</a>
+                </div>
+                <div style="display:none" itemprop="interactionStatistic" itemscope itemtype="http://schema.org/InteractionCounter">
+                <meta itemprop="interactionType" content="http://schema.org/CommentAction"/>
+                <meta itemprop="userInteractionCount" content="\{{article.comment_count}}" />     
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+\{{ endfor}}
+
+
+<!--  end display all articles -->
+
+<!-- Footer / Pagination -->
+<div class="row no-margins">
+    \{{if cgidata.orderby eq "DESC" || cgidata.orderby eq "" then}}
+        \{{if page_index > 1 then}}
+            <div class="s_col-sm-right mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index-1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                    SHOW NEWER POSTS
+                </a>
+            </div>
+        \{{endif}}
+        \{{if page_index < ceil((float)article_count.nbrows/items_per_page) then}}
+            <div class="s_col-sm-left mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index+1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                    SHOW OLDER POSTS
+                </a>
+            </div>
+        \{{endif}}
+    \{{else}}
+            \{{if page_index > 1 then}}
+            <div class="s_col-sm-right mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index-1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                   SHOW OLDER POSTS 
+                </a>
+            </div>
+        \{{endif}}
+        \{{if page_index < ceil((float)article_count.nbrows/items_per_page) then}}
+            <div class="s_col-sm-left mt-10">
+                <a href="javascript:void(0)" onclick="$('#page').val('\{{page_index+1}}'); $('#sed_blog_form').submit();" class="btn btn-default mob_full_width">
+                    SHOW NEWER POSTS
+                </a>
+            </div>
+        \{{endif}}
+    \{{endif}}
+</div>
+<!-- end footer / pagination-->
+
+<!-- SCRIPTS -->
+
+
+<!-- Script for add this -->
+{{/*hub_config.rows.code_addthis*/}}
+
+
+
+<!-- ************** scripts-->

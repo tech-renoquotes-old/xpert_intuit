@@ -1,0 +1,26 @@
+{{
+    table_dest = 'sr_cc';
+    table_from = 'tbl_cc';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idtbl_cc',
+        'uid_contractor' : 'id_ent',
+        'exp'           : 'exp',
+        'last_digits'   : 'last_digits',
+        'type'          : 'type',
+        'sn_cdate'      : 'timestamp',
+        'reference'     : 'reference', // ex: 2967536897294724
+        'name'          : 'name',
+        'merchantref'   : 'merchantref',// ex: 4070-822
+        'priority'      : 'priorite' // (1-7)
+    };
+    
+    %include 'migration.sn';
+    

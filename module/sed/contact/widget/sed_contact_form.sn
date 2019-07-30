@@ -1,0 +1,154 @@
+{{
+    // --------------------------------------------------------------------------
+    // Name:        Function sed_contact_form
+    //
+    // Description: Display the form of conatct 
+    //
+    // Version:      1.0 2016-06-2 16:00:03 gamila@sednove.com initial
+    // --------------------------------------------------------------------------
+ 
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc"; 
+    %include "/extenso/functions/sn_pages.snc";     
+    use lg;         // Function publish use context lg  
+    use widget;
+    
+    if widget.rows.table_name ne "" then
+        widget_conf = sql(single:true, "SELECT * FROM ?", widget.rows.table_name);
+    endif
+    
+    config = config();
+    
+    %include '/site/package/automail.sn';
+}}
+\{{ use page;
+    cgidata=cgidata();
+    if cgidata.u ne '' then
+        code = cgidata.u;
+        error = 1;
+        if code ne "" then
+            user_email=decrypt(value:code,key:"SednoveInfolettr",error:decrypt_err);
+            error = decrypt_err.errcode + 0;
+            if error==0 then
+                void sql("UPDATE sed_contact SET newsletter_confirmation_status='confirmed' WHERE email='?'",user_email); 
+            endif
+        endif                      
+        }}  
+        \{{ if error > 0 then }}    
+            <div class="alert alert-danger fade in" id="contact-alert-danger2">
+                {{sn_ct("contact newsletter confirmation error!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}
+            </div>
+        \{{ else }}     
+            <div class="alert alert-success fade in" id="contact-alert-success2">
+                {{sn_ct("contact Confirmation success!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}
+            </div>               
+        \{{ endif   
+    endif
+    
+    %include '/class/validator.sn';
+    validator = new Validator(name:'required',email:'required,email',phone:'required,phone',message:'required');
+    validator.setAntibotDelay(5);
+
+    if cgidata.submit_contact eq "sent" then
+        
+        newsletter = cgidata.newsletter;
+        if newsletter ne "yes" then
+            newsletter = "no";
+        else
+            newsletter = "yes";
+        endif
+        
+        if validator.validate(data:cgidata) then        
+            // <!-- Insert into sed_contact -->
+           res = insert(table:"sed_contact",fields:{
+                "name": cgidata.name,
+                "email": cgidata.email,
+                "phone": cgidata.phone,
+                "subject": cgidata.subject,
+                "message": cgidata.message,
+                "adate": datetime(),
+                "lg":"{{lg.rows.lg}}",
+                "newsletter_confirmation_status":"no",
+                "newsletter": newsletter
+            });
+             
+            contact = sql(single:true,"SELECT * FROM sed_contact WHERE uid='?'", lastuid());
+            if contact ne '' then }}
+               
+             <div class="alert alert-success fade in" id="contact-alert-success2" >
+                <!--button aria-hidden="true" data-dismiss="alert" class="close" type="button">×</button-->
+                {{sn_ct("contact Contact submited successfully!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}
+            </div>
+           \{{ endif
+            // <!-- Send contact email -->
+            automail::sendContactEmail();
+            
+            // <!-- Send newsletter confirmation -->
+            if newsletter eq "yes" then
+                automail::sendContactEmailNewsletter();
+                if email_error.errmsg eq "" then
+                     void sql("UPDATE sed_contact SET newsletter_confirmation_status='sent' WHERE uid='?'",res.uid); 
+                endif
+            endif
+            
+        else
+            errors = validator.errors;
+        endif
+   endif
+ }}
+
+
+<div class="well custom-well">
+    <div class="alert-wrap">
+        \{{if type(errors) eq 'array' then}}
+            \{{if length(errors) == 0 then}}
+            <div class="alert alert-success fade in" id="contact-alert-success2">
+                button aria-hidden="true" data-dismiss="alert" class="close" type="button">×</button
+                {{sn_ct("contact Contact submited successfully!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}
+            </div>
+            \{{else}}
+            <div class="alert alert-danger fade in" id="contact-alert-danger2">
+                button aria-hidden="true" data-dismiss="alert" class="close" type="button">×</button
+                {{sn_ct("contact Please, verify your info!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}
+                \{{errors}}
+            </div>
+            \{{endif}}
+        \{{endif}}
+    </div>
+    <form class="form-light mt-20" role="form" id="formulaire_contact" name="formulaire_contact" method="post">
+        <input type="hidden" name="submit_contact" value="sent"/>        
+        <div class="form-group">
+            <label>{{sn_ct("contact Nom", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}</label>
+            <input type="text" name="name" class="form-control required" placeholder="{{sn_ct('contact Votre nom', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_contact')}}">
+        </div>
+        <div class="row form-group">
+            <div class="col-md-6">
+                <label>{{sn_ct("contact Courriel", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}</label>
+                <input type="email" name="email" class="form-control required" placeholder="{{sn_ct('contact votre@courriel.ca', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_contact')}}">                
+            </div>
+            <div class="col-md-6">
+                <label>{{sn_ct("contact Phone", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}</label>
+                <input type="text" name="phone" class="form-control required" placeholder="{{sn_ct('contact phone', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_contact')}}">                
+            </div>            
+        </div>
+        <div class="form-group">
+            <label>{{sn_ct("contact Subject", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}</label>
+            <input type="text" name="subject" class="form-control required" placeholder="{{sn_ct('contact Subject', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_contact')}}">
+        </div>
+        <div class="form-group">
+            <label>{{sn_ct("contact Message", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}</label>
+            <textarea class="form-control required" id="message" name="message" placeholder="{{sn_ct('contact Ecrviez votre message ici', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_contact')}}" style="height:100px;resize:vertical;"></textarea>
+        </div>
+        {{ if widget_conf.rows.newsletter eq "yes" then }}
+        <div class="form-group">
+            <!--<label><input type="checkbox" name="newsletter" value="yes" /> {{//sn_ct("contact Newsletter Label", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}}</label>-->
+        </div>
+        {{ endif }}
+        <button class="btn btn-primary" type="submit">{{sn_ct("contact Envoyer", edit:false, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_contact")}} <i class="fa fa-angle-right"></i></button>
+    </form>
+    \{{
+        validator.startAntibot();
+        validator.validateJS(form:'formulaire_contact');
+    }}
+</div>

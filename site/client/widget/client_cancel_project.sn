@@ -1,0 +1,173 @@
+{{
+    /*
+        @title client_survey
+        Description: This widget is used to get feedback from a client on contractors.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-11
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+cgidata = cgidata();
+service = "";
+description = "";
+complete = 0;
+client_email = lc(cgidata.email);
+
+
+if cgidata.uid_client ne "" && cgidata.uid_project ne "" then
+    project = sql("SELECT 
+                sr_client.email, 
+                sr_project.uid_client, 
+                sr_project.uid, 
+                sr_project.description, 
+                sr_project.comments, sr_project.status, 
+                (select name_? from sr_service where uid = sr_project.uid_service) as service, 
+                status 
+                FROM sr_project INNER JOIN sr_client on sr_client.uid = sr_project.uid_client 
+                WHERE (status='active' OR status='completed' OR status='new') 
+                AND sr_client.uid = '?' ", "{{lg.rows.lg}}", cgidata.uid_client);
+                
+    for p in project.rows do
+    
+        if cgidata.uid_client eq p.uid_client && cgidata.uid_project eq hash(p.uid) then
+        
+            if(client_email eq lc(p.email)) then
+                if p.status eq 'active' then
+                    void update(
+                        tables:"sr_project",
+                        uid: p.uid,
+                        fields: {
+                            "status": 'cancelled-after-qualification',
+                            "comments": p.comments .+ ' (Le client a annulé le projet [' .+ datetime(format:'%Y-%m-%d %H:%M:%S') .+ '])'
+                        }
+                    );
+                elseif p.status eq 'new' then
+                    void update(
+                        tables:"sr_project",
+                        uid: p.uid,
+                        fields: {
+                            "status": 'cancelled-before-qualification',
+                            "comments": p.comments .+ ' (Le client a annulé le projet [' .+ datetime(format:'%Y-%m-%d %H:%M:%S') .+ '])'
+                        }
+                    );
+                else
+                    void update(
+                        tables:"sr_project",
+                        uid: p.uid,
+                        fields: {
+                            "comments": p.comments .+ ' (Le client a annulé le projet [' .+ datetime(format:'%Y-%m-%d %H:%M:%S') .+ '])'
+                        }
+                    );               
+                endif
+                complete = 1;
+            endif
+        endif
+    endfor
+endif
+}}
+
+
+\{{
+if cgidata.cl ne "" && cgidata.prj ne "" then
+    project = sql("SELECT 
+                sr_client.email, 
+                sr_project.uid_client, 
+                sr_project.uid, 
+                sr_project.description, 
+                sr_project.comments, 
+                sr_project.`status`, 
+                (select name_? from sr_service where uid = sr_project.uid_service) as service
+                FROM sr_project  INNER JOIN sr_client on sr_client.uid = sr_project.uid_client 
+                WHERE sr_client.uid = '?' ", "{{lg.rows.lg}}",cgidata.cl);
+    
+    for p in project.rows do
+        if cgidata.cl eq p.uid_client && cgidata.prj eq hash(p.uid) then
+            service = p.service;
+            description = p.description;
+            email = p.email;
+
+            if (p.status eq "active" || p.status eq "completed" || p.status eq "new") then
+                complete = 2;
+            else
+                complete = -1;
+            endif
+            break;
+        endif
+    endfor
+endif
+
+}}
+
+\{{if complete == 2 then}}
+<div class="well custom-well">
+    <form class="form-horizontal" enctype="multipart/form-data" action="{{pages('cancel_project', lg.rows.lg, table:'pages')}}" id="add_client" name="add_client" method="POST">
+        <input type='hidden' name='uid_client' value='\{{cgidata.cl}}' />
+        <input type='hidden' name='uid_project' value='\{{cgidata.prj}}' />
+        <fieldset class="form-group">
+            <label class="control-label col-md-4" for="service">
+                {{sn_ct("sr_client_cancel_project Projet de: ", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+            </label>
+            <div class="col-md-8">
+                <input disabled class="form-control" type="text" name="service" id="service" value="\{{service}}">
+                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <label class="control-label col-md-4" for="description">
+                Description:
+            </label>
+            <div class="col-md-8">
+                <div style="width:100%; height:auto; text-align:left;  " name="description" id="description">\{{description}}</div>
+            </div>
+        </fieldset>
+
+        <fieldset class="form-group">
+            <label class="control-label col-md-4" for="email">
+                {{sn_ct("sr_client_cancel_project Votre courriel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+            </label>
+            <div class="col-md-8">
+                <input class="form-control" type="text" name="email" id="email">
+                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>
+            </div>
+        </fieldset>
+
+        <div class="form-group">
+            <div class="col-md-offset-4 col-md-8">
+                <button id="submit_add_client" type="submit" class="btn btn-primary">
+                    {{sn_ct(edit:true,"sr_client_cancel_project annuler projet", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                </button>
+            </div>
+        </div>
+        <script>
+        </script>
+    </form>
+</div>
+\{{elseif complete == 1 then}}
+    <div id="ajax_success" class="alert alert-success" >
+        {{sn_ct("sr_client_cancel_project Votre projet a bien été annulé. Merci et à bientôt! ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+    </div>
+\{{elseif complete == 0 then}}
+    <div class="alert alert-info">
+        {{sn_ct("sr_client_cancel_project Désolé, ce lien n'est pas valide.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+    </div>
+\{{elseif complete == -1 then}}
+    <div class="alert alert-info">
+        {{sn_ct("sr_client_cancel_project Désolé, Il se peut que votre projet aie été déjà annulé.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+    </div>
+\{{endif}}
+
+
+<script>
+$('#ajax_success').show();
+</script>

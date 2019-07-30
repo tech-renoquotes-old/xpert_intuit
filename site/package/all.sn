@@ -1,0 +1,6 @@
+{{ 
+    %include "/site/package/automail.sn";
+    %include "/site/package/contractor.sn";
+    %include "/site/package/project.sn";
+    %include "/package/pivotal.sn";
+}}

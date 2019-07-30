@@ -1,0 +1,56 @@
+{{
+    /*
+        @title contractor_billing_history
+        Description: List all contractor's credit
+        
+        @author bbduc@yahoo.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    use extranet_user;
+    
+    credits = sql("SELECT * FROM sr_credit WHERE uid_contractor='?' ORDER BY uid_project DESC   limit 50", extranet_user.uid);
+    //extranet_user.uid;
+    //credits.nbrows;
+    //contractor = sql(single:true, "SELECT sn_cdate FROM sr_contractor WHERE uid='?'", extranet_user.uid);
+}}
+    <h2>
+        {{sn_ct("contractor_current_bill Facture courante / solde", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </h2>
+    \{{ if credits.nbrows == 0 then  }}
+        <h3>
+           {{sn_ct("contractor_credit Aucun crédit en attente", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </h3>
+    \{{ else }}
+        <div class="mb-sm table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <!--<th>{{sn_ct("contractor_credit ID de reference", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>-->
+                        <th>{{sn_ct("contractor_credit ID du projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                        <th>{{sn_ct("contractor_credit Date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                        <th>{{sn_ct("contractor_credit Status", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                \{{for credit in credits.rows do}}
+                    <tr>
+                        <!--<td>\{{credit.uid;}}</td>-->
+                        <td>\{{credit.uid_project}}</td>
+                        <td>\{{datetime(date:credit.sn_cdate,format:"%Y-%m-%d")}}</td>
+                        <td>\{{(credit.accepted eq 'yes')?'{{sn_ct(edit:false,"contractor_credit Accepted", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}':(credit.refusal_reason ne '')?'{{sn_ct(edit:false,"contractor_credit Refused", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}':'{{sn_ct(edit:false,"contractor_credit En cours", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}'}}</td>
+                    </tr>
+                \{{endfor}}
+                </tbody> 
+            </table> 
+        </div>
+    \{{ endif }}

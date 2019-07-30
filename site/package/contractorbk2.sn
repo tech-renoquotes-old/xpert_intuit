@@ -1,0 +1,547 @@
+\{{
+    /*
+        @title contractor package
+        
+        @author olivier@sednove.com
+        
+        @version 1.0 2016-08-08
+        @version 1.01 2016-12-01  add taxes by provinces
+        @version 1.02 2017-01-07  mod path for invoices
+
+
+    */
+    
+    package contractor;
+        
+        function activateContractor(uid_contractor)
+            contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+            if (contractor.rows.sent_welcome_email ne 'yes' ) then
+                //  NE PAS COCHER AFFICHAGE EDIT  POUR LE CHAMP sent_welcome_email SINON PAS D'UPDATE
+                void sql("UPDATE sr_contractor SET sent_welcome_email = 'yes' WHERE uid = '?'", uid_contractor);
+                void insert(table:'sr_debug', fields:{'description':'avant test de sent_welcome_email','text':contractor.rows.sent_welcome_email});
+                automail::contractorActivation(uid_contractor);
+            endif
+        endf
+        
+        /* 
+         * Returns a list of billing lines including the balance, invoices, credits and transactions.
+         * The totals of 'price' is the amount to pay
+         * Available fields are : uid, id, type, description, address, amount
+         */
+        function getCurrentBilling(uid_contractor)
+            if (lg eq '') then
+                lg = '{{use lg; lg.rows.lg}}';
+            endif
+            if (lg eq '') then
+                lg = 'fr';
+            endif
+            billing = sql("
+            
+                SELECT  null as uid,
+                        '' as id,
+                        '' as date,
+                        'balance' as 'type',
+                        'Balance' as description,
+                        '' as address,
+                        balance as 'amount'
+                    FROM sr_contractor 
+                    WHERE uid='?'
+                    
+                UNION
+                
+                SELECT  i.uid as uid,
+                        p.uid as id,
+                        pc.accepted_date as date,
+                        'lead' as 'type',
+                        p.description as description,
+                        IF(a.uid IS NULL, '', CONCAT(a.street_no, ' ', a.street, ', ', IF(c.name_".+lg.+"  IS NOT NULL, c.name_".+lg.+", a.city), ', ', a.province, ' ', a.zip)) as address,
+                        i.amount as 'amount'
+                    FROM sr_invoice i
+                    INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+                    INNER JOIN sr_project p ON p.uid = pc.uid_project
+                    LEFT JOIN sr_address a ON a.uid = p.uid_address
+                    LEFT JOIN sr_city c ON c.uid = a.uid_city
+                    WHERE   (i.completed != 'yes' OR i.completed IS NULL)
+                        AND pc.uid_contractor='?'
+                        
+                UNION
+                
+                SELECT  cr.uid as uid,
+                        p.uid as id,
+                        cr.sn_cdate as date,
+                        'credit' as 'type',
+                        'Crédit' as description,
+                        '' as address,
+                        (pc.lead_price*-1) as 'amount'
+                    FROM sr_credit cr
+                    INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+                    INNER JOIN sr_project p ON p.uid = pc.uid_project
+                    LEFT JOIN sr_address a ON a.uid = p.uid_address
+                    LEFT JOIN sr_city c ON c.uid = a.uid_city
+                    WHERE   (cr.completed != 'yes' OR cr.completed IS NULL)
+                        AND cr.accepted = 'yes'
+                        AND pc.uid_contractor='?'
+                        
+                UNION
+                
+                SELECT  uid,
+                        '' as id,
+                        sn_cdate as date,
+                        'transaction' as 'type',
+                        CONCAT('Transaction', ' ', DATE_FORMAT(sn_cdate, '%Y-%m-%d') , ' ', uniqueref) as description,
+                        '' as address,
+                        (amount*-1) as 'amount'
+                    FROM sr_transaction
+                    WHERE   uid_contractor = '?'
+                        AND (completed != 'yes' OR completed IS NULL)
+                        
+                ORDER BY (type = 'transaction') ASC, date ASC, type DESC
+                
+                ", uid_contractor, uid_contractor, uid_contractor, uid_contractor);
+            return billing.rows;
+        endf
+        
+        
+        ////////////////////////////////////////////////////
+        // Total Amount calculations
+        function getBillingFooter(billing)
+            subtotal = 0;
+            transactions = 0;
+            balance = 0;
+            for b in billing do
+                if (b.type eq 'transaction') then
+                    transactions += b.amount;
+                elseif (b.type eq 'balance') then
+                    balance = b.amount;
+                else
+                    subtotal += b.amount;
+                endif
+            endfor
+            if (subtotal < 0) then
+                subtotal = 0;
+            endif
+            taxes = contractor::calculateTaxes(subtotal);
+            solde = taxes.total + transactions + balance;
+            return {
+                'subtotal': subtotal,
+                'tps': taxes.tps,
+                'tvq': taxes.tvq,
+                'total': taxes.total,
+                'paid': transactions,
+                'balance': balance,
+                'solde': solde
+            };
+        endf
+        
+        
+        // Total Amount calculations  by Provinces
+        function getBillingFooterByProv(billing, uid_contractor)
+            subtotal = 0;
+            transactions = 0;
+            balance = 0;
+            for b in billing do
+                if (b.type eq 'transaction') then
+                    transactions += b.amount;
+                elseif (b.type eq 'balance') then
+                    balance = b.amount;
+                else
+                    subtotal += b.amount;
+                endif
+            endfor
+            if (subtotal < 0) then
+                subtotal = 0;
+            endif
+            taxes = contractor::calculateTaxesByProv(subtotal,uid_contractor);
+            solde = taxes.total + transactions + balance;
+            return {
+                'subtotal'      : subtotal,
+                'tps'           : taxes.tps,
+                'tvq'           : taxes.tvq,
+                'total'         : taxes.total,
+                'paid'          : transactions,
+                'balance'       : balance,
+                'solde'         : solde,
+                'tps_name'      : taxes.tps_name,
+                'tvp_name'      : taxes.tvp_name,
+                'tvp_taxe_no'   : taxes.tvp_taxe_no
+            };
+        endf
+        
+        function getCurrentBillingTotal(uid_contractor)
+            billingTotals = sql(single:true, contractor::getAllContractorsCurrentBillingTotalsQuery() .+ " WHERE c.uid = '?'", uid_contractor);
+            subtotal = billingTotals.rows.invoices_total - billingTotals.rows.credits_total;
+            //taxes = contractor::calculateTaxes(subtotal);
+            taxes = contractor::calculateTaxesByProv(subtotal,uid_contractor);
+            
+            return billingTotals.rows.balance + taxes.total - billingTotals.rows.transactions_total;
+        endf
+        
+        ////////////////////////////////////////////////////
+        
+        
+        function calculateTaxes(subtotal)
+
+            if (subtotal < 0) then
+                subtotal = 0;
+            endif
+            tps = subtotal * 0.05;
+            tvq = subtotal * 0.09975;
+            taxtotal = tps + tvq;
+            total = subtotal + taxtotal;
+            return {
+                'tps': tps,
+                'tvq': tvq,
+                'taxtotal': taxtotal,
+                'total': total
+            };
+        endf
+        
+        function calculateTaxesByProv(subtotal,uid_contractor)  // contractor to get province
+            if (lg eq '') then
+                lg = '{{use lg; lg.rows.lg}}';
+            endif
+            if (lg eq '') then
+                lg = 'fr';
+            endif
+
+            adresse = sql(single:true, "
+                        SELECT IF(a.province  IS NOT NULL, a.province, 'QC') as province
+                        FROM sr_address a 
+                        WHERE a.uid_contractor = '?' 
+                        ORDER BY a.uid DESC 
+                        LIMIT 1
+                    ", uid_contractor);
+            prov = (adresse.rows.province eq '')?'QC':adresse.rows.province;     // default = QC  
+
+            taxes = sql(single:true," SELECT tps,tvp, name_tps_".+lg.+" as name_tps, name_tvp_".+lg.+" as name_tvp, tvp_taxe_no  FROM sr_taxes WHERE code_prov = '?'",prov);        
+            void insert(table:'sr_debug', fields:{'description': 'CalculateTaxe by Prov'.+ extranet_user.uid .+ ' prov='.+ prov .+ " nameTPS".+ taxes.rows.name_tps,'text':outputfilepath});
+
+            if (subtotal < 0) then
+                subtotal = 0;
+            endif
+            tps = subtotal * taxes.rows.tps;
+            tvq = subtotal * taxes.rows.tvp;
+            taxtotal = tps + tvq;
+            total = subtotal + taxtotal;
+            return {
+                'tps'           : tps,
+                'tvq'           : tvq,
+                'taxtotal'      : taxtotal,
+                'total'         : total,
+                'tps_name'      : taxes.rows.name_tps,
+                'tvp_name'      : taxes.rows.name_tvp,
+                'tvp_taxe_no'   : taxes.rows.tvp_taxe_no
+            };
+        endf
+
+        function getAllContractorsCurrentBillingTotalsQuery() // returns uid_contractor,balance,invoices_total,credits_total,transactions_total
+            return "
+                SELECT 
+                    c.uid AS 'uid_contractor',
+                    c.balance as 'balance',
+                    IFNULL((
+                        SELECT sum(i.amount) 
+                        FROM sr_invoice i 
+                        INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+                        WHERE pc.uid_contractor = c.uid
+                        AND (i.completed is null OR i.completed != 'yes')
+                    ),0) AS 'invoices_total',
+                    IFNULL((
+                        SELECT sum(pc.lead_price) 
+                        FROM sr_credit cr 
+                        INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+                        WHERE pc.uid_contractor = c.uid
+                        AND cr.accepted = 'yes' 
+                        AND (cr.completed is null OR cr.completed != 'yes')
+                    ),0) AS 'credits_total',
+                    IFNULL((
+                        SELECT sum(t.amount)
+                        FROM sr_transaction t
+                        WHERE t.uid_contractor = c.uid
+                        AND (t.completed is null OR t.completed != 'yes')
+                    ),0) AS 'transactions_total'
+                FROM sr_contractor c
+            ";
+        endf
+        
+        function debit_charge(uid_contractor, amount)
+            // Fetch credit cards
+            creditcards = sql("SELECT * FROM sr_cc WHERE uid_contractor = '?' ORDER BY priority ASC, uid DESC", uid_contractor);
+            cardInfo = "";
+            if (creditcards.nbrows > 0) then
+                for cc in creditcards.rows do
+                    cardInfo = cc.type .+ " ************" .+ cc.last_digits;
+                    // For each credit card, try to execute a payment
+                    transaction = pivotal::make_payment_cc_ref(cc.reference, "CAD", amount, uid_contractor);
+                    if (transaction.uid) then
+                        // If a payment succeeds, trigger the transaction and stop the loop
+                        contractor::trigger_transaction(transaction.uid);
+                        return transaction.uid;
+                    else
+                        cardInfo .+= " (".+transaction.error.+")";
+                    endif
+                endfor
+                // If payment failed, trigger the payment failure
+                contractor::trigger_payment_failed(uid_contractor, cardInfo, amount);
+            endif
+            return false;
+        endf
+        
+        function addCreditCardPrivilege(uid_contractor)
+            contractor = sql(single:true,"SELECT credit_threshold FROM sr_contractor WHERE uid='?'", uid_contractor);
+            data = {'credit_cards':1};
+            // Increase credit threshold
+            configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+            if (contractor.nbrows == 1 && contractor.rows.credit_threshold < configs.rows.credit_limit_after_cc_added) then
+                data.credit_threshold = configs.rows.credit_limit_after_cc_added;
+            endif
+            void update(tables: 'sr_contractor', uid: uid_contractor, fields:data);
+        endf
+        
+        function trigger_transaction(uid_transaction)
+            transaction = sql(single:true, "SELECT * FROM sr_transaction WHERE uid = '?'", uid_transaction);
+            contractor = sql(single:true,"SELECT credit_threshold FROM sr_contractor WHERE uid='?'", transaction.rows.uid_contractor);
+            
+            configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+            
+            // Increase credit threshold
+            if (transaction.rows.uid_contractor ne '' && contractor.rows.credit_threshold < configs.rows.credit_limit_after_payment_success) then
+                void update(tables: 'sr_contractor', uid: transaction.rows.uid_contractor, fields:{'credit_threshold':configs.rows.credit_limit_after_payment_success});
+            endif
+        
+            // Calculate current billing
+            billing = contractor::getCurrentBilling(transaction.rows.uid_contractor, lg:contractor.rows.contact_lg);
+            //billing_footer = contractor::getBillingFooter(billing);
+            billing_footer = contractor::getBillingFooterByProv(billing, transaction.rows.uid_contractor);
+            
+            // If current billing is paid in full, clear billing and generate a pdf invoice
+            if (billing_footer.solde < 0.01) then
+            
+                // Remove unwanted decimals if very close to zero
+                if (billing_footer.solde > -0.01) then
+                    billing_footer.solde = 0;
+                endif
+                
+                // init totals
+                invoices = [];
+                credits = [];
+                transactions = [];
+                
+                // Calculate totals and list current invoices, credits, transactions
+                for line in billing do
+                    if (line.type eq 'lead') then
+                        push(invoices, line.uid);
+                    endif
+                    if (line.type eq 'credit') then
+                        push(credits, line.uid);
+                    endif
+                    if (line.type eq 'transaction') then
+                        push(transactions, line.uid);
+                    endif
+                endfor
+
+                    // Generate pdf invoice
+                pdf = contractor::generate_pdf(transaction.rows.uid_contractor, billing);
+                    //bd  modifié pour avoir le no de de transaction
+                //pdf = contractor::generate_pdf(transaction.rows.uid_contractor, billing, uid_transaction);
+                
+                
+                // Set account balance to Solde
+                void update(tables:'sr_contractor', uid: transaction.rows.uid_contractor, fields:{'balance':billing_footer.solde});
+                
+                // Clear invoices
+                for uid in invoices do
+                    void update(tables:'sr_invoice', uid: uid, fields:{'completed':'yes'});
+                endfor
+                
+                // Clear credits
+                for uid in credits do
+                    void update(tables:'sr_credit', uid: uid, fields:{'completed':'yes'});
+                endfor
+                
+                // Clear transactions
+                for uid in transactions do
+                    void update(tables:'sr_transaction', uid: uid, fields:{'completed':'yes'});
+                endfor
+                
+                // Send email with pdf attached
+                if (pdf) then
+                    automail::sendInvoicePdf(transaction.rows.uid_contractor, pdf);
+                endif
+            endif
+        endf
+        
+        function trigger_payment_failed(uid_contractor, cardinfo, amount)
+            configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+            contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+            if (contractor.nbrows > 0) then
+                // Reduce credit threshold
+                if (contractor.rows.credit_threshold > configs.rows.credit_limit_after_payment_failed) then
+                    void update(tables: 'sr_contractor', uid: uid_contractor, fields:{'credit_threshold':configs.rows.credit_limit_after_payment_failed});
+                endif
+                // Remove credit cards privilege (for calculation of the contractors's score)
+                void update(tables: 'sr_contractor', uid: uid_contractor, fields:{'credit_cards':0});
+                // Send email notifications
+                automail::paymentFailedToAdmin(uid_contractor, cardinfo, amount);
+                automail::paymentFailedToContractor(uid_contractor, cardinfo, amount);
+            endif
+        endf
+        
+        //function generate_pdf(uid_contractor, billing, uid_transaction)
+        function generate_pdf(uid_contractor, billing)
+            contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+            lg = contractor.rows.contact_lg;
+            if (lg eq '') then
+                lg = 'fr';
+            endif
+            
+            contractor_address = sql(single:true, "
+                    SELECT a.*, IF(c.name_".+lg.+" IS NOT NULL, c.name_".+lg.+", a.city) as city_name 
+                    FROM sr_address a 
+                    LEFT JOIN sr_city c ON c.uid = a.uid_city 
+                    WHERE a.uid_contractor = '?' 
+                    ORDER BY a.uid ASC 
+                    LIMIT 1
+                ", contractor.rows.uid);
+                
+            //billing_footer = contractor::getBillingFooter(billing);
+            billing_footer = contractor::getBillingFooterByProv(billing,contractor.rows.uid);
+
+            content = {
+                'billing': billing,
+                'billing_footer': billing_footer
+            };
+            
+            billing_pdf = insert(table:'sr_billing_pdf', fields:{});
+            t = time();
+            //tmpfilename = ((lg eq 'fr')? 'facture':'invoice').+"_".+uid_contractor.+"_".+billing_pdf.uid.+"_".+t.secs;
+            tmpfilename = ((lg eq 'fr')? 'facture':'invoice').+"_".+uid_contractor.+"_".+billing_pdf.uid;
+            tmpfilepath = "/tmp/".+tmpfilename;
+            //02017\01\#contractor\#invoice     contractor-#invoice.pdf    
+            write(tmpfilepath, data:"", append:false, data:read(compilefile:'/site/pdf_invoice_template.txt'));
+            output = exec("/extenso/utils/pdflatex.sh", tmpfilename);
+            
+            success_regex = 'Output written on '.+tmpfilename.+'\.pdf';
+            if (output.output =~ success_regex) then
+                void update(tables:'sr_billing_pdf', uid: billing_pdf.uid, fields:{
+                    'uid_contractor': uid_contractor,
+                    'pdf': tmpfilename.+".pdf",
+                    'content': stringnify(content)
+                });
+                return tmpfilename.+".pdf";
+            else
+                void sql("DELETE FROM sr_billing_pdf WHERE uid = '?'", billing_pdf.uid);
+                return false;
+            endif
+        endf
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        //------------------------TEST SECTION   ------------------------------------------------//
+        
+        function Test_Billing(uid_contractor,lg)
+            void insert(table:'sr_debug', fields:{'description':'test_Billing','text':'Entree1'});
+
+                   // Calculate current billing
+            billing = contractor::getCurrentBilling(uid_contractor, lg:lg);
+            //billing_footer = contractor::getBillingFooter(billing);
+            billing_footer = contractor::getBillingFooterByProv(billing, uid_contractor);
+            
+            // If current billing is paid in full, clear billing and generate a pdf invoice
+            if (billing_footer.solde < 0.01) then
+            
+                // Remove unwanted decimals if very close to zero
+                if (billing_footer.solde > -0.01) then
+                    billing_footer.solde = 0;
+                endif
+            void insert(table:'sr_debug', fields:{'description':'test_Billing','text':'Entree2'});
+                
+                // init totals
+                invoices = [];
+                credits = [];
+                transactions = [];
+                
+                // Calculate totals and list current invoices, credits, transactions
+                for line in billing do
+                    if (line.type eq 'lead') then
+                        push(invoices, line.uid);
+                    endif
+                    if (line.type eq 'credit') then
+                        push(credits, line.uid);
+                    endif
+                    if (line.type eq 'transaction') then
+                        push(transactions, line.uid);
+                    endif
+                endfor
+            void insert(table:'sr_debug', fields:{'description':'test_Billing','text':'Avant pdf'});
+
+                    // Generate pdf invoice
+                pdf = contractor::test_generate_pdf(uid_contractor, billing,99999);
+            endif
+        endf
+        
+         function test_generate_pdf(uid_contractor, billing, uid_transaction)
+        //function test_generate_pdf(uid_contractor, billing)
+            contractor = sql(single:true, "SELECT * FROM sr_contractor WHERE uid = '?'", uid_contractor);
+            lg = contractor.rows.contact_lg;
+            if (lg eq '') then
+                lg = 'fr';
+            endif
+            
+            contractor_address = sql(single:true, "
+                    SELECT a.*, IF(c.name_".+lg.+" IS NOT NULL, c.name_".+lg.+", a.city) as city_name 
+                    FROM sr_address a 
+                    LEFT JOIN sr_city c ON c.uid = a.uid_city 
+                    WHERE a.uid_contractor = '?' 
+                    ORDER BY a.uid ASC 
+                    LIMIT 1
+                ", contractor.rows.uid);
+            void insert(table:'sr_debug', fields:{'description':'test_Billing','text':'Avant billing footer'});
+    
+            //billing_footer = contractor::getBillingFooter(billing);
+            billing_footer = contractor::getBillingFooterByProv(billing,contractor.rows.uid);
+
+            content = {
+                'billing': billing,
+                'billing_footer': billing_footer
+            };
+            
+            //billing_pdf = insert(table:'sr_billing_pdf', fields:{});
+            t = time();
+            //tmpfilename ="facture_00000".+"_".+billing_pdf.uid;;
+            tmpfilename = "--invoice".+"_".+"9999".+"_".+billing_pdf.uid.+"_".+t.secs;
+            //tmpfilename = "02017//01//9999".+"_".+billing_pdf.uid;
+            //tmpfilename = "02017_01_9999".+"_".+billing_pdf.uid;
+            tmpfilepath = "/tmp/".+tmpfilename;
+            //02017\01\#contractor\#invoice     contractor-#invoice.pdf    
+            void insert(table:'sr_debug', fields:{'description':'tmpfilepath','text':tmpfilepath});
+
+            write(tmpfilepath, data:"", append:false, data:read(compilefile:'/site/pdf_invoice_template.txt'));
+            output = exec("/extenso/utils/pdflatex.sh", tmpfilename);
+             void insert(table:'sr_debug', fields:{'description':'test_Billing','text':'après PDF'});
+           
+            success_regex = 'Output written on '.+tmpfilename.+'\.pdf';
+            if (output.output =~ success_regex) then
+                pdf = tmpfilename.+".pdf";
+                // Send email with pdf attached
+                if (pdf) then
+                    automail::sendInvoicePdf(uid_contractor, pdf);
+                endif
+            endif
+        endf
+    
+    endp
+}}

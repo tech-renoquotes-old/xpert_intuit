@@ -1,0 +1,34 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Widget X-form
+	
+		Implement widget xform. This widget uses information from sn_tables and
+		sn_fields to implement the form. It will also get the information from the
+		table sed_xform_info.
+
+		Information from table sed_xform_info:
+
+		Which fields to use?
+		What should we do with the form: Save in a table, send an email ?
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+		@version    1.1 2016-02-25 laplante@sednove.com Make sure we have table selected
+	*/
+	// --------------------------------------------------------------------------
+	
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_debug_widget.snc";
+	%include "/extenso/functions/sn_widget_get_select_view.snc";
+	%include "/module/sed/xform/package/sed_xform.sn";
+
+	use widget;		// widget variable is from function sn_widgets
+	use lg;
+
+	widget_content = sql(single:true,"select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list);
+
+	if widget_content.nbrows > 0 then
+	    sed_xform::generate_form(widget.rows.uid_widget_list, widget_content.rows.uid_sn_tables, widget_content.rows.field, lg, 
+	            captcha: widget_content.rows.captcha, with_captcha: widget_content.rows.with_captcha, okmesg:widget_content.rows{"conclusion_" .+ lg.rows.lg} );
+	endif
+}}

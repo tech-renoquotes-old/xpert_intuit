@@ -1,0 +1,1 @@
+{{ r = sql(single:true,"select robots_txt from seo"); r.rows.robots_txt }}

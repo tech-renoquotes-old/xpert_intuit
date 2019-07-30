@@ -1,0 +1,232 @@
+
+
+{{ 
+/*    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+
+    %include "/site/package/all.sn";
+*/    
+}}
+
+\{{       
+    
+   //function showTable()
+    
+ /*       cgidata = cgidata();
+        use extranet_user;     //  ajouter  ?test=true  
+    
+    
+        projets = sql("SELECT uid  ,uid_service, uid_subservice description FROM sr_project where uid = '?'", 4689);
+        
+         extranet_user.uid;
+*/    
+     //     if cgidata.test eq  true then      //?test=true  
+            
+/*              '<button   class="btn btn-delete fa fa-stop"></button>';
+              '<table  class="  ">
+                <tr>
+                    <th>No</th><th>uid</th><th>service</th><th>sous-service</th><th>4</th><th>5</th><th>6</th>
+                </tr>';
+                n=1;
+                for projet in projets.rows do
+                    "<tr>
+                        <td>".+ n .+ "</td><td>" .+ projet.uid .+ "</td><td>" .+ projet.uid_service .+ "</td> 
+                    </tr>";
+                    n++;
+                endfor
+                "</table>";
+*/   // endf
+}}
+
+    <!--<table>-->
+    <!--    <tr>-->
+    <!--        <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td>-->
+    <!--    </tr>-->
+    <!--    <tr>-->
+    <!--        <td></td><td></td><td>3</td><td>4</td><td>5</td><td>6</td>-->
+    <!--    </tr>-->
+    <!--    <tr>-->
+    <!--        <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td>-->
+    <!--    </tr>-->
+        
+    <!--</table>-->
+
+\{{  // endif}}
+\{{//automail::notifyAdminContractorInscription(4689);}}
+\{{//automail::contractorActivation(4689);}}
+\{{//automail::test_suggestProjectToContractor("17840","4398","sr500-test@yahoo.com,sreno123456@gmail.com");
+                       //         (uid_project,uid_contractor,to_email)    
+}}
+
+\{{
+   // automail::test_notifyContractorWinProject("564105",email_to:"sr500-adm@yahoo.com",cc_email:"sr500-sr2@yahoo.com");
+                // uid_project_contractor,email_to
+}}
+
+\{{ //   automail::sendSatisfactionSurveyToClient(18078); //de bbduc   project Id   client  
+}}
+
+\{{  //envoie de courriel direct
+    
+    // automail::test_sendEmail(
+    //             "test",
+    //             to: "sr500-sr2@yahoo.com", 
+    //             lg:lg
+    //         );
+            
+            
+    // automail::test_sendEmail(
+    //             "sendSatisfactionSurveyToClient",
+    //             to: "bbduc@yahoo.com", 
+    //             lg:"fr"
+    //         );
+
+
+    // function send_test()   
+    //     email_from = 'sr500-sr2@yahoo.com';
+    //     email_to   = 'sr500-sr2@yahoo.com';
+    //     subject    = 'test de courriel';
+                
+    //     config = config();  
+    //     // get default infos
+    //     configs = sql(single:true, "SELECT default_admin_email,default_from_address,email_test_mode,email_test FROM sn_configs WHERE uid=1 LIMIT 1");
+    //     lg='fr';
+    //     email_code = 'notifyContractorWinProject';
+    // //    file = "/" .+ config.site .+ "/email/".+lg.+"/" .+ email_code .+ ".snc";
+    //     file = "/" .+ config.site .+ "/emails/fr/courriel_test.snc";
+    
+    //     void email(
+    //                     from: email_from,
+    //                     to: email_to,
+    //                     subject: subject,
+    //                     ct:"text",
+    //                     charset: "utf-8",
+    //                     //file: email.file,
+    //                     encoding:"base64",
+    //                     domain: 'soumissionrenovation.ca'
+    //                 ); 
+    
+    // endf    
+    
+
+}}
+
+
+
+\{{//automail::notifyContractorWinProject("564105");}}
+
+\{{//automail::sendSatisfactionSurveyToClient("17878");}}
+
+\{{//contractor::activateContractor(4507);}}
+\{{//automail::contractorProfileReminder1("sr500-sr@yahoo.com","BBBBBB",4507);}}
+\{{
+    //contractorProfileReminder1(contact_email, name, id_appels_entrepreneurs)
+ /*   contractor = {
+            "contact_firstname":"test",
+            "contact_phone":"514-124-3569",
+            "contact_email":"sr500-sr@yahoo.com",
+            "company_name":"cie",
+            "ip": "123.23.23.32",
+            "url":"www.www.www"
+        };
+        
+        //void insert(table:'sr_debug', fields:{'description': test_create login'text':'sr500-sr@yahoo.com'});
+        automail::notifyAdminContractorRequestInformation(contractor);
+        //http://sr.sednove.ca/fr/entrepreneur-creer-identifiant?token=99
+  */      
+}}    
+
+
+<!--<input type="text"></input>-->
+
+
+// \{{ if extranet_user.uid == 0 then   }}
+
+//     <button class="btn">Open</button>
+
+// \{{ endif    }}
+
+
+
+{{
+   
+ //STATS
+ /*
+ par service   acceptations 
+ par contracteur
+ 
+ 
+ 
+ */
+    
+}}
+
+
+
+
+// <style>
+// table {
+//     width:100%;
+// }
+// table, th, td {
+//     border: 1px solid black;
+//     border-collapse: collapse;
+// }
+// th, td {
+//     padding: 5px;
+//     text-align: left;
+// }
+// table#t01 tr:nth-child(even) {
+//     background-color: #eee;
+// }
+// table#t01 tr:nth-child(odd) {
+//   background-color:#fff;
+// }
+// table#t01 th {
+//     background-color: black;
+//     color: white;
+// }
+// </style>
+//   <script type="text/javascript" src="https://mottie.github.io/tablesorter/js/jquery.tablesorter.js"></script>
+// <!--<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>-->
+// <link href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet"/>
+// <!--  <script src="/js/jquery.tablesorter.js"></script> -->
+// <table  id="tblprojet"  class="tablesorter">
+//         <thead>
+//             <tr>
+//                 <th>uid</th><th>title2</th><th>title3</th><th>title4</th>
+//             </tr>
+//         </thead>
+//         <tbody>
+//             {{for projet  sql("SELECT * FROM sr_project LIMIT 20") do       }}
+//             <tr>
+//               <td>{{projet.rows.uid}}</td><td>{{projet.rows.active}}</td></td><td>{{projet.rows.uid}}</td><td>{{projet.rows.uid}}</td>
+//             </tr>   
+//             {{endfor}}
+//         </tbody>
+//     </table>
+    
+    
+//   <script>
+  
+  
+  
+
+
+//     $(document).ready(function(){
+//             //$("#tblprojet").tablesorter();
+//           // $("#tblprojet").dataTable();
+//             $('#tblprojet').dataTable( {
+//               "jQueryUI": true
+//             } );
+            
+//           // console.log('test');
+//     });
+//   </script>
+
+
+
+

@@ -1,0 +1,29 @@
+{{
+    /*
+        @title 			contractorAccountCreated
+        Description		Welcoming Email for the contractor informing him his account is created. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	use contractor;
+    use title;
+    
+    titre  = title;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+	token = contractor.rows.token;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

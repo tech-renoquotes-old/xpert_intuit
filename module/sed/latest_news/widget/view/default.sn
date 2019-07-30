@@ -1,0 +1,146 @@
+{{
+	// --------------------------------------------------------------------------
+	// Name:		Widget pensée du jour
+	//
+	// Description:	use to display think of the day
+	//
+	// Version:		1.0 2015-05-31 13:15:47 laplante@sednove.com
+	// --------------------------------------------------------------------------
+	
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/functions/debug_widget.sn";
+
+	use widget;		// widget variable is from function sn_widgets
+
+	// Determine if we have a view for the widget
+    nbview = sql(single:true,wantarray:true,"select count(*) from sn_widgets_view where widget = '?'", widget.rows.uid);
+    if nbview.rows[0] != 0 then
+    	with_view = true;
+		if isdigit(widget.rows.view) then // If widget has a view selected
+			view = sql(single:true,"select code from sn_widgets_view where uid = '?'", widget.rows.view);
+		else
+			first_view = sql(single:true, "select uid from sn_widgets_view where widget = '?' order by uid limit 1", widget.rows.uid);
+			//sql("UPDATE sn_widgets_list SET select_view  = '?' WHERE uid = '?'", first_view.rows.uid, widget.rows.uid_widget_list);
+			view = sql(single:true,"select code from sn_widgets_view where uid = '?'", widget.rows.view);
+		endif
+	else
+    	with_view = false;
+ 	endif
+    
+	// debug_widget(widget);
+
+	// loop threw the content if any single or multiple
+	if widget.rows.table_name ne '' && widget.rows.table_name ne 'none' then
+		for widget_content sql("select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list) do
+			if with_view && isdigit(widget.rows.view) && -e view.rows.code then // If widget has a view selected
+				read(view.rows.code);
+			endif
+		endfor
+	elseif with_view && isdigit(widget.rows.view) && -e view.rows.code then // If widget has a view selected
+		read(view.rows.code);
+	endif
+
+}}
+<style type="text/css">
+.cs .wdg_latest_news {
+    color: #282828;
+}
+
+.cs .wdg_latest_news .news {
+    display: block;
+}
+
+.cs .wdg_latest_news a {
+    color: #282828;
+    text-decoration: none;
+}
+
+.cs .wdg_latest_news a:hover .news_title {
+    text-decoration: underline;
+}
+
+.cs .wdg_latest_news h2 {
+    font-size: 22px;
+    color: #000000;
+    margin-top: 0;
+    letter-spacing: 0;
+    padding-top: 15px;
+}
+
+.cs .wdg_latest_news .news {
+    position: relative;
+    padding: 15px 0;
+    border-bottom: 1px solid #EDEDED;
+}
+
+.cs .wdg_latest_news .news .news_title {
+        font-size: 22px;
+       	line-height:22px;
+        color: #243e89;
+        margin-top: 0;
+        letter-spacing: 0;
+        padding-top: 0px;
+}
+.cs .wdg_latest_news .news .news_category {
+	color:#be9d6f;
+}
+
+.cs .wdg_latest_news .news .news_summary {
+	margin-top:15px;
+}
+
+.cs .wdg_latest_news .news:hover {
+    background-color: #F4F4F4;
+}
+
+.cs .wdg_latest_news .news_action {
+    padding: 15px 0;
+}
+</style>
+{{ 
+	use lg;
+	use widget;
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc"; 
+	parameters = sql(single:true, "select * from sed_news_parameters where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+<div class="row">
+    <div class="col-md-12">
+        <div class="wdg_latest_news">
+            \{{ for news sql("SELECT * FROM sed_news WHERE active = 'yes' ORDER BY date DESC LIMIT ?", 
+					"{{ (parameters.rows.latest_news ne "") ? parameters.rows.latest_news : 3; }} ") do }}
+				<a href="/{{lg.rows.lg}}/news-item/\{{ news.rows.seo_{{lg.rows.lg}};}}" class="news">
+				<div class="row">
+						\{{ if news.rows.image ne "" then }}
+							<div class="col-sm-6 col-md-4 news_photo">
+								<img src="\{{ news.rows.image; }}" alt="{{ sn_ct(edit:false, 'Unable to load image'); }}"class="img-responsive">
+							</div>
+							<div class="col-sm-6 col-md-8">
+						\{{ else }}
+							<div class="col-md-12">
+						\{{ endif }}
+							<div class="news_category">
+                            							\{{
+                            								for category sql("SELECT * FROM sed_news_category WHERE uid IN ('?') AND active='yes'", news.rows.category) do
+                            									category.rows.category_name_{{lg.rows.lg}};
+                            									if sn_nb1 ne category.nbrows then ","; endif
+                            								endfor
+                            							}}
+                            							</div>
+							<div class="news_title">
+								\{{ news.rows.title_{{lg.rows.lg}}; }}
+							</div>
+							<div class="news_summary">
+								\{{ news.rows.summary_{{lg.rows.lg}}; }}
+							</div>
+						</div>
+						<div class="clearfix"></div>
+				</div>
+				</a>
+			\{{ endfor }}
+            <div class="news_action">
+                <a href="{{ pages('news', lg.rows.lg) }}" class="btn btn-default btn-block">{{ sn_ct("Afficher la liste complete");}} </a>
+            </div>
+        </div>
+    </div>
+</div>

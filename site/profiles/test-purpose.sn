@@ -1,0 +1,55 @@
+{{
+    /*
+        @title contractor_clients
+        Description: This widget display the list of clients of the contractor with pagination and excel generation feature included
+        @author louis.jhonny@gmail.com
+        @version 1.1 2017-07-20
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include '/site/package/all.sn';
+
+    
+    
+    use page;
+    use lg;
+}}
+
+\{{
+    contractor::expertSendSurveyToClient('315', '586');
+
+    // survey = sql("SELECT * FROM xpert_survey WHERE isOPen = 'yes' AND uid = 1");
+    // for s in survey.rows do
+    
+    //     project = sql("
+    //         SELECT p.*
+    // 		FROM sr_project p
+    // 		WHERE DATEDIFF(now(), p.completion_date) >= ?
+    // 		AND DATEDIFF(now(), p.completion_date) <= ? + 3
+    // 		AND p.status IN('completed','inactive-incomplete')
+    // 		AND (p.employee is null OR p.employee = 'no' OR p.employee = '')
+    // 		AND NOT EXISTS(select * from xpert_project_survey WHERE uid_project = p.uid AND uid_survey = ?)
+    // 		AND p.uid = '315'
+    //     ", s.cedule,s.cedule,s.uid);
+                  
+    //     for p in project.rows do
+    //         time = time();
+          
+    // 	    token = p.token;
+    
+    //         leads = sql("select * from sr_project_contractor where uid_project = '?'", p.uid);
+    //         if(leads.nbrows > 0) then
+    //             void update(tables: 'sr_project', fields: {
+    //               'satisfaction_survey_sent': 'yes'
+    //             }, uid: p.uid);
+                
+    //             if(s.uid == 1) then
+    //                 automail::sendSurveyToClientAfterSevenDays(token, p.uid, s.resource_id);
+    //             endif
+    //         endif
+    //     endfor
+    // endfor
+
+}}
+

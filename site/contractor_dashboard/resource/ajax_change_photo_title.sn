@@ -1,0 +1,24 @@
+{{
+    /*
+        @title ajax_change_photo_title
+        Description: Change the title of a photo in the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+
+    void sql("UPDATE sr_gallery SET title='?' WHERE uid='?' AND uid_contractor='?'", cgidata.photo_title, cgidata.photo_uid, extranet_user.uid);
+
+}}

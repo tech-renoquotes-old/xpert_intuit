@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+
+
+<html lang="en">
+    <head>
+           
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    
+    <title></title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+
+    <link href="/css/en/styles.css" rel="stylesheet">
+    <link rel="alternate" hreflang="fr-CA" href="https://soumissionrenovation.ca/entrepreneur/mon-profile">
+    <link rel="alternate" hreflang="en-CA" href="https://renoquotes.com/contractor/my-profile">
+
+
+    <link rel="canonical" href="https://renoquotes.com/en/my-profile">
+    <!-- GEO LOCALISATION -->
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+    <script src="/js/en/site.js"></script>
+    <script src="//oss.maxcdn.com/jquery.form/3.50/jquery.form.min.js"></script>
+
+    </head>
+<body>
+        
+
+    <script type="text/javascript" src="/js/datepicker/jquery-ui-i18n.min.js"></script>
+    <script src="/js/ajax_resample/js/jquery.Jcrop.min.js"></script>
+    <link rel="stylesheet" href="/js/ajax_resample/css/jquery.Jcrop.css" type="text/css" />
+
+<style>
+body{
+    background-color:#ffffff;
+}
+.logo_pane {
+    float: left;
+    width: 500px;
+    background-color: #FFFFFF;
+    text-align: center;
+}
+
+.banner_pane {
+    position:absolute;
+    width: 100%;
+    height: 250px;
+    background-color: #FFFFFF;
+    text-align: center;
+    z-index:2;
+}
+
+.banner_def_text{
+    position:absolute;
+    height:250px;
+    width:100%;
+    background-color: #efefef;
+    line-height:250px;
+    text-align: center;
+    color: #adadad;
+    font-size:10em;
+    z-index: 1;
+}
+
+#canvas_bnr{
+    width:1200;
+}
+
+.btn-xl {
+    padding: 10px 20px;
+    font-size: 20px;
+    border-radius: 10px;
+    width:80%;    //Specify your width here
+}
+
+
+.banner_action {
+    display:none;
+    position: relative;
+    height:55px;
+    background-color: #EEEEEE;
+    /* This works in IE 8 & 9 too */
+	/* ... but also 5, 6, 7 */
+    filter: alpha(opacity=60);
+    /* Older than Firefox 0.9 */
+    -moz-opacity:0.5;
+    width: 100%;
+    top: 20px;
+    left: 50%;
+    text-align: center;
+      -webkit-transform: translate3d(-50%,-50%,0);
+         -moz-transform: translate3d(-50%,-50%,0);
+          -ms-transform: translate3d(-50%,-50%,0);
+           -o-transform: translate3d(-50%,-50%,0);
+              transform: translate3d(-50%,-50%,0);
+}
+
+.hero {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 28px;
+    background-color: #5a5757;
+    color:#fff;
+    font-size: 18px;
+    padding-left: 10px;
+    font-weight: bold;
+    text-align: center;
+    filter: alpha(opacity=80);
+    opacity: 0.8;
+    -moz-opacity: 0.8;
+}
+
+.cycle {
+    width: 100%px;
+}
+
+/** A WebReflection Solution */
+.position-fixed-top {
+    position:fixed !important;
+    top: 0;
+}
+.position-fixed-center {
+    position:fixed !important;
+    top: 50%;
+}
+.position-fixed-bottom {
+    position:fixed !important;
+    bottom:0;
+}
+
+
+</style>
+
+{{
+    use extranet_user;
+    if(extranet_user.uid eq "") then
+       redirect(url:"/en/extranet-login");
+    endif
+    
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/banners/");  
+    
+    // load profile generator class to re-generate profile on edit
+    %include '/class/profile_generator.sn';
+    
+    //instanciate profil generator class
+    profil = new Profilgen();
+
+    //get the current banner to display
+    banner = sql(single:true, "SELECT * FROM sr_contractor_profil WHERE uid_contractor='?'", extranet_user.uid);
+    current_banner = banner.rows;
+    
+    //generate a unique filename each time.
+    f = random(min:1000,max:9000000,init:false,seed:1);
+    fname = "banner_" .+ extranet_user.uid .+ "_" .+ f .+  ".jpg";
+    
+    
+    //if a banner is uploaded do as follow
+    profil_exists = sql(single:true, "select * from sr_contractor_profil where uid_contractor = ?", extranet_user.uid);
+    
+    
+    
+    if(cgidata.toberemoved eq 'yes') then
+        remove_photo = sql("UPDATE sr_contractor_profil SET banner_1 = '' WHERE uid_contractor = ?", extranet_user.uid);
+        if(remove_photo.affrow > 0) then
+            headers_out('X-remove', 1);
+        endif
+        profil.generate(extranet_user.uid);
+    else
+        if(cgidata.cropped_image.length() > 0) then
+            if(profil_exists.nbrows == 0 && cgidata.cropped_image.sn_fullname ne "") then
+            // validate server side
+                    photo = insert(
+                        table: "sr_contractor_profil",
+                        fields:{
+                            "uid_contractor":extranet_user.uid,
+                            "banner_1": cgidata.cropped_image.sn_fullname,
+                            "active": "yes"
+                        }
+                    );
+                    
+                    //remove(error:t, fname = "banner_" .+ extranet_user.uid .+ "_*");
+                    
+                    //Empty seo field to be able to regenerate profil
+                    update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+                    profil.generate(extranet_user.uid);
+            else
+                update_photo = sql("UPDATE sr_contractor_profil SET banner_1 = '?' WHERE uid_contractor = ?", cgidata.cropped_image.sn_fullname, extranet_user.uid); 
+                if(update_photo.affrow  >= 1) then
+                    update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+                    profil.generate(extranet_user.uid);
+                    
+                    new_banner = sql(single:true, "select banner_1 from sr_contractor_profil where uid_contractor = ?", extranet_user.uid);
+                    headers_out('new_banner', new_banner.rows.banner_1);
+                endif
+                profil.generate(extranet_user.uid);
+            endif
+        endif
+    endif
+}}
+
+
+<!-- Placed outside of .container, will make it screen width, you can place inside .row -->
+        <div class='banner_action' id='banner_action'>
+            <form enctype=multipart/form-data  action="/extranet/en/ajax_edit_banner_profile.sn" id="edit_banner_form" name="edit_banner_form" method="POST">
+                <table class='table'>
+                    <tr>
+                        <td colspan='2'>
+                            <input name="fname" id='fname' type="hidden" value="{{fname;}}" />
+                            <input name="banner_input" id='banner_input' type="file" />
+                        </td>
+                        <td>
+                            <fieldset class="form-group">
+                                    <button id="cropbannerbutton" name='cropbannerbutton' type="button" class="btn btn-primary">
+                                        <span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=3594">crop banner</span>
+                                    </button>
+                            </fieldset>
+                        </td>
+                        <td>
+                            <fieldset class="form-group">
+                                    <button id='uploadbanner'  type='submit' name='uploadbanner' class="btn btn-primary"><span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=3605">Apply change</span></button>
+                            </fieldset>
+                        </td>
+                        
+                        <td>
+                            <fieldset class="form-group">
+                                    <button id='rmbannerbutton'  type='submit' name='rmbanner' class="btn btn-primary"><span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=3605">Apply change</span></button>
+                            </fieldset>
+                        </td>
+                    </tr>
+                </table>
+                <input type="hidden" name="toberemoved" value=""/>
+            </form>
+        </div>
+    </div>
+        <div class="cycle">
+            <div class="banner_def_text"><span class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/ct/en/edit?sn_modal=t&uid=8333">Banderole ici</span></div>
+            <div class='banner_pane' id='banner_pane' name='banner_pane' {{(current_banner.banner_1 eq "")?"style='display:none'":""}}>
+                <img width="100%" src="{{current_banner.banner_1}}" id="blah" name="blah" src="#" />
+            </div>
+
+        </div> <!-- /.cycle -->
+        
+<script>
+    $(document).ready(function(){
+        
+        var applyAction = window.parent.$("#applybanner");
+        var cropAction = window.parent.$("#cropBanner");
+        var inputAction = window.parent.$("#loadBanner");
+        var stopLoader = window.parent.$('#stopLoader');
+        var removeAction = window.parent.$("#rmBanner");
+        
+        $("#banner_action").hide();
+        
+        applyAction.click(function(e){
+          $("#uploadbanner").click(); 
+        });
+        
+        inputAction.click(function(e){
+          $("#banner_input").click();      
+        });
+
+        cropAction.click(function(e){
+          $("#cropbannerbutton").click();      
+        });
+        
+        $("#banner_pane").mouseenter(function() {
+            $('.hero').css('display', '');
+        }).mouseleave(function(){
+            $('.hero').css('display', 'none');
+        });
+        
+        removeAction.click(function(e){
+            $("input[name=toberemoved]").val('yes');
+            $("#rmbannerbutton").click();
+           
+        });
+    })
+
+</script>
+    <!--<link href="rotate.css" rel="stylesheet" type="text/css" />-->
+    <!--<script type="text/javascript" src="rotate.js"></script>-->
+    <!--<script type="text/javascript">-->
+    <!--  $(window).load(function() {-->
+    <!--    startRotator("#rotator");-->
+    <!--  })-->
+    <!--</script>-->
+
+
+<script>
+    // Bind edit_contractor_profile form to ajaxform plugin to send the form via ajax
+    var form = $('form[name=edit_contractor_profile]').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                $("#ajax_success").show();
+            }
+            else{
+                $("#ajax_error").show();
+            }
+            window.scrollTo(0,0);
+        }
+    });
+
+</script>
+
+<script>
+var crop_max_width = 1200;
+var crop_max_height = 1200;
+var jcrop_api;
+var canvas;
+var context;
+var image;
+
+var prefsize;
+
+
+$("#banner_input").change(function() {
+    $('.banner_pane').show();
+    loadImage(this);
+    $(this).val('');
+});
+
+
+
+
+
+function loadImage(input) {
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    canvas = null;
+    reader.onload = function(e) {
+      image = new Image();
+      image.onload = validateImage;
+      image.src = e.target.result;
+    }
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+
+function dataURLtoBlob(dataURL) {
+  var BASE64_MARKER = ';base64,';
+  if (dataURL.indexOf(BASE64_MARKER) == -1) {
+    var parts = dataURL.split(',');
+    var contentType = parts[0].split(':')[1];
+    var raw = decodeURIComponent(parts[1]);
+
+    return new Blob([raw], {
+      type: contentType
+    });
+  }
+  var parts = dataURL.split(BASE64_MARKER);
+  var contentType = parts[0].split(':')[1];
+  var raw = window.atob(parts[1]);
+  var rawLength = raw.length;
+  var uInt8Array = new Uint8Array(rawLength);
+  for (var i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+
+  return new Blob([uInt8Array], {
+    type: contentType
+  });
+}
+
+function validateImage() {
+  if (canvas != null) {
+    image = new Image();
+    image.onload = restartJcrop;
+    image.src = canvas.toDataURL('image/jpg');
+  } else restartJcrop();
+}
+
+function restartJcrop() {
+  if (jcrop_api != null) {
+    jcrop_api.destroy();
+  }
+  $("#banner_pane").empty();
+  $("#banner_pane").append("<canvas id=\"canvas_logo\">");
+  canvas = $("#canvas_logo")[0];
+  context = canvas.getContext("2d");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  $("#canvas_logo").Jcrop({
+    onSelect: selectcanvas,
+    onRelease: clearcanvas,
+    boxWidth: crop_max_width,
+    boxHeight: crop_max_height
+  }, function() {
+    jcrop_api = this;
+  });
+  clearcanvas();
+}
+
+
+function clearcanvas() {
+  prefsize = {
+    x: 0,
+    y: 0,
+    w: canvas.width,
+    h: canvas.height,
+  };
+}
+
+function selectcanvas(coords) {
+  prefsize = {
+    x: Math.round(coords.x),
+    y: Math.round(coords.y),
+    w: Math.round(coords.w),
+    h: Math.round(coords.h)
+  };
+}
+
+function applyCrop() {
+  canvas.width = prefsize.w;
+  canvas.height = prefsize.h;
+  context.drawImage(image, prefsize.x, prefsize.y, prefsize.w, prefsize.h, 0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#ffffff";
+  validateImage();
+}
+
+
+$("#cropbannerbutton").click(function(e) {
+  applyCrop();
+});
+
+
+$("#edit_banner_form").submit(function(e) {
+    
+    e.preventDefault();
+    formData = new FormData($(this)[0]);
+    
+    if(canvas === undefined){
+        var blob = null;
+    }else{
+        var blob = dataURLtoBlob(canvas.toDataURL('image/jpeg'));
+        //---Add file blob to the form data
+        formData.append("cropped_image", blob, $('#fname').val());
+    }
+        
+    
+    $.ajax({
+        url: "/extranet/en/widget_iframe_banner.sn",
+        type: "POST",
+        data: formData,
+        contentType: false,
+        cache: false,
+        processData: false,
+    
+        beforeSend: function(){
+            console.log($('input[name=toberemoved]').val() + ' - ' + $('#blah').attr('src') + ' - ' + canvas );
+            if($('input[name=toberemoved]').val() == "yes" && ($('#blah').attr('src') === undefined || $('#blah').attr('src').length == 0) ){
+                $('input[name=toberemoved]').val("");
+                return false;
+            }
+            
+            if($('input[name=toberemoved]').val() == "" && canvas === undefined){
+                return false;
+            }
+            
+            window.parent.$(".modal").show();
+        },
+    
+        success: function(data, textStatus, xhr) {
+            $('input[name=toberemoved]').val("");
+            if(xhr.getResponseHeader("X-remove") == 1){
+                $('#banner_pane').html("");
+                $('#banner_pane').html('<img width="100%" src="" id="blah" name="blah" />');
+                $('#banner_pane').hide();
+            }else{
+                $('#banner_pane').html("");
+                $('#banner_pane').html('<img width="100%" src="' + xhr.getResponseHeader("new_banner") + '" id="blah" name="blah" />');
+            }
+        },
+    
+        error: function(data) {
+          alert("Error");
+        },
+    
+        complete: function(data) {
+            // var timerout = setTimeout(function(){// wait for 5 secs(2)
+                window.parent.$(".modal").hide();
+            // }, 5000); 
+        }
+  });
+  
+});
+
+
+</script>

@@ -1,0 +1,11 @@
+Start Direct-Mail
+2015-12-28 08:41:21
+Mail from support@sednove.com
+format HTML/TEXT
+text file is /module/sed/directmail/template/demo.txt
+html file is /module/sed/directmail/template/demo.html
+Sending to @net2evolution.com but change to chantal.ste.marie@sednove.com
+code=c-onbMsNeqP47Sp7vOhp2QjFEhCs14xVy57rix7mkajR7fv0sHjH7oEj4RsJP7:5CcuIo8x7CEl4ZtrKIcbi5FsjcSwb8IheqHpsOQV60sI=
+{"errmsg":"","filename":"/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","cfile":"mail.c","errcode":0,"filefrom":";/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","line":68,"error":"","cline":709,"compileuid":99,"date":""}2015-12-28 08:41:22
+
+End of job

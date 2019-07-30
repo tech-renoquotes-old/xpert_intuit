@@ -1,0 +1,16 @@
+{{
+	// --------------------------------------------------------------------------
+	// Name:		Widget test view 2
+	//
+	// Description:	use to test widget withing Extenso
+	//
+	// Version:		1.0 2015-05-31 13:15:47 laplante@sednove.com
+	// --------------------------------------------------------------------------
+
+	use widget;
+	use widget_content;
+	use lg;
+
+}}
+<h2 style="background-color: #0066CC; color: black;">{{widget_content.rows.title; " view2:"; lg.rows.lg}}</h2>
+<p>Vue 2 id 33</p>

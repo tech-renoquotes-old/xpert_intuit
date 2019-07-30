@@ -1,0 +1,34 @@
+/* General elements*/
+
+.notify_info{
+    max-width:600px;
+    height:350px;
+    background-color: #4CAF50;
+    border:1px #666666 solid;
+    border-radius:12px; 
+    -webkit-border-radius: 12px;
+    -moz-border-radius: 12px;
+}
+
+.notify_alert{
+    max-width:600px;
+    height:350px;
+    background-color: #efefef;
+    border-radius:12px; 
+    -webkit-border-radius: 12px;
+    -moz-border-radius: 12px;
+}
+
+
+.notify_error{
+    max-width:600px;
+    height:350px;
+    background-color: #efefef;
+    border-radius:12px; 
+    -webkit-border-radius: 12px;
+    -moz-border-radius: 12px;
+}
+
+
+
+

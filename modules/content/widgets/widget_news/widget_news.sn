@@ -1,0 +1,21 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+}}
+
+\{{	
+	config=config();
+	cgi=cgidata();
+	lg_rows="{{lg.rows.lg}}";
+	/* -------- Widget nouvelles: la variable news_seo est définie dans la fonction extenso sn_rewrite,si news_seo est vide on affiche la liste des nouvelles sinon on affiche les detailles de la nouvelles -----*/
+	if cgi.news_seo != undefined && cgi.news_seo ne "" then
+		widnl = sql(single:true, "select * from ressources where code = 'widget_news_details'");
+		include("/".+config.site.+widnl.rows{'url_'.+lg_rows}.+widnl.rows{'file_'.+lg_rows});
+	else
+		widnl = sql(single:true, "select * from ressources where code = 'widget_news_list'");
+		include("/".+config.site.+widnl.rows{'url_'.+lg_rows}.+widnl.rows{'file_'.+lg_rows});
+	endif
+
+}}

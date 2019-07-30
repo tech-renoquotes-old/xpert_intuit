@@ -1,0 +1,11 @@
+Start Direct-Mail
+2015-12-15 16:29:39
+Mail from info@sednove.com
+format HTML/TEXT
+text file is /module/sed/directmail/template/best_wishes.txt
+html file is /module/sed/directmail/template/best_wishes.html
+Sending to @net2evolution.com but change to macright@sednove.com
+code=c-onbMsNeqL47Sp7vOhp2XJnJJ-1jMV9OtaA:-QnXeUM8g2XEfNlIzD6t6k0fiT05qW0aVBoNfxxKI6fIEL0NyUbmIwYg-DCuD8H4eKx0yo=
+{"errmsg":"","filename":"/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","cfile":"mail.c","errcode":0,"filefrom":";/usr/local/website/sncodev2/module/sed/directmail/resource/transmit.sn","line":68,"error":"","cline":709,"compileuid":99,"date":""}2015-12-15 16:29:40
+
+End of job

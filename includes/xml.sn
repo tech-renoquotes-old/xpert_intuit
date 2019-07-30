@@ -1,0 +1,43 @@
+{{
+// Definitions for xml
+%define XML_UNKNOWN					0;
+%define XML_ELEMENT_NODE			1;
+%define XML_ATTRIBUTE_NODE			2;
+%define XML_TEXT_NODE				3;
+%define XML_CDATA_SECTION_NODE		4;
+%define XML_ENTITY_REF_NODE			6;
+%define XML_ENTITY_NODE				7;
+%define XML_PI_NODE					8;
+%define XML_COMMENT_NODE			9;
+%define XML_DOCUMENT_NODE			10;
+%define XML_DOCUMENT_TYPE_NODE		11;
+%define XML_DOCUMENT_FRAG_NODE		12;
+%define XML_NOTATION_NODE			13;
+%define XML_HTML_DOCUMENT_NODE		14;
+%define XML_DTD_NODE				15;
+%define XML_ELEMENT_DECL			16;
+%define XML_ATTRIBUTE_DECL			17;
+%define XML_ENTITY_DECL				18;
+%define XML_NAMESPACE_DECL			19;
+%define XML_XINCLUDE_START			20;
+%define XML_XINCLUDE_EN				21;
+
+//
+// Description:		Skip text node
+//
+// Input:			xml node
+//
+// Output:			xml node where type is not XML_TEXT_NODE
+//
+// Author:			2013-10-10 21:30:48 laplante@sednove.com
+//
+function skip_text_node(node) 
+	type = xml_type(node); 
+	while type == XML_TEXT_NODE do
+		node = xml_next(node);
+		type = xml_type(node); 
+	endw
+	return node;
+endf
+
+}}

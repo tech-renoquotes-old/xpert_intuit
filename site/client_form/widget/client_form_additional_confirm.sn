@@ -1,0 +1,64 @@
+{{
+    /*
+        @title client_form_confirmation
+        Description: This widget is the confirmation message after a client fills a form.
+        
+        @author madupuis@sednove.comapi
+        
+        @version 1.0 2016-07-19
+        @version 1.01 2017-01-20  Adwords
+        @version 1.02 2017-02-14  add  first_visited = cookies.first_visited   (créé quand on entre dans la page sans requete(?))
+        @version 1.03 2017-03-10  description escaped
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    // include the validator
+     %include "/class/validator.sn";
+    
+    // configure a new validator
+    validator = new Validator(
+         house_type: 'required',
+         budget: 'required',
+         duration: 'required'
+     );
+    
+     validator.setAntibotDelay(4);
+}}
+
+\{{
+    
+    cgidata = cgidata();  
+    cgidata.budget;
+    // validate server side
+    //if (validator.validate(data:cgidata)) then
+        // Check for existing client in the database and merge it. 
+        existing = sql(single:true, "SELECT * FROM sr_project WHERE uid = '?'", cgidata.uid_project);
+        if (existing.nbrows > 0) then
+            project = existing.rows;
+            void update(tables: "sr_project", fields: {
+                'additional_comments': cgidata.comments,
+                'property_type': cgidata.house_type,
+                'budget': cgidata.budget,
+                'estimate_duration': cgidata.duration,
+                'way_of_contact': cgidata.best_reach,
+                'is_owner': cgidata.is_owner
+            }, uid: project.uid);
+        else
+            "no data has been provided previously";
+        endif
+
+        //void insert(table:'sr_debug', fields:{'description':'Client confirmation uid='.+' ','text':project.uid.+ '  first_url='.+first_visited});
+
+        //automail::quoteRequestToClient(project.uid);
+        //automail::quoteRequestToAdmin(project.uid);
+    //else
+        //validator.errors;
+        //stop();
+        
+    //endif
+}}

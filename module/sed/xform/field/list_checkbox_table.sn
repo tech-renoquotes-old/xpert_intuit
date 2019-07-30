@@ -1,0 +1,150 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a list of checkbox from a table field
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+    function get_field_name(field,lg,table_name)
+    
+	// --------------------------------------------------------------------------
+	/* 
+		@title		function get_field_name
+	
+		return a list of field_name with the language append if the field is multi lingual
+
+		@param		field : string list if field commas separated
+
+		@param		lg : string language to used if the field is multi lingual
+
+		@param		table_name : string name if the table where this field is used.
+
+		@return		string : commas separated list if field with the language set
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+        field_list="";
+        foreign_table = sql(wantarray:true,single:true,"select uid from sn_tables where table_name = '?'", table_name);
+        uid = foreign_table.rows[0];
+
+        for field split(field) do
+            foreign_field = sql(wantarray:true,single:true, "select field_multilg from sn_fields where uid_sn_tables = '?' and field_name = '?'", uid, field);
+            multilg = foreign_field.rows[0];
+
+            if multilg eq "yes" then
+                fn = field .+ "_" .+ lg;
+            else
+                fn =  field;
+            endif
+
+            if field_list eq "" then
+                field_list = fn;
+            else
+                field_list .+= "," .+ fn;
+            endif
+        endfor
+        return field_list;
+    endf
+	
+	use field;
+	use field_title;
+	use field_name;
+	use lg;
+	use declaration;
+	
+	// Get information about this field
+	table = field.rows.fts_pulldown_menu_table;
+	table_field_value = field.rows.fts_pulldown_menu_value;
+	table_field_name = field.rows.fts_pulldown_menu_field_name;
+	table_add_field = field.rows.fts_pulldown_additionnal_field;
+	
+	add_value =  splitre(value:field.rows.addvalues,re:"\s*,\s*");
+    add_value_length = add_value.length();
+
+	add_option =  splitre(value:field.rows{"addoptions_" .+ lg.rows.lg},re:"\s*,\s*");
+    add_option_length = add_option.length();
+    
+    sortby = field.rows.fts_sortby;
+    selectby = field.rows.fts_selectby;
+
+	if add_option_length != add_value_length then
+	    error("The length of add option and add value are different in size in field " .+ field.rows.field_name .+ add_option_length .+ add_value_length);
+	endif
+	
+	fieldlg = get_field_name(table_field_name, lg.rows.lg, table);
+	addfield = get_field_name(table_add_field, lg.rows.lg, table);
+	
+	if isdigit(field.rows.nbcol)  && field.rows.nbcol != 0 then
+		nbcoltodisplay = field.rows.nbcol;
+		if nbcoltodisplay >= 6 then
+		    row = 2;
+		elseif nbcoltodisplay == 5 || nbcoltodisplay == 4 then
+		    row = 3;
+		elseif nbcoltodisplay == 3 then
+		    row = 4;
+		elseif nbcoltodisplay == 2 then
+		    row = 6;
+		else 
+		    row = 12;
+		endif
+	else
+		row = 4;
+	endif
+	
+}}\{{nbcol = 0;}}
+
+<div class="form-group">
+    <label for="{{ field_name }}">{{ 
+        field_title;
+        if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+            }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+        endif
+    }}</label><br />
+    
+    <div class="row">
+        {{ for (f=0; f<add_option_length; ++f) do }}
+            <div class="col-md-{{row}}">
+                <div class="checkbox">
+                    <label class="checkbox">
+                        <input type="checkbox" name="{{ field_name }}" id="{{ field_name }}" value="{{add_value[f]}}" {{ declaration }} >{{ add_option[f] }}
+                    </label>
+                </div>
+            </div>
+        \{{ nbcol+={{row}}; if nbcol >= 12 then nbcol=0; "</div><div class='row'>"; endif }}
+     
+        {{ endfor }}
+	    \{{ // Normal options
+		    sql = "select {{ table_field_value }}, {{fieldlg; if addfield ne "" then ","; addfield; endif }} from {{ 
+			    table; 
+			    if selectby ne "" then 
+				    " WHERE "; parse(state:0,"{{ use lg }}" .+ selectby); 
+			    endif 
+			    if sortby ne "" then 
+				    " ORDER BY "; parse(state:0,"{{ use lg }}" .+ sortby); 
+			    endif 
+			    }}";
+		    for sel sql(sql) do 
+			    }} 
+               <div class="col-md-{{row}}">
+			        <div class="checkbox">
+                        <label class="checkbox">
+                            <input type="checkbox" name="{{ field_name }}" id="{{ field_name }}" value="\{{ sel.rows.{{ table_field_value }};}}" {{ declaration }} >
+					        \{{ sel.rows.{{fieldlg}}; }}
+				            {{ for af split(addfield) do }}
+					            \{{ " "; sel.rows.{{af}}; }}
+				            {{ endfor }}
+                        </label>
+                    </div>
+                </div>
+                \{{ nbcol+={{row}}; if nbcol >= 12 then nbcol=0; "</div><div class='row'>"; endif }}
+    
+		    \{{ endfor 
+	    }}
+	</div>
+</div>

@@ -1,0 +1,56 @@
+{{
+    /*
+        @title validator for contractor_profile
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-28
+        @version 1.01 201-02-15   insurance required
+        
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    
+    // configure a new validator
+    validator = new Validator(
+        contact_firstname: 'required',
+        contact_lastname: 'required',
+        contact_phone: 'required',
+        contact_email: 'required,email',
+        // contact_title:'required',
+        // street_no: 'required',
+        // street: 'required',
+        // zip: 'required',
+        province: 'required',
+        // city: 'required',
+        // company_phone: 'required',
+        // website: 'required',
+        // fbsite: 'required',
+         insurance_company: 'required',
+         insurance_number: 'required,number',
+        // email_accounting: 'required,email',
+        // email: 'required,email',
+        // email_cc: 'r,ired,email'
+        desactivate_date:'date,func:checkDateGreaterThanToday',
+        reactivate_date: 'date,func:checkDateGreaterThanToday,func:checkDateGreaterThanFirstDate'
+    );  
+}}
+
+<script>
+    function checkDateGreaterThanToday(date) {
+        var curDate = new Date();
+        var date2 = new Date(curDate.getFullYear(), curDate.getMonth(),curDate.getDate());
+        var dateSplit = date.split("-");
+        var date1= new Date(dateSplit[0],dateSplit[1]-1,dateSplit[2]); // corrige erreur de new Date(date);
+        return (date1.getTime() >= date2.getTime() );
+    }
+    
+   function checkDateGreaterThanFirstDate(date) {
+        return ((new Date(date)).getTime() >= (new Date($('#desactivate_date').val()).getTime()));
+    }
+</script>
+

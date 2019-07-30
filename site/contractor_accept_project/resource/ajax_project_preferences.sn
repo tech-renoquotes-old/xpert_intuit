@@ -1,0 +1,422 @@
+{{
+    // /*
+    //     @title mobiledata
+    //     Description: This ressource serves as API support for payments from mobile application
+    //     @author louis.jhonny@gmail.com
+    //     @version 1.0 2018-09-17
+    // */
+    
+    %include '/site/package/all.sn';
+    
+    
+    use page;
+    use lg;
+}}
+
+\{{
+cgidata = cgidata();
+    
+    
+    
+    if(cgidata.rmuid ne "" && cgidata.cuid ne "") then
+
+        territories = sql(single:true,"SELECT *
+             FROM sr_territory t
+             INNER JOIN sr_contractor_territory ct ON t.uid=ct.uid_territory
+             WHERE t.active='yes'
+             AND ct.uid_contractor='?'
+             AND t.uid='?'", cgidata.cuid, cgidata.rmuid);
+             
+        nrows = territories.nbrows;
+        
+        headers_out("X-debug", territories.nbrows);
+        
+        if(nrows > 0) then
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': territories.rows.name_fr,
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+            
+            void sql("DELETE FROM sr_contractor_territory WHERE uid_contractor = '?' and uid_territory = '?'", cgidata.cuid, cgidata.rmuid);
+            headers_out("X-success", cgidata.rmuid);
+        endif
+    endif
+    
+    //Remove a service
+    if(cgidata.suid ne "" && cgidata.cuid ne "" && cgidata.pcuid ne "") then
+        service = sql(single:true,"SELECT s.*
+             FROM sr_service s
+             INNER JOIN sr_contractor_service cs ON s.uid=cs.uid_service
+             WHERE cs.approved='yes'
+             AND cs.uid_contractor='?'
+             AND s.uid='?'", cgidata.cuid, cgidata.suid);
+             
+
+        nrows = service.nbrows;
+        
+        
+        
+        if(nrows > 0) then
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service': service.rows.name_long_fr .+ ': ' .+ service.rows.uid,
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+            
+            void sql("DELETE FROM sr_contractor_service WHERE uid_contractor = '?' and uid_service = '?'", cgidata.cuid, cgidata.suid);
+            headers_out("X-success", cgidata.suid);
+        endif
+    endif
+    
+    
+    if(cgidata.min_amount ne "" && cgidata.max_amount ne "" && cgidata.tuid ne "" && cgidata.min_amount < cgidata.max_amount) then
+        territory_upd = sql("UPDATE sr_contractor_territory SET min_amount = '?', max_amount = '?' WHERE  uid_contractor = '?' AND uid_territory = '?'", cgidata.min_amount, cgidata.max_amount,  cgidata.cuid, cgidata.tuid);
+        
+        if(territory_upd.affrow > 0) then
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': cgidata.min_amount,
+                'preferred_max': cgidata.max_amount,
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'en') then
+                headers_out("X-updated", "territory is updated successfully");
+            else
+                headers_out("X-updated", "Mise-a-jour du territoire reussie");
+            endif
+        endif
+    else
+        if("{{lg.rows.lg}}" eq 'fr') then
+            headers_out("X-failed", "On n'arrive pas a modifier vos préférences. montant minimum doit être inferieur au montant maximum et ne doivent pas être vide");
+        else
+            headers_out("X-failed", "Cannot mofify your preferences. max amount should be greater then min amount and should not be empty");
+        endif
+    endif
+    
+    
+    if(cgidata.budget ne "" && cgidata.reason ne "" && cgidata.pcuid ne "" && cgidata.cuid ne "") then
+
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': cgidata.budget .+ " : " .+ cgidata.explanation,
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'fr') then
+                headers_out("X-updated", "Vos informations on été envoyées. Merci!");
+            else
+                headers_out("X-updated", "Your feedback has been sent. Thank you!");
+            endif
+    endif
+    
+    
+    if(cgidata.myPrice ne "" && cgidata.reason == 8 && cgidata.pcuid ne "" && cgidata.cuid ne "") then
+
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': cgidata.myPrice .+ "$ : \n" .+ cgidata.explainPrice,
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'fr') then
+                headers_out("X-updated", "Vos informations on été envoyées. Merci!");
+            else
+                headers_out("X-updated", "Your feedback has been sent. Thank you!");
+            endif
+    endif
+
+    //Modifier les preferences pour la periode de vacances
+    if(cgidata.desactivate_date ne "" && cgidata.reactivate_date ne "") then
+        vacance_upd = sql("UPDATE sr_contractor SET reactivate_date = '?', deactivate_date = '?', enable_vacation = 'yes' WHERE  uid = '?'", cgidata.reactivate_date, cgidata.desactivate_date, cgidata.cuid);
+        vacation = cgidata.desactivate_date .+ ' - ' .+ cgidata.reactivate_date;
+        
+        if(vacance_upd.affrow > 0) then
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': vacation,
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'en') then
+                headers_out("X-updated", "vacation period has been updated successfully");
+            else
+                headers_out("X-updated", "Mise-a-jour de la nouvelle période de vacance reussie!");
+            endif
+        endif
+    else
+        if("{{lg.rows.lg}}" eq 'fr') then
+            headers_out("X-failed", "On n'arrive pas a modifier vos préférences.");
+        else
+            headers_out("X-failed", "Cannot mofify your preferences.");
+        endif
+    endif
+    
+    //Modifier les preferences pour l'horaire de reception de projets
+    if(cgidata.from_active_hour ne "" && cgidata.to_active_hour ne "") then
+        schedule_upd = sql("UPDATE sr_contractor SET from_active_hour = '?', to_active_hour = '?' WHERE  uid = '?'", cgidata.from_active_hour, cgidata.to_active_hour, cgidata.cuid);
+        schedule = cgidata.from_active_hour .+ ' - ' .+ cgidata.to_active_hour;
+        
+        if(schedule_upd.affrow > 0) then
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': schedule,
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'en') then
+                headers_out("X-updated", "Your reception schedule has been updated successfully");
+            else
+                headers_out("X-updated", "Mise-a-jour de l'horaire de réception reussie!");
+            endif
+        endif
+    else
+        if("{{lg.rows.lg}}" eq 'fr') then
+            headers_out("X-failed", "On n'arrive pas a modifier vos préférences.");
+        else
+            headers_out("X-failed", "Cannot mofify your preferences.");
+        endif
+    endif
+    
+    
+    //Modifier les preferences pour la date de disponibilité
+    if(cgidata.start_reception_date ne "" || (cgidata.reception_days ne "" && cgidata.reception_days > 0))then
+    
+        if(cgidata.start_reception_date ne "") then
+            delay = cgidata.start_reception_date;
+            availability_upd = sql("UPDATE sr_contractor SET delay_from = '?', delay_dynamic = '' WHERE  uid = '?'", delay, cgidata.cuid);
+        elseif(cgidata.reception_days ne "" && cgidata.reception_days > 0) then
+            delay = cgidata.reception_days .+ " jours";
+            availability_upd = sql("UPDATE sr_contractor SET delay_dynamic = '?', delay_from = '' WHERE  uid = '?'", delay, cgidata.cuid);
+            
+        endif
+
+        if(availability_upd.affrow > 0) then
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': delay,
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'en') then
+                headers_out("X-updated", "Your availability has been updated successfully");
+            else
+                headers_out("X-updated", "Mise-a-jour de la date de disponibilité reussie!");
+            endif
+        endif
+    else
+        if("{{lg.rows.lg}}" eq 'fr') then
+            headers_out("X-failed", "On n'arrive pas a modifier vos préférences.");
+        else
+            headers_out("X-failed", "Cannot mofify your preferences.");
+        endif
+    endif
+    
+    //Raison 4: Il me manque de l'information
+    if(cgidata.more_info ne "" && cgidata.reason ne "" && cgidata.pcuid ne "" && cgidata.cuid ne "") then
+
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': 'N/A',
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':cgidata.more_info
+            });
+        
+            if("{{lg.rows.lg}}" eq 'fr') then
+                headers_out("X-updated", "Vos informations on été envoyées. Merci!");
+            else
+                headers_out("X-updated", "Your feedback has been sent. Thank you!");
+            endif
+    endif
+    headers_out("X-debug", cgidata);
+    //Raison 9 : Autre
+    if(cgidata.other_info ne "" && cgidata.reason == 9 && cgidata.pcuid ne "" && cgidata.cuid ne "") then
+            
+            void insert(table:'sr_contractor_preferences', fields:{
+                'uid_project_contractor': cgidata.pcuid,
+                'uid_contractor': cgidata.cuid,
+                'reason': cgidata.reason,
+                'other_explanation': cgidata.other_info,
+                'rm_territory': 'N/A',
+                'rm_service':'N/A',
+                'preferred_min': 'N/A',
+                'preferred_max': 'N/A',
+                'preferred_lg': 'N/A',
+                'preferred_bdg': 'N/A',
+                'preferred_price': 'N/A',
+                'preferred_avail': 'N/A',
+                'preferred_schd': 'N/A',
+                'preferred_vac': 'N/A',
+                'more_info':'N/A'
+            });
+        
+            if("{{lg.rows.lg}}" eq 'fr') then
+                headers_out("X-updated", "Vos informations on été envoyées. Merci!");
+            else
+                headers_out("X-updated", "Your feedback has been sent. Thank you!");
+            endif
+    endif
+    
+    //Raison 7 : Je ne parle pas la langue du client
+    if(cgidata.reason == 7 && cgidata.myLang ne "") then
+
+        if(cgidata.myLang == 1) then
+            lang = ("{{lg.rows.lg}}" eq 'fr')?'francais':'french';
+        elseif(cgidata.myLang == 2) then
+            lang = ("{{lg.rows.lg}}" eq 'fr')?'anglais':'english';
+        elseif(cgidata.myLang == 3) then
+            lang = ("{{lg.rows.lg}}" eq 'fr')?'billingue':'bilingual';
+        endif
+
+        languages = sql(single:true,"SELECT * FROM sr_contractor WHERE languages = '?' AND uid = '?'", cgidata.myLang, cgidata.cuid);
+    
+        headers_out("X-debug", languages);
+    
+        if(languages.nbrows == 0) then
+                language_upd = sql("UPDATE sr_contractor SET languages = '?' WHERE  uid = '?'", cgidata.myLang, cgidata.cuid);
+                
+                if(language_upd.affrow > 0) then
+                    void insert(table:'sr_contractor_preferences', fields:{
+                        'uid_project_contractor': cgidata.pcuid,
+                        'uid_contractor': cgidata.cuid,
+                        'reason': cgidata.reason,
+                        'other_explanation': 'N/A',
+                        'rm_territory': 'N/A',
+                        'rm_service':'N/A',
+                        'preferred_min': 'N/A',
+                        'preferred_max': 'N/A',
+                        'preferred_lg': cgidata.myLang .+ " : " .+ lang,
+                        'preferred_bdg': 'N/A',
+                        'preferred_price': 'N/A',
+                        'preferred_avail': 'N/A',
+                        'preferred_schd': 'N/A',
+                        'preferred_vac': 'N/A',
+                        'more_info':'N/A'
+                    });
+                
+                    if("{{lg.rows.lg}}" eq 'fr') then
+                        headers_out("X-updated", "Votre nouvelle langue pour recevoir des projets est ".+ lang);
+                    else
+                        headers_out("X-updated", "Your new language to receive projects is " .+ lang);
+                    endif
+                endif
+        else
+                if("{{lg.rows.lg}}" eq 'fr') then
+                    headers_out("X-failed", "Votre langue n'a pas été changée. Veuillez choisir une autre langue");
+                else
+                    headers_out("X-failed", "Your language has not been changed. Please choose another language");
+                endif
+        endif
+    endif
+    
+    
+
+
+}}

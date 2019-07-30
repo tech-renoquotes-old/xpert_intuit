@@ -1,0 +1,35 @@
+{{
+    /*
+        @title ajax_add_recherche
+        Description: Updates search from header
+        
+        @author bbduc@yahoo.com
+        
+        @version 1.0 2017-12-11
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+\{{
+    cgidata = cgidata();  
+    connection = connection();
+    if cgidata.mots ne ""  then
+        res =  update(
+            tables:"sr_project_contractor",
+            uid: cgidata.uid_pc,
+            fields:{
+                "client_comment": cgidata.comment
+            }
+        );
+        
+       void sql("insert into sr_recherche  (mots,uid_user,comment,ip,url) values('?','?','?','?','?') 
+            ",cgidata.mots,cgidata.uid,cgidata.comment,connection.client_ip,cgidata.url); 
+    endif
+    cgidata;
+}}

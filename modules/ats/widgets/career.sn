@@ -1,0 +1,261 @@
+{{ 
+    //
+    // Name:        career
+    //
+    // Description: Widget to display careers opportunities
+    //  
+    // Parameters:  none so far
+	//				use lg
+    //				use widget
+    //
+    //				1.0 2015-03-25 manu@i-manu.com
+	//				1.1 2015-04-06 ilya@sednove.com Candidature spontane (appel jobApply(0))
+	//				1.2 2015-04-06 ilya@sednove.com Affichage d'erreur si la variable cgidata.email_resume n'est pas vide, mais on est dehors du contexte d'envoi
+    //				1.3 2015-04-21 ilya@sednove.com cts publish (page publish instead widget publish)
+}}
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc";
+	page_carreer = sql(single:true,"select * from pages where code='carreer'");
+}}
+\{{
+    config=config(); 
+	cgidata=cgidata();
+	page={"uid":"{{page.rows.uid}}","url":"{{page.rows{'folder_' .+ lg.rows.lg}; page.rows{'page_' .+ lg.rows.lg};}}"}; // use by menus
+}}
+
+<!-- =====================================
+CSS FOR THE WIDGET 
+===================================== -->
+<style type="text/css">
+.wdg_job .panel-group .panel-heading i {
+    content: "+";
+    font-size: 12px;
+    margin-top: -8px;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+}
+.wdg_job .panel-group .panel-heading {
+    padding: 14px 15px;
+    position: relative;
+}
+.wdg_job .panel-title {
+    color: #666666!important;
+}
+.wdg_job .collapse {
+    visibility: visible;
+}
+.wdg_job .panel-group .panel {
+    margin-bottom: 0;
+    border-radius: 0px;
+}
+
+.cs .cs-main-content, #wdg_job_result_good, .cs .cs-main-content, #wdg_job_result_error {
+    
+}
+
+		#contact label{
+			display: inline-block;
+			width: 100px;
+			text-align: right;
+		}
+		#contact_submit{
+			padding-left: 100px;
+		}
+		#contact div{
+			margin-top: 1em;
+		}
+		textarea{
+			vertical-align: top;
+			height: 5em;
+		}
+		form.resume label.error, label.error {
+			color: red;
+			font-style: italic
+		}
+		
+		#wdg_job_result_good, #wdg_job_result_error { margin: 0; }
+</style>
+
+<!-- =====================================
+HTML CODE FOR THE WIDGET 
+===================================== -->
+<div id="wdg_job_list" class="row">
+    <div class="col-md-3">
+        <div class="gray-box">
+            <p>
+                {{sn_ct("CANDIDATURE SPONTANÉE", publish:"/publish/pages.sn",uids:page_carreer.rows.uid)}}
+            </p>
+            <a href="javascript:jobApply(0);" class="btn btn-primary btn-block">{{sn_ct("Apply", module:'ats', publish:"/publish/pages.sn",uids:page_carreer.rows.uid)}}</a>
+        </div>
+    </div>
+
+{{// List of the jobs, only the active one with the most recent on the top and the publication date must be not in the future }}
+    <div class="col-md-9">
+        <div class="wdg_job">
+		\{{ 
+			cgidata=cgidata(disable_upload:false,directory:"/staging/career/");
+			if cgidata.email_resume ne "" then }}
+			  {{// sn_ct("Erreur d'envoi", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+			  <script type="text/javascript">
+			  	$(document).ready(function($) {
+			  		showResultError();
+				});
+			  </script>
+		\{{
+			endif
+			}}
+            <div id="accordion" class="panel-group">\{{ nb_offers = 0;
+	for career sql("select * from mod_ats_career where active = 'yes' and publication_date <= sysdate() ORDER BY publication_date DESC;") do }}
+                <div id="career\{{career.rows.uid}}" class="panel panel-default">
+
+                    <div class="panel-heading">
+                        <h4 class="panel-title">\{{career.rows.job_title_{{lg.rows.lg}};}}<i class="glyphicon glyphicon-plus"></i></h4>
+                    </div>
+
+                    <div style="height: auto;" class="panel-collapse collapse" id="collapse_15">
+                        <div class="panel-body">
+                            <!-- DESCRIPTION OF THE JOB -->
+                            <p>\{{career.rows.job_description_{{lg.rows.lg}};}}</p>
+                            <!-- LINK TO THE CAREER FORM -->
+							{{// Show the job form according to the selected job using Ajax }}
+                            <a href="javascript:jobApply(\{{ career.rows.uid; }});" class="btn pull-right btn-primary">{{sn_ct("Apply", module:'ats', publish:"/publish/pages.sn",uids:page_carreer.rows.uid)}}</a>
+                        </div>
+                    </div>
+
+                </div>
+		\{{ nb_offers = nb_offers + 1;
+   
+	endfor
+	if nb_offers == 0 then }}
+		<div class="row">
+            <div class="alert alert-info" role="alert" style="margin-top:30px; margin-bottom:20px;">{{sn_ct("Aucun poste affiche pour le moment. Revenez plus tard ou soumettez-nous votre candidature spontannee!", module:'ats', publish:"/publish/pages.sn",uids:page_carreer.rows.uid)}}</div>
+		</div>
+\{{ endif }}
+
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
+<!-- END .row -->
+
+{{// Div of the form that need to be loaded using the function jobApply }}
+<div id="wdg_job_form" class="row">
+{{
+	// ajax call to ressource /modules/content/career/career_form.sn
+}}
+</div>
+
+{{// Div that show the success message }}
+<div id="wdg_job_result_good" class="row">
+            <h2><small>{{sn_ct("Vous postulez présentement pour :", lg:lg.rows.lg, module:'ats', publish:"/publish/ressources.sn", uids:ressource.rows.uid)}}</small> <br/>
+                    	<p id="jobtitle"><!-- job title--></p>
+            </h2>
+            <div class="alert alert-success" role="alert" style="margin-top:30px; margin-bottom:20px;">{{sn_ct("Your request has been sent successfully.", module:'ats', publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</div>
+            <a href="javascript:showJobList();{{ // sn_pages('carreer',lg.rows.lg,table:'pages');}}" class="btn btn-primary">{{sn_ct("Back to job list", module:'ats', publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</a>
+
+</div>
+
+{{// Div that show the error message }}
+<div id="wdg_job_result_error" class="row">
+            <div class="alert alert-danger" role="alert" style="margin-top:30px; margin-bottom:20px;">{{sn_ct("There was an error during submission.", module:'ats', publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</div>
+            <a href="javascript:showJobList();{{ // sn_pages('carreer',lg.rows.lg,table:'pages'); }}" class="btn btn-primary">{{sn_ct("Back to job list", module:'ats', publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</a>
+</div>
+<!-- END .row -->
+
+
+<!-- JS -->
+<script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.13.1/jquery.validate.js"></script>
+
+<script type="text/javascript">
+
+{{// for the accordion }}
+$(document).ready(function($) {
+    $('#accordion').find('.panel-heading').click(function() {
+
+        //Expand or collapse this panel
+        $('.glyphicon').removeClass('glyphicon-minus').addClass('glyphicon-plus');
+        $(this).find('.glyphicon').toggleClass('glyphicon-plus glyphicon-minus');
+        $(this).next('.panel-collapse').slideToggle('fast');
+
+        //Hide the other panels
+        $(".panel-collapse").not($(this).next()).slideUp('fast');
+
+    });
+});
+
+{{// function to hide a Div }}
+function hideDiv(divId) {
+    $("#"+divId).hide();
+}
+
+{{// function to show a Div }}
+function showDiv(divId) {
+    $("#"+divId).show();
+}
+
+function scrolltotop() {
+    $("html, body").animate({ scrollTop: 0 }, "fast");
+}
+
+{{// load the form with the jobid selected, show the job form Div and hide the others }}
+function jobApply(jobid) {
+	var str = "jobid=" + jobid;
+	// $("#wdg_job_form").load("{{sn_pages("career_form",lg.rows.lg,table:"ressources") .+ "?jobid="}}"+jobid);
+	$.ajax({//
+		type: 'post',
+		url:'{{sn_pages("career_form",lg.rows.lg,table:"ressources")}}',
+		data: str, 
+		dataType: 'html',
+		success: function(msg){//
+			$('#wdg_job_form').html(msg);
+		}
+	});
+	hideDiv('wdg_job_list');
+	hideDiv('wdg_job_result_good');
+	hideDiv('wdg_job_result_error');
+	showDiv('wdg_job_form');
+	scrolltotop();
+}
+
+function showJobList() {
+	hideDiv('wdg_job_form');
+	hideDiv('wdg_job_result_error');
+	hideDiv('wdg_job_result_good');
+	showDiv('wdg_job_list');
+	scrolltotop();
+}
+
+function showResultGood() {
+	hideDiv('wdg_job_list');
+	hideDiv('wdg_job_form');
+	hideDiv('wdg_job_result_error');
+	showDiv('wdg_job_result_good');
+	scrolltotop();
+}
+
+function showResultError() {
+	hideDiv('wdg_job_list');
+	hideDiv('wdg_job_form');
+	hideDiv('wdg_job_result_good');
+	showDiv('wdg_job_result_error');
+	scrolltotop();
+}
+
+{{// show the job list Div and hide the others }}
+showDiv('wdg_job_list');
+hideDiv('wdg_job_form');
+hideDiv('wdg_job_result_good');
+hideDiv('wdg_job_result_error');
+
+</script>

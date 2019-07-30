@@ -1,0 +1,15 @@
+
+{{
+    cgidata = cgidata();
+    use extranet_user;
+    
+    uids = esc(filter:"sqlqm", cgidata.service_uid);
+    services = sql("DELETE FROM sr_contractor_service WHERE uid_contractor='?' AND uid_service IN (?)", extranet_user.uid, uids );
+
+    if services.sqlcode == 0 then
+        headers_out("X-delete_service_success", "1");
+    else
+        headers_out("X-delete_service_error", "1");
+    endif
+
+}}

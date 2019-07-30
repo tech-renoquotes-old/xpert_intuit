@@ -1,0 +1,31 @@
+{{ 
+    use lg;         // Function publish use context lg
+    %include "/extenso/functions/sn_ct.snc"; 
+	page_nouvelles = select(tables:"pages",selectby:"code = 'actualites_et_evenements'"); 
+}}
+<!-- News -->
+<div id="news-wrap" class="clearfix">
+	<h2>{{sn_ct(code:"Nouvelles en bref",lg:lg.rows.lg,publish:"/publish/sn_widgets.sn",uids:6)}}</h2>
+	<div class="row" id="news">
+	\{{ nb = 0; }}
+	{{ for nouv sql("select * from actualites where actif = 'oui' order by sn_custom") do }}
+	\{{ if (config.site eq "staging" || "{{nouv.rows.production}}" eq "oui") && ++nb < 3 then }}	
+	<a href="{{page_nouvelles.rows[0]['folder_' .+ lg.rows.lg];nouv.rows['seo_' .+ lg.rows.lg]}}">
+		<div class="col-xs-6">
+			<div class="row item">
+				<div class="col-xs-4">
+					<div class="img-wrap">
+						<img src="{{nouv.rows.miniature}}" alt="{{nouv.rows['alt_' .+ lg.rows.lg]}}" title="{{nouv.rows['alt_' .+ lg.rows.lg]}}" />
+					</div>
+				</div>
+				<div class="col-xs-8">
+					<p class="red">{{nouv.rows.adate}}</p>
+					<p>{{nouv.rows['titre_' .+ lg.rows.lg]}}</p>
+				</div>
+			</div>
+	</div></a>
+	\{{ endif }}
+	{{ endfor }}
+	</div>
+	<p class="pull-right"><a href="{{page_nouvelles.rows[0]['folder_' .+ lg.rows.lg]}}{{page_nouvelles.rows[0]['page_' .+ lg.rows.lg]}}" class="red">{{sn_ct(code:"Lire toutes les nouvelles",lg:lg.rows.lg,publish:"/publish/sn_widgets.sn",uids:6)}}<i class="fa fa-angle-double-right"></i></a></p>
+</div>

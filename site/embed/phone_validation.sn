@@ -1,0 +1,17 @@
+if (cgidata.phone1.length() < 10 && cgidata.phone1 ne "") then
+    addr = sql(single:true, "SELECT phone1 FROM sr_address WHERE uid = '?'", cgidata.uid);
+    cgidata.phone1 = addr.rows.phone1;
+    '<div class="alert alert-danger">phone number (phone1) must be 10 digits or higher</div>';
+endif
+
+if (cgidata.phone2.length() < 10 && cgidata.phone2 ne "") then
+    addr = sql(single:true, "SELECT phone1 FROM sr_address WHERE uid = '?'", cgidata.uid);
+    cgidata.phone2 = addr.rows.phone2;
+    '<div class="alert alert-danger">phone number (phone2) must be 10 digits or higher</div>';
+endif
+
+if (cgidata.phone3.length() < 10 && cgidata.phone3 ne "") then
+    addr = sql(single:true, "SELECT phone1 FROM sr_address WHERE uid = '?'", cgidata.uid);
+    cgidata.phone3 = addr.rows.phone3;
+    '<div class="alert alert-danger">phone number (phone3) must be 10 digits or higher</div>';
+endif

@@ -1,0 +1,312 @@
+\{{
+    /*
+        @title pivotal package
+        Description: This package contains function related to pivotal payments and credit cards.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+        
+        sn_configs fields : pivotal_terminalid (varchar),
+                            pivotal_secret (varchar),
+                            pivotal_sandbox (checkbox yes/no)
+                            
+        credit_card_table fields :  credit_card_table_user_field (int),
+                                    exp (varchar 4),
+                                    last_digits (varchar 4),
+                                    type (varchar),
+                                    reference (varchar),
+                                    name (varchar),
+                                    merchantref (varchar)
+                                    
+        transaction_table fields :  transaction_table_user_field (int),
+                                    amount (decimal),
+                                    uniqueref (varchar)
+
+    */
+    package pivotal;
+    
+        // include the pivotal class
+        %include "/class/pivotal/pivotal.sn";
+        credit_card_table = "sr_cc";
+        credit_card_table_user_field = "uid_contractor";
+        transaction_table = "sr_transaction";
+        transaction_table_user_field = "uid_contractor";
+        
+        
+        // Main pivotal instance (singleton)
+        mainInstance = null;
+        
+        
+        /*
+         * This function gets the configs from sn_configs and calls pivotal class constructor
+         *
+         * @author madupuis@sednove.com
+         *
+         * @return pivotal instance
+		 *
+         */
+        function get_pivotal_ctx()
+            if (pivotal::mainInstance == null) then
+                pivotal_configs = sql(single:true,"SELECT pivotal_terminalid, pivotal_secret, pivotal_sandbox FROM sn_configs");
+                terminalID = pivotal_configs.rows.pivotal_terminalid;
+                secret = pivotal_configs.rows.pivotal_secret;
+                sandbox = (pivotal_configs.rows.pivotal_sandbox eq 'yes');
+                pivotal = new Pivotal(terminalID, secret, sandbox:sandbox);
+                pivotal::mainInstance = pivotal;
+            endif
+            return pivotal::mainInstance;
+        endf
+        
+        
+        /*
+         * This function saves a credit card using pivotal. It sets headers X-save_cc_success if SUCCESS or X-save_cc_error if ERROR.
+         *
+         * @author madupuis@sednove.com
+         *
+         * @param string type
+         * @param string name
+         * @param string card_number
+         * @param string exp_year (2 digits)
+         * @param string exp_month (2 digits)
+         * @param string cvv (3-5 digits)
+         * @param int uid_contractor (typically extranet_user.uid)
+		 *
+         */
+        function save_credit_card(type, name, card_number, exp_year, exp_month, cvv, uid_contractor)
+        
+            // get the pivotal context (calls constructor)
+            pivotal_ctx = pivotal::get_pivotal_ctx();
+            
+             // insert an empty credit card to get uid
+            cc = insert(
+                table:pivotal::credit_card_table,
+                fields:{}
+            );  
+            
+            // concatenate expiry month + year i.e. 0517 for mai 2017
+            card_expiry = str_pad(exp_month, "2", "0", 1) .+ exp_year;
+            
+            // local reference for pivotal
+            merchant_ref = "CON_" .+ uid_contractor .+ "_" .+ cc.uid;
+            
+            // save a card with pivotal
+            card = pivotal_ctx.save_card(merchantref:merchant_ref,cardtype:uc(type),cardnumber:card_number,cardexpiry:card_expiry,name:name,cvv:cvv);
+            
+            if card.success then
+                // update the card in the database
+                void update(
+                    tables:pivotal::credit_card_table,
+                    uid:cc.uid,
+                    fields:{
+                        "type":type,
+                        "name":name,
+                        "exp":card_expiry,
+                        "last_digits":substr(card_number, -4),
+                        pivotal::credit_card_table_user_field:uid_contractor,
+                        "reference": card.reference,
+                        "merchantref":merchant_ref
+                    }
+                );
+                
+                return {'uid':cc.uid};
+            else
+                // delete the temporary credit card
+                void sql("DELETE FROM ".+ pivotal::credit_card_table .+" WHERE uid='?'", cc.uid);
+                return {'error':card.error};
+            endif
+        endf
+        
+        
+        function save_my_credit_card(type, name, card_number, exp_year, exp_month, cvv, uid_contractor)
+            // get the pivotal context (calls constructor)
+            pivotal_ctx = pivotal::get_pivotal_ctx();
+            
+             // insert an empty credit card to get uid
+            cc = insert(
+                table:pivotal::credit_card_table,
+                fields:{}
+            );  
+            
+            // concatenate expiry month + year i.e. 0517 for mai 2017
+            card_expiry = str_pad(exp_month, "2", "0", 1) .+ exp_year;
+            
+            // local reference for pivotal
+            merchant_ref = "CON_" .+ uid_contractor .+ "_" .+ cc.uid;
+            
+            // save a card with pivotal
+            card = pivotal_ctx.save_my_card(merchantref:merchant_ref,cardtype:uc(type),cardnumber:card_number,cardexpiry:card_expiry,name:name,cvv:cvv);
+            
+            
+            if card.success then
+                // update the card in the database
+                void update(
+                    tables:pivotal::credit_card_table,
+                    uid:cc.uid,
+                    fields:{
+                        "type":type,
+                        "name":name,
+                        "exp":card_expiry,
+                        "last_digits":substr(card_number, -4),
+                        pivotal::credit_card_table_user_field:uid_contractor,
+                        "reference": card.reference,
+                        "merchantref":merchant_ref
+                    }
+                );
+                
+                return {'uid':cc.uid};
+            else
+                // delete the temporary credit card
+                void sql("DELETE FROM ".+ pivotal::credit_card_table .+" WHERE uid='?'", cc.uid);
+                return {'error':card.error};
+            endif
+            void insert(table:'sr_debug', fields:{'description':'save_credit_card debug','text':'success='.+card.success.+ '-' .+ data});
+        endf
+        
+        
+        /*
+         * This function makes a payment using the card informations provided. It sets headers X-payment_card_success if SUCCESS or X-payment_card_error if ERROR.
+         *
+         * @author madupuis@sednove.com
+         *
+         * @param string type
+         * @param string name
+         * @param string card_number
+         * @param string exp_year (2 digits)
+         * @param string exp_month (2 digits)
+         * @param string cvv (3-5 digits)
+         * @param string currency
+         * @param string amount (separated by a dot for decimal)
+         * @param int uid_contractor (typically extranet_user.uid)
+		 *
+         */
+        function make_payment_card(type, name, card_number, exp_year, exp_month, cvv, currency, amount, uid_contractor)
+        
+            // get the pivotal context (calls constructor)
+            pivotal_ctx = pivotal::get_pivotal_ctx();
+            
+             // insert an empty transaction to get uid
+            transaction = insert(
+                table:pivotal::transaction_table,
+                fields:{}
+            );  
+            
+            // concatenate expiry month + year i.e. 0517 for mai 2017
+            card_expiry = str_pad(exp_month, "2", "0", 1) .+ exp_year;
+            
+            // Generate orderID
+            orderID = uid_contractor.+'-'.+transaction.uid;
+            
+            // send payment to pivotal
+            payment = pivotal_ctx.payment_card(orderID:orderID,amount:amount,currency:currency,cardtype:type,cardnumber:card_number,cardexpiry:card_expiry,name:name,cvv:cvv);
+            
+            if payment.success then
+                // update the card in the database with success flag
+                void update(
+                    tables:pivotal::transaction_table,
+                    uid:transaction.uid,
+                    fields:{
+                        "amount":amount,
+                        "uniqueref":payment.uniqueref,
+                        "status":"succeeded",
+                        pivotal::transaction_table_user_field:uid_contractor
+                        
+                    }
+                );
+                return {'uid': transaction.uid};
+            else
+                // update the card in the database with failure flag
+                void update(
+                    tables:pivotal::transaction_table,
+                    uid:transaction.uid,
+                    fields:{
+                        "amount":amount,
+                        "uniqueref":payment.uniqueref,
+                        "status":"failed",
+                        "completed":"yes",
+                        pivotal::transaction_table_user_field:uid_contractor
+                    }
+                );
+                return {'error': payment.error};
+            endif
+        endf
+        
+        /*
+         * This function makes a payment using an existing card reference. It sets headers X-payment_success if SUCCESS or X-payment_error if ERROR.
+         *
+         * @author madupuis@sednove.com
+         *
+         * @param string cc_ref
+         * @param string currency
+         * @param string amount (separated by a dot for decimal)
+         * @param int uid_contractor (typically extranet_user.uid)
+		 *
+         */
+        function make_payment_cc_ref(cc_ref, currency, amount, uid_contractor)
+            // get the pivotal context (calls constructor)
+            pivotal_ctx = pivotal::get_pivotal_ctx();  
+            
+            // insert an empty transaction to get uid
+            transaction = insert(
+                table:pivotal::transaction_table,
+                fields:{}
+            );
+            
+            // Generate orderID
+            orderID = uid_contractor.+'-'.+transaction.uid;
+            
+            payment = pivotal_ctx.payment_ref(orderID:orderID,amount:amount,currency:currency,cardnumber:cc_ref);
+            if payment.success then
+                // update the card in the database with success flag
+                void update(
+                    tables:pivotal::transaction_table,
+                    uid:transaction.uid,
+                    fields:{
+                        "amount":amount,
+                        "uniqueref":payment.uniqueref,
+                        "status":"succeeded",
+                        pivotal::transaction_table_user_field:uid_contractor
+                        
+                    }
+                );
+                return {'uid': transaction.uid};
+            else
+                // update the card in the database with failure flag
+                void update(
+                    tables:pivotal::transaction_table,
+                    uid:transaction.uid,
+                    fields:{
+                        "amount":amount,
+                        "uniqueref":payment.uniqueref,
+                        "status":"failed",
+                        "completed":"yes",
+                        pivotal::transaction_table_user_field:uid_contractor
+                    }
+                );
+                return {'error': payment.error};
+            endif 
+        endf
+        
+        /*
+         * This function makes a payment using an existing card uid. It sets headers X-payment_ref_success if SUCCESS or X-payment_ref_error if ERROR.
+         *
+         * @author madupuis@sednove.com
+         *
+         * @param string cc_uid
+         * @param string currency
+         * @param string amount (separated by a dot for decimal)
+         * @param int uid_contractor (typically extranet_user.uid)
+		 *
+         */
+        function make_payment_cc_uid(cc_uid, currency, amount, uid_contractor)
+            cc = sql(single:true,"SELECT reference FROM ".+ pivotal::credit_card_table .+" WHERE uid='?' AND ".+ pivotal::credit_card_table_user_field .+"='?'", cc_uid, uid_contractor);
+            if cc.nbrows > 0 then
+                return pivotal::make_payment_cc_ref(cc.rows.reference, currency, amount, uid_contractor);
+            endif
+        endf
+        
+    endp
+
+    
+    
+}}

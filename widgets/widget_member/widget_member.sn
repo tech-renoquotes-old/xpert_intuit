@@ -1,0 +1,65 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+    use lg;
+    use widget;
+}}
+\{{
+    member_page = sql(single:true, "SELECT folder_{{lg.rows.lg}} AS url FROM pages WHERE code='member_info'"); 
+    
+    config=config();    
+    sql_select = "active='yes'";
+    if config.site ne "staging" then 
+        sql_select .+= " AND production='yes'"; 
+    endif         
+    company = sql(single:true, "SELECT * FROM member WHERE " .+ sql_select .+ " ORDER BY RAND() LIMIT 1"); 
+    extra = sql(single:true," 
+                    SELECT 
+                        city.name_{{lg.rows.lg}} AS city,
+                        member_cat.category_{{lg.rows.lg}} AS category
+                    FROM 
+                        member_cat,
+                        member LEFT JOIN city ON member.uid_city=city.uid
+                    WHERE 
+                        member.uid='?' AND
+                        member_cat.uid='?'
+                ", company.rows.uid, company.rows.uid_category); 
+}}
+\{{ if company.nbrows > 0 then }}
+<h3 class="section-title title-1 mb-20">{{ sn_ct("Here is one of our members", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</h3>
+<div class="row">    
+    \{{ 
+        grid_value = 12; 
+        if company.rows.logo ne "" && -e company.rows.logo then
+            grid_value = 8;
+            }}
+            <div class="col-sm-4 col-xs-12">
+                \{{if company.rows.website ne "" then }}<a href="\{{company.rows.website}}" target="_blank">\{{ endif }}   
+                <img class="max-100 mb-20" src="\{{company.rows.logo}}" alt="\{{company.rows.name}}" />
+                \{{if company.rows.website ne "" then }}</a>\{{ endif }}      
+            </div>        
+            \{{ 
+        endif 
+    }} 
+    <div class="col-sm-\{{grid_value}} col-xs-12">
+        <a class="btn btn-xs btn-two float-right" href="\{{member_page.rows.url}}?memberid=\{{company.rows.uid}}">{{ sn_ct("View Profile", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a>
+        <h4>\{{company.rows.name}}</h4>
+        <div class="box-a">
+            <p class="sn_pencil" 
+                data-sn_link1="/extenso/extranet/member/{{lg.rows.lg}}/edit.snc?uid=\{{company.rows.uid}}" 
+                data-sn_class1="edit" 
+                data-sn_title1="{{sn_ct(edit:false,"Edit member",lg:lg.rows.lg,publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}">
+                \{{ esc(filter:"multbr", company.rows.introduction_{{lg.rows.lg}});  }}
+            </p>
+        </div>
+        <ul class="ul-a">
+            <li><i class="fa fa-tag"></i><strong>\{{extra.rows.category}}</strong></li>
+            <li><i class="fa fa-map-marker"></i><strong>\{{extra.rows.city}}</strong></li>
+        </ul>
+    </div>
+</div>
+\{{ else }}
+    <div role="alert" class="alert alert-danger">
+        <strong><i class="fa fa-exclamation-circle fa-lg" style="padding-right: 10px;"></i></strong> 
+        {{ sn_ct("Not member found!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+    </div>
+\{{ endif }}

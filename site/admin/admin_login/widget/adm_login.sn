@@ -1,0 +1,225 @@
+{{
+    
+    /*
+       
+    	@title	sr_contractor_login (based on sed_login)
+    	
+    	Use to display Display login form and lost password form
+    
+    	
+    	@author gamila@sednove.com
+    	
+    	@version 1.0 2016-06-02 10:00:00 laplante@sednove.com Initial Version
+    	@version 1.1 2016-06-03 10:00:00 pascale@sednove.com Code review + page choice from table sed_login_page
+
+ 
+    */
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+	use widget;
+	use lg;
+    %include "/site/contractor_login/include/fblogin.sn";
+	%include "/site/package/all.sn";
+	config = config();
+
+    page = sql(single:true,"SELECT url_interne FROM sed_login_page");  
+    p = sql(single:true,"select * from pages where uid = '?'", page.rows.url_interne);
+    void insert(table:'sr_debug', fields:{'description':'login','text':cgidata,'module':'login'});
+
+}}
+<style>
+.fb-sep {
+    margin: 20px -10px 20px -10px;
+    position: relative;
+    background-color: #cccccc;
+    height: 1px;
+}
+.fb-login-help {
+    text-align: right;
+    font-size: 11px;
+    line-height: 13px;
+    color: #666;
+    margin-top: -2px;
+    margin-bottom: 8px;
+}
+
+div.chk{
+    display: table;
+    text-align: center;
+    margin: 2px auto;
+}
+
+</style>
+<link rel="stylesheet" href="/css/bootstrap-social.css">
+\{{
+    //%include "/extenso/functions/sn_login.snc"; 
+    %include "/site/admin/admin_login/include/sr_login.sn"; // temporaire for testing
+    
+	cgidata = cgidata();
+	request = request();
+//cgidata;
+	use config; 
+	use page; // In template, this variable is defined.
+    ch_password = 1 ;
+	message = "";
+	error = [];
+}}
+
+	<div class="col-sm-offset-3 col-sm-6 well">
+	    <!--Logout-->
+	   \{{	if cgidata.logout then }} 
+        		<div class="alert alert-info" role="alert"> 
+        		    {{ sn_ct("sed_login You have been logout",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}} 
+        		</div>
+		\{{    void sn_logout(user_table:"sr_contractor",login_table:"sr_login");
+	        endif
+
+	        if (request.unparsed_uri =~ 'need_activation') then
+	            }}
+	            <div class="alert alert-warning" role="alert"> 
+        		    {{ sn_ct("sed_login You have not created credentials yet, you will receive an email shortly with a link.",publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"sed_login")}} 
+        		</div>
+	            \{{
+	        endif
+	       
+       
+        // Login
+    	if cgidata.action eq "login" then
+    		if cgidata.username eq "" then
+    			error[length(error)] = dq(({{ sn_ct("sed_login username is missing",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    		endif
+    
+    		if cgidata.password eq "" then
+    			error[length(error)] = dq(({{ sn_ct("sed_login password is missing",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    		endif
+            
+    		if length(error) == 0  then
+    			intranet_user = sn_login(user_table:"sr_contractor",login_table:"sr_login",username:cgidata.username,password:cgidata.password,fb_uid:cgidata.fb_uid);
+    			
+    	
+    			
+    			if intranet_user == null  then
+    				error[length(error)] = dq(({{ sn_ct("sed_login incorrect login",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    				// sleep(3);
+    			else
+    			
+
+    			    // redirection page
+                     if "{{p.nbrows}}" eq 1 then
+                         file = "{{p.rows{'folder_' .+ lg.rows.lg}; p.rows{'page_' .+ lg.rows.lg}; }}.snc";
+    				 else
+    				     file =  "/intranet/{{lg.rows.lg}}/connection-admin.snc";
+    				endif
+
+         			if intranet_user.change_password ne "yes" then
+        				    // redirect(url:file);
+        				    
+        				    "{{ sn_ct(edit:false, 'sed_login Connexion en cours...'); }}";
+        				    "<script>location = location;</script>";
+        				    
+        			else 
+        				    u = crypt(key:"aj58fla74jdna63g",value:intranet_user.uid);
+        				    redirect(url:"{{pages("intranet_login", lg.rows.lg, table:"pages")}}?action=force_change_password&u=".+u);
+        			endif
+    			endif
+    		endif
+    	endif
+
+}}
+
+    \{{if cgidata.action eq "forget" || (cgidata.action eq "reset_password" && ch_password == null) then }}  
+          \{{  // forget password form }}
+          \{{ for err in error do}}
+              <div class="alert-wrap">
+                  <div class="alert alert-danger" role="alert">
+                      \{{ err }}
+                  </div>
+              </div>
+          \{{ endfor }}
+          
+          <form role="form" method="post" action="{{pages(table:'pages','extranet_login',lg.rows.lg)}}">
+              <input type="hidden" name="action" value="reset_password">
+              <h2>{{ sn_ct("sed_login Forget password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</h2>
+              <div class="form-group">
+                  <label for="inputEmail3" class="control-label">{{ sn_ct("sed_login Please enter your email",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+                  <input type="email" class="form-control" id="email" name="email">
+              </div>
+              
+              <div class="form-group">
+                	  <a class="btn btn-default pull-left" href="?">
+                          <i class="fa fa-reply left"></i>{{ sn_ct("sed_login Cancel",edit:true,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                      </a>  
+                      <button type="submit" class="btn btn-primary pull-right">
+                          <i class="fa fa-check-circle left red"></i>{{ sn_ct("sed_login Submit",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                      </button>
+              </div>
+              <div class="clearfix"></div>
+          </form>
+    \{{ else }}
+
+        \{{ if message ne "" then }}
+          <div class="alert-wrap">
+            <div class="alert alert-success" role="alert">
+                <i class="fa fa-check-circle left"></i> \{{ message }}
+            </div>
+          </div>
+        \{{ endif }}
+
+        \{{ for err in error do}}
+          <div class="alert-wrap">
+              <div class="alert alert-danger" role="alert">
+                  \{{ err }}
+              </div>
+          </div>
+        \{{ endfor }}
+
+      
+        \{{ 
+            //   Connexion form
+            request = request();
+          
+            // to prevent redirection loop
+            url = (request.uri =~ "admin-login" || request.uri =~ "connection-admin" ) ? "{{pages(table:'pages','sr_admin_dashboard',lg.rows.lg)}}" : "";
+      
+      
+            //check if contractor has been redirected 
+            //  user Login
+            url;
+        }}
+        
+            
+            
+            <form role="form" action="\{{url}}" method="post">
+              <input type="hidden" name="action" value="login">
+              <h2>{{ sn_ct("admin_login Connection title",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</h2>
+              <div class="form-group\{{ if length(error) > 0 then }} has-error\{{ endif }}">
+                  <label for="inputEmail3" class="control-label">
+                  	<i class="fa fa-user"> </i>{{ sn_ct("admin_login User",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                  </label>
+                  <input type="text" class="form-control" id="username" name="username">
+              </div>
+              <div class="form-group\{{ if length(error) > 0 then }} has-error\{{ endif }}">
+                  <label for="password" class="control-label">
+                  	<i class="fa fa-key"> </i>{{ sn_ct("admin_login Password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                </label>
+                  <input type="password" class="form-control" id="password" name="password">
+              </div>
+              
+              <div class="form-group">
+                  <a class="password pull-left" href="{{pages("intranet_login", lg.rows.lg, table:"pages")}}?action=forget">{{ sn_ct("admin_login Forget your password ?",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</a>
+                  <button id="btn_go" type="submit" class="btn btn-primary pull-right btn-block">
+                      <i class="fa fa-check-circle left red"></i> {{ sn_ct("admin_login Login",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                  </button>
+               </div>
+            
+              <div class="clearfix"></div>
+            </form>
+
+  \{{ endif }}
+</div>
+
+
+
+
+

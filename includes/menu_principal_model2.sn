@@ -1,0 +1,247 @@
+{{
+    //
+    // Name:        menu_principal
+    //
+    // Description: Permet de publier le menu principal
+    //
+    // Parameters:  none so far
+	//				use cgidata
+	//				use lg
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version
+    //
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+
+    use lg;          // Loop from the publish
+
+	site_config = sql(single:true,"select * from sn_configs");
+
+	// menu_principal
+	menu_json = sql(single:true,wantarray:true,"select json from sn_menus where code = 'menu_principal'");
+	if menu_json.rows[0] eq '' then
+		menu = [];
+	else
+		menu = unstringnify(menu_json.rows[0]);
+	endif
+}}
+
+\{{ use page; }}
+
+{{
+	function display_menu(menu, lg, level)
+		for item in menu do
+			menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+			if menu_item.rows.active eq "yes" then
+				if menu_item.rows.type eq "page" then
+					pg = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+					if pg.nbrows == 1 then
+						}}
+						\{{
+							active='';
+							if page.uid=='{{menu_item.rows.uid_page}}' then
+								active=' on';
+							endif
+						}}
+						<div class="item {{menu_item.rows.class}}\{{active}}">
+							<a href="{{pg.rows{"folder_" .+ lg.rows.lg};if pg.rows{"page_" .+ lg.rows.lg} ne "index" then pg.rows{"page_" .+ lg.rows.lg}; endif}}" class="item-link">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						</div><!--item-1-->
+						{{
+					endif
+				elseif menu_item.rows.type eq "url" then
+					}}
+					<div class="item {{menu_item.rows.class}}">
+						<a target="{{menu_item.rows{"target"};}}" href="{{menu_item.rows{"url_" .+ lg.rows.lg};}}" class="item-link">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+					</div><!--item-1-->
+					{{
+				elseif menu_item.rows.type eq "group" then
+					}}
+					\{{ active=''; }}
+					{{
+					if item.children != undefined then
+						// <!-- Get all page ID from children -->
+						children = stringnify(item.children);
+						arr = explode("\"uid_page\":\"",children);
+						puids = {};
+						for v in arr do
+							tmp = explode("\"",v,1);
+							if length(tmp) > 0 then
+								puid = (int)tmp[0];
+								if puid > 0 then
+									puids{puid}=1;
+								endif
+							endif
+						endfor
+						}}
+						\{{
+						puids={{puids}};
+						// <!-- If one child has the current page ID his parent is active -->
+						if puids{page.uid} then
+							active=' on';
+						endif
+						}}
+						{{
+					endif
+				}}
+					<div class="item\{{active}} item-group">
+						<a href="javascript:void(0);" class="item-link" onclick="menu_main_toggle_children(this);">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						<div class="item-children">
+							{{
+								if item.children != undefined then
+									new_level = level + 1;
+									display_menu(item.children, lg, new_level);
+								endif
+							}}
+						</div>
+					</div><!--item-->
+				{{
+				endif
+			endif
+		endfor
+	endf
+}}
+
+<!--script type="text/javascript">
+    function show_first_child(el){
+        var url = $(el).next().find("a").first().attr("href");
+        if (url){
+            location.href = url;
+        }
+    }
+</script-->
+
+
+
+
+<style type="text/css">
+/* CSS FOR THE MAIN NAV
+============================================================== */
+    /* .pt is a temporrary class to protect menu style */
+    .cs .pt .clearfix:before {content:" "; display:table;}
+    .cs .pt .clearfix:after {content:" "; display:table; clear:both;}
+
+    /* logo-1 */
+    .cs .pt .logo-1 {display:inline-block;margin:5px 0 16px 10px;vertical-align:bottom;max-width:250px;max-height:75px;margin-top:17px;}
+    @media screen and (max-width :967px) {
+        .cs .pt .logo-1 {display:none;}
+    }
+
+    /* menu main - mobile control */
+    .cs .pt .menu-main-mobile-control {display:none;padding:5px 0;}
+    .cs .pt .menu-main-mobile-control .menu-main-mobile-btn {display:inline-block;margin:0 10px;background:rgba(0,0,0,0.05);padding:6px 9px;}
+    .cs .pt .menu-main-mobile-control .menu-main-mobile-btn:hover {background:rgba(0,0,0,0.06);}
+    .cs .pt .menu-main-mobile-control .menu-main-mobile-btn,
+    .cs .pt .menu-main-mobile-control .menu-main-mobile-btn:focus {outline:0;}
+    .cs .pt .menu-main-mobile-control .menu-main-mobile-btn .fa {font-size:24px;color:#4d4d4d;}
+    .cs .pt .menu-main-mobile-control .menu-main-mobile-btn:hover .fa {color:#417bad;}
+    @media screen and (max-width :967px) {
+        .cs .pt .menu-main-mobile-control {display:block;}
+    }
+    .cs .pt .logo-2 {vertical-align:bottom;max-width:250px;max-height:70px;margin: 0;}
+
+    /* menu main - wrapper */
+    .cs .pt .menu-main-wrapper {min-height: 75px;padding-top: 15px;}
+    @media screen and (max-width :967px) {
+        .cs .pt.model-2{margin:10px 0;}
+        .cs .pt .menu-main-wrapper {
+            display: none;
+            padding-top: 0px;
+            position: absolute;
+            right: 0;
+            left: 0;
+            padding: 0;
+            z-index: 600;
+        }
+        .cs .pt .menu-main-wrapper.on-js {display:block;background-color: #fff;}
+    }
+
+    /* menu main */
+    .cs .pt .menu-main {padding:5px 15px 0 15px;float:right;}
+    .cs .pt .menu-main-wrapper .container-fluid{padding:0;}
+    @media screen and (max-width :967px) {
+        .cs .pt .menu-main {padding-left:0; padding-right:0;float:none;}
+    }
+    .cs .pt .menu-main a,
+    .cs .pt .menu-main a:focus {outline:0;}
+
+    /* menu main - level 1 */
+    .cs .pt .menu-main > .item {float:left; position:relative; margin:0 5px 5px 0;}
+    .cs .pt .menu-main > .item.separator {border-left:1px solid #7d7d7d;}
+    @media screen and (max-width :967px) {
+        .cs .pt .menu-main > .item {float:none; position:static;margin:0;}
+    }
+
+    .cs .pt .menu-main > .item:last-child {margin-right:0;}
+    .cs .pt .menu-main > .item > .item-link {font-weight:lighter;display:block; margin:0 14px;padding:10px 0; font-size:16px;line-height:18px; text-decoration:none;color:#666666;border-bottom:3px solid transparent;}
+    .cs .pt .menu-main > .item.on > .item-link {}
+    .cs .pt .menu-main > .item.on-js > .item-link {}
+    .cs .pt .menu-main > .item > .item-link:hover {text-decoration:none;color:#363636;border-bottom:3px solid #b4b4b4;}
+
+    @media screen and (max-width :967px) {
+        .cs .pt .menu-main > .item > .item-link {background:#f8f8f8;margin:0;padding:10px 14px;border-bottom:none;}
+        .cs .pt .menu-main > .item.on > .item-link {background:#eeeeee;}
+        .cs .pt .menu-main > .item.on-js > .item-link {background:#eeeeee;}
+        .cs .pt .menu-main > .item > .item-link:hover {background:#e0e0e0;border-bottom:none;}
+    }
+
+    /* menu main - level 2 */
+    .cs .pt .menu-main > .item > .item-children {display:none; position:absolute; z-index:600; left:-50%; top:100%; width:200px; border-bottom: 3px solid #cccccc;background:#e0e0e0;}
+    @media screen and (max-width :967px) {
+        .cs .pt .menu-main > .item > .item-children {position:static; width:auto; border-bottom:0;border-top:0px solid #ffffff;}
+        .cs .pt .item-group .item-link {padding-right:20px;}
+        .cs .pt .item-group > .item-link::after { content: "+";float:right;color:#8d8d8d;}
+        .cs .pt .menu-main > .item.on-js > .item-link::after  {content:"-";color:#8d8d8d;}
+
+
+    }
+    .cs .pt .menu-main .item.on-js > .item-children {display:block;}
+    @media screen and (min-width :501px) {
+        /*.cs .pt .menu-main > .item:hover > .item-children {display:block;}*/
+    }
+    .cs .pt .menu-main > .item > .item-children > .item > .item-link {display:block; border-top:1px solid #cccccc; padding:7px 14px 7px 25px;font-size:14px;line-height:18px;color:#4d4f53;text-decoration:none; font-weight:lighter;}
+    .cs .pt .menu-main > .item > .item-children > .item:first-child > .item-link {border-top: 0;}
+    .cs .pt .menu-main > .item > .item-children > .item > .item-link.on {background:#d8d8d8;}
+    .cs .pt .menu-main > .item > .item-children > .item > .item-link:hover {text-decoration:none; background:#d8d8d8;}
+</style>
+
+
+
+
+<div class="pt model-2 clearfix">
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-md-4">
+				{{ logo_client = sql(single:true,"select * from sn_configs where uid = '1'");}}
+				<a href="/"><img src="{{logo_client.rows.logo}}" class="logo-1"></a>
+				<div class="menu-main-mobile-control clearfix">
+					<a href="javascript:void(0);" class="menu-main-mobile-btn" onclick="menu_main_toggle_mobile('.menu-main-wrapper');"><i class="fa fa-bars"></i></a><a href="/"><img src="{{logo_client.rows.logo}}" class="logo-2"></a>
+				</div>
+			</div>
+			<div class="col-md-8">
+				<div class="menu-main-wrapper clearfix">
+					<div class="container-fluid">
+						<nav class="menu-main clearfix">
+							{{ display_menu(menu, lg, 0); }}
+						</nav><!--menu-main-->
+					</div><!--container-fluid-->
+				</div><!--menu-main-wrapper-->
+			</div>
+		</div>
+	</div><!--container-fluid-->
+</div>
+
+
+
+<script>
+	/* main menu : when click on an item of level 1, show/hide level 2 */
+	function menu_main_toggle_children(bo){
+		$(bo).parent().siblings().removeClass("on-js").end().toggleClass("on-js");
+	}
+
+	/* main menu : mobile view : show/hide */
+	function menu_main_toggle_mobile(sel){
+		$(sel).toggleClass("on-js");
+	}
+</script>

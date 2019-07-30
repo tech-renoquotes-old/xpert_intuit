@@ -1,0 +1,48 @@
+{{
+    // /*
+    //     @title Ubity Callback url for init calls, answered calls and hangoff calls
+    //     Description: This ressource use ubity api callback to register call events on database
+    //     @author louis.jhonny@gmail.com
+    //     @version 1.0 2018-10-22
+    // */
+    
+    %include '/site/package/all.sn';
+    
+    
+    use page;
+    use lg;
+}}
+
+\{{
+    cgidata = cgidata();
+    callid = cgidata.callid;
+    caller = cgidata.exten;
+    callee = cgidata.number;
+    apikey = cgidata.apikey;
+    
+    nowdate = datetime();
+    
+    if(request.uri =~ 'fr/callapi/init') then
+        if(apikey eq '00FFD6BDDF0A') then
+            json = {'event':'1', 'apikey':'00FFD6BDDF0A', 'api_call_uuid':'AB676DD50GG0FFEE314', 'callid':'AABCCDD009911', 'diagnostic':"success", 'stamp':nowdate, 'code':'200'};
+        else
+            json = {'event':'1', 'apikey':'00FFD6BDDF0A', 'api_call_uuid':'AB676DD50GG0FFEE314', 'diagnostic':"failed", 'stamp':datetime(), 'code':'501', 'error':'Mauvaise cle api!'};
+        endif
+    elseif(request.uri =~ 'fr/callapi/fin') then
+        if(callid eq 'AABCCDD009911') then
+            json = {'api_call_uuid':'AB676DD50GG0FFEE314', 'callid':"AABCCDD009911", 'event':'3', 'calltype':'outgoing', 'caller':caller, "duration":'11', 'callee':callee, 'enddate':nowdate, 'ended':'true', 'code':'200'};
+        else
+            json = {'api_call_uuid':'AB676DD50GG0FFEE314', 'callid':"AABCCDD009911", 'event':'3', 'calltype':'outgoing', 'caller':caller, 'callee':callee, 'code':'201', 'stamp':nowdate, 'error':'cant find this call'};
+        endif
+        
+    elseif(request.uri =~ 'fr/callapi/recu') then
+        if(callid eq 'AABCCDD009911') then
+            json = {'api_call_uuid':'AB676DD50GG0FFEE314', 'callid':"AABCCDD009911", 'event':'2', 'calltype':'outgoing', 'caller':caller, 'callee':callee, 'answered':'true', 'stamp':nowdate, 'code':'200'};
+        else
+            json = {'api_call_uuid':'AB676DD50GG0FFEE314', 'callid':"AABCCDD009911", 'event':'2', 'calltype':'outgoing', 'caller':caller, 'callee':callee, 'code':'201', 'stamp':nowdate, 'error':'cant find this call'};
+        endif
+    endif
+    
+    json;
+
+}}

@@ -1,0 +1,3 @@
+<div style="color:orange;font-weight:bold;">Contenu de test
+time={{datetime();}}
+</div>

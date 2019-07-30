@@ -1,0 +1,21 @@
+{{
+    table_dest = 'sr_city';
+    table_from = 'tbl_ville';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idTBL_Ville',
+        'uid_territory' : 'ID_Territoire',
+        'name_fr'       : 'Ville',
+        'name_en'       : 'Ville',
+        'active'        : "Actif::IF('?', 'yes', 'no')"
+    };
+    
+    %include 'migration.sn';
+    

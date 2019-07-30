@@ -1,0 +1,341 @@
+{{ 
+	// --------------------------------------------------------------------------
+	/* 
+		@title		package sed_xform
+	
+		Regroup all function for module xform.
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+		@version    1.1 2016-02-26 laplante@sednove.com Update to set reset form
+		@version    1.2 2016-03-07 laplante@sednove.com Use right resource to send email and fix bug.
+		@version    1.3 2016-03-07 laplante@sednove.com Add support for field_name
+	*/
+	// --------------------------------------------------------------------------
+	
+    %include "/module/sed/package/sed_util.sn";
+    
+    package sed_xform;
+
+	function generate_field(uid_field, table, lg)
+	
+	// --------------------------------------------------------------------------
+	/* 
+		@title		function generate_field
+	
+		Generate part of a form for a specific field
+
+		@param		uid_field : integer uid of the field
+
+		@param		table : context current table
+
+		@param		lg : current language as read by select * from sn_languages
+
+		@return		errcode : 0 if ok
+					errmesg : error message
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+	// Prepare default return
+		json.errcode = 0;
+		json.errmesg = "";
+	
+		field = sql(single:true, "select * from sn_fields where uid = '?' and uid_sn_tables = '?'", uid_field, table.rows.uid);
+		
+		if field.nbrows != 1 then
+			json.errode = 1;
+			json.errmesg = "Invalid field " .+ f;
+			return json;
+		endif
+		
+		// Implement javascript validation
+		declaration = "";
+		if field.rows.js_validation ne "" then
+            js = sql(single:true, "select * from sn_js_validation where uid = '?'", field.rows.js_validation);
+            if js.nbrows == 1 then
+                if js.rows.js_function_name eq "sn_not_empty" then
+                    declaration = dq[[data-fv-notempty="true" data-fv-notempty-message="]] .+ esc(filter:html, js.rows{"js_function_description_" .+ lg.rows.lg}) .+ '"';
+                endif
+            endif
+        endif
+        
+		field_type = sql(single: true, "select * from sed_xform_field where field_type = '?'", field.rows.field_type);
+		if field_type.nbrows == 1 then
+		    if field.rows.field_multilg eq "yes" then
+		        for l sql("select lg from sn_languages where active = 'yes'") do
+		            field_name = field.rows.field_name .+ "_".+ l.rows.lg;
+		           	field_title = field.rows{"field_title_".+ l.rows.lg} .+ "&nbsp;".+ l.rows.lg .+ "&nbsp;";
+		            include(field_type.rows.code);
+		        endfor
+		    else
+		        field_name = field.rows.field_name;
+		        field_title = field.rows{"field_title_".+ lg.rows.lg};
+		     	include(field_type.rows.code);
+		    endif
+		endif
+
+		return json;
+	endf
+
+
+	function generate_form(uid_widget, uid_table, field_str, lg)
+	// --------------------------------------------------------------------------
+	/* 
+		@title		function generate_form
+	
+		Generate a form for a specific table in a language for the specify fields
+
+		@param		uid_widget : integer uid of the instance of widget
+		@param		uid : integer uid of entry in sn_tables
+		@param		field_str : string list of commas separated uid field or * for all field
+		@param		lg : current language as read by select * from sn_languages
+		@param      optional_field captcha : string public captcha key from google 
+		@param      optional_field with_captcha : bool if with_captcha = yes, display a captcha
+		@param      optional_field okmesg : string message if form is submitted correctly.
+
+		@return		no return
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+	// verify parameters
+
+		// uid_widget
+		if ! isdigit(uid_widget) then
+			json.errcode = 1;
+			json.errmesg = "uid_widget is not a digit: " .+ uid_widget;
+			return json;
+		endif
+		
+		// okmesg
+		if okmesg eq "" then
+		    okmesg = sed_util::ct(module:"sed_xform","Your data has been saved!");
+		endif
+
+		// uid_table
+		if ! isdigit(uid_table) then
+			json.errcode = 2;
+			json.errmesg = "uid_table is not a digit: " .+ uid_table;
+			return json;
+		endif
+
+		table = sql(single:true, "select * from sn_tables where uid = '?'", uid_table);
+		if table.nbrows != 1 then
+			json.errcode = 3;
+			json.errmesg = "Can't find table for this uid_table: " .+ uid_table;
+			return json;
+		endif
+
+		// field_str
+		if field_str ne "*" then
+		    tmp_field_str = "";
+		    separ_tmp_field_str = "";
+		    for tmp_f sql("SELECT tabname_? as tabname FROM sn_fields WHERE FIND_IN_SET(uid,'?') GROUP BY tabname_? ORDER BY sn_custom",lg.rows.lg, field_str, lg.rows.lg) do
+		        for tmp_ff sql(wantarray:true, "SELECT uid FROM sn_fields WHERE FIND_IN_SET(uid,'?') AND tabname_? = '?' ORDER BY sn_custom",field_str, lg.rows.lg, tmp_f.rows.tabname) do
+		            if !isset(list:tmp_field_str,values:tmp_ff.rows[0]) then
+		                tmp_field_str = tmp_field_str .+ separ_tmp_field_str .+ tmp_ff.rows[0];
+		            endif
+		            separ_tmp_field_str = ",";
+		        endfor
+		    endfor
+			list_field = split(tmp_field_str);
+			for f in list_field do
+				if ! isdigit(f) then
+				    res = sql(single:true, "select uid from sn_fields where field_name = '?' and uid_sn_tables = '?'", f, table.rows.uid);
+				    if res.nbrows != 1 then
+					    json.errcode = 4;
+					    json.errmesg = "Field "; f; " in "; field_str; " is not a digit";
+					    return json;
+					 else
+					    list_field[sn_nb] = res.rows.uid;
+					 endif
+				endif
+				res = sql(single:true, "select uid from sn_fields where uid = '?' and uid_sn_tables = '?'", f, table.rows.uid);
+				if res.nbrows != 1 then
+					json.errcode = 5;
+					json.errmesg = "Field "; f; " in "; field_str; " is not in sn_fields";
+					return json;
+				endif
+			endfor
+		else
+			list_field = [];
+			for tmp_f sql("SELECT tabname_? as tabname FROM sn_fields WHERE uid_sn_tables = '?' GROUP BY tabname_?  ORDER BY sn_custom",lg.rows.lg, table.rows.uid, lg.rows.lg) do
+		        for f sql(wantarray:true, "SELECT uid FROM sn_fields WHERE uid_sn_tables = '?' AND tabname_? = '?' ORDER BY sn_custom",table.rows.uid, lg.rows.lg, tmp_f.rows.tabname) do
+				    list_field.push(f.rows[0]);
+				endfor
+			endfor
+		endif
+
+		// lg
+		if lg.type() ne "context" then
+			json.errcode = 6;
+			json.errmesg = "Paramater lg is not a context";
+			return json;
+		endif
+
+		if lg.rows.type() ne "context" then
+			json.errcode = 7;
+			json.errmesg = "Paramater lg.rows is not a context";
+			return json;
+		endif
+
+	// Output form
+	    }}<div id="sed_xform-div-{{uid_widget}}">{{
+        }}<script type="text/javascript" src="/extenso/formvalidation/js/formValidation.min.js"></script>{{
+        }}<script type="text/javascript" src="/extenso/formvalidation/js/framework/bootstrap.min.js"></script>{{
+        }}<script type="text/javascript" src="/extenso/jquery.form.js/jquery.form.min.js"></script>{{
+        }}<link rel="stylesheet" href="/extenso/formvalidation/css/formValidation.min.css">{{
+        }}<script src="/extenso/formvalidation/js/addons/reCaptcha2.min.js"></script>{{
+		}}<form method="post" enctype="multipart/form-data" accept-charset="UTF-8" id="sed_xform-{{uid_widget}}" name="sed_xform-{{uid_widget}}"{{
+		    if with_captcha eq "yes" && captcha ne "" then 
+		        }}
+		        data-fv-addons="reCaptcha2"
+                data-fv-addons-recaptcha2-element="captchaContainer"
+                data-fv-addons-recaptcha2-theme="light"
+                data-fv-addons-recaptcha2-timeout="120"
+                data-fv-addons-recaptcha2-sitekey="{{ captcha }}"
+                data-fv-addons-recaptcha2-message="{{ sed_util::ct(edit:false, 'The captcha is not valid'); }}"
+                {{
+		    endif
+            }}
+                data-fv-framework="bootstrap"
+                data-fv-icon-valid="glyphicon glyphicon-ok"
+                data-fv-icon-invalid="glyphicon glyphicon-remove"
+                data-fv-icon-validating="glyphicon glyphicon-refresh"
+            {{
+		
+		}}>{{
+		    
+			for f in list_field do
+			    ftab = sql(single:true, "select field_type,tabname_? from sn_fields where uid = '?' and uid_sn_tables = '?'",lg.rows.lg, f, table.rows.uid);
+			    f_type = sql(single: true, "select * from sed_xform_field where field_type = '?'", ftab.rows.field_type);
+			    if f_type.nbrows == 1 && ftab_name ne ftab.rows{"tabname_".+lg.rows.lg} then
+			        if ftab_name ne "" then
+			            "</fieldset>";
+			        endif
+			        ftab_name = ftab.rows{"tabname_".+lg.rows.lg};
+			        
+			        "<fieldset>";
+                        "<legend>";ftab_name;"</legend>";
+			    endif
+				res = sed_xform::generate_field(f, table, lg);
+				if res.errcode != 0 then
+					json.errcode = 8;
+					json.errmesg = "Error while generating field " .+ f .+ " : " .+ res.errmesg;
+					return json;
+				endif
+			endfor
+			
+		    if with_captcha eq "yes" && captcha ne "" then 
+		        }}
+		        <div class="form-group">
+                    <div id="captchaContainer"></div>
+                </div>
+		        {{
+		    endif
+
+		    }}
+		    
+		    <div class="form-group">
+		        <button type="button" class="btn btn-default" onClick="sed_xform_submit_{{uid_widget}}();">{{sn_ct(code:"Soumettre")}}</button>
+                <button type="button" class="btn btn-default" id="resetButton" onClick="reset_form();">{{sn_ct(code:"Reset")}}</button>
+            </div>
+		</form>
+		</div>
+		
+	    <div id="sed_xform-ok-{{uid_widget}}" style="display:none ;">
+	       <div class="alert alert-success" role="alert">{{okmesg}}</div> 
+	    </div>
+	    
+	    <div id="sed_xform-err-{{uid_widget}}" style="display:none ;">
+	    </div>
+	    
+		<script type="text/javascript">
+		
+		    function reset_form() {
+                {{ for f in list_field do 
+                    field=sql(single:true,"select field_name,field_multilg from sn_fields where field_type = 'ckeditor' and uid_sn_tables = '?' and uid='?'", table.rows.uid, f);
+                    if field.nbrows != 0 then
+                        if field.rows.field_multilg eq "yes" then 
+                            for lckedit sql("select lg from sn_languages") do }}
+                                ckeditor_{{field.rows.field_name}}_{{lckedit.rows.lg}}.setData('');
+                          {{ endfor
+                        else}}
+                            ckeditor_{{field.rows.field_name}}.setData('');
+                        {{endif
+                    endif
+                 endfor }}
+                $('#sed_xform-{{uid_widget}}').resetForm();
+
+		    }
+		
+		    // Implement form validation and tooltip
+		    $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+                $('#sed_xform-{{ uid_widget }}').formValidation();
+            })
+            
+            // Validate and submit the form if everything is ok.
+            function sed_xform_submit_{{uid_widget}}() {
+                $('#sed_xform-{{uid_widget}}').data('formValidation').validate();
+                var v = $('#sed_xform-{{uid_widget}}').data('formValidation').isValid();
+               
+                if (v) {
+                    // Update ckeditor text area
+                    {{	for f in list_field do 
+                            field=sql(single:true,"select field_name,field_multilg from sn_fields where field_type = 'ckeditor' and uid_sn_tables = '?' and uid='?'", table.rows.uid, f);
+                            if field.nbrows != 0 then
+                                if field.rows.field_multilg eq "yes" then
+                                    for lckedit sql("select lg from sn_languages") do }}
+                                        ckeditor_{{field.rows.field_name}}_{{lckedit.rows.lg}}.updateElement();
+                                   {{ endfor
+                                else}}
+                                    ckeditor_{{field.rows.field_name}}.updateElement();
+                                {{endif
+                            endif
+                         endfor }}
+                    
+                    // Submit form
+                    $("#sed_xform-{{uid_widget}}").ajaxSubmit({
+                        target: "#sed_xform-div-{{uid_widget}}",
+                        dataType: "json",
+                        url: "{{sed_util::resource('sed_xform_save');}}?widget={{ crypt(key:"duhf498u4r349r36",value:{"uid_widget": uid_widget,"date":datetime(format:"%s")}) }}",
+                        success: function(data)  { 
+                            console.log("after save"+data.errcode+data.errmesg);
+							if (data.errcode == 0) {
+                                $("#sed_xform-ok-{{uid_widget}}").show();
+                                //$("#sed_xform-{{uid_widget}}").resetForm(true);
+                                $("#sed_xform-{{uid_widget}}").data('formValidation').resetForm();
+
+							} else {
+                                $("#sed_xform-err-{{uid_widget}}").html(data.errmesg);
+                                $("#sed_xform-err-{{uid_widget}}").show();
+							}
+                        }
+                    }); 
+                }
+            }
+            
+            // Set the value of the checkbox according to its state.
+            function sed_xform_checkbox(field_name) {
+                var on = $('#sed_xform_' + field_name).data('on');
+                var off = $('#sed_xform_' + field_name).data('off');
+                if ($("#sed_xform_" + field_name).is(':checked')) {
+                    $('#' + field_name).val(on);
+                } else {
+                    $('#' + field_name).val(off);
+                }
+            }
+
+		</script>
+		    
+		{{
+
+
+	endf
+
+endp;
+
+}}

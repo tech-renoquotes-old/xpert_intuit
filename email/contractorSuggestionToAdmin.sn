@@ -1,0 +1,31 @@
+{{
+    /*
+        @title 			contractorSuggestion
+        Description		Sends the suggestions/comments of the contractor to the admin.
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+    use contractor_info;
+    entrepreneur = contractor_info.company_name;
+    id_entrepreneur = contractor_info.uid_contractor;
+    suggestion = contractor_info.suggestion;
+    gender = contractor_info.gender;
+    first_name = contractor_info.first_name;
+    last_name = contractor_info.last_name;
+    email_contractor = contractor_info.email_contractor;
+    telephone = contractor_info.telephone;
+    
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

@@ -1,0 +1,46 @@
+{{ 
+	//
+	// Name:		footer
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	//
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	%include "/extenso/functions/sn_widgets.snc"; 
+
+	use lg;
+	use ressource;
+	
+	footer_grid = sql(single:true, "SELECT * FROM sn_grid WHERE footer='yes' AND active='yes'");
+}}
+
+
+<div class="container-full sed-footer no-print">
+	<div class="container-fluid">            
+		<div class="row">
+		    {{if "bk" eq "2015-02-12" then}}<!--
+			<div class="col-md-6" style="padding-bottom:10px;">
+				\{{datetime(format:"%Y");}} 
+				{{sn_ct("SedNove Inc. Tous droits réservés.", lg:lg.rows.lg, publish:"/publish/ressources.sn", uids:ressource.rows.uid)}}
+			</div>
+			<div class="col-md-6">
+				{{ %include "/includes/menu_sitemap.sn"; }}
+			</div>
+			-->{{endif}}
+			<div id="sn_cs_footer">
+			    {{
+		            if footer_grid.nbrows > 0 then
+		                uid_grid = footer_grid.rows.uid;
+		                grid = unstringnify(footer_grid.rows.grid);
+			            %include "/includes/show_grid.sn";
+		            endif
+			    }}
+			</div>
+		</div>
+	</div>
+</div>
+
+{{ google = sql(single:true, "select google_analytics from seo"); google.rows.google_analytics; }}

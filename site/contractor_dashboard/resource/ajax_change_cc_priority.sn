@@ -1,0 +1,25 @@
+{{
+    /*
+        @title ajax_change_cc_priority
+        Description: Change the priority of credit cards for a contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+    cgidata.cc_uid;
+    for cc in explode(",", cgidata.cc_uid) do
+        void sql("UPDATE sr_cc SET priority='?' WHERE uid='?' AND uid_contractor='?'", sn_nb1, cc, extranet_user.uid);
+    endfor
+}}

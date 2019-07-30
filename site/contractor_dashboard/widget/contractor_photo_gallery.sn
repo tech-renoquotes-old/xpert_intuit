@@ -1,0 +1,101 @@
+{{
+    /*
+        @title contractor_photo_gallery
+        Description: Shows all photos in the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    use extranet_user;
+    
+    photos = sql("SELECT * FROM sr_gallery WHERE uid_contractor='?' AND active='yes' ORDER BY priority ASC, uid DESC", extranet_user.uid);
+}}
+
+<script src="/js/jquery.magnific-popup.min.js"></script>
+<link rel="stylesheet" href="/css/magnific-popup.css">
+
+<div class="pull-right">
+    <a href="{{pages(table:'pages','sr_contractor_edit_photo',lg.rows.lg)}}" class="btn btn-primary mb-sm text-center">
+        {{sn_ct("contractor_photo_gallery Éditer ma galerie photo", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </a>
+</div>
+
+<div class="zoom-gallery gallery">
+    <div class="row">
+    \{{ for p in photos.rows do}}
+            <div class="col-sm-4 item">
+                <div>
+                    <a data-source="\{{p.photo}}" href="\{{p.photo}}" title="\{{p.title}}"><img src="\{{p.photo}}?size=400x200&crop" class="img-responsive"></a>
+                </div>
+                <div class="title">
+                    \{{p.title}}
+                </div>
+            </div>
+    \{{ endfor}}
+    </div>
+</div>
+<style>
+    .pull-right{
+        margin-bottom:20px;
+    }
+    .cs .gallery .item{
+        margin-bottom:10px;
+    }
+    .cs .gallery .item .title{
+        font-size:1.1em;
+        font-weight:bold;
+        margin:5px 0;
+    }
+    .cs .gallery .item:nth-child(3n+1){
+        clear:both;
+    }
+    @media(max-width:768px){
+        .cs .gallery .item:nth-child(3n+1){
+            clear:none;
+        }
+        .cs .gallery .item:nth-child(2n+1){
+            clear:both;
+        }
+        .cs .gallery .item{
+            width:50%;
+            float:left;
+        }
+    }
+</style>
+<script>
+    //Initialize the magnific popup
+	$('.zoom-gallery').magnificPopup({
+		delegate: 'a',
+		type: 'image',
+		closeOnContentClick: false,
+		closeBtnInside: false,
+		mainClass: 'mfp-with-zoom mfp-img-mobile',
+		image: {
+			verticalFit: true,
+			titleSrc: function(item) {
+				return item.el.attr('title') + ' &middot; <a class="image-source-link" href="'+item.el.attr('data-source')+'" target="_blank">Source de l\'image</a>';
+			}
+		},
+		gallery: {
+			enabled: true
+		},
+		zoom: {
+			enabled: true,
+			duration: 300, // don't foget to change the duration also in CSS
+			opener: function(element) {
+				return element.find('img');
+			}
+		}
+		
+	});
+</script>

@@ -1,0 +1,25 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+
+\{{
+    
+    cgidata = cgidata();
+    
+    site_config = sql(single:true,"SELECT * FROM sn_configs");
+    
+    email(
+        from:cgidata.user_email,
+        to:cgidata.author_email,
+        subject: "User sent you this message",
+        ct:"text/html",
+        file:"/staging/module/sed/blog/{{lg.rows.lg}}/sed_email_template_author.snc"
+    );
+    
+
+    
+}}    

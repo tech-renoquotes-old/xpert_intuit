@@ -1,0 +1,188 @@
+{{
+    /*
+     *  @title sed_articles
+     *
+     *  @Version 1.0  2016-05-10
+     *
+     *  @author madupuis@sednove.ca
+     * 
+     *  Gets the list of articles to be displayed by the different views. Included at the top of views.
+     */
+     
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    blog_config = sql(single:true,"SELECT * FROM sed_blog_config");
+}}  
+\{{
+
+    cgidata = cgidata();
+    config=config();    
+    request = request();
+    use extranet_user;
+
+	site_config = sql(single:true,"SELECT * FROM sn_configs");
+
+    // Category filter
+    if cgidata.category ne "" then
+        cat = esc(filter:"sqlqm", cgidata.category);
+        category = sql(single:true, "SELECT uid, name FROM sed_blog_category WHERE uid='?' AND language='?'", cat, "{{lg.rows.lg}}");
+        if category.nbrows != 0 then
+            category_name = category.rows.name;
+            category_uid = category.rows.uid;
+        else
+            redirect(request.uri);
+        endif
+    else
+        category = sql(single:true, "SELECT url FROM sed_blog_category WHERE uid IN ('4','107') AND language='?'", "{{lg.rows.lg}}");
+        if category.nbrows > 0 then
+            redirect(category.rows.url);
+        endif
+    endif
+    
+    // Order by filter for the date : ASC or DESC (default = DESC)
+    if cgidata.orderby ne "" then 
+        order_by = esc(filter:"sqlqm", cgidata.orderby);
+        if order_by ne "ASC" && order_by ne "DESC" then
+            redirect(request.uri);
+        endif
+    else
+        order_by = "DESC";
+    endif
+    
+    // Specific author filter (only show articles of a specific author)
+    // if cgidata.author ne "" then
+    //     auth = esc(filter:"sqlqm", cgidata.author);
+    //     author = sql(single:true,
+    //         "SELECT sed_blog_article.author as author,
+    //                 sn_users.firstname as firstname,
+    //                 sn_users.lastname as lastname
+    //         FROM sed_blog_article 
+    //         LEFT JOIN sn_users ON sed_blog_article.author = sn_users.uid
+    //         WHERE sed_blog_article.author = '?'
+    //         ", auth
+    //     );
+    //     if author.nbrows > 0 then
+    //         author_uid = author.rows.author;
+    //         author_name = author.rows.firstname .+ " " .+ author.rows.lastname;
+    //     else
+    //       redirect(request.uri);
+    //     endif
+    // endif
+    
+    // Pagination
+    if cgidata.page > 0 then
+        page_index = cgidata.page;
+    else
+        page_index = 1;
+    endif
+}} 
+
+<!-- CUSTOM SELECT PANEL -->
+<div class="mb-20">
+    <form method="GET" id="sed_blog_form">
+        <input type="hidden" id="category" name="category" value="\{{ category_uid }}">
+        <input type="hidden" id="orderby" name="orderby" value="\{{ order_by }}">
+        <input type="hidden" id="page" name="page" value="\{{ page_index }}">
+        <input type="hidden" id="start" name="start" value="\{{ cgidata.start }}">
+
+        <div class="text-center mb-20">
+            <!--<div >-->
+            <!--    \{{if cgidata.author ne "" then}}-->
+            <!--       <h1>{{sn_ct("blog Archives for",edit:true)}}  \{{author_name}}</h1> -->
+            <!--    \{{endif}}-->
+            <!--</div>-->
+            
+            <!--\{{if  cgidata.author ne "" || cgidata.category ne "" || cgidata.orderby ne "" then}}-->
+            <!--    <div>-->
+            <!--        <a href="\{{request.uri}}" class="">-->
+            <!--            <i class="fa fa-times" aria-hidden="true"></i>{{sn_ct("blog Remove filters",edit:true)}}-->
+            <!--        </a>-->
+            <!--    </div>-->
+            <!--\{{endif}}    -->
+        </div>
+        <div>
+            {{%include "/module/sed/blog/include/sed_custom-select.sn"}}      
+        </div>
+    </form>
+</div> 
+<!-- ----------------- -->
+
+\{{ 
+    // Apply filters to the sql search
+    sql_custom_filter = "";
+    
+    // We apply category filter only if a category if specified
+    if cgidata.category ne "" then 
+         sql_custom_filter .+= " AND find_in_set('".+ category_uid .+ "', sed_blog_article.category)"; 
+    endif
+    
+    // We apply author filter only if author name was clicked
+    if cgidata.author ne "" then
+         sql_custom_filter .+= " AND sed_blog_article.author = " .+ author_uid;
+    endif
+    
+    // Show articles in prod only if prod_active is checked
+    prod_active = "";
+    if config.site ne "staging" then 
+        prod_active .+= " AND sed_blog_article.prod_active ='yes' ";     
+    endif  
+
+    // Pagination
+    default_items_per_page = 6;
+    items_per_page = ("{{blog_config.rows.items_per_page}}" > 0) ? "{{blog_config.rows.items_per_page}}" : default_items_per_page;
+    offset = (page_index-1) * items_per_page;
+
+    // SQL query for list of articles
+    articles_query = " 
+        SELECT  sed_blog_article.title,
+            sed_blog_article.full_text,
+            sed_blog_article.sn_mdate,
+            sed_blog_article.brief_text,
+            sed_blog_article.surtitle,
+            sed_blog_article.url,
+            sed_blog_article.author,
+            sed_blog_article.uid,
+            sed_blog_article.featured_image,
+            sed_blog_article.date_article,
+            sed_blog_article.show_social_bookmark,
+            sed_blog_article.category,
+            sed_blog_article.allow_comments,
+            sed_blog_article.language,
+            sed_blog_article.prod_active,
+            sn_users.firstname as firstname,
+            sn_users.lastname as lastname,
+            sn_users.email as email,
+            (   SELECT  COUNT(sed_blog_comment.uid) 
+                FROM    sed_blog_comment 
+                WHERE   sed_blog_comment.uid_article = sed_blog_article.uid
+                    AND sed_blog_comment.approved = 'yes'
+            ) AS comment_count
+        FROM sed_blog_article
+        LEFT JOIN sn_users ON sn_users.uid = sed_blog_article.author
+        WHERE sed_blog_article.active = 'yes' 
+        AND sed_blog_article.language = '{{lg.rows.lg}}'
+            ".+ prod_active .+ " 
+            ".+ sql_custom_filter
+    ;
+    
+    // execute SQL query                     
+    articles = sql(
+        articles_query .+ "
+            ORDER BY sed_blog_article.date_article ?
+            LIMIT ? OFFSET ?
+            ", order_by, items_per_page, offset
+    );
+    
+    // execute query without LIMIT to get total number of articles for pagination                
+    article_count = sql(articles_query);
+
+    if articles.nbrows == 0 then 
+}}
+    <div class="alert alert-info mt15">
+         {{sn_ct("blog NO RESULT MATCHES YOUR SEARCH CRITERIAS",edit:true)}}
+    </div>
+\{{ endif}}

@@ -1,0 +1,39 @@
+{{ 
+     /*
+    	@title	sed_table
+    	Description:Use to display two column
+        @author richard@sednove.com
+    	@version 1.0 2016-05-25 Version initial
+    	
+    */
+
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    use page;			// Loop from the publish
+    use lg;             // Loop from the publish
+    use ressource;
+    use widget;
+    use page;
+  
+}}
+<div class="row col-sm-10 col-lg-6 col-md-8 col-sm-offset-1 col-lg-offset-3 col-md-offset-2 ">
+    <table class="table font16">
+        <tbody> 
+                <tr>
+                    <th>{{sn_ct("colonne 1_".+widget.rows.uid_widget_list,publish:"/publish/pages.sn",edit:true,uids:page.rows.uid, module:"sed_table")}}</th>
+                    <th>{{sn_ct("colonne 2_".+widget.rows.uid_widget_list,publish:"/publish/pages.sn",edit:true,uids:page.rows.uid, module:"sed_table")}}</th>
+                </tr>
+               
+            {{for content sql("select * from sed_table where uid_widget='?' ORDER BY sn_custom", widget.rows.uid_widget_list) do}}
+                <tr>
+                    <td>{{content.rows{'cell_1_'.+ lg.rows.lg};}}</td>
+                    <td>{{content.rows{'cell_2_'.+ lg.rows.lg};}}</td>
+                </tr>
+                
+            {{endfor}}
+        </tbody>
+    </table>
+ </div>   
+ 

@@ -1,0 +1,75 @@
+{{
+    /*
+        @title 			suggestProjectToContractor
+        Description		Sends en email to a contractor to suggest him a free client.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-07-21
+        @mod       		1.1   ajout de reference
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+\{{
+	use project;
+    use contractor;
+    use project_contractor;
+    use token;
+    
+    // site = sql(single:true,"select url_prod from sn_configs"); 
+    // site = site.rows.url_prod;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    
+    if contractor.rows.contact_gender eq "f" then
+    	titre = mme;
+    elseif contractor.rows.contact_gender eq "m" then
+    	titre = mr;
+    endif
+    
+    if project.rows.gender eq "f" then
+    	titre_client = mme;
+    elseif project.rows.gender eq "m" then
+    	titre_client = mr;
+    endif
+    
+    ref_token = contractor.rows.token;
+    uid_contractor = contractor.rows.uid;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+    nom_client = project.rows.lname;
+    prenom_client = project.rows.fname;
+    email = project.rows.email;
+    best_moment = project.rows.when_to_call;
+    home_phone = project.rows.phone1;
+    work_phone = project.rows.phone2;
+    cell_phone = project.rows.phone3;
+    ville = project.rows.city;
+    code_postal = project.rows.zip;
+    province = project.rows.province;
+    description = nl2br(project.rows.description);
+    date_travaux = project.rows.due_date;
+    id_project = project_contractor.rows.uid_project;
+    geoaddress = urlencode(code_postal .+ ' ' .+ ville .+ ' ' .+ province);
+	address = project.rows.address;
+	
+    if contractor.rows.contact_lg eq 'fr' then
+        profile = "/entrepreneur/" .+ contractor.rows.seo;
+    else
+        profile = "/contractor/" .+ contractor.rows.seo;
+    endif
+    
+    profile_url = site .+ profile;
+	
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

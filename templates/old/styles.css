@@ -1,0 +1,9 @@
+/* Fichier CSS pour le site */
+/* Ceci sera utilisé par ck editor */
+{{
+a=curl(url:"http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css"); a.body;
+a=curl(url:"http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"); a.body;
+a=curl(url:"http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css"); a.body;
+read("/staging/assets/css/styles.css");
+read("/staging/assets/css/jquery.bxslider.css");
+}}

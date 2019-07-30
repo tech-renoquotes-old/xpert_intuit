@@ -1,0 +1,44 @@
+<!-- bxSlider Javascript file -->
+<script src="/js/jquery.bxslider.min.js"></script>
+<!-- bxSlider CSS file -->
+<link href="/css/jquery.bxslider.css" rel="stylesheet" />
+{{
+
+	use uid;
+	use table;
+	use widget;
+	use lg;
+}}
+<!-- Slider -->
+
+<script type="text/javascript">
+	$(document).ready(function(){
+		$('.bxslider').bxSlider({
+			mode: 'fade',
+			auto:true,
+			speed: 500,
+			controls : true,
+			pause : 4000,
+			infiniteLoop: true,
+			responsive: true,
+			slideMargin: 0,
+            adaptiveHeight: false
+		 });
+	 });
+</script>
+
+		<div id="slider" >      
+		  <ul class="bxslider">
+			{{ for parten sql("select * from sed_slider_image where actif = 'oui' and uid_widget = '?' order by sn_custom", widget.rows.uid_widget_list) do }}
+            <li {{ if sn_nb > 0 then dq((style="display:none;")); endif }}>
+            	{{ if parten.rows.url ne "" then }}
+        			<a href="{{parten.rows['url_' .+ lg.rows.lg]}}">
+                {{ endif }}
+            			<img class="img_slider" src="{{parten.rows.image}}?size=660x400&crop" alt="{{parten.rows.alt}}" />
+                {{ if parten.rows.url ne "" then }}
+                	</a>
+                {{ endif }}
+            </li>
+			{{ endfor }}
+		  </ul>
+		</div>

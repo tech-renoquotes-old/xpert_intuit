@@ -1,0 +1,163 @@
+{{
+    //
+    // Name:        menu_principal
+    //
+    // Description: Permet de publier le menu principal
+    //
+    // Parameters:  none so far
+	//				use cgidata
+	//				use lg
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version
+    //
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+
+    use lg;          // Loop from the publish
+
+	site_config = sql(single:true,"select * from sn_configs");
+
+	// menu_principal
+	menu_json = sql(single:true,wantarray:true,"select json from sn_menus where code = 'menu_principal'");
+	
+	if menu_json.rows[0] eq '' then
+		menu = [];
+	else
+		menu = unstringnify(menu_json.rows[0]);
+	endif
+}}
+
+\{{
+    use page;
+    %include "/package/sn_util.sn";
+    reqdata = sn_util::reqdata();
+}}
+
+{{
+	function display_menu(menu, lg, level)
+	    use reqdata;
+
+		for item in menu do
+			menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+			if menu_item.rows.active eq "yes" then
+				if menu_item.rows.type eq "page" then
+					pg = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+					if pg.nbrows == 1 then
+						}}
+						\{{
+							active='';
+							if page.uid=='{{menu_item.rows.uid_page}}' || (reqdata.pagecode ne '' && reqdata.pagecode eq '{{pg.rows.code}}') then
+								active=' on';
+							endif
+						}}
+						<div class="item {{menu_item.rows.class}}\{{active}}" data-page="{{pg.rows.code}}">
+							<a href="{{pg.rows{"folder_" .+ lg.rows.lg};if pg.rows{"page_" .+ lg.rows.lg} ne "index" then pg.rows{"page_" .+ lg.rows.lg}; endif}}" class="item-link">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+							
+							{{ if (menu_item.rows.class eq 'articles item-group') then}}
+    							<div class="item-children">
+    							   \{{if("{{lg.rows.lg}}" == 'en') then}}
+    							        \{{ for category sql("SELECT (SELECT name FROM sed_blog_category WHERE uid = bc.language_ref) as name, (SELECT url FROM sed_blog_category WHERE uid = bc.language_ref) as url, (SELECT language FROM sed_blog_category WHERE uid = bc.language_ref) as lg FROM sed_blog_category bc HAVING lg = '{{lg.rows.lg}}'  order by name") do }}
+            							    <div class='item'><a href="\{{category.rows.url}}" class="item-link"> \{{category.rows.name}}</a></div>
+        							    \{{ endfor }}
+        							\{{else}}
+    							        \{{ for category sql("SELECT (SELECT name FROM sed_blog_category WHERE uid = bc.language_ref) as name, (SELECT url FROM sed_blog_category WHERE uid = bc.language_ref) as url, (SELECT language FROM sed_blog_category WHERE uid = bc.language_ref) as lg FROM sed_blog_category bc HAVING lg = '{{lg.rows.lg}}' order by name") do }}
+            							    <div class='item'><a href="\{{category.rows.url}}" class="item-link"> \{{category.rows.name}}</a></div>
+        							    \{{ endfor }}
+    							    \{{endif}}
+    							</div>
+							{{ endif }}
+
+						</div><!--item-1-->
+						{{
+					endif
+
+				elseif menu_item.rows.type eq "url" then
+					}}
+					<div class="item {{menu_item.rows.class}}">
+						<a target="{{menu_item.rows{"target"};}}" href="{{menu_item.rows{"url_" .+ lg.rows.lg};}}" class="item-link">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						
+						
+						
+					    <!--service menu-->
+						{{if (menu_item.rows.class eq 'services item-group') then}}
+							<div class="item-children">
+    							\{{for p sql("SELECT  title_{{lg.rows.lg}} as name , concat(folder_{{lg.rows.lg}}, page_{{lg.rows.lg}}) as url  FROM pages where code  like 'services_%' and active = 'yes'  order by 1 " ) do }}
+    							    <div class='item'><a href="\{{p.rows.url }}" class="item-link">\{{p.rows.name }}</a></div>
+							    \{{ endfor }}
+							</div>
+						{{ endif }}
+						
+						<!--info menu-->
+						{{if (menu_item.rows.class eq 'info item-group') then}}
+							<div class="item-children">
+							    <div class="item"><a href="{{pages(table:'pages','how_does_it_work',lg.rows.lg)}}" class="item-link">{{sn_ct(edit:false, "Comment ça fonctionne")}}</a></div>
+							    <div class="item"><a href="{{pages(table:'pages','about',lg.rows.lg)}}" class="item-link">{{sn_ct(edit:false, "À propos")}}</a></div>
+							    <div class="item"><a href="{{pages(table:'pages','faq_clients',lg.rows.lg)}}" class="item-link">FAQ</a></div>
+							    <div class="item"><a href="{{pages(table:'pages','contact',lg.rows.lg)}}" class="item-link">{{sn_ct(edit:false, "Nous contacter")}}</a></div>
+							</div>
+						{{ endif }}
+						
+						<!--expert menu-->
+						{{if (menu_item.rows.class eq 'expert item-group') then}}
+							<div class="item-children">
+							    <div class="item"><a href="{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}" class="item-link">{{sn_ct(edit:false, "Connexion")}}</a></div>
+							    <div class="item"><a href="{{pages(table:'pages','accueil_contractor',lg.rows.lg)}}" class="item-link">{{sn_ct(edit:false, "S'inscrire")}}</a></div>
+							    <div class="item"><a href="{{pages(table:'pages','faq_contractors',lg.rows.lg)}}" class="item-link">FAQ</a></div>
+							</div>
+						{{ endif }}
+						
+					</div><!--item-1-->
+					{{
+				elseif menu_item.rows.type eq "group" then
+					}}
+					\{{ active=''; }}
+					{{
+					if item.children != undefined then
+						// <!-- Get all page ID from children -->
+						children = stringnify(item.children);
+						arr = explode("\"uid_page\":\"",children);
+						puids = {};
+						for v in arr do
+							tmp = explode("\"",v,1);
+							if length(tmp) > 0 then
+								puid = (int)tmp[0];
+								if puid > 0 then
+									puids{puid}=1;
+								endif
+							endif
+						endfor
+						}}
+						\{{
+						puids={{puids}};
+						// <!-- If one child has the current page ID his parent is active -->
+						if puids{page.uid} then
+							active=' on';
+						endif
+						}}
+						{{
+					endif
+				}}
+					<div class="item\{{active}} item-group test">
+						<a href="javascript:void(0);" class="item-link" onclick="menu_main_toggle_children(this);">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						<div class="item-children">
+							{{
+								if item.children != undefined then
+									new_level = level + 1;
+									display_menu(item.children, lg, new_level);
+								endif
+							}}
+						</div>
+					</div><!--item-->
+				{{
+				endif
+			endif
+		endfor
+	endf
+}}
+
+
+
+{{ display_menu(menu, lg, 0); }}
+

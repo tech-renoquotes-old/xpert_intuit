@@ -1,0 +1,185 @@
+{{
+    /*
+        @title contractor_profile
+        Description: This widget displays the parameters about the account of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-19
+        @mod  bbduc@yahoo.com
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+    
+}}
+    
+<link rel="stylesheet" href="css/myprofile/myprofile.css" /> <!-- profile template   -->
+
+
+<!-- First row  -->    
+<div class="container">
+    <div class="col-md-2 col-lg-2 " align="center"> <img alt="User Pic"  src="http://babyinfoforyou.com/wp-content/uploads/2014/10/avatar-300x300.png" class="img-circle img-responsive"> </div>	<div class="col-sm-3">
+		<div class="rating-block">
+			<h4>{{sn_ct("Average Contractor rating")}}</h4>
+			<h2 class="bold padding-bottom-7">4.3 <small>/ 5</small></h2>
+			<button type="button" class="btn btn-warning btn-sm" aria-label="Left Align">
+				<span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+			</button>
+			<button type="button" class="btn btn-warning btn-sm" aria-label="Left Align">
+				<span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+			</button>
+			<button type="button" class="btn btn-warning btn-sm" aria-label="Left Align">
+				<span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+			</button>
+			<button type="button" class="btn btn-default btn-grey btn-sm" aria-label="Left Align">
+				<span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+			</button>
+			<button type="button" class="btn btn-default btn-grey btn-sm" aria-label="Left Align">
+				<span class="glyphicon glyphicon-star" aria-hidden="true"></span>
+			</button>
+		</div>
+	</div>
+	
+    <div class=" col-md-6 col-lg-6 hidden-xs hidden-sm">
+        <strong>Prenom Nom</strong><br>
+        <table class="table table-user-information">
+            <tbody>
+                <tr>
+                    <td>{{sn_ct("Niveau")}}:</td>
+                    <td>Entrepreneur</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Enregistrer depuis")}}:</td>
+                    <td>11/12/2013</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Projets")}} :</td>
+                    <td>15</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Note")}} :</td>
+                    <td>0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<div class="h-divider"><hr></div>
+
+<!-- Second row  -->
+<div class="container">
+   
+    <!-- More information on company -->
+    <div class="row">
+        <div class="col-md-6">
+    		<div class="panel panel-success">
+    				<div class="panel-heading">
+    					<h3 class="panel-title">{{sn_ct("Company Information")}}</h3>
+    					<span class="pull-right clickable"><i class="glyphicon glyphicon-chevron-up"></i></span>
+    				</div>
+    			<div class="panel-body">
+    				
+                   <table class="table table-user-information">
+                        <tbody>
+                            <tr>
+                            <td>{{sn_ct("Nom Companie")}}:</td>
+                                <td>CompTest</td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("No De rue")}}:</td>
+                                <td>3375</td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Ville")}}</td>
+                                <td>Montreal</td>
+                            </tr>
+                           
+                            <tr>
+                            <tr>
+                                <td>{{sn_ct("Province")}}</td>
+                                <td>QC</td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Code Postal")}}</td>
+                                <td>Kathmandu,Nepal</td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Site Internet")}}:</td>
+                                <td><a href="www.comptest.com">www.comptest.com</a></td>
+                            </tr>
+                                <td>{{sn_ct("Telephone")}}:</td>
+                                <td>123-4567-890(Landline)<br><br>555-4567-890(Mobile)
+                                </td>
+                            </tr>
+                            </tr>
+                                <td>{{sn_ct("Numéro License")}}:</td>
+                                <td>1234567890</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+    	    </div>
+    	</div>
+    	
+    	<div class="col-md-6">
+    		<div class="panel panel-success">
+    				<div class="panel-heading">
+    					<h3 class="panel-title">{{sn_ct("Contact Information")}}</h3>
+    				    <span class="pull-right clickable"><i class="glyphicon glyphicon-chevron-up"></i></span>
+    				</div>
+    				
+    			<div class="panel-body">
+                    <table class="table table-user-information">
+                        <tbody>
+                            <tr>
+                            <td>{{sn_ct("Prénom")}}:</td>
+                                <td>Mon Prenom</td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Nom")}}:</td>
+                                <td>Mon Nom</td>
+                            </tr>
+                           
+                            <tr>
+                                <td>{{sn_ct("Code Postal")}}</td>
+                                <td>123-4567-890(Landline)<br><br>555-4567-890(Mobile)</td>
+                            </tr>
+                            <tr>
+                                <td>{{sn_ct("Courriel")}}:</td>
+                                <td><a href="mailto@comptest.com">info@comptest.com</a></td>
+                            </tr>
+                                <td>{{sn_ct("Telephone")}}:</td>
+                                <td>123-4567-890(Landline)<br><br>555-4567-890(Mobile)
+                                </td>
+                                   
+                            </tr>
+                             
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>        
+</div>
+
+<script>
+$(document).on('click', '.panel-heading span.clickable', function(e){
+    var $this = $(this);
+	if(!$this.hasClass('panel-collapsed')) {
+		$this.parents('.panel').find('.panel-body').slideUp();
+		$this.addClass('panel-collapsed');
+		$this.find('i').removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+	} else {
+		$this.parents('.panel').find('.panel-body').slideDown();
+		$this.removeClass('panel-collapsed');
+		$this.find('i').removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+	}
+})
+</script>

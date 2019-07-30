@@ -1,0 +1,261 @@
+{{ 
+	// --------------------------------------------------------------------------
+	/* 
+		@title		package sed_xform
+	
+		Regroup all function for module xform.
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+    %include "/module/sed/package/sed_util.sn";
+    
+    package sed_xform;
+
+	function generate_field(uid_field, table, lg)
+	
+	// --------------------------------------------------------------------------
+	/* 
+		@title		function generate_field
+	
+		Generate part of a form for a specific field
+
+		@param		uid_field : integer uid of the field
+
+		@param		table : context current table
+
+		@param		lg : current language as read by select * from sn_languages
+
+		@return		errcode : 0 if ok
+					errmesg : error message
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+	// Prepare default return
+		json.errcode = 0;
+		json.errmesg = "";
+	
+		field = sql(single:true, "select * from sn_fields where uid = '?' and uid_sn_tables = '?'", uid_field, table.rows.uid);
+		if field.nbrows != 1 then
+			json.errode = 1;
+			json.errmesg = "Invalid field " .+ f;
+			return json;
+		endif
+		
+		// Implement javascript validation
+		declaration = "";
+		if field.rows.js_validation ne "" then
+            js = sql(single:true, "select * from sn_js_validation where uid = '?'", field.rows.js_validation);
+            if js.nbrows == 1 then
+                if js.rows.js_function_name eq "sn_not_empty" then
+                    declaration = dq[[data-fv-notempty="true" data-fv-notempty-message="]] .+ esc(filter:html, js.rows{"js_function_description_" .+ lg.rows.lg}) .+ '"';
+                endif
+            endif
+        endif
+        
+		field_type = sql(single: true, "select * from sed_xform_field where field_type = '?'", field.rows.field_type);
+		if field_type.nbrows == 1 then
+		    read(field_type.rows.code);
+		endif
+
+		return json;
+	endf
+
+
+	function generate_form(uid_widget, uid_table, field_str, lg)
+	// --------------------------------------------------------------------------
+	/* 
+		@title		function generate_form
+	
+		Generate a form for a specific table in a language for the specify fields
+
+		@param		uid_widget : integer uid of the instance of widget
+		@param		uid : integer uid of entry in sn_tables
+		@param		field_str : string list of commas separated uid field or * for all field
+		@param		lg : current language as read by select * from sn_languages
+		@param      optional_field captcha : string public captcha key from google 
+		@param      optional_field with_captcha : bool if with_captcha = yes, display a captcha
+		@param      optional_field okmesg : string message if form is submitted correctly.
+
+		@return		no return
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+	// verify parameters
+
+		// uid_widget
+		if ! isdigit(uid_widget) then
+			json.errcode = 1;
+			json.errmesg = "uid_widget is not a digit: " .+ uid_widget;
+			return json;
+		endif
+
+		// uid_table
+		if ! isdigit(uid_table) then
+			json.errcode = 2;
+			json.errmesg = "uid_table is not a digit: " .+ uid_table;
+			return json;
+		endif
+
+		table = sql(single:true, "select * from sn_tables where uid = '?'", uid_table);
+		if table.nbrows != 1 then
+			json.errcode = 3;
+			json.errmesg = "Can't find table for this uid_table: " .+ uid_table;
+			return json;
+		endif
+
+		// field_str
+		if field_str ne "*" then
+			list_field = split(field_str);
+			for f in list_field do
+				if ! isdigit(f) then
+					json.errcode = 4;
+					json.errmesg = "Field "; f; " in "; field_str; " is not a digit";
+					return json;
+				endif
+				res = sql(single:true, "select uid from sn_fields where uid = '?' and uid_sn_tables = '?'", f, table.rows.uid);
+				if res.nbrows != 1 then
+					json.errcode = 5;
+					json.errmesg = "Field "; f; " in "; field_str; " is not in sn_fields";
+					return json;
+				endif
+			endfor
+		else
+			list_field = [];
+			for f sql(wantarray:true, "select uid from sn_fields where uid_sn_tables = '?'", table.rows.uid) do
+				list_field.push(f.rows[0]);
+			endfor
+		endif
+
+		// lg
+		if lg.type() ne "context" then
+			json.errcode = 6;
+			json.errmesg = "Paramater lg is not a context";
+			return json;
+		endif
+
+		if lg.rows.type() ne "context" then
+			json.errcode = 7;
+			json.errmesg = "Paramater lg.rows is not a context";
+			return json;
+		endif
+
+	// Output form
+	    }}<div id="sed_xform-div-{{uid_widget}}">{{
+        }}<script type="text/javascript" src="/extenso/formvalidation/js/formValidation.min.js"></script>{{
+        }}<script type="text/javascript" src="/extenso/formvalidation/js/framework/bootstrap.min.js"></script>{{
+        }}<script type="text/javascript" src="/extenso/jquery.form.js/jquery.form.min.js"></script>{{
+        }}<link rel="stylesheet" href="/extenso/formvalidation/css/formValidation.min.css">{{
+        }}<script src="/extenso/formvalidation/js/addons/reCaptcha2.min.js"></script>{{
+		}}<form id="sed_xform-{{uid_widget}}" name="sed_xform-{{uid_widget}}"{{
+		    if with_captcha eq "yes" && captcha ne "" then 
+		        }}
+		        data-fv-addons="reCaptcha2"
+                data-fv-addons-recaptcha2-element="captchaContainer"
+                data-fv-addons-recaptcha2-theme="light"
+                data-fv-addons-recaptcha2-timeout="120"
+                data-fv-addons-recaptcha2-sitekey="{{ captcha }}"
+                data-fv-addons-recaptcha2-message="{{ sed_util::ct(edit:false, 'The captcha is not valid'); }}"
+                {{
+		    endif
+            }}
+                data-fv-framework="bootstrap"
+                data-fv-icon-valid="glyphicon glyphicon-ok"
+                data-fv-icon-invalid="glyphicon glyphicon-remove"
+                data-fv-icon-validating="glyphicon glyphicon-refresh"
+            {{
+		
+		}}>{{
+		    
+			for f in list_field do
+				res = sed_xform::generate_field(f, table, lg);
+				if res.errcode != 0 then
+					json.errcode = 8;
+					json.errmesg = "Error while generating field " .+ f .+ " : " .+ res.errmesg;
+					return json;
+				endif
+			endfor
+			
+		    if with_captcha eq "yes" && captcha ne "" then 
+		        }}
+		        <div class="form-group">
+                    <div id="captchaContainer"></div>
+                </div>
+		        {{
+		    endif
+
+		    }}
+		    
+		    <div class="form-group">
+		        <button type="button" class="btn btn-default" onClick="sed_xform_submit_{{uid_widget}}();">{{sn_ct(code:"Soumettre")}}</button>
+                <button type="button" class="btn btn-default" id="resetButton">Reset</button>
+            </div>
+            <input type="hidden" name="widget" value="\{{ crypt(key:"duhf498u4r349r36",value:{"uid_widget": "{{uid_widget}}","date":datetime(format:"%s")}) }}">
+		</form>
+		</div>
+		
+	    <div id="sed_xform-ok-{{uid_widget}}" style="display:none ;">
+	       <div class="alert alert-success" role="alert">{{okmesg}}</div> 
+	    </div>
+	    
+	    <div id="sed_xform-err-{{uid_widget}}" style="display:none ;">
+	    </div>
+	    
+		<script type="text/javascript">
+		    $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+                $('#sed_xform-{{ uid_widget }}').formValidation();
+            })
+            
+            function xsed_xform_submit_{{uid_widget}}() {
+                $('#sed_xform-{{uid_widget}}').data('formValidation').validate();
+                var v = $('#sed_xform-{{uid_widget}}').data('formValidation').isValid();
+                if (v) {
+                    $("#sed_xform-{{uid_widget}}").ajaxSubmit({
+                        target: "#sed_xform-div-{{uid_widget}}",
+                        dataType: "json",
+                        url: "{{sed_util::resource('sed_xform_save');}}",
+                        success: function(data)  { 
+                            console.log("after save"+data.errcode+data.errmesg);
+                            if data.errcode == 0 then
+                                $('#sed_xform-ok-{{uid_widget}}").show();
+                                $("#sed_xform-{{uid_widget}}").resetForm();
+                            else
+                                $('#sed_xform-err-{{uid_widget}}").html(data.errmesg);
+                                $('#sed_xform-err-{{uid_widget}}").show();
+                            endif
+                        }
+                    }); 
+                }
+            }
+
+            function sed_xform_submit_{{uid_widget}}() {
+                console.log("Submit the form...");
+                $('#sed_xform-{{uid_widget}}').data('formValidation').validate();
+                var v = $('#sed_xform-{{uid_widget}}').data('formValidation').isValid();
+                console.log("v="+v);
+                if (v) {
+                    $("#sed_xform-{{uid_widget}}").ajaxSubmit({
+                        target: "#sed_xform-div-{{uid_widget}}",
+                        url: "{{sed_util::resource('sed_xform_save');}}",
+                        success: function(responseText, statusText, xhr, $form)  { 
+                            console.log("after save");
+                        }
+                    }); 
+                }
+            }
+		</script>
+		    
+		{{
+
+
+	endf
+
+endp;
+
+}}

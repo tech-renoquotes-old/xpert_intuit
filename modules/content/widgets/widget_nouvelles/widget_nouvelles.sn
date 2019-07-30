@@ -1,0 +1,115 @@
+{{ /* 
+
+2015-01-12 : version 1.0 paul@sednove.com
+*/ }}
+
+{{	
+	%include "/extenso/functions/sn_ct.snc";
+	use widget;
+	use uid;
+	use table;
+	use lg;
+}}
+<div class="container-fluid">
+	<div class="margin-side-40 marg-bt-30">
+		<div class="row slider-header">
+			<div class="col-sm-8">
+				<h2>{{sn_ct("Nouvelles", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</h2>
+			</div>
+			<div class="col-sm-4 text-right hidden-xs">
+				{{ nouvelles = sql(single:true,"select * from pages where code = 'nouvelles'"); }}
+				<a class="btn btn-default" href="{{nouvelles.rows{'folder_'.+ lg.rows.lg};}}">{{sn_ct("Voir plus de nouvelles", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="slider2 sed_slider">
+					{{ 	dateformat = "%e %B %Y";
+						if lg.rows.lg eq "en" then dateformat = "%B %e, %Y"; endif 
+						nouvelle_page = sql(single:true,"select * from ressources where code = '?'", 'nouvelle_details');
+					}}
+					
+					\{{ production_select= "";
+					if config.site ne "staging" then production_select .+= " and production='oui'"; endif
+					
+					for n sql("select * from nouvelles where visible_widget='oui' and actif='oui' ".+ production_select .+ " ORDER BY adate") do 
+					
+						adate = datetime(lg:"{{lg.rows.lg}}", date:n.rows.adate, format:"{{dateformat}}");
+						if n.rows.image ne "" && -e n.rows.image then
+							img = n.rows.image;
+						else
+							img = "/assets2/images/slide-vide.png";
+						endif 
+					}}
+						<div class="box-nouvelle">
+							<div class="nouvelle-photo">
+								<img alt="\{{n.rows.titre_{{lg.rows.lg}};}}" src="\{{img}}">
+							</div>
+							<div class="nouvelle-content">
+								<span class="date">\{{adate}}</span>
+								<h3 class="titre">\{{n.rows.titre_{{lg.rows.lg}};}}</h3>
+								<p>\{{n.rows.breve_{{lg.rows.lg}};}}</p>
+								<div class="readmore"><a href="{{nouvelle_page.rows{'url_'.+ lg.rows.lg};}}\{{n.rows.seo_{{lg.rows.lg}};}}">{{sn_ct("Lire la suite", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a></div>
+							</div>
+						</div>
+					\{{ endfor }}
+				</div>
+				<a class="btn btn-default visible-xs-block slider-bottom" href="{{nouvelles.rows{'folder_'.+ lg.rows.lg};}}">{{sn_ct("Voir plus de nouvelles", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a>
+			</div>
+		</div><!--/.row -->
+	</div><!--/.margin-side-40-->
+	<div class="clear"></div>
+</div><!--/.container-fluid-->
+
+<script>
+$(function(){
+	var winWidth = $(window).width();
+
+	$('.bxslider').bxSlider({
+		auto: true,
+		controls: true,
+		adaptiveHeight: true,
+	});
+
+	if (winWidth > 701) {
+		$('.slider2').bxSlider({
+			slideWidth: 275,
+			minSlides: 1,
+			maxSlides: 4,
+			slideMargin: 10,
+			pager: false
+		});
+	}
+
+	if (winWidth < 700) {
+		$('.slider2').bxSlider({
+			maxSlides: 1,
+			slideMargin: 10,
+			pager: false,
+			controls: false
+		});
+	}
+
+	$(window).resize(function() {
+		var winWidth = $(window).width();
+		var slideWidth = 1230;
+		var nmbSlide = $('.sn_slide').length;
+		// alert(nmbSlide);
+
+		if(winWidth > 1230){
+			slideWidth = 1230;
+		}else{
+			var slideWidth = winWidth;
+			var slidecontWidth = nmbSlide*slideWidth;
+			var slidecontPos = +Math.ceil(slidecontWidth / 2);
+			var slideHeight = Math.ceil(450 * slideWidth / 1230);
+		}
+		
+		// alert(slideHeight);
+		$('.sn_slide').css('width',slideWidth).css('height', slideHeight);
+		$('.sn_slider_wrap').css('height', slideHeight);
+		$('.sn_slider_cont').css('width', slidecontWidth).css('margin-left', -slidecontPos);
+	});
+});
+</script>
+

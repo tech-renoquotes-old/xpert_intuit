@@ -1,0 +1,7 @@
+{{email_to = ".";
+if email_to =~ "^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" then
+  	"yes";
+else 
+	"no";
+endif
+}}

@@ -1,0 +1,76 @@
+{{ 
+    //
+    // Name:        menu_haut
+    //
+    // Description: Permet de publier le menu du haut.
+    //  
+    // Parameters:  none so far
+	//				use cgidata 
+	//				use lg
+	//				use page uid of page defines in template
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    
+    use lg;             // Loop from the publish
+    use cgidata;           // To get infos about the user who publish the page
+
+	site_config = sql(single:true,"select * from sn_configs");
+	menu_json = sql(single:true,wantarray:true,"select json from sn_menus where code = 'menu_haut'");
+	if menu_json.rows[0] eq '' then
+		menu = [];
+	else
+		menu = unstringnify(menu_json.rows[0]);
+	endif
+}}
+
+\{{ use page;
+    request = request();
+    config = config();
+}}
+ {{   %include "/includes/blog_detail.sn"; //to change href per language in blog_detail
+ }}
+       
+		<nav class="menu-top clearfix">
+			{{ for item in menu do 
+				menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+				if menu_item.rows.active eq "yes" then
+					if menu_item.rows.type eq "page" then
+						pg = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+						if pg.nbrows == 1 then
+							}} <a class="item-link{{(menu_item.rows.class ne '') ? ' '.+menu_item.rows.class : '';}}" href="{{pg.rows{"folder_" .+ lg.rows.lg};pg.rows{"page_" .+ lg.rows.lg};}}">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a> {{
+						endif
+					elseif menu_item.rows.type eq "url" then
+						}} <a class="item-link" target="{{menu_item.rows{"target"};}}" href="{{menu_item.rows{"url_" .+ lg.rows.lg};}}">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a> {{
+					elseif menu_item.rows.type eq "group" then
+					endif
+				endif
+			endfor 
+		
+			// Implement language change
+			for l sql("select * from sn_languages where active = 'yes' and lg != '?'", lg.rows.lg) do
+				}}\{{
+				if page.code eq "blog_detail" then
+            		blogartact = sql(single:true,"SELECT uid FROM sed_blog_article WHERE url='?'",request.uri);
+            		blogarttra = sql(single:true,"SELECT uid_article_{{l.rows.lg}} FROM sed_blog_article_translation WHERE uid_article_{{lg.rows.lg}}='?'",blogartact.rows.uid);
+            		blogartopp = sql(single:true,"SELECT url FROM sed_blog_article WHERE uid='?'",blogarttra.rows.uid_article_{{l.rows.lg}});
+            	endif
+				if blogartopp.rows.url ne "" || page{"url_{{l.rows.lg }}"} ne "" then}}
+				<a class="item-link"  href="\{{
+				    if config.site ne "staging" then
+				        if "{{l.rows.lg}}" eq "fr" then
+				            "https://soumissionrenovation.ca";
+				        else
+				            "https://renoquotes.com";
+				        endif
+				    endif
+				if blogartopp.rows.url ne "" then
+				    blogartopp.rows.url;
+				else
+				    page{"url_{{l.rows.lg }}"};
+				endif}}">{{l.rows.lgname}}</a>\{{endif}}{{
+			endfor }}
+		</nav><!--menu-top-->

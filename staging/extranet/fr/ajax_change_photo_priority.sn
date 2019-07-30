@@ -1,0 +1,9 @@
+
+{{
+    cgidata = cgidata();
+    use extranet_user;
+    
+    for photo in explode(",", cgidata.photo_uid) do
+        void sql("UPDATE sr_gallery SET priority='?' WHERE uid='?' AND uid_contractor='?'", sn_nb1, photo, extranet_user.uid);
+    endfor
+}}

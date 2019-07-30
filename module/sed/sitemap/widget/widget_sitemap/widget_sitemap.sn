@@ -1,0 +1,134 @@
+{{ 
+    //
+    // Name:        widget sitemap
+    //
+    // Description: Widget to display any menu on the sidebar
+    //  
+    // Parameters:  none so far
+	//				use lg
+    //				use widget
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version (function)
+    //				1.1 2015-03-06 07:35:00 manu@i-manu.com
+    //
+
+  %include "/extenso/functions/sn_ct.snc"; 
+//   %include "/extenso/functions/sn_pages.snc"; 
+
+    
+    use widget;    
+    use lg;          // Loop from the publish    
+    use page;
+}}
+
+\{{ 
+	use page; 
+	menu = [];
+	// Get the menu selected for that widget
+	uid_menu = sql(single:true, "select * from sed_sitemap_sitemap where uid = '?'", {{widget.rows.uid_widget_list}});
+	// If a menu is selected, get the menu_json content
+	if uid_menu.rows.uid_menu ne "" then 
+		// get the menu json
+		menu_json = sql(single:true,wantarray:true,"select json from sn_menus where uid = '?'", uid_menu.rows.uid_menu);
+        //menu_json;
+		if menu_json.rows[0] eq '' then
+			menu = "no menu";
+		else
+			menu = unstringnify(menu_json.rows[0]);
+		endif
+	else // if no menu selected
+		menu="no menu";
+	endif
+
+}}
+
+<style>
+ .cs, .cs p  {
+    background: #ffffff !important;
+}
+</style>
+
+   
+    <div class="site-width">             
+\{{ 
+               
+	// function that display the branch of that element of menu
+	function display_menu(menu, lg, level) 
+		for item in menu do 
+			// select the element of the branch
+			menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+			// if the element is active
+			if menu_item.rows.active eq "yes" then
+				// if the element is a page, we show the <li>
+				if menu_item.rows.type eq "page" then
+					pg = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+					if pg.nbrows == 1 then
+
+						}}
+							<li class='page'>
+								<a href="\{{pg.rows{"folder_" .+ lg.rows.lg};if pg.rows{"page_" .+ lg.rows.lg} 
+                                ne "index" then pg.rows{"page_" .+ lg.rows.lg};".snc"; endif}}" class="\{{active}}">\{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+							</li>
+					\{{
+					endif
+				// if the element is an url, we also show it with <li>
+				elseif menu_item.rows.type eq "url" then
+					}} 
+						<li class='page'>
+							<a target="\{{menu_item.rows{"target"};}}" href="\{{menu_item.rows{"url_" .+ lg.rows.lg};}}" class="">\{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						</li>
+				\{{
+				// if the element is a group (an element with children)
+				elseif menu_item.rows.type eq "group" then
+					if item.children != undefined then
+						// <!-- Get all page ID from children -->
+						children = stringnify(item.children);
+						arr = explode("\"uid_page\":\"",children); 
+						puids = {};
+						for v in arr do
+							tmp = explode("\"",v,1);
+							if length(tmp) > 0 then
+								puid = (int)tmp[0];
+								if puid > 0 then
+									puids{puid}=1;
+								endif
+							endif
+						endfor                                    
+					endif
+				}} 
+					{{ //we show the li }}
+					<li class='page'>
+						{{// with the title of the group but without link - we show it as a link to keep the same class}}
+						<a href="javascript:void(0);">\{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						{{// we create the ul tag that will englobe the children}}
+						<ul class='group'>
+							\{{
+								if item.children != undefined then
+									new_level = level + 1;
+									// to display the children, we simply call back the same function
+									display_menu(item.children, lg, new_level);
+								endif
+							}}
+						</ul>
+					</li><!--item-->
+				\{{
+				endif
+			endif
+		endfor 
+	endf
+}}
+
+	<div id="css_menu">
+		<ul class="sitemap">
+			{{
+		    	lgmod = unstringnify(lg);
+				lgmod = str_replace('}'.+'}','} }',lgmod);
+			}}
+			\{{
+				// display the menu (level 0)
+				display_menu(menu, {{lgmod}}, 0);
+                
+			}}
+		</ul>
+	</div><!--css_menu-->
+    </div>

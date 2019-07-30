@@ -1,0 +1,13 @@
+{{
+ cgidata = cgidata();
+// cgidata;
+
+// p = sql(single:true, "SELECT user()as user, now() as date1,length(meta_desc) as len_meta_desc, TIMESTAMPDIFF(MINUTE, last_mod, now()) as age FROM sed_blog_article WHERE uid = '?'", cgidata.uid);
+// p = sql(single:true, "SELECT user()as user, now() as date1,length(meta_desc) as len_meta_desc, TIMESTAMPDIFF(MINUTE, last_mod, now()) as age FROM sed_blog_article WHERE uid = '?'", 50);
+
+//'<div class="alert ">Longueur de la description:'.+   p.rows.len_meta_desc   .+'</div>';
+//'<div class="alert ">Longueur de la description:'.+  ' test '   .+'</div>';
+
+
+}}
+

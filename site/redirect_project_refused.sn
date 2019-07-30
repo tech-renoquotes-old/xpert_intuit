@@ -1,0 +1,7 @@
+{{
+    %include "/extenso/functions/sn_pages.snc";
+    use lg;
+}}
+\{{
+    redirect("{{sn_pages(table:'ressources', 'redirect_project_accepted', lg.rows.lg)}}?project_hash=".+cgidata.project_hash.+"&entrepreneur_hash=".+cgidata.entrepreneur_hash.+"&accepted=no");
+}}

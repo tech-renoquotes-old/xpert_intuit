@@ -1,0 +1,24 @@
+{{ 
+	%include "/extenso/functions/ct.snc"; 
+	%include "/extenso/functions/sn_publish.snc";
+
+	use state; 
+	use config;
+
+	elems = splitre(value:state.sn_path,re:":");
+	if state.sn_modal eq "t" && isdigit(elems[1]) && elems[0] eq "uid_widget"  then
+		widget = sql(single:true,"select * from sn_widgets_list where uid = '?'", elems[1]);
+        widget_code = widget.rows.widget_code;
+        include("/extenso/publish/sn_widgets.sn");
+        //res = sn_publish(widget.rows.table_name,widget.rows.uid_page,config.site); 
+      /*"<ul>";
+		for page  in res do }}
+			<li>
+				<strong>{{page[0]}} ({{page[1]}})</strong>
+				<a target="_blank" href="{{page[2]}}">{{page[2]}}</a>
+		{{ endfor
+		"</ul>";
+    */else 
+		ct(ct:"sn_ct",code:"Can't publish this widget %s", state.sn_path); 
+	endif
+}}

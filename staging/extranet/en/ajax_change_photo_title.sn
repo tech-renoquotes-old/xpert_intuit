@@ -1,0 +1,8 @@
+
+{{
+    cgidata = cgidata();
+    use extranet_user;
+
+    void sql("UPDATE sr_gallery SET title='?' WHERE uid='?' AND uid_contractor='?'", cgidata.photo_title, cgidata.photo_uid, extranet_user.uid);
+
+}}

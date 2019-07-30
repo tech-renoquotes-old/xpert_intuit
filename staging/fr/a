@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+
+{{ 
+    config=config(); 
+	page={	"uid":"229", 
+			"role":"sn_admin",
+			"code":"sr_client_form_confirmation",
+			"url":"/fr/confirmation-formulaire-client" 
+			
+				,"url_fr":"/fr/confirmation-formulaire-client"
+			
+				,"url_en":"/en/client-form-confirmation"
+			
+	}; 
+}}
+<html lang="fr">
+    <head>
+                 {{ // to get direct link on language button
+             // exemple  http://ssr.sednove.ca/choisir-son-crepi-exterieur
+             // devient href  http://ssr.sednove.ca/en/choosing-the-right-plaster-home-exterior 
+            request = request();
+            use page;
+            config = config(); 
+            if strpos(page.url,"blog_detail")>= 0 then  
+                 url_prod_en = "https://renoquotes.com";
+        	    //url_prod_en = "https://soumissionrenovation.ca";
+                // URL FROM sed_blog_article
+                res = sql(single: true, "SELECT uid, url, language, title, meta_title, meta_desc, brief_text, featured_image, url FROM sed_blog_article WHERE url = '?' OR (url = '?' OR url = '?' OR CONCAT(url,'/') = '?') ORDER BY url = '?' DESC LIMIT 1", request.unparsed_uri, request.uri, request.uri.+'/', request.uri, request.unparsed_uri);
+                if (res.nbrows == 1) then
+                    sn_configs = sql(single:true,"SELECT * FROM sn_configs");
+                    lg = res.rows.language;
+                    url_prod = (lg eq "en") ? url_prod_en : sn_configs.rows.url_prod ;   
+                    sr_site = (lg eq "en") ? " | Reno Quotes" : " | Soumission Renovation";
+                    page1 = sql(single:true, "SELECT CONCAT(folder_fr, page_fr) AS url_fr, CONCAT(folder_en, page_en) AS url_en FROM pages WHERE code = 'blog_detail' LIMIT 1");
+                    url = page1.rows{'url_'.+lg};
+                    title = (res.rows.meta_title ne "") ? res.rows.meta_title : res.rows.title;
+                    description = (res.rows.meta_desc ne "") ? res.rows.meta_desc : res.rows.brief_text;
+                    
+                    alternate = sql(single:true, "
+                            SELECT 
+                                (SELECT url FROM sed_blog_article afr WHERE afr.uid = at.uid_article_fr ) as url_fr, 
+                                (SELECT url FROM sed_blog_article aen WHERE aen.uid = at.uid_article_en ) as url_en
+                            FROM sed_blog_article_translation at 
+                            WHERE uid_article_? = '?'
+                            LIMIT 1
+                        ", lg, res.rows.uid);
+
+                    filename = "/".+config.site.+url.+".snc";
+                  //  page.url_fr = 'fr'.+page.folder_fr.+alternate.rows.url_fr.+'fr';
+                  //  page.url_en = 'en'.+page.folder_en.+alternate.rows.url_en.+'en';//lien remodifié ailleurs
+                    page.url_fr = page.folder_fr.+alternate.rows.url_fr;
+                    page.url_en = page.folder_en.+alternate.rows.url_en;
+                    page.url = url_prod.+res.rows.url;
+                    request.args =((request.args ne '') ? request.args.+'&' : '').+"pagecode=blog_list&uid=".+res.rows.uid.+"&PAGE_TITLE=".+urlencode(title.+sr_site).+"&DESCRIPTION=".+urlencode(strip_tags(description)).+"&IMAGE=".+urlencode(url_prod.+res.rows.featured_image).+"&URL=".+urlencode(url_prod.+res.rows.url).+"&CANONICAL=".+res.rows.url.+"&ALTERNATE=".+urlencode(stringnify(alternate.rows));
+                endif;
+               
+            endif;
+        }}
+ 
+              
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{
+    use page;
+    
+    // save a cookie with the first site visited
+    request = request();
+    cookies = cookies();
+    if cookies.first_visited == undefined then
+	//	expiry=datetime(extended:true,op:"+1d",format:"%Sednove2");
+		expiry=datetime(extended:true,op:"+3h",format:"%Sednove2");
+		cookies(name:"first_visited",value:request.hostname .+ request.uri,path:"/",expiry:expiry);
+    endif
+}}
+{{
+    %include "/package/sn_util.sn";
+    reqdata = sn_util::reqdata();
+
+    // For articles, use the article information as metadata
+    PAGE_TITLE = reqdata.PAGE_TITLE;
+    if (PAGE_TITLE eq '') then
+        PAGE_TITLE = "Confirmation formulaire client | Soumission Rénovation"; 
+    endif
+}}
+<title>{{PAGE_TITLE}}</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!--[if lt IE 9]>
+   <script>
+      document.createElement('header');
+      document.createElement('nav');
+      document.createElement('section');
+      document.createElement('article');
+      document.createElement('aside');
+      document.createElement('footer');
+   </script>
+<![endif]-->
+
+<meta name="sednove_lg" content="fr">
+<meta name="sednove_uid" content="229">
+<meta name="sednove_url" content="/fr/confirmation-formulaire-client">
+<meta name="sednove_section" content="">
+<meta name="sednove_date" content="2017-03-31">
+
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+<link href="/css/fr/styles.css" rel="stylesheet">
+
+
+
+{{
+    url_prod_en = "https://renoquotes.com";
+    sn_configs = sql(single:true,"SELECT * FROM sn_configs");
+    url_prod_fr = sn_configs.rows.url_prod;
+    //url_prod = ("fr" eq "en") ? url_prod_en : sn_configs.rows.url_prod ;   //mod v1.1
+    //url_prod = sn_configs.rows.url_prod;  //executé statiquement
+    url_prod = url_prod_fr;
+}}
+
+{{alternates = unstringnify(reqdata.ALTERNATE);}}
+{{
+    if (reqdata.ALTERNATE eq '') then
+        alternates = page;
+    endif
+}}
+{{if (alternates.url_fr ne '') then}}
+    <link rel="alternate" hreflang="fr-CA" href="{{url_prod_fr.+alternates.url_fr}}">
+{{endif}}
+{{if (alternates.url_en ne '') then}}
+    <link rel="alternate" hreflang="en-CA" href="{{url_prod_en.+alternates.url_en}}">
+{{endif}}
+{{
+    canonical = reqdata.CANONICAL;
+    if (canonical eq '') then
+        canonical = page.url_fr;
+    endif
+}}
+<link rel="canonical" href="{{url_prod.+canonical}}">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="{{if reqdata.DESCRIPTION ne "" then reqdata.DESCRIPTION; else "Obtenez 3 soumissions en 48 heures d'entrepreneurs qualifiés et sérieux spécialisés en rénovation résidentielle et commerciale - C'est gratuit et simple!"; endif }}"  />
+<meta name="keywords" content="{{if reqdata.KEYWORDS ne "" then reqdata.KEYWORDS; else ""; endif }}" />
+<meta name="generator" content="" />
+<meta name="author" content="Soumission Rénovation"> 
+<meta name="robots" content="noindex, follow"> 
+<meta name="google-site-verification" content="F1ouPzi7gedOCFnwc6BvDkoZGyeGxlHD_srW0GoOiD4"/>
+
+<!-- GEO LOCALISATION -->
+
+
+
+
+
+
+
+
+
+
+
+<meta name="DC.title" content="Montréal" /> 
+<meta name="geo.region" content="CA-QC" />
+<meta name="geo.placename" content="Montréal" /> 
+<meta name="geo.position" content="45.523428;-73.600159" /> 
+<meta name="ICBM" content="45.523428, -73.600159" /> 
+
+<!-- OPEN GRAPH -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<meta property="og:site_name" content="Obtenez 3 soumissions d" /> 
+
+
+<meta property="og:title" content="{{if reqdata.PAGE_TITLE ne "" then reqdata.PAGE_TITLE; else "Confirmation formulaire client | Soumission Rénovation"; endif }}"/> 
+
+
+<meta property="og:description" content="{{if reqdata.DESCRIPTION ne "" then reqdata.DESCRIPTION; else "Obtenez 3 soumissions en 48 heures d"; endif }}" />
+
+
+<meta property="og:url" content="{{if reqdata.URL ne "" then reqdata.URL; else "https://soumissionrenovation.ca"; endif }}" /> 
+
+
+<meta property="og:image" content="{{if reqdata.IMAGE ne "" then reqdata.IMAGE; else "https://soumissionrenovation.ca/sn_uploads/obtenez_trois_soumissions.jpg"; endif }}"/> 
+
+
+<meta property="og:image:type" content="jpg" /> 
+
+
+<meta property="og:image:width" content="{{if reqdata.IMAGE ne "" then "930"; else "1200"; endif }}" /> 
+
+
+<meta property="og:image:height" content="{{if reqdata.IMAGE ne "" then "600"; else "630"; endif }}" /> 
+
+
+<!-- TWITTER CARD ================ -->
+<meta name="twitter:card" content="summary" />
+
+    <meta name="twitter:site" content="{{if reqdata.URL ne "" then reqdata.URL; else "https://soumissionrenovation.ca"; endif }}" />
+
+
+    <meta name="twitter:title" content="{{if reqdata.PAGE_TITLE ne "" then reqdata.PAGE_TITLE; else "Confirmation formulaire client | Soumission Rénovation"; endif }}" />
+
+
+    <meta name="twitter:description" content="{{if reqdata.DESCRIPTION ne "" then reqdata.DESCRIPTION; else "Obtenez 3 soumissions en 48 heures d"; endif }}" />
+
+
+    <meta name="twitter:image" content="{{if reqdata.IMAGE ne "" then reqdata.IMAGE; else "https://soumissionrenovation.ca/sn_uploads/obtenez_trois_soumissions.jpg"; endif }}" />
+
+
+<!-- Others metas -->
+
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+<script src="/js/fr/site.js"></script>
+<script src="//oss.maxcdn.com/jquery.form/3.50/jquery.form.min.js"></script>
+
+
+
+<meta name="sednove_lg" content="fr">
+<meta name="sednove_uid" content="229">
+<meta name="sednove_url" content="/fr/confirmation-formulaire-client">
+<meta name="sednove_section" content="">
+<meta name="sednove_date" content="2017-03-31">
+{{
+	r = request();
+   	void sql("INSERT DELAYED INTO sn_search_siteindex (sn_cdate,sn_mdate,url,nbhit,page,date_publication,lg,nbref,section) values 
+		(NOW(), NOW(),'?','1','?',NOW(),'fr',0, '?') 
+   		on duplicate key update nbhit = nbhit + 1,date_publication=NOW()",r.uri,"/fr/confirmation-formulaire-client","");
+}}
+        <!-- Generated by laplante 2017-03-31 09:49:36 /usr/local/website/srv1/templates/grid.sn ;  /usr/local/website/srv1/extenso/publish/pages.sn ;  /usr/local/website/srv1/staging/extenso/extranet/pages/fr/publish.snc ;   -->
+    </head>
+    <body class="site">
+        <h1>PIERER</h1>
+        {{ 
+            if config.site eq "staging" then 
+                client_has_bootstrap = true; 
+                if user.lg ne "" then
+                    //include("/extenso/html/extranet/" .+ user.lg .+ "/fullpage.snc");
+                else
+                    //include("/extenso/html/extranet/fr/fullpage.snc"); 
+                endif
+            endif
+        }}
+        <div class="cs sed">
+          	{{ //include("/" .+ config.site .+ "/includes/fr/header.snc"); }}
+		 	<div class="sed-content">
+                 <div class="widget_area_top">
+					
+		{{ use config; if config.site eq "staging" then // Remove pencil in production }}
+			
+			<div   
+				id="haut" class="sn_drag sn_widget_container sn_pencil sn_all" data-sn_link1="/extenso/extranet/fr/widget-add.snc?nb=5&uid_page=229&table=pages&lg=fr&position=haut&add=true" data-sn_title1="Ajouter une composante " data-sn_class1="widget-add">
+			
+		{{ else }}
+			<div class="sn_widget_container sn_drag sn_all" id="haut"   >
+		{{ endif }}
+	
+
+	 
+		
+		{{ position = dq((haut)); // position will be available in include }}
+		{{ if config.site eq "staging" then // Remove pencil in production }}
+		<!-- Widget 1498 sed_spotlight /module/sed/spotlight/widget/sed_spotlight.sn 229 pages fr haut by laplante 2017-03-31 09:49:36 -->
+		<div id="1498" class="sn_pencil" style="min-height: 40px;" 
+			title="Widget En vedette (sed_spotlight) "
+			
+				
+				data-sn_link1="/extenso/extranet/sed_spotlight_config/fr/edit.snc?nb=5&uid_page=229&table=pages&lg=fr&position=haut&add=true&sn_uniq=yes&uid=1498&sn_modal=t&sn_path=uid_widget:1498" 
+				data-sn_title1="Edit En vedette" data-sn_class1="pencil" 
+			
+
+			
+			
+            	
+			
+            	
+			
+            	
+			
+
+			
+			data-sn_link2="" data-sn_class2="arrows sn_widget_drag" data-sn_title2="Déplacer le widget"
+			data-sn_link3="/extenso/extranet/fr/widget-remove.snc?nb=5&uid_page=229&table=pages&lg=fr&position=haut&add=true&uw=1498&sn_modal=t" data-sn_class3="trash-o" data-sn_title3="Supprimer le widget"
+
+			
+			>
+		{{ endif }}
+			
+				
+
+<style> 
+#inner {
+    margin: 0 auto; 
+}
+  .widget-image-text-ck {margin:0 0 30px 0;}
+  .widget-image-text-ck > .box {text-align:center;padding-top:20px;}
+  .widget-image-text-ck > .box img {display:block; margin:0 auto;}
+  .widget-image-text-ck > .box h4 {margin:16px 0 4px 0;}
+  
+  @media screen and (max-width :640px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:left;}
+  }
+   @media screen and (max-width :991px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:none;}
+      .widget-image-text-ck > .box:nth-child(3n+1) {clear:left;}
+      .widget-image-text-ck > .box:last-child{
+          float:none;
+          margin:auto;
+          clear:both;
+      }
+  }
+  
+      .img-circle {
+        border-radius: 50%;
+    }
+    .btn_centered {
+        text-align: center;
+    }
+
+    .btn_right {
+        text-align: right;
+    }
+
+    .btn_left {
+        text-align: left;
+    }
+    
+    .widget-image-text-ck h2{
+        font-size:26px;
+        margin:10px 0;
+    }
+    .widget-image-text-ck p{
+        margin:15px 0 5px 0;
+    }
+    .widget-image-text-ck .wdg_image{
+        min-height:150px;
+        display:table;
+        width:100%;
+    }
+    .widget-image-text-ck .wdg_image_container{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .wdg_spotlight_container{
+        position:relative;
+    }
+    /*.row .wdg_spotlight_container .container{
+        padding:0;
+        max-width:initial;
+        width:auto;
+    }*/
+    .wdg_spotlight_container .mask{
+        background-size:cover;background-repeat:no-repeat;background-position:center;
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+    }
+    .wdg_spotlight_container .single_box{
+        max-width:600px;
+        margin:auto;
+        float:none;
+    }
+    .wdg_spotlight_container .wdg_title{
+        text-align:center;
+        position:relative;
+        top:0;
+    }
+    .wdg_spotlight_container .wdg_title>*{
+        margin:10px 0;
+    }
+    @media (max-width:768px){
+        .wdg_spotlight_container{
+            /*this remove the user padding in mobile*/
+            padding:0!important;
+         }
+        .wdg_spotlight_container .wdg_title{
+            top:0px;
+        }
+    }
+</style>
+
+<div class="clearfix"></div>
+
+<div class="wdg_spotlight_container" style="padding:70px 0;">
+    <div class="mask" style="background-image:url(/sn_uploads/14369636_1.jpeg?maxw=1200&maxh=900);"></div><div class="mask" style="background-color:#000;opacity:.65;"></div>
+    
+    <div class="container">
+        
+            <div class="wdg_title">
+                <h1 style="color:#FFF;">
+                    MERCI !
+                </h1>
+            </div>
+        
+    </div>
+</div>
+<div class="clearfix"></div>
+
+
+			
+		{{ if config.site eq "staging" then // Remove pencil in production }}
+		</div>
+		{{ endif }}
+	 </div> 
+                 </div>
+
+                  <style scoped>
+                  .sn_grid_main_menu {position:relative;right:0;top:0;z-index:502;margin:0!important;}
+                  a.sn_grid_main_menu {
+                      border: 1px solid transparent;
+                      -moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;
+                      display: inline-block;
+                      font-size: 14px!important;
+                      font-weight: 400;
+                      line-height: 1.42857;
+                      margin-bottom: 0;
+                      padding: 6px 12px;
+                      text-align: center;
+                      vertical-align: middle;
+                      white-space: nowrap;
+                      background-color: #dddddd!important;
+                      border-color: #dddddd!important;
+                      color: #666666!important;
+                  }
+
+                  a.sn_grid_main_menu.widget-add {
+                      padding: 1px;
+                  }
+
+                  a.sn_grid_main_menu.ct {
+                      padding: 1px 4px 1px 4px!important; /* MODIFICATION DES MARGIN */
+                      font-size: 8px!important; /* MODIFICITION FONT-SIZE */
+                      color: black!important;
+                  }
+                  .sn_grid_main_menu .link {
+                      border: 1px solid transparent;
+                      -moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;
+                      display: inline-block;
+                      font-size: 14px!important;
+                      font-weight: 400;
+                      line-height: 1.42857;
+                      margin-bottom: 0;
+                      padding: 6px 12px;
+                      text-align: center;
+                      vertical-align: middle;
+                      white-space: nowrap;
+                      background-color: #dddddd!important;
+                      border-color: #dddddd!important;
+                      color: #666666!important;
+                  }
+                  </style>
+            
+            <div class="cs-main-content">
+				<!--<div class='sn_grid_main_menu'><a class='link'><i class='fa fa-bars'></i></a></div>-->
+				
+					<div class="test container" style="min-height:50px;">
+                        <div class="row">
+                            
+                                <div class="sn_pencil sn-grid col-md-12" 
+                                    data-sn_link1="/extenso/extranet/sn_template_grid_content/fr/edit.snc?uid=303&sn_uniq=yes&sn_modal=t" 
+                                    data-sn_class1="edit" data-sn_title1="Edit">
+                                    
+                                    
+                                    
+		{{ use config; if config.site eq "staging" then // Remove pencil in production }}
+			
+			<div   
+				id="grid-11" class="sn_drag sn_widget_container sn_pencil sn_all" data-sn_link1="/extenso/extranet/fr/widget-add.snc?nb=5&uid_page=229&table=pages&lg=fr&position=grid-11&add=true" data-sn_title1="Ajouter une composante " data-sn_class1="widget-add">
+			
+		{{ else }}
+			<div class="sn_widget_container sn_drag sn_all" id="grid-11"   >
+		{{ endif }}
+	
+
+	 
+		
+		{{ position = dq((grid-11)); // position will be available in include }}
+		{{ if config.site eq "staging" then // Remove pencil in production }}
+		<!-- Widget 1386 sr_client_form_confirmation /site/client_form/widget/client_form_confirmation.sn 229 pages fr grid-11 by laplante 2017-03-31 09:49:36 -->
+		<div id="1386" class="sn_pencil" style="min-height: 40px;" 
+			title="Widget Confirmation du formulaire de client (sr_client_form_confirmation) "
+			
+				
+			
+
+			
+			
+            	
+			
+            	
+			
+            	
+			
+
+			
+			data-sn_link1="" data-sn_class1="arrows sn_widget_drag" data-sn_title1="Déplacer le widget"
+			data-sn_link2="/extenso/extranet/fr/widget-remove.snc?nb=5&uid_page=229&table=pages&lg=fr&position=grid-11&add=true&uw=1386&sn_modal=t" data-sn_class2="trash-o" data-sn_title2="Supprimer le widget"
+
+			
+			>
+		{{ endif }}
+			
+				{{ 
+					widget = { "uid_widget_list" : "1386", "uid" : "86" };
+					include("/" .+ config.site .+ "/widgets/fr/sr_client_form_confirmation.snc") 
+				  }}
+			
+		{{ if config.site eq "staging" then // Remove pencil in production }}
+		</div>
+		{{ endif }}
+	 
+		
+		{{ position = dq((grid-11)); // position will be available in include }}
+		{{ if config.site eq "staging" then // Remove pencil in production }}
+		<!-- Widget 1388 sed_textck /module/sed/textck/widget/sed_textck.sn 229 pages fr grid-11 by laplante 2017-03-31 09:49:36 -->
+		<div id="1388" class="sn_pencil" style="min-height: 40px;" 
+			title="Widget Texte avec édition libre (CK) (sed_textck) "
+			
+				
+				data-sn_link1="/extenso/extranet/sed_textck/fr/edit.snc?nb=5&uid_page=229&table=pages&lg=fr&position=grid-11&add=true&sn_uniq=yes&uid=1388&sn_modal=t&sn_path=uid_widget:1388" 
+				data-sn_title1="Edit Texte avec édition libre (CK)" data-sn_class1="pencil" 
+			
+
+			
+			
+            	
+			
+            	
+			
+            	
+			
+
+			
+			data-sn_link2="" data-sn_class2="arrows sn_widget_drag" data-sn_title2="Déplacer le widget"
+			data-sn_link3="/extenso/extranet/fr/widget-remove.snc?nb=5&uid_page=229&table=pages&lg=fr&position=grid-11&add=true&uw=1388&sn_modal=t" data-sn_class3="trash-o" data-sn_title3="Supprimer le widget"
+
+			
+			>
+		{{ endif }}
+			
+				<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: 20px; line-height: inherit; text-decoration: inherit;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: inherit; font-weight: bold;">Un oubli?</span></span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: 20px; line-height: inherit; text-decoration: inherit;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: inherit; font-weight: bold;">​​​​​​​Avez-vous inscrit le délai pour faire vos travaux?</span></span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;">&nbsp;</p>
+
+<p class="test1" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;"><span class="wysiwyg-font-type-Arimo" style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: inherit;">Si vous avez oublié d'indiquer le délai pour faire les t</span><span class="wysiwyg-font-type-Arimo" style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">ravaux ou si ce</span><span class="wysiwyg-font-type-Arimo" style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: inherit;">s informations sont inexactes, veuillez envoyer les bonnes informations à l'adresse courriel suivante&nbsp;<a href="mailto:client@soumissionrenovation.ca">client@soumissionrenovation.ca</a></span></span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">Nous vous remercions d'avoir fait une demande de soumission à SoumissionRenovation.ca! Comme nous tenons&nbsp;à votre satisfaction, notre équipe fera son maximum pour vous aider à réaliser vos projets dans les plus brefs délais.</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: inherit; font-weight: bold;">Voici ce à quoi vous devez maintenant vous attendre:</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">Si nous avons besoin de plus de détails sur votre projet nous vous recontacterons dans les 24h suivant la demande de soumission.&nbsp;</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">Votre projet sera ensuite envoyé à plusieurs entrepreneurs qualifiés de votre région qui sont disponibles pour réaliser vos travaux.&nbsp;</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">À chaque fois qu'un entrepreneur est intéressé par votre projet, vous recevrez un courriel contenant des informations à son sujet. Notre objectif est de vous mettre en contact avec 3 entrepreneurs et jusqu'à un maximum de 4 entrepreneurs.&nbsp;</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">Les entrepreneurs que nous vous auront référés entrerons alors en contact avec vous dans les jours suivants. Vous pouvez aussi prendre les devants et les contacter dès que vous recevez leurs informations par courriel.&nbsp;</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">Après discussion et éventuelles rencontres avec les entrepreneurs, vous recevrez les soumissions pour votre projet.&nbsp;</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; line-height: 26px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">Lorsque vous aurez choisi&nbsp;l'entrepreneur qui vous convient, profitez de votre temps libre pendant qu'il réalise votre projet !</span></p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;">&nbsp;</p>
+
+<p class="uxp-align-left" style="-webkit-font-smoothing: antialiased; margin-bottom: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; color: rgb(0, 0, 0); font-size: 16px; font-family: Arial;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; line-height: inherit; text-decoration: inherit;">N'hésitez pas à nous faire part de tous commentaires, questions ou suggestions à&nbsp;<a href="mailto:client@soumissionrenovation.ca"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: underline;"><span style="-webkit-font-smoothing: antialiased; margin: 0px; padding: 0px; text-rendering: optimizeLegibility; word-wrap: break-word; font-family: inherit; font-size: inherit; line-height: inherit; text-decoration: inherit; color: rgb(51, 62, 207);">client@soumissionrenovation.ca</span></span></a>.&nbsp;Notre équipe se fera un plaisir de lire vos courriels et vous répondra dans les plus brefs délais.</span></p>
+
+
+			
+		{{ if config.site eq "staging" then // Remove pencil in production }}
+		</div>
+		{{ endif }}
+	 </div> 
+                                </div>
+                            
+                        </div><!--/.row-->
+                    </div><!--/.container-->
+				
+	
+			</div>
+	
+			{{ //include("/" .+ config.site .+ "/includes/fr/footer.snc"); }}
+           </div>
+        </div><!--/.cs-->
+         
+        
+		<!-- Placed at the end of the document so the pages load faster -->
+<!--[if lt IE 9]>
+    <script src="/js/html5shiv.js"></script>
+    <script src="/js/respond.min.js"></script>
+<![endif]-->
+     
+    </body>
+</html>

@@ -1,0 +1,149 @@
+{{
+/*
+ * @title pagination Class
+ * @version 0.1 - 2017-03-16
+ * @author Jhonny Louis Alcius <louis.jhonny@gmail.com>
+ * 
+ * @description Pagination class esay to integrate on any other pages
+ * 
+ * 
+ * Server-side implementation (within a dynamic sncode context) : 
+ 
+ */
+class Pagination
+
+    method Pagination(nbrPerPage,linksPerPage,offset,query,sortField,orderBy,language)
+    
+        //define language to display the navigation buttons - supported: french and english
+        this.lang = language;
+        if this.lang eq 'fr' then
+            this.prev_text = 'PLUS RECENT';
+            this.next_text = 'PLUS VIEUX';
+        else
+            this.prev_text = 'MOST RECENT';
+            this.next_text = 'OLDEST';
+        endif
+        
+        mainquery = sql(query);
+        this.finalQuery = sql(query .+ " ORDER BY ? ? LIMIT ? OFFSET ?", sortField, orderBy, nbrPerPage, offset);
+        
+        this.per_page = nbrPerPage;
+        this.linksPerPage = linksPerPage;
+        this.nbrLines = mainquery.nbrows;
+        this.nbrPages = ceil(mainquery.nbrows / nbrPerPage);
+    endm
+    
+    method navigation(startpage, page, linkstyle)
+    
+        
+        //display navigation items only if there a minimum of 2 pages returned in the resultset
+        if(this.nbrPages > 1) then
+        pagination = '<div class="navContainer">';
+
+            if(startpage.length() == 0 || startpage == null || startpage == 0) then
+                startpage = 1;    
+            endif
+            
+            if(startpage > 1) then
+                offset = startpage;
+            else
+                offset = 0;
+            endif
+            
+            for (i = startpage; i < (this.linksPerPage + offset); i++ )
+                do
+                
+                // Display previous page interval before each firstpage(page % linksPerPage == 0). 
+                if((i >= this.linksPerPage) && (i % this.linksPerPage == 0)) then
+                    pagination = '<div class="navContainer">';
+                    firstpage = 1;
+                    pagination .+= '<div class="' .+ linkstyle .+ '"><a href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (firstpage) .+'); $(\'#start\').val(' .+(firstpage) .+'); $(\'#sed_blog_form\').submit();">'.+ (firstpage) .+ '</a>...';
+                    pagination .+= '<a href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (startpage - 1) .+'); $(\'#start\').val(' .+ (startpage - this.linksPerPage) .+ '); $(\'#sed_blog_form\').submit();">'.+ (startpage - 1) .+ '</a></div>';
+                endif
+                    
+                    
+                // Display current page if iteration and the page are the same / If not, only display the link.
+                if (i == page) then //si on est sur la page actuelle
+                    pagination .+= '<div class="' .+ linkstyle .+ '"><strong title="page actuelle">' .+ i .+ '/' .+ this.nbrPages .+ '</strong></div>';
+                else
+                    pagination .+= '<a class="' .+ linkstyle .+ '" href="javascript:void(0)" onclick="$(\'#page\').val(' .+ i .+'); $(\'#start\').val(' .+ startpage .+'); $(\'#sed_blog_form\').submit();">'.+ i .+ '</a>';
+                endif
+                    
+                    
+                // Write next interval while we are in last page of the previous interval 
+                if((i + 1) == (this.linksPerPage + offset)) then
+                    startpage = i;
+                    pagination .+= '<div class="' .+ linkstyle .+ '"><a href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (i + 1) .+'); $(\'#start\').val(' .+ (i + 1) .+'); $(\'#sed_blog_form\').submit();">'.+ (i + 1) .+ '</a>...';
+                    pagination .+= '<a href="javascript:void(0)" onclick="$(\'#page\').val(' .+ this.nbrPages .+'); $(\'#start\').val(' .+ (trunc(this.nbrPages / this.linksPerPage) * this.linksPerPage) .+ '); $(\'#sed_blog_form\').submit();">'.+ this.nbrPages .+ '</a></div>';
+                    pagination .+= '</div>';
+                    break;
+                endif
+                    
+                    
+                // Don't display more page if total number of pages is reached.
+                if((i + 1)  > this.nbrPages) then
+                    pagination .+= '</div>';
+                    break;
+                endif
+            endfor
+        endif
+    
+        return pagination;
+    
+   endm
+   
+    /**
+    * @description navigate to next page and stop navigation at very last page.
+    * @args startpage int : Defined when first navigation page is found
+    * @args page int : is the current page
+    * @args style string : a css class name to customize the next button
+    * 
+    */
+    method next(startpage, page, style)
+        if (page != this.nbrPages) then
+            if ((page + 1) % this.linksPerPage == 0) then
+                pagination .+= '<a class="' .+ style .+ '" href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (page + 1) .+'); $(\'#start\').val(' .+ (page + 1) .+'); $(\'#sed_blog_form\').submit();">' .+ this.next_text .+ '</a>';
+            else
+                pagination .+= '<a class="' .+ style .+ '" href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (page + 1) .+'); $(\'#start\').val(' .+ startpage .+'); $(\'#sed_blog_form\').submit();">' .+ this.next_text .+ '</a>';
+                
+            endif
+        else
+            pagination .+= '<a class="' .+ style .+ '"> </a>';
+        endif
+        
+        return pagination;
+    endm
+    
+    
+    /**
+    * @description navigate to previous page and stop navigation at page 1.
+    * @args startpage int : Defined when first navigation page is found
+    * @args page int : is the current page
+    * @args style string : a css class name to customize the previous button
+    * 
+    */
+    method previous(startpage, page, style)
+        if (page != 1) then
+            if (page % this.linksPerPage == 0) then
+                pagination .+= '<a class="' .+ style .+ '" href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (startpage - this.linksPerPage) .+'); $(\'#start\').val(' .+ (startpage - this.linksPerPage) .+'); $(\'#sed_blog_form\').submit();">' .+ this.prev_text .+ ' </a>';
+              //pagination .+= '<span class="' .+ style .+ '"><a href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (startpage - this.linksPerPage) .+'); $(\'#start\').val(' .+ (startpage - this.linksPerPage) .+'); $(\'#sed_blog_form\').submit();"><<PLUS RECENT</a></span>';
+            else
+                pagination .+= '<a class="' .+ style .+ '" href="javascript:void(0)" onclick="$(\'#page\').val(' .+ (page - 1) .+'); $(\'#start\').val(' .+ startpage .+'); $(\'#sed_blog_form\').submit();">' .+ this.prev_text .+ ' </a>';
+            endif
+        else
+            pagination .+= '<a class="' .+ style .+ '"></a>';
+        endif
+        
+        return pagination;
+    endm
+    
+    
+    method newQuery()
+        return this.finalQuery;
+    endm
+    
+    
+endc
+}}
+
+

@@ -1,0 +1,35 @@
+
+{{
+    // include the validator 
+    %include "/site/contractor_dashboard/include/update_project_validator.sn";
+    
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/");  
+    connection = connection();
+    
+    use extranet_user;
+    //void insert(table:'sr_debug', fields:{'description':'data','text':cgidata.uid_project});
+    if (cgidata.uid_project ne "" && validator.validate(data:cgidata)) then
+        exists = sql(single:true,"SELECT uid, file FROM sr_project_contractor WHERE uid_contractor='?' AND uid_project='?'", extranet_user.uid, cgidata.uid_project);
+        if cgidata.action eq "delete_file" then
+            file = "";
+        else
+            file = (cgidata.file.sn_fullname ne "") ?  cgidata.file.sn_fullname  : exists.rows.file;
+        endif
+        if exists.nbrows > 0 then
+            void update(
+                tables:"sr_project_contractor",
+                uid: exists.rows.uid,
+                fields:{
+                    "comments": cgidata.comments, 
+                    "amount_contract_report": cgidata.amount_contract_report,
+                    "expected_date": cgidata.expected_date,
+                    "quote": cgidata.quote,
+                    "contract_signed": cgidata.contract_signed,
+                    "file": file
+                }
+            );
+        endif
+        headers_out("X-success",1);
+    endif
+    
+}}

@@ -1,0 +1,40 @@
+{{%include '/site/package/all.sn';}}
+\{{
+  
+  //Send email to clients that didn't get a contractor referred after 72 hours          
+query = "SELECT sp.uid_client, sp.uid, sp.`status`, sp.uid_service, sc.firstname, sc.lastname, sc.email, sc.lang, sc.gender, sp.active_date, sp.description, HOUR(TIMEDIFF(now(),sp.active_date)) as delay, 
+        (SELECT count(*) FROM sr_project INNER JOIN sr_project_contractor ON sr_project.uid = sr_project_contractor.uid_project WHERE sr_project.uid = sp.uid AND sr_project_contractor.accepted = 'yes') as nbrAcc
+        FROM srv1.sr_client sc 
+        INNER JOIN sr_project sp ON sc.uid = sp.uid_client HAVING delay=72 AND nbrAcc = 0 AND sp.`status` = 'active' ORDER BY sp.active_date DESC";
+        
+
+    // for each language
+    for client sql(query)
+    do
+        
+        services = sql(single:true,"SELECT name_? as service_name FROM srv1.sr_service WHERE uid = ? ", client.rows.lang, client.rows.uid_service);
+        automail::sendEmail(
+        "clientLongWaitForQuote",
+        group: 'clients',
+		to: client.rows.email,
+		lg: client.rows.lang
+        );
+
+    	void insert(table:'sr_debug', fields:{'description':'Notify Client in 72 hours('.+ client.rows.firstname,'text':'project ='.+ client.rows.uid_project .+ ' / Notification sent to Client :' .+ client.rows.email });
+    endfor
+    
+    //Resend projects that didn't reach 4 contractors and that are still active after 96 hours
+/*query_rewrite = "SELECT sp.uid_client, sp.uid, sp.`status`, sp.uid_service, sc.firstname, sc.lastname, sc.email, sc.lang, sc.gender, sp.active_date, sp.description, sp.rewritten, sp.lead_price, HOUR(TIMEDIFF(now(),sp.active_date)) as delay, 
+        (SELECT count(*) FROM sr_project INNER JOIN sr_project_contractor ON sr_project.uid = sr_project_contractor.uid_project WHERE sr_project.uid = sp.uid AND sr_project_contractor.accepted = 'yes') as nbrAcc
+        FROM srv1.sr_client sc 
+        INNER JOIN sr_project sp ON sc.uid = sp.uid_client HAVING delay>=96 AND delay <= 120 AND sp.lead_price >= 7.5 AND nbrAcc <= 3 AND sp.`status` = 'active' AND sp.rewritten = 'no' ORDER BY sp.active_date DESC";*/
+        
+// for each language
+/*for project sql(query_rewrite)
+    do
+        void sql("UPDATE sr_project SET rewritten = 'yes', urgent = 'yes' WHERE uid = ? ", project.rows.uid);
+        void sql("DELETE from sr_project_contractor WHERE uid_project = ? AND isnull(hidden) AND isnull(accepted) AND isnull(accepted_rebate)", project.rows.uid);
+    	void insert(table:'sr_debug', fields:{'description':'Resend project after 96 hours ('.+ project.rows.firstname,'text':'project ='.+ project.rows.uid });
+endfor*/
+    
+}}

@@ -1,0 +1,23 @@
+{{
+    table_dest = 'sr_gallery';
+    table_from = 'tbl_gallerie_photo';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idtbl_gallerie_photo',
+        'uid_contractor' : 'ID_Entrepreneur',
+        'photo'         : "Path::REPLACE('?', '/wp-content/uploads/', '/sn_uploads/')",
+        'priority'      : 'Priorite',
+        'active'        : "Actif::IF('?', 'yes', 'no')",
+        'title'         : 'Title',
+        'sn_cdate'      : 'timestamp'
+    };
+    
+    %include 'migration.sn';
+    

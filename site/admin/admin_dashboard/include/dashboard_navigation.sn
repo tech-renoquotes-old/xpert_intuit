@@ -1,0 +1,44 @@
+{{
+    /*
+        @title dashboard_natigation 
+        Description: Dropdown to select the page to go in the dashboard
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-28
+        
+        **Must publish header resource of the grid in use for changes to apply**
+    */
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+
+    function get_page(code)
+        use lg;
+        page = sql(single:true,"
+            SELECT title_? as title, uid
+            FROM pages 
+            WHERE code='?'",lg.rows.lg, code);
+        return {"title":page.rows.title, "uid":page.rows.uid};
+    endf
+}}
+<select class="form-control" id="navigator" name="navigator" onchange="location = this.value;">
+    <option value=""></option>
+    <optgroup label='{{sn_ct("header_intranet Menu principal,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','sr_admin_dashboard',lg.rows.lg)}}" {{ current_page = get_page('sr_admin_dashboard');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+    <optgroup label='{{sn_ct("header_intranet Clients,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','sr_manage_client',lg.rows.lg)}}" {{ current_page = get_page('sr_manage_client');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <option value="{{pages(table:'pages','sr_search_client',lg.rows.lg)}}" {{ current_page = get_page('sr_search_client');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+    <optgroup label='{{sn_ct("header_intranet Projets similaire,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','projet_similaire',lg.rows.lg)}}" {{ current_page = get_page('projet_similaire');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+    <optgroup label='{{sn_ct("header_intranet Rechercher un projet,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','search_project',lg.rows.lg)}}" {{ current_page = get_page('search_project');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+</select>
+

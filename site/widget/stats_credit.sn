@@ -1,0 +1,432 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+   //session 
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+    use extranet_user;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+    void timeout(15);
+    
+}}
+
+\{{       
+    
+cgidata = cgidata();
+
+fullname=user.firstname .+ " " .+ user.lastname;
+
+if length(fullname) > 2 then
+
+}}
+<style>
+#contractors {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#contractors td, #customers th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#contractors tr:nth-child(even){background-color: #f2f2f2;}
+
+#contractors tr:hover {background-color: #ddd;}
+
+#contractors th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: center;
+    background-color: #00517e;
+    color: white;
+}
+hr {
+    overflow: visible; /* For IE */
+    padding: 0;
+    border: none;
+    border-top: medium double #333;
+    color: #333;
+    text-align: center;
+}
+hr:after {
+    content: "{{sn_ct(edit:false,'Prochaine demande')}}";
+    display: inline-block;
+    position: relative;
+    top: -0.7em;
+    font-size: 1.5em;
+    padding: 0 0.25em;
+    background: white;
+}
+</style>
+
+<script src="https://cdn.ckeditor.com/4.6.2/full-all/ckeditor.js"></script>
+
+<form action="" method="post">
+    <input type="text" placeholder="id projet" name="id_project">
+    <input type="submit" name="project_info">
+</form>
+
+\{{
+
+if cgidata.accepted then
+    if cgidata.do_not_count then
+        do_not_count = 'yes';
+    endif
+    void sql("UPDATE sr_credit
+            SET accepted = 'yes', msg_acceptation = '?', legit_request = '?'
+            WHERE uid = ?
+        ", cgidata.reason, do_not_count, cgidata.cruid);
+    automail::creditApproved(cgidata.cruid);
+    if cgidata.cancel then
+        project_cancel = sql(single:true, "SELECT p.uid FROM sr_project p INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid WHERE cr.uid = ?", cgidata.cruid);
+        void sql("UPDATE sr_project SET status = 'cancelled-after-qualification' WHERE uid = ?", project_cancel.rows.uid);
+    endif
+endif
+
+if cgidata.refused then
+    if cgidata.do_not_count then
+        do_not_count = 'yes';
+    endif
+    void sql("UPDATE sr_credit
+            SET accepted = 'no', refusal_reason = '?', legit_request = '?'
+            WHERE uid = ?
+        ", cgidata.reason, do_not_count, cgidata.cruid);
+    automail::creditDenied(cgidata.cruid, cgidata.reason);
+    if cgidata.cancel then
+        project_cancel = sql(single:true, "SELECT p.uid FROM sr_project p INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid WHERE cr.uid = ?", cgidata.cruid);
+        void sql("UPDATE sr_project SET status = 'cancelled-after-qualification' WHERE uid = ?", project_cancel.rows.uid);
+    endif
+endif       
+
+if cgidata.callback then
+    void sql("UPDATE sr_credit
+            SET callback_date = '?', sr_comment = '?', follow_up = '?'
+            WHERE uid = ?
+            ", cgidata.callback_date, cgidata.our_comments, cgidata.follow_up, cgidata.cruid);
+endif
+
+if cgidata.id_project then
+
+    project = sql("
+        SELECT c.email, p.active_date, sold_count.count, p.status, p.comments, c.uid, p.uid as puid, p.description, p.due_date
+        FROM sr_project p
+        INNER JOIN sr_client c ON c.uid = p.uid_client
+        CROSS JOIN (
+            SELECT count(*) as count
+            FROM sr_project_contractor pc
+            WHERE pc.uid_project = ?
+            AND accepted_date > 0
+        ) as sold_count
+        WHERE p.uid = ?
+        ", cgidata.id_project, cgidata.id_project);
+
+else
+    nb_project = sql(single:true,"
+        SELECT count(*) as count
+        FROM sr_credit cr
+        INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+        INNER JOIN sr_project p ON p.uid = pc.uid_project
+        INNER JOIN sr_client c ON c.uid = p.uid_client
+        WHERE c.lang = '?'
+        AND ((cr.refusal_reason is null 
+        AND (cr.accepted is null or cr.accepted = 'no') 
+        AND (cr.callback_date is null OR cr.callback_date <= curdate()))
+    OR 
+        (cr.follow_up = 'yes' 
+        AND (cr.callback_date is null OR cr.callback_date = '' OR cr.callback_date <= curdate())))
+        ", "{{lg.rows.lg}}");
+
+    project = sql("
+        SELECT c.email, p.active_date, sold_count.count, p.status, p.comments, c.uid, cr.uid as cruid, p.uid as puid, a.phone1, a.phone2, p.description, c.firstname, c.lastname, c.gender, p.due_date
+        FROM sr_credit cr
+        INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+        INNER JOIN sr_project p ON p.uid = pc.uid_project
+        INNER JOIN sr_client c ON c.uid = p.uid_client
+        INNER JOIN sr_address a ON a.uid_client = c.uid
+        CROSS JOIN (
+            SELECT count(*) as count, pc.uid_project
+            FROM sr_project_contractor pc
+            WHERE accepted_date > 0
+            GROUP BY pc.uid_project
+        ) as sold_count ON sold_count.uid_project = p.uid
+        WHERE c.lang = '?'
+        AND ((cr.refusal_reason is null 
+        AND (cr.accepted is null or cr.accepted = 'no') 
+        AND (cr.callback_date is null OR cr.callback_date <= curdate()))
+    OR 
+        (cr.follow_up = 'yes' 
+        AND (cr.callback_date is null OR cr.callback_date = '' OR cr.callback_date <= curdate())))
+        GROUP BY p.uid
+        ORDER BY cr.sn_cdate
+        LIMIT 3
+        ", "{{lg.rows.lg}}");
+endif
+
+'<div style="width: 100%; float:both">{{sn_ct("Nombre de crédits à traiter")}}: '.+ nb_project.rows.count.+'</div>';
+
+if project.nbrows >= 1 then
+    for p in project.rows do
+        id_project = p.puid;
+        }}
+        <hr>
+        <div style="width:29%; float:left">
+            <table id="contractors">
+                <th colspan="2">{{sn_ct("Info du projet")}} - \{{id_project}}</th>
+                <tr>
+                    <td>Uid client</td>
+                    <td><a href="/intranet/fr/recherche-client?subject=\{{p.uid}}" target="_blank">\{{p.uid}}</a> - \{{p.gender .+ ' ' .+ p.firstname .+ ' ' .+ p.lastname}}</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Courriel du client")}}</td>
+                    <td>\{{p.email}}</td>
+                </tr>
+                <tr>
+                    <td>Telephone</td>
+                    <td>\{{p.phone1}} - \{{p.phone2}}</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Date d'activation")}}</td>
+                    <td>\{{p.active_date}}</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Statut")}}</td>
+                    <td>\{{p.status}}</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Nombre d'entrepreneurs")}}</td>
+                    <td>\{{p.count}}</td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>\{{p.description}}</td>
+                </tr>
+                <tr>
+                    <td>Délai</td>
+                    <td>\{{p.due_date}}</td>
+                </tr>
+                <tr>
+                    <td>{{sn_ct("Commentaires sur le projet")}}</td>
+                    <td>\{{p.comments}}</td>
+                </tr>
+            </table>
+        </div>
+        
+        \{{
+        credits = sql("
+            SELECT c.company_name, c.uid, pc.lead_price, credits_accepted.count as credits, projects_accepted.count as projects, pc.accepted_date, pc.client_satisfaction, pc.client_comment, c.contact_phone, c.contact_email,
+            cr.reason, cr.called, cr.voicemail, cr.email, cr.call1_date, cr.call2_date, cr.call3_date, cr.explanation, cr.no_quote, cr.accepted, cr.refusal_reason, cr.msg_acceptation, cr.sr_comment,
+            cr.attached_file, cr.feed_id, cr.feed_date, cr.feed_text, cr.callback_date, cr.legit_request, c.comments, cr.sn_cdate, cr.uid as cruid, c.contact_lg, c.contact_gender, c.contact_firstname, c.contact_lastname, cr.follow_up
+            FROM sr_credit cr
+            INNER JOIN sr_project_contractor pc ON cr.uid_project_contractor = pc.uid
+            INNER JOIN sr_contractor c ON c.uid = pc.uid_contractor
+            LEFT JOIN (
+                SELECT count(*) as count, pc.uid_contractor
+                FROM sr_credit cr
+                INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+                WHERE cr.accepted = 'yes'
+                GROUP BY pc.uid_contractor
+            ) as credits_accepted ON credits_accepted.uid_contractor = c.uid
+            LEFT JOIN (
+                SELECT count(*) as count, pc.uid_contractor
+                FROM sr_project_contractor pc
+                WHERE accepted_date > 0
+                AND lead_price > 0
+                GROUP BY pc.uid_contractor
+            ) as projects_accepted ON projects_accepted.uid_contractor = c.uid
+            WHERE pc.uid_project = ?
+            ORDER BY sn_cdate DESC
+        ", id_project);
+        
+        i = 0;
+        
+        for c in credits.rows do
+            if c.reason == 1 then
+                reason = '{{sn_ct(edit:false,"Je n ai jamais rejoint le client")}}';
+            elseif c.reason == 2 then
+                reason = '{{sn_ct(edit:false,"Le projet à été annulé par le client")}}';
+            elseif c.reason == 3 then
+                reason = '{{sn_ct(edit:false,"Le client a trop de soumissions et n en veux plus d autre")}}';
+            elseif c.reason == 4 then
+                reason = '{{sn_ct(edit:false,"Le contrat a déjà été donné avant que je fasse une soumission")}}';
+            elseif c.reason == 5 then
+                reason = '{{sn_ct(edit:false,"Autre")}}';
+            endif
+            
+            if c.feed_id == 1 then
+                feed_id = '{{sn_ct(edit:false,"a pu donner un prix mais le projet est annulé/donné")}}';
+            elseif c.feed_id == 2 then
+                feed_id = '{{sn_ct(edit:false,"na pas donner de prix et le projet est annulé/donné")}}';
+            elseif c.feed_id == 3 then
+                feed_id = '{{sn_ct(edit:false,"na pas donner de prix mais le projet est toujours disponible")}}';
+            elseif c.feed_id == 4 then
+                feed_id = '{{sn_ct(edit:false,"a pu donner un prix et le projet est disponible")}}';
+            elseif c.feed_id == 5 then
+                feed_id = '{{sn_ct(edit:false,"Je souhaite ajouter une explication")}}';
+            endif
+            
+            i++;
+            if i > 1 then
+                "<div style='width:29%; height: 1px; float:left;'></div>";
+            endif
+            
+            if c.accepted eq 'yes' then
+                style = "background-color:green;";
+            elseif c.refusal_reason ne '' then
+                style = "background-color:red;";
+            else
+                style = "";
+            endif
+            
+            }}
+            <div style="width:70%; float:left">
+                <div style="width:49%; float:left">
+                    <table id="contractors">
+                    <th colspan="2" style="\{{style}}">{{sn_ct("Info entrepreneur")}}</th>
+                    <tr>
+                        <td>{{sn_ct("Entrepreneur")}}</td>
+                        <td>\{{c.company_name}} - (\{{c.gender .+ ' ' .+ c.contact_firstname .+ ' ' .+ c.contact_lastname}})</td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Coordonnées")}}</td>
+                        <td>\{{c.contact_phone .+ ' ' .+ c.contact_email}}</td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Langue")}}</td>
+                        <td>\{{c.contact_lg}}</td>
+                    </tr>
+                    <tr>
+                        <td>#uid</td>
+                        <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{c.uid}}" target="_blank">\{{c.uid}}</a></td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Ratio de crédit")}}</td>
+                        <td>\{{c.credits}} / \{{c.projects}} (\{{round(c.credits/c.projects*10000)/100}}%)</td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Prix")}}</td>
+                        <td>\{{c.lead_price}}$</td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Date acceptation")}}</td>
+                        <td>\{{c.accepted_date}}</td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Satisfaction du client")}}</td>
+                        <td>\{{c.client_satisfaction .+ ' ' .+ c.client_comment}}</td>
+                    </tr>
+                    <tr>
+                        <td>{{sn_ct("Nos commentaires sur cet entrepreneur")}}</td>
+                        <td>\{{c.comments}}</td>
+                    </tr>
+                    </table>
+                    <form action="" method="post">
+                        <textarea class="ckeditor" maxlength="2000" id="ckdesc" placeholder="Message d'acceptation ou de refus" name="reason"></textarea>
+                        <!--<input type="hidden" name="id_project" value="\{{id_project}}">-->
+                        <input type="hidden" name="cruid" value="\{{c.cruid}}">
+                        <input type="submit" name="accepted" value='{{sn_ct(edit:false,"Accepter")}}' style="margin-right:100px;">
+                        <input type="submit" name="refused" value='{{sn_ct(edit:false,"Refuser")}}'><br>
+                        {{sn_ct("Annuler le projet")}}<input type="checkbox" name="cancel"><br>
+                        {{sn_ct("Ne pas compter cette demande de crédit dans le score de l'entrepreneur")}}<input type="checkbox" name="do_not_count">
+                    </form>
+
+                </div>
+                <div style="width:49%; float:left">
+                    <table id="contractors">
+                        <th colspan="2" style="\{{style}}">{{sn_ct("Info demande")}} #\{{i}}/\{{credits.nbrows}} - uid \{{c.cruid}}</th>
+                        <tr>
+                            <td>{{sn_ct("Date de la demande")}}</td>
+                            <td>\{{c.sn_cdate}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Raison")}}</td>
+                            <td>\{{reason}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Appelé")}}</td>
+                            <td>\{{c.called}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Msg vocal")}}</td>
+                            <td>\{{c.voicemail}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Courriel")}}</td>
+                            <td>\{{c.email}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Date 1er appel")}}</td>
+                            <td>\{{c.call1_date}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Date 2e appel")}}</td>
+                            <td>\{{c.call2_date}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Date 3e appel")}}</td>
+                            <td>\{{c.call3_date}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Explication")}}</td>
+                            <td>\{{c.explanation}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Fichier joint")}}</td>
+                            <td><a href="\{{c.attached_file}}" target="_blank">\{{c.attached_file}}</a></td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Aucune soumission")}}</td>
+                            <td>\{{c.no_quote}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Réponse du client")}}</td>
+                            <td>\{{feed_id .+ ' ' .+ c.feed_text}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Crédit accepté")}}</td>
+                            <td>\{{c.accepted}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Raison refus")}}</td>
+                            <td>\{{c.refusal_reason}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Raison acceptation")}}</td>
+                            <td>\{{c.msg_acceptation}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Notre date de rappel")}}</td>
+                            <td>\{{c.callback_date}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Nos commentaires")}}</td>
+                            <td>
+                                <form action="" method="post">
+                                <textarea style="width:100%; height: 75px;" name="our_comments">\{{c.sr_comment}}</textarea><br>
+                                <input type="date" name="callback_date" required><br>
+                                <!--<input type="hidden" name="id_project" value="\{{id_project}}">-->
+                                {{sn_ct("Suivi à faire")}}: <input type="checkbox" value="yes" name="follow_up" \{{if c.follow_up eq 'yes' then 'checked'; endif}}>
+                                <input type="hidden" name="cruid" value="\{{c.cruid}}">
+                                <input type="submit" name="callback" value='{{sn_ct(edit:false,"Nouvelle date de rappel")}}'>
+                                </form>
+                            </td>
+                        </tr>
+                        
+                    </table>
+                    
+                </div>
+            </div>
+            \{{
+        endfor
+        "<div style='clear:both;'></div>";
+    endfor
+    }}
+\{{endif}}
+
+\{{endif}}

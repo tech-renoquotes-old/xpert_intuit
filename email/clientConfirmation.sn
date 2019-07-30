@@ -1,0 +1,30 @@
+{{
+    /*
+        @title 			adminRequestConfirmation
+        Description		Confirmation email for the admin when a client  asks for quotes. 
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+    use client_info;
+    nom = client_info.name;
+    telephone = client_info.phone;
+    courriel = client_info.email;
+    adresse = client_info.address;
+    code_postale = client_info.postal_code;
+    message = client_info.description;
+
+    
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

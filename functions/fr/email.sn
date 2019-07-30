@@ -1,0 +1,7 @@
+
+{{
+    function get_email_file(email_code, lg)
+        config = config();
+        return config.site +"/email/"+ lg +"/"+ email_code +".snc";
+    endf
+}}

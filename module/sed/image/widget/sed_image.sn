@@ -1,0 +1,151 @@
+{{
+	// --------------------------------------------------------------------------
+    // Name:        sed_image
+    //
+    // Description: Implement widget sed_image. This widget uses information from sn_widget and
+	//	            sn_languages to implement image. It will also get the information from the
+	//	            table sed_image.
+	// 
+	// Information from table sed_image: image, maxWidth, alt, url, uid_widget
+    //
+    // Version:     1.0 2015-11-18 16:01:13 laplante@sednove.com Initial version
+	//	            1.1 2061-05-30 14:00:00 pascale@sednove.com : Code review + add imageProcessor with a max width
+    // --------------------------------------------------------------------------
+
+    use widget;
+    use lg;
+    
+    img = sql(single:true, "SELECT * FROM sed_image WHERE uid = '?'", widget.rows.uid_widget_list);
+    if img.rows.uid eq '' then
+	    // Set default content
+            fields = {
+                "maxheight" : "1500",
+                "maxwidth":"2000",
+                "image_form":"square",
+                "border":"no",
+                "lightbox" :"no",
+                "opacity" :"100",
+                "uid":widget.rows.uid_widget_list,
+                "uid_widget":widget.rows.uid_widget_list
+            };
+            
+            
+            for l sql("select * from sn_languages where active = 'yes'") do
+                    fields{"url_" .+ l.rows.lg} = "http://sednove.com " ;
+                    fields{"alt_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                    fields{"image_" .+ l.rows.lg} = "/module/sed/image/image_default/image_default.jpg";
+                   
+            endfor
+        verif_ctx = sql(single:true,"SELECT uid FROM sed_image WHERE uid_widget='?'",widget.rows.uid_widget_list);
+    	       	if verif_ctx.nbrows == 0 then
+    	            void insert(table:"sed_image",fields:fields);
+    	        endif
+       img = sql(single:true, "SELECT * FROM ? WHERE uid_widget = '?'  ",'sed_image',widget.rows.uid_widget_list);	 
+       
+    endif
+    if img.rows.maxwidth ne "" then 
+    		maxWidth = img.rows.maxwidth;
+    else
+    		maxWidth = "2000";
+    endif
+    if img.rows.maxheight ne "" then 
+    		maxHeight = img.rows.maxheight;
+    else
+    		maxHeight = "1500";
+    endif
+
+	for ll sql("select lg  from sn_languages") do
+	  if img.rows{'image_'.+ll.rows.lg} ne "" then
+	    image_src = img.rows{'image_'.+ ll.rows.lg};
+	  endif
+	endfor
+	
+	if  (img.rows.opacity) >= '0' && (img.rows.opacity) <= '100'  then
+        opacity = img.rows.opacity /100;
+    else
+        opacity = 1;
+    endif 
+    
+}}
+
+       
+   
+<style type="text/css">
+ {{%include "/module/sed/image/css/magnific-popup.css"}}
+    .wdg-img img{
+        max-width: 100%;
+    }
+    .img-circle {
+        border-radius: 50%;
+    }
+    {{if img.rows.border eq 'yes' then}}
+       .wdg-img img{
+            border:  solid {{img.rows.width_border }}px #{{img.rows.color_border}};
+            padding:{{img.rows.padding_border}}px;
+       }
+   {{endif}}
+</style>
+
+<div class="row">
+    {{if img.rows.lightbox  ne 'yes' then}}
+        <div class="col-sm-12 text-center wdg-img">
+    		{{ if img.rows{'url_'.+ lg.rows.lg}ne "" then}}<a href="{{img.rows{'url_' .+ lg.rows.lg};}}" target="_blank">{{ endif }}
+    			<img class="{{if img.rows.image_form  eq 'circle' then  "img-circle"; endif}} service-img img-max-100" style="opacity:{{opacity}};" src="{{image_src}}?maxw={{maxWidth;}}&maxh={{maxHeight}}" alt="{{img.rows{'alt_'.+ lg.rows.lg};}}">
+    		  </a>
+    	   <figcaption>{{img.rows{'legend_' .+ lg.rows.lg};}}</figcaption>
+        </div>
+	{{else}}
+        <div class="zoom-gallery col-sm-12 text-center wdg-img">								
+            	<a href="{{image_src}}?maxw=1500&maxh=1200" title ="{{img.rows{'legend_' .+ lg.rows.lg};}}" data-link="{{img.rows{'url_' .+ lg.rows.lg};}}" >
+        		<img class="{{if img.rows.image_form  eq 'circle' then  "img-circle"; endif}} service-img img-max-100" style="opacity:{{opacity}};" src="{{image_src}}?maxw={{maxWidth;}}&maxh={{maxHeight}}" alt="{{img.rows{'alt_'.+ lg.rows.lg};}}">
+        		<figcaption>{{img.rows{'legend_' .+ lg.rows.lg};}}</figcaption>
+        	</a>
+        </div>
+ {{endif}}
+</div>
+
+
+
+<script>
+{{%include "/module/sed/image/js/jquery.magnific-popup.min.js"}}
+$(document).ready(function(){
+    var item_iii;
+	//Initialize the magnific popup
+	$('.zoom-gallery').magnificPopup({
+		delegate: 'a',
+		type: 'image',
+		closeOnContentClick: false,
+		closeBtnInside: false,
+		mainClass: 'mfp-with-zoom mfp-img-mobile',
+		image: {
+			verticalFit: true,
+			titleSrc: function(item) {
+			    item_iii = item.el.attr('data-link');
+				return item.el.attr('title') + ' &middot; <a class="image-source-link" href="'+item.el.attr('data-link')+'" target="_blank">link</a>';
+			},
+			markup: 
+			'<div class="mfp-figure"><div class="mfp-close"></div><a href="javascript:void(0);" target="_blank" style="opacity:{{opacity}};" class="mfp-img-link"><div class="mfp-img"></div></a><div class="mfp-bottom-bar"><div class="mfp-title"></div><div class="mfp-counter"></div></div></div>' // Popup HTML markup. `.mfp-img` div will be replaced with img tag, `.mfp-close` by close button
+			
+			
+			
+			
+		},
+		gallery: {
+			enabled: false
+		},
+		zoom: {
+			enabled: true,
+			duration: 300, // don't foget to change the duration also in CSS
+			opener: function(element) {
+				return element.find('img');
+			}
+		},
+		callbacks: {
+          open: function(element) {
+            $('.mfp-img-link').attr('href',item_iii);
+          }
+        }
+		
+	});
+});
+</script>

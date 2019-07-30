@@ -1,0 +1,252 @@
+{{
+
+%include "/extenso/functions/sn_ct.snc";
+%include "/extenso/functions/sn_pages.snc";
+%include '/site/package/all.sn';
+
+use page;
+use lg;
+}}
+
+
+\{{
+    
+    query = "SELECT p.uid_client, p.uid, c.locked, c.locked_by, c.firstname, c.lastname, c.gender, c.email, c.address, c.lang, c.languages, c.when_to_call,
+            a.phone1, a.city, a.country, a.province, a.zip, a.street, a.street_no,
+            (SELECT sn_mdate from sr_followup WHERE uid_client = p.uid_client AND msg_uid <> 12 ORDER BY uid DESC LIMIT 1) as last_update
+            FROM sr_client c 
+            INNER JOIN sr_project p ON p.uid_client = c.uid
+            LEFT JOIN sr_address a ON a.uid_client = c.uid
+            WHERE p.status = 'new' AND ((c.locked='' OR ISNULL(c.locked)) OR c.locked_by = '?') 
+            AND NOT EXISTS(SELECT * from sr_followup WHERE msg_uid IN(11,6,4,3,5) AND uid_client = p.uid_client)
+            AND languages = '?'
+            AND skipped_by <> '?'";
+            
+    query_new = query;
+
+    if(cgidata.category eq 'pending') then
+        query = "SELECT p.uid_client, p.uid, c.locked, c.locked_by, c.firstname, c.lastname, c.gender, c.email, c.address, c.lang, c.languages, c.when_to_call,
+            a.phone1, a.city, a.country, a.province, a.zip, a.street, a.street_no,
+            (SELECT sn_mdate from sr_followup WHERE uid_client = p.uid_client AND msg_uid <> 12 ORDER BY uid DESC LIMIT 1) as last_update
+            FROM sr_client c 
+            INNER JOIN sr_project p ON p.uid_client = c.uid
+            LEFT JOIN sr_address a ON a.uid_client = c.uid
+            WHERE p.status = 'new' AND ((c.locked='' OR ISNULL(c.locked)) OR c.locked_by = '?') 
+            AND EXISTS(SELECT * from sr_followup WHERE msg_uid IN(11,6,4,3,5) AND uid_client = p.uid_client)
+            AND languages = '?'
+            AND skipped_by <> '?'";
+    endif
+
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = '1'");
+    history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+    
+        
+       //Lock the first client in the list with this action
+        if(cgidata.action eq 'begin') then
+            if(total_clients.rows[0].locked_by ne user.username) then
+                project::addLock(total_clients.rows[0].uid_client, user.username);
+                project::followup(uid_msg:9, clientID:total_clients.rows[0].uid_client, uid_project:total_clients.rows[0].uid, username:user.username);
+                headers_out('X-success', 1);
+            endif
+        endif
+    
+       //UnLock the first client in case user just unlock manually
+        if(cgidata.action eq 'abort') then
+            project::rmLock(cgidata.abortid);
+            project::followup(uid_msg:10, clientID:cgidata.abortid, uid_project:'', username:user.username);
+            headers_out('X-success', 1);
+        endif
+        
+       //UnLock the first client, register action and goto next client.
+        if(cgidata.action eq 'skip') then
+            if(cgidata.category eq 'new') then
+                cl = sql(single:true,query_new .+ "AND c.locked='yes' AND p.uid_client = '?' GROUP BY p.uid_client ORDER BY c.locked_by DESC, p.sn_cdate < (NOW() - INTERVAL 15 MINUTE) AND p.sn_cdate > concat(NOW(),' ','17:00:00'), p.sn_cdate < NOW() - INTERVAL 6 HOUR, p.sn_cdate > NOW()",user.username, user.languages, user.username, cgidata.skipid);
+                next_cl = sql(single:true, query_new .+ "GROUP BY p.uid_client ORDER BY c.locked_by DESC, p.sn_cdate < (NOW() - INTERVAL 15 MINUTE) AND p.sn_cdate > concat(NOW(),' ','17:00:00'), p.sn_cdate < NOW() - INTERVAL 6 HOUR, p.sn_cdate > NOW() LIMIT 200 OFFSET ?",user.username, user.languages, user.username, cgidata.nextidx);
+                if(cl.rows.locked eq 'yes' && cl.rows.uid_client ne "") then
+                    project::skip(cl.rows.uid_client, user.username);
+                    project::followup(uid_msg:12, clientID:cl.rows.uid_client, uid_project:'', username:user.username, comments:cgidata.comment);
+                    
+                    project::addLock(next_cl.rows.uid_client, user.username);
+                    project::followup(uid_msg:9, clientID:next_cl.rows.uid_client, uid_project:next_cl.rows.uid, username:user.username);
+                    headers_out('X-success', 1);
+                else
+                    headers_out('X-success', 0);
+                endif
+            else
+            
+            endif
+        endif
+    
+        if(cgidata.action eq 'update_client') then
+            client = update(
+                tables:"sr_client",
+                fields: {
+                "firstname": cgidata.firstname,
+                "lastname": cgidata.lastname,
+                "email": cgidata.email,
+                "when_to_call":cgidata.when_to_call,
+                "languages":cgidata.languages,
+                "lang": cgidata.lang
+                }, 
+                uid:cgidata.clientID
+            );
+            
+            address = sql(single:true,"select * from sr_address where uid_client = '?' and zip = '?' order by uid", cgidata.clientID, cgidata.postal_code);
+            
+            if(address.nbrows > 0) then
+                addr = update(
+                    tables:"sr_address",
+                    fields: {
+                        "city":cgidata.locality,
+                        "street_no": cgidata.street_number,
+                        "street": cgidata.route,
+                        "zip": cgidata.postal_code,
+                        "province": cgidata.administrative_area_level_1,
+                        "country":cgidata.country,
+                        "phone1": cgidata.phone1
+                    }, 
+                    uid:address.rows.uid
+                    
+                );
+                headers_out('X-res', addr);
+            else
+                addr = insert(
+                    table:"sr_address",
+                    fields: {
+                        "uid_client": cgidata.clientID,
+                        "city":cgidata.locality,
+                        "street_no": cgidata.street_number,
+                        "street": cgidata.route,
+                        "zip": cgidata.postal_code,
+                        "province": cgidata.administrative_area_level_1,
+                        "country":cgidata.country,
+                        "phone1": cgidata.phone1
+                    } 
+                );
+                
+                headers_out('X-res', addr);
+            endif
+        endif
+        
+        if(cgidata.refresh) then
+           clients = sql("SELECT p.uid_client FROM sr_client c 
+                        WHERE p.locked = 1 
+                        AND p.status= 'new' 
+                        AND locked_by <> '?'", user.username);
+        endif
+        
+        if(cgidata.action eq 'callback') then
+            fulldate = cgidata.calldate .+ " " .+ cgidata.calltime;
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'3',
+                "when_to_callback": fulldate,
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username,
+                "comments": cgidata.comment
+                }
+            );
+            
+            history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'firstcall') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'1',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username,
+                "comments": cgidata.comment
+                }
+            );
+            
+            history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'request_plan') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'11',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username,
+                "comments": cgidata.comment
+                }
+            );
+
+            automail::askWorkplanToClient(cgidata.uid_project);
+            history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'request_plan_without_email') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'5',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username,
+                "comments": cgidata.comment
+                }
+            );
+            
+            history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'unreachable') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'4',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username,
+                "comments": cgidata.comment
+                }
+            );
+            
+            history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'email') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'6',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+            
+            automail::customEmailToClient(cgidata.uid_project, cgidata.subject, cgidata.message);    
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'cancel') then
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'7',
+                "uid_client": cgidata.clientID,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+            
+            project::incompleteProject(cgidata.uid_project);
+            history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+            headers_out('X-result', history.rows);
+        elseif(cgidata.action eq 'addlock') then
+            project::addLock(cgidata.clientID, user.username);
+            project::followup(uid_msg:9, clientID:cgidata.clientID, uid_project:cgidata.uid_project, username:user.username);
+            headers_out('X-lock', 1);
+        elseif(cgidata.action eq 'removelock') then
+            project::rmLock(cgidata.clientID);
+            project::followup(uid_msg:10, clientID:cgidata.clientID, uid_project:cgidata.uid_project, username:user.username);
+            headers_out('X-lock', 1);
+        elseif(cgidata.action eq 'lockstatus') then
+            locks = project::getLocks();
+            headers_out('X-locks', locks);
+        else
+            headers_out('X-result', history.rows);
+        endif
+}}    

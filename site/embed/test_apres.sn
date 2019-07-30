@@ -1,0 +1,3 @@
+if (new_entry) then
+   '<div class="alert alert-danger">Nouvelle entrée</div>';
+endif

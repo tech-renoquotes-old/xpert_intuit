@@ -1,0 +1,26 @@
+{{ 
+	// --------------------------------------------------------------------------
+	/* 
+		@title		package sn_util
+	
+		Regroup all function for extenso
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+    
+    package sn_util;
+        
+        function reqdata()
+            request = request();
+            args = {};
+            for arg in explode('&', request.args) do
+                keyval = explode('=', arg);
+                args{urldecode(keyval[0])} = urldecode(keyval[1]);
+            endfor
+            return args;
+        endf
+
+        
+    endp
+}}

@@ -1,0 +1,16 @@
+FORCE_EMAIL_PROD = true;
+
+// Approval
+if (cgidata.f eq 'accepted' && v eq 'yes') then
+    automail::creditApproved(cgidata.uid);
+endif
+
+// Refusal
+if (cgidata.f eq 'refusal_reason' && v ne '') then
+    credit = sql(single:true, "SELECT * FROM sr_credit WHERE uid = '?'", cgidata.uid);
+    if (credit.rows.accepted ne 'yes') then
+        automail::creditDenied(cgidata.uid, "");
+    endif
+endif
+//cgidata;
+//'v=';v

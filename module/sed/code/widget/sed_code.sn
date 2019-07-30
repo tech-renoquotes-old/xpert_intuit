@@ -1,0 +1,35 @@
+{{   /*
+    	@title	sed_code
+    	Description:use to implement a code in a page
+    	@author laplante@sednove.com
+        @version 1.0 2015-05-31 13:15:47 version initial
+        @version 1.1 2016-06-20 13:15:47 display value 
+    */
+   
+    
+    %include "/extenso/functions/sn_ct.snc";
+
+    use widget;     // widget variable is from function sn_widgets
+    use lg;
+    widget_cont=sql(single:true,"select *  from sed_code where uid_widget = '?' ORDER BY uid DESC",  widget.rows.uid_widget_list);
+    if widget_cont.nbrows == 0 then
+	    // Set default content
+        	fields = {
+                     "uid_widget":widget.rows.uid_widget_list,
+                      "uid" : widget.rows.uid_widget_list
+            };
+        	for l sql("select * from sn_languages where active = 'yes'") do
+                        fields{"code_" .+ l.rows.lg} = "Code " .+ l.rows.lg;
+            endfor
+            verif_ctx = sql(single:true,"SELECT uid FROM sed_code WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_code",fields:fields);
+	        endif
+        	widget_cont=sql(single:true,"select *  from sed_code where uid_widget = '?' ORDER BY uid DESC",  widget.rows.uid_widget_list);        
+    endif
+    
+    
+    widget_cont.rows{'code_'.+ lg.rows.lg};
+    
+    
+}}

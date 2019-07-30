@@ -1,0 +1,75 @@
+{{
+    /*
+        @title ajax_add_cc
+        Description: Add a credit card to the contractor account.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-26
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+    
+    
+    
+    if(cgidata.action eq 'edit') then
+        if cgidata.pc_uid && cgidata.confirm eq 'yes' then
+            
+            res = update(
+                tables:"sr_project_contractor",
+                        uid: cgidata.pc_uid,
+                        fields:{
+                            "contractor_reply": cgidata.response,
+                            "reply_date": datetime(format:'%Y-%m-%d')
+                        }
+                    );
+                    
+            //headers_out("X-test", cgidata);
+                    
+            // if no error
+            if res.sqlcode == 0 then
+                headers_out("X-save_reply_success", cgidata.response);
+            endif
+            
+        elseif cgidata.pc_uid && cgidata.confirm eq 'no' then
+            res = sql(single:true, "select * from sr_project_contractor where uid = '?'", cgidata.pc_uid);
+            headers_out("X-cancel_reply_success", res.rows.contractor_reply);
+            
+        endif
+        
+    elseif(cgidata.action eq 'delete') then
+    headers_out("X-test", cgidata);
+        if cgidata.pc_uid && cgidata.confirm eq 'yes' then
+            
+            res = update(
+                tables:"sr_project_contractor",
+                        uid: cgidata.pc_uid,
+                        fields:{
+                            "contractor_reply": "",
+                            "reply_date": ""
+                        }
+                    );
+
+            // if no error
+            if res.sqlcode == 0 then
+                headers_out("X-delete_success", cgidata.response);
+            endif
+            
+        elseif cgidata.pc_uid && cgidata.confirm eq 'no' then
+            res = sql(single:true, "select * from sr_project_contractor where uid = '?'", cgidata.pc_uid);
+            headers_out("X-cancel_delete_success", res.rows.contractor_reply);
+            
+        endif
+    
+    endif
+}}

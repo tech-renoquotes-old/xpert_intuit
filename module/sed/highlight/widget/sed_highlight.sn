@@ -1,0 +1,76 @@
+{{
+   /*
+    	@title	sed_highlight
+    	Description:Widget to display Frame containing text and a button
+        @author gamilae@sednove.com
+    	@version 1.0 2015-08-02 08:49:42  initial version (function)
+    	@version 1.1 2016-07-06 07:35:00 gamila@sednove.com change the path and the name of module
+    */
+}}
+<style type="text/css">
+	.cs .box-element {
+		margin-top: 20px;
+        margin-bottom:20px;
+        padding:20px;
+	}
+    .cs .box-element p {
+		font-size:22px;
+        line-height:30px;
+	}
+    .cs .box-element.box-element-bordered {
+    	background: transparent !important;
+    	border: 2px solid #ccc;
+    }
+</style>
+
+{{
+    use widget;
+    use lg; 
+    content = sql(single:true, "SELECT * FROM ? WHERE uid_widget='?' ORDER BY uid DESC", widget.rows.table_name, widget.rows.uid_widget_list); 
+    if  content.nbrows == 0 then
+        // Set default content
+        fields = {
+            "uid_widget":widget.rows.uid_widget_list,
+            "uid" : widget.rows.uid_widget_list
+        };
+       
+        for l sql("select * from sn_languages where active = 'yes'") do
+                    fields{"btn_text_" .+ l.rows.lg} = "Bouton texte  " .+ l.rows.lg;
+                    fields{"content_" .+ l.rows.lg} = "Description " .+ l.rows.lg;
+                    fields{"url_" .+ l.rows.lg} = "http://sednove.com/".+ l.rows.lg ;
+        endfor
+   
+        verif_ctx = sql(single:true,"SELECT uid FROM sed_highlight WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_highlight",fields:fields);
+	        endif
+        content = sql(single:true, "SELECT * FROM ? WHERE uid_widget='?' ORDER BY uid DESC", widget.rows.table_name, widget.rows.uid_widget_list);	            
+    endif
+}}
+<div class="box-element box-element-bordered">
+	<div class="row">
+		{{ if content.rows{'btn_text_'.+ lg.rows.lg} ne "" then }}
+        	<div class="col-md-8">
+        {{else}}
+        	<div class="col-md-10 col-md-offset-1">
+        {{ endif }}
+			{{ content.rows{"content_" .+ lg.rows.lg};  }}
+		</div>
+        
+        {{ if content.rows{'btn_text_'.+ lg.rows.lg} ne "" then }}
+        <div class="col-md-4">
+            {{  
+            if content.rows{'url_'.+ lg.rows.lg} ne "" then 
+                url = esc(filter:"html",content.rows{'url_'.+ lg.rows.lg});
+                btn_text = esc(filter:"html",content.rows{'btn_text_'.+ lg.rows.lg});
+            }}
+                <a href="{{url}}" class="btn btn-default btn-lg pull-right" target="_blank">
+                    {{btn_text}}
+                </a>
+            {{ else }}
+                <span class="btn btn-default btn-lg pull-right">{{content.rows{'btn_text_'.+ lg.rows.lg};}}</span>
+            {{ endif }}
+        </div>
+        {{ endif }}
+	</div>
+</div>

@@ -1,0 +1,47 @@
+{{
+    /*
+        @title 			contractorActivation
+        Description		Welcoming Email for the contractor informing him his account is created. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+\{{
+	use contractor;
+    
+    contractor_uid = contractor.rows.uid;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    titre = (contractor.rows.contact_gender eq "f") ? mme : mr; 
+    
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+
+    //url = sql(single:true, "SELECT url_prod FROM sn_configs");
+    // url for Renoquotes
+    url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
+    url = url.rows.url_prod;
+   	url_link = url .+ "{{ pages('sr_contractor_create_login', lg.rows.lg , table:pages); }}?token=" .+ contractor.rows.token;
+
+	page_identifiant = url_link;
+    site_soumission_renovation = url;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

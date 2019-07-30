@@ -1,0 +1,33 @@
+{{
+    /*
+        @title sr_standard_email
+        Description: Standard  e-mail template for soumission renovation.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    use page;			// Loop from the publish
+    use lg;             // Loop from the publish
+    use uid;            // Loop from the publish
+
+}}
+
+{{
+// header of the template
+%include "/include/sr_standard_email/header.sn"; 
+
+// body of the template (code of the email in the database)
+email = sql(single:true,"SELECT * FROM email WHERE active='yes' AND uid='?'",uid);
+if email.rows.body ne "" then
+    read(file:email.rows.body);
+endif
+
+// footer of the template
+%include "/include/sr_standard_email/footer.sn"; 
+}}

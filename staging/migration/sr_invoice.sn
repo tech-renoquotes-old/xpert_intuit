@@ -1,0 +1,19 @@
+{{
+    table_dest = 'sr_invoice';
+    table_from = 'tbl_projet_entrepreneur';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"` WHERE (Valide IS NULL OR Valide = '0') AND (Frais_Admin_Paye IS NULL OR Frais_Admin_Paye = '0')";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid_project_contractor' : "ID_Entrepreneur,ID_Projet::(SELECT uid FROM sr_project_contractor WHERE uid_contractor = '?' AND uid_project = '?' LIMIT 1)",
+        'amount' : 'Pro_PrixLead'
+    };
+    
+    %include 'migration.sn';
+    
+    

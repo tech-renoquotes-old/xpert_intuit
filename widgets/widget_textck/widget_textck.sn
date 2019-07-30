@@ -1,0 +1,8 @@
+{{
+	use widget;
+	use lg;
+	textck = sql(single:true, "select * from widget_textck where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+<div>
+    {{textck.rows{'text_'.+ lg.rows.lg};}}
+</div>

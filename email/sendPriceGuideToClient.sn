@@ -1,0 +1,13 @@
+{{
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+    use client_name;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

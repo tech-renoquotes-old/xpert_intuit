@@ -1,0 +1,117 @@
+{{ 
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc"; 
+    %include "/extenso/functions/sn_pages.snc";     
+    use lg;         // Function publish use context lg  
+    use widget;
+    if widget.rows.table_name ne "" then
+        widget_conf = sql(single:true, "SELECT * FROM ?", widget.rows.table_name);
+    endif
+}}
+<style>
+.well {
+    min-height: 20px;
+    padding: 25px;
+    margin-bottom: 20px;
+    background-color: #F5F5F5;
+    border: none;
+    border-radius: 0px;
+    box-shadow: none;
+}
+</style>
+
+<div class="well">
+    <div class="alert-wrap">
+        <div class="alert alert-success fade in" id="contact-alert-success2" style="display:none;">
+            <!--button aria-hidden="true" data-dismiss="alert" class="close" type="button">×</button-->
+            {{sn_ct("contact Contact submited successfully!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}
+        </div>
+        <div class="alert alert-danger fade in" id="contact-alert-danger2" style="display:none;">
+            <!--button aria-hidden="true" data-dismiss="alert" class="close" type="button">×</button-->
+            {{sn_ct("contact Please, verify your info!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}
+        </div>
+    </div>
+    <form class="form-light mt-20" role="form" onsubmit="return contact_verif_form(this);" method="post">
+        <input type="hidden" name="submit_contact" value="sent"/>        
+        <div class="form-group">
+            <label>{{sn_ct("contact Nom", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</label>
+            <input type="text" name="name" class="form-control required" placeholder="{{sn_ct('contact Votre nom', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'contacts')}}">
+        </div>
+        <div class="row form-group">
+            <div class="col-md-6">
+                <label>{{sn_ct("contact Courriel", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</label>
+                <input type="email" name="email" class="form-control required" placeholder="{{sn_ct('contact votre@courriel.ca', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'contacts')}}">                
+            </div>
+            <div class="col-md-6">
+                <label>{{sn_ct("contact Phone", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</label>
+                <input type="text" name="phone" class="form-control required" placeholder="{{sn_ct('contact phone', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'contacts')}}">                
+            </div>            
+        </div>
+        <div class="form-group">
+            <label>{{sn_ct("contact Subject", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</label>
+            <input type="text" name="subject" class="form-control required" placeholder="{{sn_ct('contact Subject', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'contacts')}}">
+        </div>
+        <div class="form-group">
+            <label>{{sn_ct("contact Message", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</label>
+            <textarea class="form-control required" id="message" name="message" placeholder="{{sn_ct('contact Ecrviez votre message ici', edit:false, publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'contacts')}}" style="height:100px;resize:vertical;"></textarea>
+        </div>
+        {{ if widget_conf.rows.newsletter eq "yes" then }}
+        <div class="form-group">
+            <label><input type="checkbox" name="newsletter" value="yes" /> {{sn_ct("contact Newsletter Label", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}}</label>
+        </div>
+        {{ endif }}
+        <button class="btn btn-primary" type="submit">{{sn_ct("contact Envoyer", edit:false, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"contacts")}} <i class="fa fa-angle-right"></i></button>
+    </form>
+</div>
+            
+<script type="text/javascript">
+var contact_email_pattern = /^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$/;
+
+function contact_verif_form(form){//
+    // Hiding errors.
+    $("#contact-alert-success2, #contact-alert-danger2").hide();
+    $(".form-group").removeClass("has-error");
+    var erreur=0;
+    
+    var $form = $(form);
+    // required fields
+    $form.find(".required").each(function(){
+        if ($.trim(this.value) == ""){//
+            erreur++;
+            $(this).closest(".form-group").addClass("has-error");
+        } 
+    });
+    // email fields
+    $form.find(".email").each(function(){
+        if ($.trim(this.value) != "" && !contact_email_pattern.test(this.value)){//
+            erreur++;
+            $(this).closest(".form-group").addClass("has-error");
+        } 
+    });
+   
+    if (erreur==0){
+        $.ajax({
+            type: "post",
+            data: $form.serialize(),
+            url: "/modules/contacts/ressources/{{lg.rows.lg}}/widget_ajax_contact_form.snc",
+            dataType: 'JSON',
+            success: function(data) { 
+                if(data.error){
+                    $("#contact-alert-danger2").show();
+                } else {
+                    // $form.hide();
+                    $form.trigger("reset");
+                    $("#contact-alert-success2").show();
+                }
+            },
+            error : function(data) {//
+                $("#contact-alert-danger2").show();
+            }
+        });
+    } else {
+        $("#contact-alert-danger2").show();
+    }
+    return false;
+}
+</script>

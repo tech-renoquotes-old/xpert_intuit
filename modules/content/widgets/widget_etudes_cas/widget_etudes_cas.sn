@@ -1,0 +1,144 @@
+{{ /* 
+
+2015-01-12 : version 1.0 paul@sednove.com
+*/ }}
+
+{{	
+	%include "/extenso/functions/sn_ct.snc";
+	use widget;
+	use uid;
+	use table;
+	use lg;
+}}
+<div class="container-fluid">
+	<div class="margin-side-40">
+		<div class="row slider-header">
+			<div class="col-sm-8">
+				<h2>{{sn_ct("Étude de cas", lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</h2>
+			</div>
+			<div class="col-sm-4 text-right hidden-xs">
+				{{ 	
+					etude_cas = sql(single:true,"select * from pages where code = 'etudes_de_cas'");
+					etude_cas_page = sql(single:true,"select * from ressources where code = '?'", 'etude_cas_details');
+				}}
+				
+				<a class="btn btn-default" href="{{etude_cas.rows{'folder_'.+ lg.rows.lg};}}">{{sn_ct("Voir plus d'étude de cas", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a>
+			</div>
+		</div><!--/.slider-header -->
+		<div class="row">
+			<div class="col-sm-12">
+				<div class="slider1 sed_slider">
+					\{{ production_select= "";
+					if config.site ne "staging" then production_select .+= " and production='oui'"; endif
+					for c sql("select * from etudes_cas where visible_widget='oui' and actif='oui' ".+ production_select .+ " ORDER BY sn_custom") do }}
+						<div class="box-projet slide">
+							\{{ if c.rows.logo ne "" && -e c.rows.logo then }}
+								<div class="logo" onclick="showProjectDetails(this);" onmouseover="showProjectDetails(this);">
+									<img src="\{{c.rows.logo}}" alt="\{{c.rows.nom_{{lg.rows.lg}};}}">
+								</div>
+							\{{ endif }}
+							
+							<div class="image" onclick="showProjectDetails(this);" onmouseover="showProjectDetails(this);">
+								\{{ if c.rows.image ne "" && -e c.rows.image then
+										img = c.rows.image;
+									else
+										img = "http://placehold.it/405x246";
+									endif 
+								}}
+								<img src="\{{img}}" alt="\{{c.rows.alt_image_{{lg.rows.lg}};}}">
+							</div>
+							<div class="content">
+								<div class="table">
+									\{{ if c.rows.logo2 ne "" && -e c.rows.logo2 then }}
+										<img class="logo-client-white" src="\{{c.rows.logo2}}" alt="\{{c.rows.nom_{{lg.rows.lg}};}}" >
+									\{{ endif }}
+									<div class="services">&nbsp;<!--\{{c.rows.nom_{{lg.rows.lg}};}}--></div>
+									<a class="btn btn-white" href="{{etude_cas_page.rows{'url_'.+ lg.rows.lg};}}\{{c.rows.seo_{{lg.rows.lg}};}}">{{sn_ct("Voir étude de cas", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} <i class="fa fa-plus"></i></a>
+								</div>
+							</div>
+						</div><!--/.box-projet -->
+					\{{ endfor }}
+				</div><!--/.slider1 -->
+				<a class="btn btn-default visible-xs-block slider-bottom" href="{{etude_cas.rows{'folder_'.+ lg.rows.lg};}}">{{sn_ct("Voir plus d'étude de cas", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a>
+			</div>
+		</div><!--/.row -->
+	</div><!--/.margin-side-40-->
+	<div class="clear"></div>
+</div><!--/.container-fluid-->
+
+<script>
+$(function(){
+	var winWidth = $(window).width();
+
+	$('.bxslider').bxSlider({
+		auto: true,
+		controls: true,
+		adaptiveHeight: true,
+	});
+
+	if (winWidth > 701) {
+		$('.slider1').bxSlider({
+			slideWidth: 275,
+			minSlides: 1,
+			maxSlides: 4,
+			slideMargin: 10,
+			pager: false
+		});
+	}
+
+	if (winWidth < 700) {
+		$('.slider1').bxSlider({
+			maxSlides: 1,
+			slideMargin: 10,
+			controls: false,
+			pager: false
+		});
+	}
+
+
+	$(".bx-prev").click(function() {
+		hideProjectDetails();
+	});
+	$(".bx-next").click(function() {
+		hideProjectDetails();
+	});
+
+
+	$(window).resize(function() {
+		var winWidth = $(window).width();
+		var slideWidth = 1230;
+		var nmbSlide = $('.sn_slide').length;
+		// alert(nmbSlide);
+
+		if(winWidth > 1230){
+			slideWidth = 1230;
+		}else{
+			var slideWidth = winWidth;
+			var slidecontWidth = nmbSlide*slideWidth;
+			var slidecontPos = +Math.ceil(slidecontWidth / 2);
+			var slideHeight = Math.ceil(450 * slideWidth / 1230);
+		}
+		
+		// alert(slideHeight);
+		$('.sn_slide').css('width',slideWidth).css('height', slideHeight);
+		$('.sn_slider_wrap').css('height', slideHeight);
+		$('.sn_slider_cont').css('width', slidecontWidth).css('margin-left', -slidecontPos);
+	});
+});
+
+function showProjectDetails(thisObject){
+	// alert("test");
+	$('.box-projet .content').css('visibility','hidden' );
+	$('.box-projet .logo').css('visibility','visible' );
+	
+	$(thisObject).closest(".box-projet").find('.logo').css('visibility','hidden' );
+	$(thisObject).closest(".box-projet").find('.content').css('visibility','visible' );
+}
+
+function hideProjectDetails(){
+	// alert("test");
+	$('.box-projet .logo').css('visibility','visible' );
+	$('.box-projet .content').css('visibility','hidden' );
+}
+</script>
+

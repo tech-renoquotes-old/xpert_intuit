@@ -1,0 +1,60 @@
+{{
+    /*
+    	@title	    sed_blog_article_list
+    	Description Implement widget sed_blog_article_list. This widget uses use views
+        @author     madupuis@sednove.com
+    	@version    1.0 2016-07-31 16:01:13 madupuis@sednove.com  Creation
+        @modify  by louis.jhonny@gmail.com
+        change view to sed_list_two_column_v2.sn to include pagination
+    */
+ 
+    use lg;
+    use widget; 
+    if widget.rows.select_view ne "" then
+        view_uid = widget.rows.select_view;
+    else
+        views = sql(single:true, "SELECT uid FROM sn_widgets_view WHERE widget = '?' LIMIT 1", widget.rows.uid);
+        if views.nbrows > 0 then
+            view_uid = views.rows.uid;
+            void sql("UPDATE sn_widgets SET select_view = '?' WHERE uid = '?'", view_uid, widget.rows.uid);
+        else
+            sn_ct("No view available");
+        endif
+    endif
+    view = sql(single:true,"SELECT code FROM sn_widgets_view WHERE uid = '?'", view_uid);
+}}
+\{{
+        // Trying to find translation after switching language
+        headers_in = headers_in();
+        referer = headers_in.Referer;
+        if (referer ne '') then
+            request = request();
+            referer = resub(referer, "^https?://", "");
+            referer = str_replace(request.hostname, "", referer);
+            if (referer ne '') then
+                otherArticle = sql(single: true, "
+                    SELECT * 
+                    FROM sed_blog_article 
+                    WHERE language != '{{lg.rows.lg}}' 
+                    AND url = '?' 
+                    LIMIT 1
+                ", referer);
+                if (otherArticle.nbrows > 0) then   
+                    linkedArticle = sql(single:true, "
+                        SELECT a.url 
+                        FROM sed_blog_article_translation at 
+                        INNER JOIN sed_blog_article a ON a.uid = at.uid_article_{{lg.rows.lg}} 
+                        WHERE uid_article_? = '?' 
+                        LIMIT 1
+                    ", otherArticle.rows.language, otherArticle.rows.uid);
+                    if (linkedArticle.nbrows > 0) then
+                        redirect(linkedArticle.rows.url);
+                    endif
+                endif
+            endif
+        endif
+}}
+{{
+    include(view.rows.code);
+}}
+

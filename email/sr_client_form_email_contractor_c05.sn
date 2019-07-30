@@ -1,0 +1,28 @@
+{{
+    /*
+        @title 			sr_client_form_email_admin_c04
+        Description		Confirmation E-mail for when a client suscribes.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-07-21
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	titre = "Mr";
+    prenom = "Marc-André";
+    ville = "Saint-Lambert";
+    description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at porttitor sem.";
+    dateTravaux = "2016-07-07";
+    idProjet = "32543";
+    prixSoumission = "20,00$ + tx";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

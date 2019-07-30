@@ -1,0 +1,22 @@
+{{
+    table_dest = 'sr_subservice';
+    table_from = 'tbl_services_sous_categories';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idtbl_services_sous_categories',
+        'uid_service'   : 'ID_Service',
+        'name_fr'       : 'Nom',
+        'name_en'       : 'Nom',
+        'lead_price'    : 'Prix',
+        'active'        : "Actif::IF('?', 'yes', 'no')"
+    };
+    
+    %include 'migration.sn';
+    

@@ -1,0 +1,56 @@
+{{
+/**
+* @title: notify_balance
+* @desc: Notify contractor of his/her outstanding balance
+* @cedule: First day of every month
+**/
+
+%include '/site/package/all.sn';
+
+}}
+
+\{{  
+
+
+configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+contractor = sql("SELECT c.uid, 
+                c.company_name, 
+                c.balance, 
+                c.contact_firstname, 
+                c.contact_lastname,
+                c.email,
+                c.contact_gender,
+                c.contact_lg,
+                (SELECT DATEDIFF(now(), accepted_date) 
+                    FROM sr_project_contractor 
+                    WHERE uid_contractor = c.uid
+                    AND (accepted_date is not null or accepted_date <> '')
+                    ORDER BY accepted_date DESC LIMIT 1) as last_accepted_days
+                FROM sr_contractor c 
+                WHERE c.active = 'yes'
+                AND c.verified = 'yes'
+                HAVING last_accepted_days >= 30 
+              ");
+                
+                
+for ctr in contractor.rows do
+    billing = contractor::getCurrentBilling(ctr.uid);
+    
+  // billing_footer = contractor::getBillingFooter(billing);
+    billing_footer = contractor::getBillingFooterByProv(billing, ctr.uid);
+    email_to = ctr.email;
+    
+    if(email_to ne "") then
+        if(billing_footer.solde >= 10) then
+            automail::sendEmail(
+                "notifyUnpaidBalanceToContractor",
+                to: email_to, 
+                lg:ctr.contact_lg
+            );
+        endif
+    endif
+endfor
+
+
+}}

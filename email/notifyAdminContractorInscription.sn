@@ -1,0 +1,40 @@
+{{
+    /*
+        @title 			sr_client_form_email_admin_contractor_subscriptionc14
+        Description		Admin - Contractor subscription
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	use contractor;
+    use territories;    
+    
+    contact = contractor.rows.contact_firstname .+ " " .+ contractor.rows.lastname;
+    contact_telephone = contractor.rows.contact_phone;
+    contact_courriel = contractor.rows.contact_email;
+    titre =	contractor.rows.contact_title;
+    entreprise = contractor.rows.company_name;
+    adresse = contractor.rows.address;
+    telephone = contractor.rows.company_phone;
+    neq = contractor.rows.ne;
+    assureur = contractor.rows.insurance_company;
+    police = contractor.rows.insurance_number;
+	territoires = territories.rows.territories;
+    services = contractor.rows.comments;
+    id_entrepreneur = contractor.rows.uid;
+
+
+}}
+<div style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+</div>

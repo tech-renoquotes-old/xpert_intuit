@@ -1,0 +1,142 @@
+<!-- START Exit popup -->
+
+    <style>
+        .x-popup {
+            position: relative;
+        }
+        .exit-modal{
+            opacity: 1;
+            background: rgba(0, 0, 0, .6);
+        }
+        #contact_info{
+            display:none;
+        }
+    </style>
+
+  <div class="x-popup">
+        <div class="modal exit-modal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" style="text-align: center; font-weight: bold; font-size: 24px;">{{sn_ct("exit-popup Ne quittez pas tout de suite!", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid, edit:true)}}</h4>
+                    </div>
+                    <div class="modal-body">
+                        <h4 style="width: 80%; margin: auto; margin-bottom: 10px;">{{sn_ct("exit-popup Vous préférez parler au téléphone?  Prendez un rendez-vous de 15 minutes avec moi", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid, edit:true)}}</h4>
+                        <div style="width:80%;margin:0 auto;padding-bottom:20px" class="row">
+                            <button type="submit" class="btn btn-primary"><a href="https://calendly.com/deb-54" target="_blank">{{sn_ct("exit-popup Prendre un rendez-vous", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid, edit:true)}}</a></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bootstrap -->
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" type="text/javascript"></script>
+
+    <!-- Exit plugin -->
+    <script type="text/javascript" src="/js/jquery.exit-modal.js"></script>
+
+<script>
+    //Submit exit popup form
+
+</script>
+
+    <script type="text/javascript">
+
+        $(document).ready(function(){
+            var timer;
+            var exitModalParams = {
+                numberToShown:                  1,
+                callbackOnModalShow:            function() {
+                    var counter = $('.exit-modal').data('exitModal').showCounter;
+                },
+                callbackOnModalShown:           function() {
+                    timer = setTimeout(function(){
+                        
+                    }, 4000)
+
+                },
+                callbackOnModalHide:            function() {
+                    clearTimeout(timer);
+                    setCookie("has_exited", "yes", 0.25);
+                }
+            }
+			
+			if(getCookie("has_exited") == ""){
+    			$('.exit-modal').exitModal(exitModalParams);
+			}
+			
+            if($('.exit-modal').data('exit-modal')) {
+                $(".destroyed-state").hide();
+                $(".initialized-state").show();
+            }			
+
+            $('.destroy-exit-modal').on("click", function(e){
+                e.preventDefault();
+                if($('.exit-modal').data('exit-modal')) {
+                    $(".initialized-state").hide();
+                    $(".destroyed-state").show();
+                }
+                $('.exit-modal').exitModal('hideModal');
+                $('.exit-modal').exitModal('destroy');
+                $(".initialized").hide();
+            });
+
+            $('.init-exit-modal').on('click', function(e){
+                e.preventDefault();
+                $('.exit-modal').exitModal(exitModalParams);
+                if($('.exit-modal').data('exit-modal')) {
+                    $(".destroyed-state").hide();
+                    $(".initialized-state").show();
+                }
+                
+            });
+
+            $('.close-exit-modal').on('click', function(e){
+                e.preventDefault();
+                $('.exit-modal').exitModal('hideModal');
+                
+            });
+
+           $('#continuebtn').click(function(){
+               var url = window.location.href;
+               location.hash = "#clientform";
+               $("textarea[name='description']").val($('#quick_desc').val());
+               
+               
+           });
+
+        });
+
+    </script>
+    
+    <script>
+        function getCookie(cname) {
+            var name = cname + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var ca = decodedCookie.split(';');
+            for(var i = 0; i <ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+            return "";
+        }
+        
+        function setCookie(cname, cvalue, exdays) {
+            var d = new Date();
+            d.setTime(d.getTime() + (exdays*24*60*60*1000));
+            var expires = "expires="+ d.toUTCString();
+            document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+        }
+        
+    </script>
+
+<!-- END Exit popup -->

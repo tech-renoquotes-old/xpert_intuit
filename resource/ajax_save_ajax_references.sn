@@ -1,0 +1,21 @@
+{{
+    /*
+        @title ajax_link_tracker
+        Description: Tracks which ip clicked on which link from which page
+        
+        @author mjodoin@soumissionrenovation.ca
+        
+        @version 1.0 2019/03/17
+
+    */
+    
+}}
+
+\{{
+cgidata = cgidata();
+
+if cgidata.save_ajax then
+    void sql("UPDATE sr_project SET description = '?' WHERE uid = '?' AND adwords_campaign = 'atonelabs.com'", cgidata.value, cgidata.uid);
+endif
+
+}}

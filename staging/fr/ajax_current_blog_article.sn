@@ -1,0 +1,18 @@
+{{
+cgidata = cgidata();
+
+    last_mod = sql(single:true, "SELECT sn_mdate FROM sed_blog_article WHERE uid = '?'", cgidata.last_mod);
+	d = last_mod.rows.sn_mdate;
+
+	date1 = date(datetime(format:'%Y-%m-%d %H:%M:%S'));
+	date2 = date(d);
+
+
+	diff_s = date1.unix - date2.unix;
+	diff_m = diff_s / 60;
+    
+    refresh_date =  sql("update sed_blog_article set last_mod = '?' where uid = '?'", last_mod.rows.sn_mdate, cgidata.last_mod);
+    
+	headers_out("X-resp", diff_m);
+    headers_out("X-last_mod_date", refresh_date);
+}}

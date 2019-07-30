@@ -1,0 +1,20 @@
+{{
+    /*
+        @title validator for contractor_suggestion
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-03
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        suggestion: 'required'
+    );  
+}}
+

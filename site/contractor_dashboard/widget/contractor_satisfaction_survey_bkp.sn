@@ -1,0 +1,904 @@
+<style>
+    input.input_file{
+        width:100%;
+        height:100%;
+        display:inline-block;
+        position:absolute;
+        left:0;
+        top:0;
+        opacity:0;
+        cursor:pointer;
+    }
+    a.input_file{
+        position:relative;
+    }
+    a.file{
+        text-decoration: none;
+        color:inherit;        
+    }
+    [data-validator-error]{
+        min-height:1em;
+        display:inline-block;
+    }
+
+    .navigator_table {
+        width: 100%;
+    }
+
+    
+    /* Styling pagination nav default links container*/
+    .navContainer {
+        width: auto%;
+        text-align: center;
+    }
+    
+    .custom_nav {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    
+    /* Styling pagination nav right next button link*/
+    .next_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: right;
+        padding-left: 30px;
+        padding-right: 10px;
+        background: url("/sn_uploads/icon/arrow_prev.png") no-repeat left;
+        background-size: 20px;
+        border: solid 1px #ccc;
+    }
+    
+    .next_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .next_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    
+    /* Styling pagination nav right button link*/
+    .right_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: left;
+        padding-left: 10px;
+        padding-right: 30px;
+        background: url("/sn_uploads/icon/arrow_next.png") no-repeat right;
+        background-size: 20px;
+        border: solid 1px #ccc;
+
+    }
+    
+    .right_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .right_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+
+    
+    /* Styling pagination nav standalone links*/
+    .linkStyle{
+        float:left;
+        min-width:30px;
+        height: 30px;
+        line-height: 30px;
+        border: solid 1px #ccc;
+        padding: 2px;
+    }
+    
+    .linkStyle:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    /* Styling pagination nav page interval links*/
+    .linkStyle a:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle a:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle a:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+
+    
+    /*Rating styles*/
+    .btn-grey{
+        background-color:#D8D8D8;
+    	color:#FFF;
+    }
+    .rating-block{
+    	background-color:#FAFAFA;
+    	border:1px solid #EFEFEF;
+    	padding:15px 15px 20px 15px;
+    	border-radius:3px;
+    }
+    .bold{
+    	font-weight:700;
+    }
+    .padding-bottom-7{
+    	padding-bottom:7px;
+    }
+    
+    .review-block{
+    	background-color:#FAFAFA;
+    	border:1px solid #EFEFEF;
+    	padding:15px;
+    	border-radius:3px;
+    	margin-bottom:5px;
+    }
+    
+    .review-block-pending{
+    	background-color:#f4e1d2;
+    	border:1px solid #EFEFEF;
+    	padding:15px;
+    	border-radius:3px;
+    	margin-bottom:5px;
+    	margin-top: 170px;
+    }
+    
+    .review-block-name{
+    	font-size:12px;
+    	font-weight:bold;
+    	margin:10px 0;
+    	font-style:italic;
+    }
+    .review-block-date{
+    	font-size:12px;
+    }
+    .review-block-rate{
+    	font-size:13px;
+    	margin-bottom:5px;
+    }
+    
+    .review-block-title{
+    	font-size:15px;
+    	font-weight:700;
+    	margin-bottom:5px;
+    }
+    .review-block-description{
+    	font-size:13px;
+    }   
+    
+    .review-block-response{
+    	margin-left:30px;
+    	margin-top:10px;
+    	color:#71390C;
+    	font-size: 13px;
+    } 
+    
+    .review-public-response{
+    	margin-left:30px;
+    	margin-top:10px;
+    	color:#71390C;
+    	font-size: 13px;
+    } 
+    
+    .response{
+        width:100%;
+        margin-bottom:10px;
+    }
+    
+    .response textarea{
+        background-color: #f4e1d2;
+        border: 0px #FAFAFA none;
+        width:100%;
+    } 
+    
+    .textzone{
+        display:inline-block;
+        min-height:10px;
+        min-width:40px;
+        max-width: 100%;
+        padding-left:5px;
+        padding-right:5px;
+    }
+
+
+
+</style>
+
+
+{{
+    /*
+        @title Client Satisfaction survey for contractors 
+        Description: This widget display and manage the list of client ratings.
+        
+        @author louis.jhonny@gmail.com
+        @version 1.0 2017-07-17
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+
+\{{
+    data = cgidata();
+    %include "/site/package/pagination.sn";
+
+    use extranet_user;
+    
+    res = sql(single:true,"select * from sr_contractor where active = 'yes' and uid = ?", extranet_user.uid);
+    contractor = res.rows;
+    
+    
+    query = "SELECT pc.uid, 
+                    DATE(accepted_date) as system_date, 
+                    pc.evaluation_date, 
+                    pc.uid_project, 
+                    pc.client_comment, 
+                    pc.client_satisfaction, 
+                    pc.contractor_reply, 
+                    pc.reply_date, 
+                    pc.comment_verified, 
+                    (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
+                    (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
+                    (select firstname from sr_client where uid = p.uid_client) as firstname 
+                    FROM sr_project_contractor pc INNER JOIN sr_project p on p.uid = pc.uid_project 
+                    WHERE pc.uid_contractor = '" .+ contractor.uid .+ "' 
+                    AND (pc.client_satisfaction <> '' OR pc.client_satisfaction IS NOT NULL)
+                    AND (pc.comment_verified = 'yes')
+                    ";
+                    
+    query2 = "SELECT  
+                    ps.sn_cdate as evaluation_date, 
+                    ps.uid_project, 
+                    ps.service_comment, 
+                    ps.service_rate, 
+                    ps.xpert_reply, 
+                    ps.xpert_reply_date, 
+                    ps.comment_verified,
+                    (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
+                    (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
+                    (select firstname from sr_client where uid = p.uid_client) as firstname 
+                    FROM xpert_project_survey ps 
+                    INNER JOIN sr_project p on p.uid = ps.uid_project 
+                    WHERE ps.winner = '" .+ contractor.uid .+ "' 
+                    AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL)
+                    AND (ps.comment_verified = 'yes')
+                    ";
+ 
+                
+    total_ratings = sql(query);
+
+                
+    query_pending = "SELECT pc.uid, 
+                    DATE(accepted_date) as system_date, 
+                    pc.evaluation_date, 
+                    pc.uid_project, 
+                    pc.client_comment, 
+                    pc.client_satisfaction, 
+                    pc.contractor_reply, 
+                    pc.reply_date, 
+                    pc.comment_verified, 
+                    (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
+                    (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
+                    (select firstname from sr_client where uid = p.uid_client) as firstname 
+                    FROM sr_project_contractor pc INNER JOIN sr_project p on p.uid = pc.uid_project
+                    WHERE pc.uid_contractor = '" .+ contractor.uid .+ "' 
+                    AND (pc.client_satisfaction <> '' OR pc.client_satisfaction IS NOT NULL)
+                    AND (pc.comment_verified = '' OR pc.comment_verified IS NULL)
+                    ORDER BY evaluation_date DESC, system_date DESC";
+                    
+    query_pending2 = "SELECT pc.uid, 
+                    ps.evaluation_date, 
+                    ps.uid_project, 
+                    ps.client_comment, 
+                    ps.client_satisfaction, 
+                    ps.contractor_reply, 
+                    ps.reply_date, 
+                    ps.comment_verified,
+                    (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
+                    (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
+                    (select firstname from sr_client where uid = p.uid_client) as firstname 
+                    FROM sr_project_contractor pc INNER JOIN sr_project p on p.uid = pc.uid_project
+                    WHERE ps.uid_contractor = '" .+ contractor.uid .+ "' 
+                    AND (ps.client_satisfaction <> '' OR ps.client_satisfaction IS NOT NULL)
+                    AND (ps.comment_verified = '' OR ps.comment_verified IS NULL)
+                    ORDER BY ps.evaluation_date DESC, ps.system_date DESC";                    
+    xquery_pending = sql(query_pending);
+    total_pendings = xquery_pending.nbrows;
+    
+    
+    //PAGINATION SETTINGS            
+    items_per_page = 12;
+    limit = 200;
+    if data.page > 0 then
+        page_index = data.page;
+    else
+        page_index = 1;
+    endif
+    offset = (page_index - 1) * items_per_page;
+    pg = new Pagination
+    (
+        items_per_page, // number of items to display per page
+        12,             // Number of links allowed per page. cannot be empty.
+        offset,         // offset to query 1 page at a time. cannot be empty.
+        query, // the main query used without sorting. cannot be empty
+        limit,
+        "evaluation_date DESC, reply_date DESC, system_date",      // Field to sort query from
+        "DESC",       // order by possible value are DESC,ASC (ASC if empty)
+        contractor.contact_lg // language to display navigation strings. (english if empty)
+    );
+    
+
+    
+    //Redraw query;
+    xquery = pg.newQuery();
+    
+    //calcul average rate for customer
+    total_rate = 0;
+    contractor.reviews = [];
+    contractor.pending_reviews = [];
+    c = 1;
+    f = 0;
+    
+    for t in total_ratings.rows do
+    	total_rate = total_rate + t.client_satisfaction;
+    endfor
+    
+     
+    //Already published satisfaction
+    for r in xquery.rows do
+    //display rating date. If not provided display project_contractor sn_mdate.
+    	if(r.evaluation_date ne "" && r.evaluation_date ne '0000-00-00') then
+    	    d = r.evaluation_date;
+    	else
+    		d = r.system_date;
+    	endif
+    		   
+    	push(contractor.reviews,{
+    	'rating': r.client_satisfaction, 
+    	'comment': r.client_comment, 
+    	'service': r.sname, 
+    	'city': r.city, 
+        'firstname': r.firstname, 
+    	'comment_date': d,
+    	'pc_uid': r.uid,
+    	'response': r.contractor_reply,
+    	'resp_date': r.reply_date,
+    	'verified': p.comment_verified
+    	});
+    endfor
+    		
+    if(total_ratings.nbrows != 0) then
+        contractor.avgRate = total_rate / total_ratings.nbrows;
+    else
+        contractor.avgRate = 0;
+    endif
+    
+    
+    //Already published satisfaction
+    for p in xquery_pending.rows do
+    //display rating date. If not provided display project_contractor sn_mdate.
+    	if(p.evaluation_date ne "" && p.evaluation_date ne '0000-00-00') then
+    	    d = p.evaluation_date;
+    	else
+    		d = p.system_date;
+    	endif
+    		   
+    	push(contractor.pending_reviews,{
+    	'rating': p.client_satisfaction, 
+    	'comment': p.client_comment, 
+    	'service': p.sname, 
+    	'city': p.city, 
+        'firstname': p.firstname, 
+    	'comment_date': d,
+    	'pc_uid': p.uid,
+    	'response': p.contractor_reply,
+    	'resp_date': p.reply_date,
+    	'verified': p.comment_verified
+    	});
+    endfor
+
+
+//language
+no_comment_txt = ("{{lg.rows.lg}}" eq 'fr')? 'aucun commentaire': 'No comment';
+save_txt = ("{{lg.rows.lg}}" eq 'fr')? 'sauvegarder': 'save';
+edit_txt = ("{{lg.rows.lg}}" eq 'fr')? 'modifier': 'edit';
+reply_txt = ("{{lg.rows.lg}}" eq 'fr')? 'répondre': 'reply';
+delete_txt = ("{{lg.rows.lg}}" eq 'fr')? 'éffacer': 'delete';
+wrote_on_txt = ("{{lg.rows.lg}}" eq 'fr')? 'à écris le': 'wrote on';
+contractor_answered_on_txt = ("{{lg.rows.lg}}" eq 'fr')? "répondu le": "answered on";
+dialog_save_txt = ("{{lg.rows.lg}}" eq 'fr')? "êtes-vous sure d'envoyer cette réponse": "are you sure you want to send this answer";
+dialog_delete_txt = ("{{lg.rows.lg}}" eq 'fr')? "êtes-vous sure de cette suprimer cette réponse?": "are you sure you want to delete this answer?";
+avg_user_rating = ("{{lg.rows.lg}}" eq 'fr')? "Moyenne du sondage": "Average user rating";
+published_reviews_txt = ("{{lg.rows.lg}}" eq 'fr')? "Sondages publiques": "Public reviews";
+pending_reviews_txt = ("{{lg.rows.lg}}" eq 'fr')? "Sondages en attente": "pending reviews";
+
+}}
+
+\{{if xquery.nbrows > 0 then}}
+	    <div class="col-sm-6">
+			<div class="rating-block">
+			    <h4>Average user rating</h4>
+    		    <h2 class="bold padding-bottom-7">\{{(strpos(contractor.avgRate, '.') > 0)? substr(contractor.avgRate,0,strpos(contractor.avgRate,'.') + 2): contractor.avgRate}}<small>/ 5</small></h2>
+    					
+				\{{c=1}}
+				\{{while (c <= trunc(contractor.avgRate)) do}}
+    				<div class="btn btn-warning btn-sm" aria-label="Left Align">
+    					<span class="glyphicon glyphicon-star" ></span>
+    				</div>
+				\{{c++}}
+				\{{endw}}
+					
+				\{{for (f = 0; f < 5 - trunc(contractor.avgRate); f++) do}}
+        			<div class="btn btn-default btn-grey btn-sm" aria-label="Left Align">
+        				<span class="glyphicon glyphicon-star" ></span>
+        			</div>
+				\{{endfor}}
+			</div>
+	        <br />
+	        
+
+    		<div class="review-block">
+            <h4>\{{published_reviews_txt}} <span class='reviews_count' >(\{{total_ratings.nbrows}})</span></h4>
+            <br />
+            
+    	       <div class="container-fluid">
+                    \{{pg.previous(data.start, page_index, "next_arr");}}
+                    \{{pg.navigation(data.start, page_index, "linkStyle");}}
+                    \{{pg.next(data.start, page_index, "right_arr");}}
+                </div>
+                
+                <hr />
+        		    <br>
+        	    \{{for rates in contractor.reviews do}}
+        		    <div class="review-block-rate">
+        		    <div class="review-block-name"><h5>\{{rates.service}} / \{{rates.city}}</h5></div>
+    
+    					\{{r1=1}}
+    					\{{while (r1 <= rates.rating) do}}
+    						<div class="btn btn-warning btn-xs" aria-label="Left Align">
+    							<span class="glyphicon glyphicon-star" ></span>
+    						</div>
+    						\{{r1++}}
+    					\{{endw}}
+    					
+    					\{{for (f = 0; f < 5 - rates.rating; f++) do}}
+    						<div class="btn btn-default btn-grey btn-xs" aria-label="Left Align">
+    							<span class="glyphicon glyphicon-star" ></span></span>
+    						</div>
+    					\{{endfor}}
+        			</div>
+            		<div class="review-block-date"><h6><img src='/sn_uploads/icon/user_icon_black.png' width='30px'/>\{{rates.firstname}} \{{wrote_on_txt}} \{{substr(rates.comment_date,0,10)}}:</h6></div>
+        			\{{if(rates.comment ne "") then}}
+        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{rates.comment}}<font color='#00739f' size='4'>»</font></div>
+            			
+            			<div class='review-block-response'>
+            			    <div class="response" id='\{{rates.pc_uid}}'>
+                			    <img src='/sn_uploads/icon/user-blue-icon.png' width='30px'/>
+                			    <label>\{{contractor_answered_on_txt}} \{{rates.resp_date}}:</label>
+                			    <br>
+            			    «<div onblur='cancel_comment("\{{rates.pc_uid}}")' onfocus='save_comment("\{{rates.pc_uid}}")' name="textzone" class="textzone" id='textzone_\{{rates.pc_uid}}' contentEditable="false"/>\{{rates.response}}</div>»
+                			    <input type='hidden' value="\{{rates.pc_uid}}"/>
+            	            </div>
+            	            
+        	            \{{if (rates.response ne "") then}}
+                            &nbsp;<img onclick='handle_comments("img_\{{rates.pc_uid}}","review_count")' name='img_action' id='img_\{{rates.pc_uid}}' class='img_action' src='/sn_uploads/icon/comment-edit.png' width='30px'/>
+                            &nbsp;<label class='action' id='action_\{{rates.pc_uid}}' for='img_action' onclick='handle_comments("img_\{{rates.pc_uid}}")'>\{{edit_txt}}</label>
+                        \{{else}}
+                            &nbsp;<img onclick='handle_comments("img_\{{rates.pc_uid}}","review_count")' name='img_action' id='img_\{{rates.pc_uid}}' class='img_action' src='/sn_uploads/icon/add-comment-icon.png' width='30px'/>
+                            &nbsp;<label class='action' id='action_\{{rates.pc_uid}}' onclick='handle_comments("img_\{{rates.pc_uid}}","review_count")'>\{{reply_txt}}</label>
+                        \{{endif}}
+                             
+                            <span class= 'cancel' id='cncl_\{{rates.pc_uid}}' style="display:none">
+                            &nbsp;<img onclick='handle_comments("cancel_\{{rates.pc_uid}}")' name='img_cancel' id='cancel_\{{rates.pc_uid}}' src='/sn_uploads/icon/cancel_icon.png' width='20px'/>
+                            &nbsp;<label for='img_cancel' onclick='handle_comments("cancel_\{{rates.pc_uid}}","review_count")'>\{{delete_txt}}</label>
+                            </span>
+                            
+                        </div>
+        			
+        			\{{else}}
+        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{no_comment_txt}}<font color='#00739f' size='4'>»</font></div>
+        			\{{endif}}
+        			<hr />
+        	    \{{endfor}}
+        	    
+                <div class="container-fluid">
+                    \{{pg.previous(data.start, page_index, "next_arr");}}
+                    \{{pg.navigation(data.start, page_index, "linkStyle");}}
+                    \{{pg.next(data.start, page_index, "right_arr");}}
+                </div>
+    	    
+			</div>
+		</div>
+
+\{{else}}
+    <div class="col-sm-6">
+        <div class="alert alert-info">
+            {{sn_ct("contractor_satisfaction_survey Vous n'avez présentement aucun commentaire publié", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+    </div>
+\{{endif}}
+
+
+\{{if xquery_pending.nbrows > 0 then}}
+	    <div class="col-sm-6">
+    		<div class="review-block-pending">
+            <h4>\{{pending_reviews_txt}} <span class='pending_reviews_count' >(\{{total_pendings}})</span></h4>
+                <hr />
+        	    \{{for rates in contractor.pending_reviews do}}
+        		    <div class="review-block-rate">
+        		    <div class="review-block-name"><h5>\{{rates.service}} / \{{rates.city}}</h5></div>
+    
+    					\{{r1=1}}
+    					\{{while (r1 <= rates.rating) do}}
+    						<div class="btn btn-warning btn-xs" aria-label="Left Align">
+    							<span class="glyphicon glyphicon-star" ></span>
+    						</div>
+    						\{{r1++}}
+    					\{{endw}}
+    					
+    					\{{for (f = 0; f < 5 - rates.rating; f++) do}}
+    						<div class="btn btn-default btn-grey btn-xs" aria-label="Left Align">
+    							<span class="glyphicon glyphicon-star" ></span></span>
+    						</div>
+    					\{{endfor}}
+        			</div>
+            		<div class="review-block-date"><h6><img src='/sn_uploads/icon/user_icon_black.png' width='30px'/>\{{rates.firstname}} \{{wrote_on_txt}} \{{substr(rates.comment_date,0,10)}}:</h6></div>
+        			\{{if (rates.comment ne "") then}}
+        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{rates.comment}}<font color='#00739f' size='4'>»</font></div>
+        			<div class='review-public-response'>
+        			    <div class="response" id='\{{rates.pc_uid}}'>
+            			    <img src='/sn_uploads/icon/user-blue-icon.png' width='30px'/>
+            			    <label>\{{contractor_answered_on_txt}} \{{rates.resp_date}}:</label>
+            			    <br>
+            			    «<div onblur='cancel_comment("\{{rates.pc_uid}}")' onfocus='save_comment("\{{rates.pc_uid}}")' name="textzone" class="textzone" id='textzone_\{{rates.pc_uid}}' contentEditable="false"/>\{{rates.response}}</div>»
+            			    <input type='hidden' value="\{{rates.pc_uid}}"/>
+        	            </div>
+        	            
+        	            \{{if (rates.response ne "") then}}
+                            &nbsp;<img onclick='handle_comments("img_\{{rates.pc_uid}}", "pending_review_count")' name='img_action' id='img_\{{rates.pc_uid}}' class='img_action' src='/sn_uploads/icon/comment-edit.png' width='30px'/>
+                            &nbsp;<label class='action' id='action_\{{rates.pc_uid}}' for='img_action' onmousedown='handle_comments("img_\{{rates.pc_uid}}","pending_review_count")'>\{{edit_txt}}</label>
+                        \{{else}}
+                            &nbsp;<img onclick='handle_comments("img_\{{rates.pc_uid}}","pending_review_count")' name='img_action' id='img_\{{rates.pc_uid}}' class='img_action' src='/sn_uploads/icon/add-comment-icon.png' width='30px'/>
+                            &nbsp;<label class='action' id='action_\{{rates.pc_uid}}' onmousedown='handle_comments("img_\{{rates.pc_uid}}","pending_review_count")'>\{{reply_txt}}</label>
+                        \{{endif}}
+                         
+                            <span class= 'cancel' id='cncl_\{{rates.pc_uid}}' style="display:none">
+                            &nbsp;<img onclick='handle_comments("cancel_\{{rates.pc_uid}}")' name='img_cancel' id='cancel_\{{rates.pc_uid}}' src='/sn_uploads/icon/cancel_icon.png' width='20px'/>
+                            &nbsp;<label for='img_cancel' onclick='handle_comments("cancel_\{{rates.pc_uid}}","pending_review_count")'>\{{delete_txt}}</label>
+                            </span>
+                        
+                    </div>
+        			\{{else}}
+        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{no_comment_txt}}<font color='#00739f' size='4'>»</font></div>
+        			\{{endif}}
+        			<hr />
+        			
+        	    \{{endfor}}
+        	    
+			</div>
+		</div>
+		
+\{{else}}  
+    <div class="col-sm-6">
+        <div class="alert alert-info">
+            {{sn_ct("contractor_satisfaction_survey Vous n'avez présentement aucun commentaire en cours", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+    </div>
+\{{endif}}
+
+
+<script>
+var textzone = "";
+
+$('.review-block-response').find('.response').each(function(){
+    resp = $('#' + this.id);
+        if(resp.find('.textzone').text().length == 0){
+            resp.hide();
+        }else{
+            resp.show();
+            resp.parent().find('.cancel').show();
+        }
+});
+
+$('.review-public-response').find('.response').each(function(){
+    resp = $('#' + this.id);
+   
+        if(resp.find('.textzone').text() == ""){
+            resp.hide();
+        }else{
+            resp.show();
+            resp.parent().find('.cancel').show();
+        }
+});
+
+function save_comment(zone){
+    textzone = $('#textzone_' + zone).text();
+}
+
+function cancel_comment(zone){
+    if(textzone == ""){
+        if(textzone != $('#textzone_'+zone).text()){
+            handle_comments('img_' + zone, '');
+
+        }else{
+            $('#' + zone).hide();
+            $('#img_' + zone).attr('src', '/sn_uploads/icon/add-comment-icon.png');
+            $('#action_' + zone).html('\{{reply_txt}}');
+        }
+    }else{
+        if(textzone != $('#textzone_'+zone).text()){
+            $('#img_' + zone).click();
+        }else{
+            $('#img_' + zone).attr('src', '/sn_uploads/icon/comment-edit.png');
+            $('#action_' + zone).html('\{{edit_txt}}');
+            $('#textzone_' + zone).attr('contentEditable', 'false');
+            $('#textzone_' + zone).css("background-color","");
+            $('#cncl_' + zone).show();
+        }
+    }
+}
+
+function handle_comments(zone, list){
+    ctrl = $('#' + zone);
+    var action = $('#' + zone).attr('src');
+    var d = new Date();
+    var month = d.getMonth()+1;
+    var day = d.getDate();
+    var year = d.getFullYear();
+    var today = year + '-' +
+        (month<10 ? '0' : '') + month + '-' +
+        (day<10 ? '0' : '') + day;
+    
+     //Answer an existing comment   
+    if(action == "/sn_uploads/icon/add-comment-icon.png"){
+        ctrl.attr('src', '/sn_uploads/icon/check-icon.png');
+        ctrl.closest('div').find('.action').html('\{{save_txt}}');
+        ctrl.closest('div').find('.response').find('label').html("contractor replies on " + today + ":");
+        ctrl.closest('div').find('.response').show();
+        ctrl.closest('div').find('.response').find('.textzone').attr('contentEditable', 'true');
+        ctrl.closest('div').find('.response').find('.textzone').css("background-color","#ffbb89");
+        ctrl.closest('div').find('.response').find('.textzone').focus();
+
+
+        
+     //Saving a response by clicking the green check button   
+    }else if(action == "/sn_uploads/icon/check-icon.png"){
+        var reply = ctrl.closest('div').find('.response').find('.textzone').text();
+        var uid = ctrl.closest('div').find('.response').find('input').val();
+        
+        $('<div></div>').appendTo('body')
+          .html("<div><h6>\{{dialog_save_txt}}</h6></div>")
+          .dialog({
+              modal: true, title: 'message', zIndex: 10000, autoOpen: true,
+              width: 'auto', resizable: false,
+              buttons: {
+                  Yes: function () {
+                        $.ajax({
+                            url: "{{sn_pages('ajax_contractor_reply', lg.rows.lg, table:'ressources')}}",
+                            data: {"pc_uid":uid, "response":reply, "confirm":'yes',"action":'edit'},
+                            type: "POST",
+                            success: function(data, statusText, xhr) {
+                                var res_save = xhr.getResponseHeader("X-save_reply_success");
+                                res_save = res_save.decode();
+                                
+                                if (res_save){
+                                    ctrl.closest('div').find('.response').find('.textzone').html(res_save);
+                                    ctrl.closest('div').find('.cancel').show();
+                                    ctrl.attr('src', '/sn_uploads/icon/comment-edit.png');
+                                    ctrl.closest('div').find('.action').html('\{{edit_txt}}');
+                                    ctrl.closest('div').find('.response').find('.textzone').attr('contentEditable', 'false');
+                                    ctrl.closest('div').find('.response').find('.textzone').css("background-color","");
+                                }
+                            }
+                        });
+                
+                      $(this).dialog("close");
+                  },
+                  No: function () {
+                        $.ajax({
+                            url: "{{sn_pages('ajax_contractor_reply', lg.rows.lg, table:'ressources')}}",
+                            data: {"pc_uid":uid, "response":reply, "confirm":'no', "action":'edit'},
+                            type: "POST",
+                            success: function(data, statusText, xhr) {
+                                var res_cancel = xhr.getResponseHeader("X-cancel_reply_success");
+                                
+                                if (res_cancel){
+                                    ctrl.closest('div').find('.response').find('.textzone').html(res_cancel);
+                                }
+                            }
+                        });
+                        
+                        if(textzone == ""){;
+                            ctrl.attr('src', '/sn_uploads/icon/add-comment-icon.png');
+                            ctrl.closest('div').find('.action').html('\{{reply_txt}}');
+                            ctrl.closest('div').find('.response').find('.textzone').html(textzone);
+                            ctrl.closest('div').find('.response').find('.textzone').css("background-color","");
+                            ctrl.closest('div').find('.response').hide();
+                        }else{
+                            ctrl.closest('div').find('.cancel').show();
+                            ctrl.attr('src', '/sn_uploads/icon/comment-edit.png');
+                            ctrl.closest('div').find('.action').html('\{{edit_txt}}');
+                            ctrl.closest('div').find('.response').find('.textzone').attr('contentEditable', 'false');
+                            ctrl.closest('div').find('.response').find('.textzone').css("background-color","");
+                        }
+                        
+                      $(this).dialog("close");
+                  }
+              },
+              close: function (event, ui) {
+                  $(this).remove();
+              }
+        });
+
+     //Saving a response by clicking the green check button   
+    }else if(action == "/sn_uploads/icon/comment-edit.png"){
+        ctrl.attr('src', '/sn_uploads/icon/check-icon.png');
+        ctrl.closest('div').find('.cancel').hide();
+        ctrl.closest('div').find('.action').html('\{{save_txt}}');
+        ctrl.closest('div').find('.response').find('.textzone').attr('contentEditable', 'true');
+        ctrl.closest('div').find('.response').find('.textzone').css("background-color","#ffbb89")
+        ctrl.closest('div').find('.response').find('.textzone').focus();
+        
+        
+    }else if(action == "/sn_uploads/icon/cancel_icon.png"){
+        var reply = ctrl.closest('div').find('.response').find('.textzone').text();
+        var uid = ctrl.closest('div').find('.response').find('input').val();
+        
+        $('<div></div>').appendTo('body')
+          .html('<div><h6>\{{dialog_delete_txt}}</h6></div>')
+          .dialog({
+              modal: true, title: 'message', zIndex: 10000, autoOpen: true,
+              width: 'auto', resizable: false,
+              buttons: {
+                  Yes: function () {
+                        $.ajax({
+                            url: "{{sn_pages('ajax_contractor_reply', lg.rows.lg, table:'ressources')}}",
+                            data: {"pc_uid":uid, "response":reply, "confirm":'yes', "action":'delete'},
+                            type: "POST",
+                            success: function(data, statusText, xhr) {
+                                if (xhr.getResponseHeader("X-delete_success")){
+                                    ctrl.closest('div').find('.response').hide();
+                                    ctrl.closest('div').find('.response').parent().find('.img_action').attr('src', '/sn_uploads/icon/add-comment-icon.png');
+                                    ctrl.closest('div').find('.response').parent().find('.action').html('reply');
+                                    ctrl.closest('div').find('.response').find('.textzone').html("");
+                                    ctrl.parent().hide();
+                                    
+                                    
+                                    
+                                }
+                            }
+                        });
+                
+                      $(this).dialog("close");
+                  },
+                  No: function () {
+                        $.ajax({
+                            url: "{{sn_pages('ajax_contractor_reply', lg.rows.lg, table:'ressources')}}",
+                            data: {"pc_uid":uid, "response":reply, "confirm":'no', "action":'delete'},
+                            type: "POST",
+                            success: function(data, statusText, xhr) {
+                                if (xhr.getResponseHeader("X-cancel_delete-success")){
+                                    ctrl.closest('div').find('.response').hide();
+                                    
+                                    ctrl.parent().find('.action').show();
+                                    ctrl.closest('div').find('.action').html('edit');
+                                    alert(ctrl.find('review_count').html());
+                                }
+                            }
+                        });
+                        
+                      $(this).dialog("close");
+                  }
+              },
+              close: function (event, ui) {
+                  $(this).remove();
+              }
+        });
+    }else{
+    }
+    
+}
+</script>
+
+<script>
+        String.prototype.encode = function(encoding) {
+            var result = "";
+         
+            var s = this.replace(/\r\n/g, "\n");
+         
+            for(var index = 0; index < s.length; index++) {
+                var c = s.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                }
+                else if((c > 127) && (c < 2048)) {
+                    result += String.fromCharCode((c >> 6) | 192);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+                else {
+                    result += String.fromCharCode((c >> 12) | 224);
+                    result += String.fromCharCode(((c >> 6) & 63) | 128);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+            }
+         
+            return result;
+        };
+         
+         
+        String.prototype.decode = function(encoding) {
+            var result = "";
+         
+            var index = 0;
+            var c = c1 = c2 = 0;
+         
+            while(index < this.length) {
+                c = this.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                    index++;
+                }
+                else if((c > 191) && (c < 224)) {
+                    c2 = this.charCodeAt(index + 1);
+                    result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                    index += 2;
+                }
+                else {
+                    c2 = this.charCodeAt(index + 1);
+                    c3 = this.charCodeAt(index + 2);
+                    result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                    index += 3;
+                }
+            }
+         
+            return result;
+        };
+
+</script>

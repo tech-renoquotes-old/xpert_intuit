@@ -1,0 +1,26 @@
+{{
+    /*
+    	@title	    sed_blog_article_detail
+    	Description Implement widget sed_blog_article_detail. This widget uses use views.
+        @author     madupuis@sednove.com
+    	@version    1.0 2016-07-31 16:01:13 madupuis@sednove.com  Creation
+
+    */
+
+    use widget;
+    
+    if widget.rows.select_view ne "" && widget.rows.select_view != 0 then
+        view_uid = widget.rows.select_view;
+    else
+        views = sql(single:true, "SELECT uid FROM sn_widgets_view WHERE widget = '?' LIMIT 1", widget.rows.uid);
+        if views.nbrows > 0 then
+            view_uid = views.rows.uid;
+            void sql("UPDATE sn_widgets SET select_view = '?' WHERE uid = '?'", view_uid, widget.rows.uid);
+        else
+            sn_ct("No view available");
+        endif
+    endif
+  
+    view = sql(single:true,"SELECT code FROM sn_widgets_view WHERE uid = '?'", view_uid);
+    include(view.rows.code);
+}}

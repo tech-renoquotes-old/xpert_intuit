@@ -1,0 +1,182 @@
+{{%include '/site/package/all.sn';}}
+\{{// Every day at 9h00, 12h00, 15h00, 17h30
+     // @version 1.1    language support
+     // @version 1.2    Test AB
+
+//This is the 1st email
+//test A/B.  The ids that are even will get version A, the odd ids will get version B
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name, 
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE tbl_appels_entrepreneurs.Statut = 2 AND (idtbl_appels_entrepreneurs % 2) = 0
+    ") do
+
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 13 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+    if (appel_entrepreneur.rows.age < 96) then
+        automail::contractorProfileReminder1(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    endif
+    
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 13 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name, 
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE tbl_appels_entrepreneurs.Statut = 2 AND (idtbl_appels_entrepreneurs % 2) > 0
+    ") do
+
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 13 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+    if (appel_entrepreneur.rows.age < 96) then
+        automail::contractorProfileReminder1B(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    endif
+    
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 13 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+//end of the 1st email
+
+//This is the 2nd email sent after 4 days
+//test A/B.  The ids that are even will get version A, the odd ids will get version B
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name,  
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE   TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) > 96
+            AND tbl_appels_entrepreneurs.Statut = 13 AND (idtbl_appels_entrepreneurs % 2) = 0
+    ") do
+    //  email can update the statut
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 14 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+    if (appel_entrepreneur.rows.age < 192) then
+        automail::contractorProfileReminder2(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    endif
+    
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 14 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name,  
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE   TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) > 96
+            AND tbl_appels_entrepreneurs.Statut = 13 AND (idtbl_appels_entrepreneurs % 2) > 0
+    ") do
+    //  email can update the statut
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 14 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+    if (appel_entrepreneur.rows.age < 192) then
+        automail::contractorProfileReminder2B(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    endif
+    
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 14 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+//end of the 2nd email
+
+//This is the 3rd email sent after 14 days
+//test A/B.  The ids that are even will get version A, the odd ids will get version B
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name,  
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE   TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) > 336
+            AND tbl_appels_entrepreneurs.Statut = 14 AND (idtbl_appels_entrepreneurs % 2) = 0
+            order by age
+    ") do
+    automail::contractorProfileReminder3(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 15 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name,  
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE   TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) > 336
+            AND tbl_appels_entrepreneurs.Statut = 14 AND (idtbl_appels_entrepreneurs % 2) > 0
+            order by age
+    ") do
+    automail::contractorProfileReminder3B(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 15 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+//end of the 3rd email
+
+//email for a much later reminder (eg: 3-6 months later)
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                Personne_Contact as name,  
+                languages,
+                DATE_FORMAT(Date_Qualifie, '%M') as month
+        FROM tbl_appels_entrepreneurs 
+        WHERE tbl_appels_entrepreneurs.Statut = 21
+    ") do
+    if (appel_entrepreneur.rows.languages eq "fr") then
+        if (appel_entrepreneur.rows.month) eq "January" then
+            appel_entrepreneur.rows.month = "janvier";
+        elseif (appel_entrepreneur.rows.month) eq "February" then
+            appel_entrepreneur.rows.month = "février";
+        elseif (appel_entrepreneur.rows.month) eq "March" then
+            appel_entrepreneur.rows.month = "mars";
+        elseif (appel_entrepreneur.rows.month) eq "April" then
+            appel_entrepreneur.rows.month = "avril";
+        elseif (appel_entrepreneur.rows.month) eq "May" then
+            appel_entrepreneur.rows.month = "mai";
+        elseif (appel_entrepreneur.rows.month) eq "June" then
+            appel_entrepreneur.rows.month = "juin";
+        elseif (appel_entrepreneur.rows.month) eq "July" then
+            appel_entrepreneur.rows.month = "juillet";
+        elseif (appel_entrepreneur.rows.month) eq "August" then
+            appel_entrepreneur.rows.month = "août";
+        elseif (appel_entrepreneur.rows.month) eq "September" then
+            appel_entrepreneur.rows.month = "septembre";
+        elseif (appel_entrepreneur.rows.month) eq "October" then
+            appel_entrepreneur.rows.month = "octobre";
+        elseif (appel_entrepreneur.rows.month) eq "November" then
+            appel_entrepreneur.rows.month = "novembre";
+        elseif (appel_entrepreneur.rows.month) eq "December" then
+            appel_entrepreneur.rows.month = "décembre";
+        endif
+    endif
+    automail::contractorProfileReminder4(appel_entrepreneur.rows.email, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages, appel_entrepreneur.rows.month);
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 22 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+
+
+//This is to send an email as a txt to the cellphone of the contractor.  THIS IS CURRENTLY NOT WORKING
+for appel_entrepreneur sql("
+        SELECT  idtbl_appels_entrepreneurs as id,
+                Courriel as email,
+                email_cell,
+                Personne_Contact as name, 
+                languages,
+                TIMESTAMPDIFF(HOUR, Date_Qualifie, now()) as age
+        FROM tbl_appels_entrepreneurs 
+        WHERE tbl_appels_entrepreneurs.Statut = 18
+    ") do
+    
+//    void insert(table:'sr_log', fields:{'type':'email  test18-1','uid_project_contractor':appel_entrepreneur.rows.id, 'email_to': appel_entrepreneur.rows.email_cell  ,'description':'email contractorProfileRemindercell','value': appel_entrepreneur.rows.name});
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 19 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+    if (appel_entrepreneur.rows.age < 96) then
+        automail::contractorProfileReminder_cell(appel_entrepreneur.rows.email_cell, appel_entrepreneur.rows.name, appel_entrepreneur.rows.id, appel_entrepreneur.rows.languages);
+    endif
+    
+    void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 19 WHERE idtbl_appels_entrepreneurs = '?'", appel_entrepreneur.rows.id);
+endfor
+
+}}

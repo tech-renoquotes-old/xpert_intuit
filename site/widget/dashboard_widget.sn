@@ -1,0 +1,683 @@
+<meta name="robots" content="noindex">
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+    use extranet_user;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+    //enlever_entrepreneur - pour enlever un projet/entrepreneur de project_contractor.
+    //verification - Requêtes de vérification pour les entrepreneurs
+}}
+
+\{{
+
+cgidata = cgidata();
+
+fullname=user.firstname .+ " " .+ user.lastname;
+
+if length(fullname) > 2 then
+
+    }}
+    
+    {{if lg.rows.lg eq 'fr' then}}
+    <a href="/widgets/en/dashboard_widget.snc">Go to the English version</a><br>
+    {{else}}
+    <a href="/widgets/fr/dashboard_widget.snc">Aller à la version en français</a><br>
+    {{endif}}
+    
+    <style>
+        .cs .nomargin{
+            margin:0;
+        }
+        .dashboard_group{
+            margin:-7px -7px 13px -7px;
+            clear:both;
+        }
+        .dashboard_group:after{
+            visibility: hidden;
+            display: block;
+            font-size: 0;
+            content: " ";
+            clear: both;
+            height: 0;
+        }
+        .dashboard_group .dashboard_item_container{
+            width:20%;
+            float:left;
+            padding:7px;
+        }
+        .dashboard_group .dashboard_item_ratio{
+            border-radius:5px;
+            border-bottom-right-radius:0;
+            border-bottom-left-radius:0;
+            padding-bottom:42%;
+            width:100%;
+            position:relative;
+            
+            border-bottom:3px #00517e solid;
+            background-repeat:no-repeat;
+            background-position:10px center;
+            background-size:auto 70%;
+        }
+        
+        .dashboard_group .dashboard_item_position{
+            border-radius:5px;
+            border-bottom-right-radius:0;
+            border-bottom-left-radius:0;
+            position:absolute;
+            width:100%;
+            height:100%;
+            top:0;
+            left:0;
+            background-color:#dfdfdf;
+            background-repeat:no-repeat;
+            background-position:10px center;
+            background-size:auto 70%;
+        }
+        
+        .dashboard_group .dashboard_item_ratio:hover{
+            border-bottom:3px #002a41 solid;
+            background-color:#00517e;
+        }
+        .dashboard_group .dashboard_item_ratio:hover a{
+            color:#d9efef;
+        }
+        .dashboard_group .dashboard_item_ratio:hover .dashboard_item_position{
+            background:none!important;
+        }
+        
+        .dashboard_group .dashboard_item_position .dtable{
+            width:100%;
+            height:100%;
+            display:table;
+            float:right;
+        }
+        .dashboard_group .dashboard_item_position .dtable a{
+            display:table-cell;
+            vertical-align:middle;
+            text-align:center;
+            padding:0 15px;
+            text-decoration:none;
+            font-size:14px;
+            font-weight:bold;
+            padding-left:35%;
+        }
+        .pull-right-md{
+            float:right;
+        }
+        .cs .big_text{
+            font-size:24px;
+            color:#737672;
+            margin:5px 0;
+        }
+        .cs .med_text{
+            font-size:18px;
+        }
+        .cs .dashboard_comment{
+            margin-top:30px;
+        }
+        .cs .dashboard_comment h2{
+            margin:0 0 15px 0;
+        }
+        @media(max-width:991px){
+            .pull-right-md{
+                float:none;
+            }
+        }
+        
+        @media (max-width:768px){
+            .dashboard_group .dashboard_item_container{
+                width:50%;
+            }
+            .dashboard_group .dashboard_item_ratio{
+                padding-bottom:20%;
+            }
+            .dashboard_group .dashboard_item_position .dtable{
+                width:100%;
+            }
+            .dashboard_group .dashboard_item_position .dtable a{
+                padding-left:60px;
+            }
+        }
+        @media (max-width:640px){
+            .dashboard_group .dashboard_item_ratio{
+                padding-bottom:0;
+                height:70px;
+            }
+            .dashboard_group .dashboard_item_container{
+                width:100%;
+                float:none;
+            }
+        }
+    </style>
+    <h3>Intéressants</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=verification_hebdo">
+                            {{sn_ct("Vérification hebdo")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=top_buyers">
+                            {{sn_ct("Top acheteurs")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=revenus_7days">
+                            {{sn_ct("Ventes récentes par jour")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=real_revenus_7days">
+                            {{sn_ct("Transactions récentes par jour")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=revenues_province">
+                            {{sn_ct("Revenus par province")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=results_per_week">
+                            {{sn_ct("Résultats par semaine")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=results_per_region">
+                            {{sn_ct("Résultats par région")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=contractors_owing_balance">
+                            {{sn_ct("Qui doit de l'argent")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3>Entrepreneurs</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/{{lg.rows.lg}}/stats_contractors.snc">
+                            {{sn_ct("Stats entrepreneur + suivi")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=verification">
+                            {{sn_ct("Vérification des paramètres d'entrepreneurs")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=good_contractors">
+                            {{sn_ct("Trouver des bons entrepreneurs pour un service + territoire")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=add_service">
+                            {{sn_ct("Gérer les demandes d'ajout de service")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=new_contractors">
+                            {{sn_ct("Les nouvelles inscriptions d'entrepreneurs")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=search_contractor">
+                            {{sn_ct("Chercher un entrepreneur")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=contractor_list">
+                            {{sn_ct("Liste d'entrepreneur pour un service/territoire")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=omar_sales">
+                            {{sn_ct("Vente de projet de 50$+ par Omar")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=search_contractor_potential">
+                            {{sn_ct("Recherche entrepreneur centrale")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=new_contractors_region">
+                            {{sn_ct("Inscriptions par région dernier 14 jours")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=contractors_region">
+                            {{sn_ct("Nombre d'entrepreneur par région")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=new_contractors_week">
+                            {{sn_ct("Inscription d'entrepreneurs par mois depuis le début")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=provider_list">
+                            {{sn_ct("Liste des experts vérifiés et actifs")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    
+    <h3>Crédits</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/stats_credit.snc">
+                            {{sn_ct("Gestion des crédits")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <h3>Clients</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=elise">
+                            {{sn_ct("Suivi de gestion client")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=verify_project&activated_by=EliseS">
+                            {{sn_ct("Les dernieres projets qualifiés pour une personne spécifique (par défaut = Élise)")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=search_client">
+                            {{sn_ct("Chercher un client")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/complaints_followup.snc">
+                            {{sn_ct("Gestion des plaintes")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=stats_complaints">
+                            {{sn_ct("Stats des plaintes")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=satisfaction_survey">
+                            {{sn_ct("Sondage de satisfaction")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=new_projects_non_activated">
+                            {{sn_ct("Projet non-activé de la veille")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=campaign_adwords&campaign=1690785728">
+                            {{sn_ct("campaign_adwords")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <h3>Stats de vente</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=omar">
+                            {{sn_ct("nombre de projet pour un service et territoire pour une période de temps")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=vente_par_service">
+                            {{sn_ct("Nombre d'entrepreneur par projet pour un service et pendant une période spécifique")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=resultat_sous_region_1_an&time=30">
+                            {{sn_ct("Nombre de projet par région et moyenne d'entrepreneur par projet.  Pour les 30 derniers jours")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=contractor_region_service">
+                            {{sn_ct("Nombre d'entrepreneur par région et service")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=sales_service_region">
+                            sales_service_region
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    
+    <h3>Actions</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=enlever_entrepreneur">
+                            {{sn_ct("pour enlever un entrepreneur pour pas qu'il ne reçoive un projet + ")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=sondage">
+                            {{sn_ct("Envoyer un sondage à un client + répondre à un sondage pour un client")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=connect_contractor">
+                            {{sn_ct("Envoyer un projet potentiel à un entrepreneur")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=agent_schedule">
+                            {{sn_ct("Heures de l'équipe")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=projects_actived_by">
+                            {{sn_ct("Activation de projet par personne")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3>Centrale</h3>
+    <div class="dashboard_group">
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=call_lists">
+                            {{sn_ct("État des listes d'appels")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=call_list_today">
+                            {{sn_ct("Qui a appelé quelle liste aujourd'hui")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=call_weekly_results">
+                            {{sn_ct("Résultat par semaine")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=cc_last_21days">
+                            {{sn_ct("Horaire de l'équipe et résultat")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        
+
+        
+        
+        
+        
+        
+        
+    
+    
+    \{{
+endif

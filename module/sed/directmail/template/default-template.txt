@@ -1,0 +1,42 @@
+{{
+    // --------------------------------------------------------------------------
+    // Name:        Function sed_contact_form
+    //
+    // Description: Display template text for the newsletter
+    //
+    // Version:      1.0 2016-06-2 11:00:03 gamila@sednove.com initial
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+    use code;
+    use user;
+    site_config = sql(single:true,"select * from sn_configs");
+    base_config = sql(single:true,"SELECT * FROM sed_directmail_base_conf");
+    theme_config = sql(single:true,"
+        SELECT theme.heading_font_color heading_color, theme.content_font_color content_color, theme.btn_primary_text_color btn_text_color, 
+        theme.btn_primary_bck_color btn_bg_color, font.value content_font, font2.value heading_font, content_link_color link_color
+        FROM sn_theme_color theme 
+        JOIN sn_fonts font ON theme.content_font_familly = font.uid
+        JOIN sn_fonts font2 ON theme.heading_font_familly = font2.uid
+        WHERE theme.uid = '1'
+    ");
+    
+
+    function urltrack(url)
+        use urltrack;
+        return urltrack .+ urlencode(url);
+    endf  
+    
+    cgidata = cgidata();
+    status = sql(single:"true","SELECT * FROM sed_directmail_status WHERE uid='?'",cgidata.uid_status);
+    campaign = sql(single:"true","SELECT * FROM sed_directmail_campaign WHERE uid='?'",status.rows.uid_campaign);
+    content = sql("SELECT a.*, b.display FROM sed_directmail_content_bloc a JOIN sed_directmail_bloc_type b ON a.bloc_type_code = b.code WHERE uid_campaign = '?' ORDER by sn_custom", campaign.rows.uid);
+    
+    base_config.rows{"btn_label_" .+ user.rows.lg}; "\n" ;
+    site_config.rows{"client_name_" .+ user.rows.lg}; "\n" ;
+    nl2br(base_config.rows{"footer_col_left_" .+ user.rows.lg}); "\n" ;
+    nl2br(base_config.rows{"footer_col_right_" .+ user.rows.lg}); "\n" ;
+    base_config.rows{"footer_why_" .+ user.rows.lg}; "\n" ;
+    base_config.rows{"footer_all_rights_" .+ user.rows.lg}; "\n" ;
+}}

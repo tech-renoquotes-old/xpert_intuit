@@ -1,0 +1,42 @@
+         \{{ // to get direct link on language button
+             // exemple  http://ssr.sednove.ca/choisir-son-crepi-exterieur
+             // devient href  http://ssr.sednove.ca/en/choosing-the-right-plaster-home-exterior 
+            request = request();
+            use page;
+            config = config(); 
+            if strpos(page.url,"blog_detail")>= 0 then  
+                 url_prod_en = "https://renoquotes.com";
+        	    //url_prod_en = "https://soumissionrenovation.ca";
+                // URL FROM sed_blog_article
+                res = sql(single: true, "SELECT uid, url, language, title, meta_title, meta_desc, brief_text, featured_image, url FROM sed_blog_article WHERE url = '?' OR (url = '?' OR url = '?' OR CONCAT(url,'/') = '?') ORDER BY url = '?' DESC LIMIT 1", request.unparsed_uri, request.uri, request.uri.+'/', request.uri, request.unparsed_uri);
+                if (res.nbrows == 1) then
+                    sn_configs = sql(single:true,"SELECT * FROM sn_configs");
+                    lg = res.rows.language;
+                    url_prod = (lg eq "en") ? url_prod_en : sn_configs.rows.url_prod ;   
+                    sr_site = (lg eq "en") ? " | Reno Quotes" : " | Soumission Renovation";
+                    page1 = sql(single:true, "SELECT CONCAT(folder_fr, page_fr) AS url_fr, CONCAT(folder_en, page_en) AS url_en FROM pages WHERE code = 'blog_detail' LIMIT 1");
+                    url = page1.rows{'url_'.+lg};
+                    title = (res.rows.meta_title ne "") ? res.rows.meta_title : res.rows.title;
+                    description = (res.rows.meta_desc ne "") ? res.rows.meta_desc : res.rows.brief_text;
+                    
+                    alternate = sql(single:true, "
+                            SELECT 
+                                (SELECT url FROM sed_blog_article afr WHERE afr.uid = at.uid_article_fr ) as url_fr, 
+                                (SELECT url FROM sed_blog_article aen WHERE aen.uid = at.uid_article_en ) as url_en
+                            FROM sed_blog_article_translation at 
+                            WHERE uid_article_? = '?'
+                            LIMIT 1
+                        ", lg, res.rows.uid);
+
+                    filename = "/".+config.site.+url.+".snc";
+                  //  page.url_fr = 'fr'.+page.folder_fr.+alternate.rows.url_fr.+'fr';
+                  //  page.url_en = 'en'.+page.folder_en.+alternate.rows.url_en.+'en';//lien remodifié ailleurs
+                    page.url_fr = page.folder_fr.+alternate.rows.url_fr;
+                    page.url_en = page.folder_en.+alternate.rows.url_en;
+                    page.url = url_prod.+res.rows.url;
+                    request.args =((request.args ne '') ? request.args.+'&' : '').+"pagecode=blog_list&uid=".+res.rows.uid.+"&PAGE_TITLE=".+urlencode(title.+sr_site).+"&DESCRIPTION=".+urlencode(strip_tags(description)).+"&IMAGE=".+urlencode(url_prod.+res.rows.featured_image).+"&URL=".+urlencode(url_prod.+res.rows.url).+"&CANONICAL=".+res.rows.url.+"&ALTERNATE=".+urlencode(stringnify(alternate.rows));
+                endif;
+               
+            endif;
+        }}
+ 

@@ -1,0 +1,5 @@
+User-agent: * 
+Disallow: /extenso/extranet
+Disallow: /extranet 
+Sitemap: /sitemap.xml
+test:robotest.txt

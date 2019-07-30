@@ -1,0 +1,161 @@
+<style type="text/css">
+.comsoc .slider-item{
+	display: inline-block;
+	width:155px;
+	padding: 5px;
+	border:1px solid #ffffff;
+	min-height: 190px;
+	margin-right: 10px;
+	vertical-align: top;
+	font-size: 12px;
+	border-radius:5px;
+	margin-bottom: 10px;
+}
+.comsoc .slider-item:hover{
+	border:1px solid #d0d0d0;
+}
+.comsoc .slider-item .img-cont{
+	width: 145px;
+	height:110px;
+	overflow: hidden;
+}
+.comsoc .slider-item img{
+	max-width: 145px;
+}
+.comsoc .slider-item span{
+	max-height:45px;
+	overflow: hidden;
+	display: block;
+}
+</style>
+
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	/*
+	/*/
+	galery_items = [];
+	galery_items_ctx = {};
+	for content sql("select * from widget_gallery where uid_widget = '?' and active = 'yes'", widget.rows.uid_widget_list) do
+		galery_items[length(galery_items)] = content.rows;
+}}
+		<a 
+			class="slider-item fancybox" 
+			id="slider-item{{content.rows.uid}}" 
+			href="{{content.rows.sn_dir_image}}"
+			data-fancybox-group="gallery{{widget.rows.uid_widget_list}}"
+			title="{{esc(filter:'html',content.rows{'description_'.+lg.rows.lg});}}"
+		>
+			<div class="img-cont">
+				<img 
+					src="{{content.rows.sn_dir_image}}" style="width:150px;" 
+					data-gallery="{{widget.rows.uid_widget_list}}" 
+					data-galleryid="{{content.rows.uid}}" 
+				/>
+			</div>
+			<span>
+				{{content.rows{'description_short_'.+lg.rows.lg} }}
+			</span>
+		</a>
+{{
+		galery_items_ctx{content.rows.uid} = content.rows;
+	endfor
+	//*/
+}}
+
+\{{
+use fancy_box_initialized;
+
+if !fancy_box_initialized then
+	fancy_box_initialized=true;
+}}
+<script type="text/javascript" src="/assets/fancybox/source/jquery.fancybox.js?v=2.1.5"></script>
+<link rel="stylesheet" type="text/css" href="/assets/fancybox/source/jquery.fancybox.css?v=2.1.5" media="screen" />
+
+<script>
+$(document).ready(function(){//
+	$('.fancybox').fancybox({
+		helpers		: {
+			title	: { type : 'inside' },
+			buttons	: {}
+		}
+	});
+});
+</script>
+\{{endif}}
+
+
+
+{{if 0 then}}
+<style>
+.gallery-modal{display:none;}
+</style>
+<div id="gallery-modal-{{widget.rows.uid_widget_list}}" class="gallery-modal">
+	<div class="controls control-left">left</div>
+	
+	<div class="gallery-modal-image"></div>
+	<div class="gallery-modal-text"></div>
+	
+	<div class="controls control-right">right</div>
+</div>
+<script>
+/*
+if(!window.sn) window.sn=new Object();
+$('[data-gallery]').each(function(){
+	$(this).addClass('sn-gallery-'+$(this).data('gallery'));
+	//var modal = $('#gallery-modal-{{widget.rows.uid_widget_list}}');
+	sn.load_gallery_modal = function(modal,item,finished){
+		modal = $(modal);
+		var slider_item = galery_items_ctx{{widget.rows.uid_widget_list}}[$(item).data('galleryid')];
+		//console.log(slider_item);
+		var $items = $('.sn-gallery-'+$(item).data('gallery'));
+		var offset = $.inArray(item,$items);
+		
+			modal
+				.find('.controls')
+				.hide()
+				.each(function(){
+					if(!$(this).data('gallery-initialized')){
+						$(this).click(function(){
+							sn.load_gallery_modal(modal,$(this).data('gallery-next'));
+						});
+						$(this).data('gallery-initialized',true);
+					}
+				});
+		if(offset){
+			modal
+				.find('.control-left')
+				.show()
+				.data('gallery-next',$items[offset-1]);
+		}
+		if(offset+1<$items.length){
+			modal
+				.find('.control-right')
+				.show()
+				.data('gallery-next',$items[offset+1]);
+		}
+		console.log($items);
+		modal.find('.gallery-modal-text').html(slider_item.description_{{lg.rows.lg}});
+		modal.find('.gallery-modal-image').html('<img src="'+slider_item.sn_dir_image+'" />');
+		
+		// to be added loading screen
+		// to be added on loading animation
+		if(finished)
+			finished();
+		else
+			modal.dialog({//
+				modal:true
+			});
+	}
+	$(this).click(function(){
+		sn.load_gallery_modal($('#gallery-modal-{{widget.rows.uid_widget_list}}'),this);
+	});
+});
+galery_items_ctx{{widget.rows.uid_widget_list}} = {{galery_items_ctx}};
+*/
+</script>
+{{endif}}

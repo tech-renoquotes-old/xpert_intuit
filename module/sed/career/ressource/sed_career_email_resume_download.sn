@@ -1,0 +1,38 @@
+{{
+    /*
+    	@title	sed_career_email_resume_download
+    	Description:download the resume attached to the email
+        @author manu@i-manu.com
+    	@version 	1.0 2015-04-06 
+    	@version 1.1 2016-06-15 gamila@sednove.com to put in the email table
+       
+    */
+    
+}}
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	use ressource;
+
+	%include "/extenso/functions/sn_ct.snc";
+}}
+\{{
+	%include "/extenso/functions/sn_pages.snc";
+
+    use contact;
+    site_config = config();
+    config = sql(single:true,"select * from sn_configs");
+    base_url = config.rows.url_staging;
+    if site_config.site ne "staging" then
+        base_url = config.rows.url_prod;
+    endif
+	cgidata=cgidata();
+
+	result = sql(single:true,"select sn_dir_resume from sed_ats_application where sha1(concat(uid,sn_dir_resume)) ='?'", cgidata.resume_id);
+	if result.rows.sn_dir_resume ne "" then
+		sendfile(result.rows.sn_dir_resume, finish:true);
+	endif
+}}

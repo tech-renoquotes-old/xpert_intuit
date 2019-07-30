@@ -1,0 +1,478 @@
+{{
+    /*
+        @title contractor_confirmation_accept_project
+        Description: Confirmation message after a contractor accepts a project.
+        Page 3 du processus
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+        @version 1.02 2017-01-20   Ajout du calcul de taxes par prov
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg; 
+    %include "/site/package/all.sn";
+}}
+\{{
+    cgidata = cgidata(); 
+    refus_txt="";
+    warning_limit = false;
+    if cgidata.token ne "" && cgidata.accepted ne "" then
+        //void insert(table:'sr_debug', fields:{'description':'debut confirmation accept','text':'début'});
+ 
+        project_contractor = sql(single:true, "SELECT uid, uid_project, uid_contractor FROM sr_project_contractor WHERE token='?'", cgidata.token);
+        console.log(cgidata.token);
+        if project_contractor.nbrows > 0 then
+            project = sql(single:true,"
+                SELECT p.*, (SELECT COUNT(*) FROM sr_project_contractor WHERE uid_project=p.uid AND accepted='yes') as nb_accepted 
+                FROM sr_project p 
+                WHERE uid='?'", project_contractor.rows.uid_project);
+            contractor = sql(single:true,"SELECT * FROM sr_contractor WHERE uid='?'", project_contractor.rows.uid_contractor);
+            if project.nbrows > 0 && contractor.nbrows > 0 then
+                if cgidata.accepted eq 'yes' then
+                    //  Vérifier si la balance courante de l'entrepreneur dépasse sa limite de crédit
+                    total = contractor::getCurrentBillingTotal(contractor.rows.uid);
+                    if total >= contractor.rows.credit_threshold then
+                        if  contractor.rows.credit_cards eq 'yes' then  //privilege card 
+                            // Effectuer un prélevement sur la carte de crédit
+                            transaction_uid = contractor::debit_charge(contractor.rows.uid, total);
+                        endif
+                    endif
+                    //void insert(table:'sr_debug', fields:{'description':'total','text':total});
+                    // Si la balance ne dépasse pas la limite de crédit OU que la transaction à été effectuée
+                    if total < contractor.rows.credit_threshold || (transaction_uid != false && transaction_uid ne "") then
+                        if cgidata.confirm eq 'yes' then
+                            // Vérifier que le projet est encore actif et que le nombre de soumissions maximum n'est pas atteint
+                            if project.rows.status eq "active" &&  project.rows.nb_accepted < project.rows.max_quotes then
+                                // Vérifier que l'entrepreneur peut accepter des projets
+                                if contractor.rows.can_accept_projects eq 'yes' then
+                                    if (project_contractor.rows.accepted ne 'yes') then
+                                        project::acceptProjectContractor(project_contractor.rows.uid, project.rows.lead_price);
+                                    endif
+                                    if project.rows.nb_accepted + 1 >= project.rows.max_quotes then
+                                        void sql("UPDATE sr_project SET status='completed' WHERE uid='?'", project.rows.uid);
+                                    endif
+                                    cgidata.accepted = 'success';
+                                    void insert(table:'sr_debug', fields:{'description':'avant contractorAccountBlocked','text':'total='.+total.+'lead_price='.+project.rows.lead_price});
+                                    //V1.02
+                                    taxes = contractor::calculateTaxesByProv(project.rows.lead_price, contractor.rows.uid);
+                                    //if (total +( project.rows.lead_price * 1.14975)) >= contractor.rows.credit_threshold   &&  (contractor.rows.credit_cards ne 'yes' ) then 
+                                    if (total +taxes.total) >= contractor.rows.credit_threshold   &&  (contractor.rows.credit_cards ne 'yes' ) then 
+                                            void insert(table:'sr_debug', fields:{'description':'après contractorAccountBlocked','text':'total='.+total.+'lead_price='.+project.rows.lead_price});
+                                            automail::contractorAccountBlocked(contractor.rows.uid); 
+                                            warning_limit =true;
+                                    endif 
+                                else
+                                    cgidata.accepted = "cant_accept_projets";
+                                endif
+                            else
+                                cgidata.accepted = "inactive";
+                            endif
+                            
+                        else
+                            cgidata.accepted = "confirm";
+                        endif
+                    else
+                        if (contractor.rows.username eq '') then    // Create Username
+                            contractor::activateContractor(contractor.rows.uid);
+                            contractor_needs_activation = "&need_activation";
+                        endif
+                        redirect("{{pages('sr_contractor_current_bill',lg.rows.lg,table:'pages')}}?accepted=yes&token=" .+ cgidata.token .+ contractor_needs_activation);
+                    endif
+                    
+                elseif cgidata.accepted eq 'no' then
+                    void update(
+                        tables:"sr_project_contractor",
+                        uid: project_contractor.rows.uid,
+                        fields:{
+                            "accepted":"no",
+                            "accepted_rebate":"no"
+                        }
+                    );
+                elseif cgidata.accepted eq "halfpriced" then
+                    if (cgidata.confirm eq 'yes') then
+                        void update(
+                            tables:"sr_project_contractor",
+                            uid: project_contractor.rows.uid,
+                            fields:{
+                                "accepted_rebate":"yes"
+                            }
+                        );
+                    endif
+                endif
+            else
+                cgidata.accepted = "";
+            endif    
+        else
+            cgidata.accepted = "";
+        endif
+    endif
+    
+}}    
+
+\{{ if cgidata.accepted eq "success" then}}
+    <div class="alert alert-success">
+        {{sn_ct("contractor_confirmation_accept_project texte projet accepté",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+    \{{
+        project = sql(single:true,"
+            SELECT p.uid, a.street_no, a.street, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.province, a.zip, p.description, p.due_date, p.lead_price
+            FROM sr_project_contractor pc
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city c ON c.uid=a.uid_city
+            WHERE pc.token='?'
+            ", cgidata.token);
+            
+        project_contractor = sql(single:true, "
+            SELECT  ct.contact_title, ct.contact_firstname, ct.contact_lastname, c.firstname, c.lastname, c.gender, 
+                    a.street_no, a.street, a.city, city.name_fr as city_fr, city.name_en as city_en, a.zip, a.phone1, a.phone2, a.phone3, 
+                    ct.contact_gender,
+                    c.email, c.when_to_call, p.description, p.additional_info, p.uid,
+                    ct.contact_lg
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor ct ON ct.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city city ON city.uid=a.uid_city
+            WHERE pc.token = '?'"
+            , cgidata.token);
+        
+        client_nom = project_contractor.rows.firstname .+ " " .+ project_contractor.rows.lastname;
+        adresse = project_contractor.rows.street_no .+ " " .+ project_contractor.rows.street .+ ", " .+ project_contractor.rows.city;
+        telephone_maison = project_contractor.rows.phone1;
+        telephone_bureau = project_contractor.rows.phone2;
+        telephone_cellulaire = project_contractor.rows.phone3;
+        courriel = project_contractor.rows.email;
+        code_postal=project_contractor.rows.zip;
+        meilleur_moment = project_contractor.rows.when_to_call;
+        description = project_contractor.rows.description;
+        info_additionnelle = project_contractor.rows.additional_info;
+        id_projet = project_contractor.rows.uid;
+    
+            
+        if (warning_limit == true) then
+            redirect("{{pages('sr_contractor_current_bill',lg.rows.lg,table:'pages')}}?accepted=yes&token=" .+ cgidata.token .+ contractor_needs_activation);
+        endif
+    }}
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.uid}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Nom :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{client_nom}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Adresse :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4"> 
+            \{{project.rows.street_no}}&nbsp;\{{project.rows.street}}, \{{project.rows.city}}, \{{project.rows.province}}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.zip}}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  telephone_maison :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{telephone_maison}}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  telephone_bureau :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{telephone_bureau}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  telephone_cellulaire :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{telephone_cellulaire}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  courriel :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{courriel}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Meilleur moment pour contacter le client :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{meilleur_moment}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.description}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  info_additionnelle :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{info_additionnelle}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{project.rows.due_date}}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 bold">
+            {{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        <div class="col-md-4">
+            \{{money_format(project.rows.lead_price, {{"lg.rows.lg"}} )}}
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        
+        \{{//address = urlencode(project.rows.province .+' , '.+  project.rows.zip .+ ' ,' .+     project.rows.street_no .+ ' ' .+ project.rows.street .+ ' ,' .+  project.rows.city);
+           //void insert(table:'sr_debug', fields:{'description':'Projet accepté #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Adresses=','text': address});   }}
+        \{{address = urlencode(project.rows.zip .+ ' ' .+ project.rows.city.+ ' ' .+ project.rows.province .+ ' ,' .+     project.rows.street_no .+ ' ' .+ project.rows.street );
+           void insert(table:'sr_debug', fields:{'description':'Projet accepté #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Adresses=','text': address}); }}   
+        <div class="col-md-12">
+            <p><a href="https://www.google.ca/maps/?q=\{{address}}"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>
+        </div>
+    </div>
+    
+\{{ elseif cgidata.accepted eq "no" then }}
+    <div class="alert alert-info">
+        {{sn_ct("contractor_confirmation_accept_project texte projet pas accepté", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+    <script>
+        setTimeout(function(){
+            window.location = '{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}';
+        }, 3000);
+    </script>
+\{{ elseif cgidata.accepted eq "halfpriced" && cgidata.confirm ne 'no' then }}
+    \{{if (cgidata.confirm eq '') then}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_confirmation_accept_project Vous êtes sur le point d'accepter un projet si il tombe à moitier prix. Voulez-vous vraiment participer à ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        \{{
+            project = sql(single:true,"
+                SELECT p.uid, a.street_no, a.street, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.province, a.zip, p.description, p.due_date, p.lead_price
+                FROM sr_project_contractor pc
+                INNER JOIN sr_project p ON p.uid=pc.uid_project
+                LEFT JOIN sr_address a ON a.uid=p.uid_address
+                LEFT JOIN sr_city c ON c.uid=a.uid_city
+                WHERE pc.token='?'
+                ", cgidata.token);
+        }}
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{project.rows.uid}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{substr(project.rows.zip, 0, 3)}} \{{project.rows.city}}
+            </div>
+        </div>
+    
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{project.rows.description}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{project.rows.due_date}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{money_format(project.rows.lead_price, {{"lg.rows.lg"}} )}}
+            </div>
+        </div>
+            
+        <div class="row">
+            \{{address = urlencode(substr(project.rows.zip, 0, 3) .+ ' ' .+ project.rows.city.+ ' ' .+ project.rows.province);}}
+            <div class="col-md-12">
+                <p><a href="https://www.google.ca/maps/?q=\{{address}}"  target="_blank"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>
+            </div>
+        </div>
+        
+        <div style="margin:20px 0px"><hr></div>
+
+        <form action="" method="GET">
+            <input type="hidden" name="token" value="\{{cgidata.token}}">
+            <input type="hidden" name="accepted" value="halfpriced">
+            <button type="submit" class="btn btn-primary" name="confirm" value="yes">{{sn_ct("contractor_confirmation_accept_project yes",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+            <button type="submit" class="btn btn-primary" name="confirm" value="no">{{sn_ct("contractor_confirmation_accept_project no",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+        </form>
+    \{{elseif (cgidata.confirm eq 'yes') then}}
+        <div class="alert alert-success">
+            {{sn_ct("contractor_confirmation_accept_project texte projet accepté à moitié prix",  publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+        </div>
+    \{{endif}}
+\{{ elseif cgidata.accepted eq "inactive" then }}
+    <div class="alert alert-danger">
+        {{sn_ct("contractor_confirmation_accept_project Désolé, le nombre de demandes maximum est déjà atteint ou le projet est inactif", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{ elseif cgidata.accepted eq "cant_accept_projets" then }}
+    <div class="alert alert-danger">
+        {{sn_ct("contractor_confirmation_accept_project Désolé, vous ne pouvez pas accepter de projet pour l'instant, veuillez contacter un administrateur", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{ elseif cgidata.confirm eq "no" then }}
+    <div class="alert alert-info">
+        {{sn_ct("contractor_confirmation_accept_project Vous ne participerez pas à ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{ elseif cgidata.accepted eq "confirm" then }}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_confirmation_accept_project Vous êtes sur le point d'accepter un projet. Voulez-vous vraiment participer à ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        \{{
+            project = sql(single:true,"
+                SELECT p.uid, a.street_no, a.street, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.province, a.zip, p.description, p.due_date, p.lead_price
+                FROM sr_project_contractor pc
+                INNER JOIN sr_project p ON p.uid=pc.uid_project
+                LEFT JOIN sr_address a ON a.uid=p.uid_address
+                LEFT JOIN sr_city c ON c.uid=a.uid_city
+                WHERE pc.token='?'
+                ", cgidata.token);
+        }}
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{project.rows.uid}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{substr(project.rows.zip, 0, 3)}} \{{project.rows.city}}
+            </div>
+        </div>
+    
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{project.rows.description}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{project.rows.due_date}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4 bold">
+                {{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            </div>
+            <div class="col-md-4">
+                \{{money_format(project.rows.lead_price, {{"lg.rows.lg"}} )}}
+            </div>
+        </div>
+            
+        <div class="row">
+            \{{address = urlencode(substr(project.rows.zip, 0, 3) .+ ' ' .+ project.rows.city);}}
+            <div class="col-md-12">
+                <p><a href="https://www.google.ca/maps/?q=\{{address}}" target="_blank"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>
+            </div>
+        </div>
+        
+        <div style="margin:20px 0px"><hr></div>
+
+        <form action="" method="GET">
+            <input type="hidden" name="token" value="\{{cgidata.token}}">
+            <input type="hidden" name="accepted" value="yes">
+            <button type="submit" class="btn btn-primary" name="confirm" value="yes">{{sn_ct("contractor_confirmation_accept_project yes",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+            <button type="submit" class="btn btn-primary" name="confirm" value="no">{{sn_ct("contractor_confirmation_accept_project no",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+        </form>
+\{{ else}}
+    <div class="alert alert-danger">
+        {{sn_ct("contractor_confirmation_accept_project Ce lien est invalide", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{  endif }}

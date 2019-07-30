@@ -1,0 +1,8 @@
+{{
+cgidata = cgidata();
+
+if(cgidata.uid_city.length() > 0 && cgidata.uid_address.length() > 0) then
+void sql("update sr_address set uid_city = '?' where uid_address = '?'", cgidata.uid_city, cgidata.uid_address)
+endif
+
+}}

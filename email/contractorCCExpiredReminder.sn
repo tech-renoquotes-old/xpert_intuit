@@ -1,0 +1,48 @@
+{{
+    /*
+        @title 			contractorProfileReminder_cell
+        Description		Email for the contractor for a follow up after a phone call  on cellulaire
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+}}
+
+\{{ 
+
+
+
+	use contractor;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if contractor.rows.contact_gender eq "f" then
+    	titre = mme;
+    elseif contractor.rows.contact_gender eq "m" then
+    	titre = mr;
+    endif
+     
+    uid_contractor = contractor.rows.uid;
+    firstname = contractor.rows.contact_firstname;
+    name = contractor.rows.contact_lastname;
+    lastDigits = contractor.rows.last_digits;
+    language = "{{lg.rows.lg}}";
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

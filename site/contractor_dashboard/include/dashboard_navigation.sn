@@ -1,0 +1,52 @@
+{{
+    /*
+        @title dashboard_natigation 
+        Description: Dropdown to select the page to go in the dashboard
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-28
+        
+        **Must publish header resource of the grid in use for changes to apply**
+    */
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+
+    function get_page(code)
+        use lg;
+        page = sql(single:true,"
+            SELECT title_? as title, uid
+            FROM pages 
+            WHERE code='?'",lg.rows.lg, code);
+        return {"title":page.rows.title, "uid":page.rows.uid};
+    endf
+}}
+<select class="form-control" id="navigator" name="navigator" onchange="location = this.value;">
+    <option value=""></option>
+    <optgroup label='{{sn_ct("header_extranet Menu principal,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_dashboard');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+    <optgroup label='{{sn_ct("header_extranet Votre compte,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','sr_contractor_profile',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_profile');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <!--<option value="{{pages(table:'pages','sr_contractor_credit_cards',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_credit_cards');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>-->
+        <option value="{{pages(table:'pages','sr_contractor_current_bill',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_current_bill');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <option value="{{pages(table:'pages','sr_contractor_billing_history',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_billing_history');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <!--<option value="{{pages(table:'pages','sr_contractor_supplier_discounts',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_supplier_discounts');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>-->
+        <option value="{{pages(table:'pages','sr_contractor_edit_photo',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_edit_photo');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+    <optgroup label='{{sn_ct("header_extranet Vos clients,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','sr_contractor_unanswered_projects',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_unanswered_projects');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <!--<option value="{{pages(table:'pages','sr_contractor_discounted_projects',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_discounted_projects');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>-->
+        <option value="{{pages(table:'pages','sr_contractor_clients',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_clients');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <option value="{{pages(table:'pages','sr_contractor_get_project_credit',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_get_project_credit');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+    <optgroup label='{{sn_ct("header_extranet Vos filtres,",publish:"/publish/ressources.sn", edit:false, uids:ressource.rows.uid)}}'>
+        <option value="{{pages(table:'pages','sr_contractor_services',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_services');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+        <option value="{{pages(table:'pages','sr_contractor_territories',lg.rows.lg)}}" {{ current_page = get_page('sr_contractor_territories');}} \{{ if page.uid eq "{{current_page.uid}}" then}} selected \{{endif}}>{{current_page.title}}</option>
+    </optgroup>
+</select>
+

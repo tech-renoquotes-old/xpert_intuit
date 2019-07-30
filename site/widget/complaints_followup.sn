@@ -1,0 +1,380 @@
+
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+   //session 
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+    use extranet_user;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+    void timeout(15);
+    
+}}
+
+\{{       
+    
+cgidata = cgidata();
+
+fullname=user.firstname .+ " " .+ user.lastname;
+
+if fullname then
+    }}
+    
+    \{{if cgidata.add then
+        complaint = insert(
+            table:"sr_complaints",
+            fields:{
+                "uid_project": cgidata.id_project,
+                "uid_contractor": cgidata.id_contractor,
+                "comments": cgidata.comments,
+                "source": cgidata.source,
+                "priority": cgidata.priority,
+                "followup_date": cgidata.followup_date,
+                "status": cgidata.status
+            }
+        );
+        
+        history = insert(
+            table:"sr_complaints_history",
+            fields:{
+                "uid_complaint": complaint.uid,
+                "description": cgidata.comments
+            }
+        );
+    endif
+    
+    if cgidata.add_history then
+        add_comments = cgidata.add_comments .+ ' - Prochain suivi: ' .+ cgidata.next_followup;
+        history = insert(
+            table:"sr_complaints_history",
+            fields:{
+                "uid_complaint": cgidata.uid_complaint,
+                "description": add_comments
+            }
+        );
+        
+        if cgidata.next_followup then
+            next_followup = cgidata.next_followup;
+        else
+            next_followup_sql = sql(single:true, "SELECT followup_date FROM sr_complaints WHERE uid = ?", cgidata.uid_complaint);
+            next_followup = next_followup_sql.rows.followup_date;
+        endif
+        
+        void sql("UPDATE sr_complaints
+            SET status = '?', priority = '?', followup_date = '?'
+            WHERE uid = ?
+            ", cgidata.status, cgidata.priority, next_followup, cgidata.uid_complaint);
+    endif
+    
+    if cgidata.search then
+        if (cgidata.firstname || cgidata.lastname) then
+            complaints = sql("SELECT co.*, c.company_name, c.contact_lg, c.contact_email, c.contact_phone, c.uid as cuid, 
+            cl.uid as cluid, a.phone1, a.phone2, cl.email, c.contact_firstname, c.contact_gender, c.contact_lastname, cl.gender, cl.firstname, cl.lastname
+            FROM sr_complaints co 
+            LEFT JOIN sr_contractor c ON c.uid = co.uid_contractor
+            LEFT JOIN sr_project p ON p.uid = co.uid_project
+            LEFT JOIN sr_client cl ON cl.uid = p.uid_client
+            LEFT JOIN sr_address a ON a.uid = p.uid_address
+            WHERE cl.firstname LIKE '%?%'
+            AND cl.lastname LIKE '%?%'
+            ORDER BY co.sn_cdate DESC
+            ", cgidata.firstname, cgidata.lastname);
+        elseif cgidata.co_uid then
+            complaints = sql("SELECT co.*, c.company_name, c.contact_lg, c.contact_email, c.contact_phone, c.uid as cuid, 
+            cl.uid as cluid, a.phone1, a.phone2, cl.email, c.contact_firstname, c.contact_gender, c.contact_lastname, cl.gender, cl.firstname, cl.lastname
+            FROM sr_complaints co 
+            LEFT JOIN sr_contractor c ON c.uid = co.uid_contractor
+            LEFT JOIN sr_project p ON p.uid = co.uid_project
+            LEFT JOIN sr_client cl ON cl.uid = p.uid_client
+            LEFT JOIN sr_address a ON a.uid = p.uid_address
+            WHERE co.uid = ?
+            ", cgidata.co_uid);
+        endif
+    endif
+    
+    }}
+    <style>
+    #contractors {
+        font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+    
+    #contractors td, #customers th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    
+    #contractors tr:nth-child(even){background-color: #f2f2f2;}
+    
+    #contractors tr:hover {background-color: #ddd;}
+    
+    #contractors th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: center;
+        background-color: #00517e;
+        color: white;
+    }
+    hr {
+        overflow: visible; /* For IE */
+        padding: 0;
+        border: none;
+        border-top: medium double #333;
+        color: #333;
+        text-align: center;
+    }
+    hr:after {
+        content: "{{sn_ct(edit:false,'Prochaine plainte')}}";
+        display: inline-block;
+        position: relative;
+        top: -0.7em;
+        font-size: 1.5em;
+        padding: 0 0.25em;
+        background: white;
+    }
+    </style>
+    <div style="width:33%; float: left">
+        <form action="" method="post">
+            <table id="contractors">
+                <th colspan="2">Ajouter une plainte</th>
+                <tr>
+                    <td>uid entrepreneur</td>
+                    <td><input type="text" placeholder="id entrepreneur" name="id_contractor"></td>
+                </tr>
+                <tr>
+                    <td>uid projet</td>
+                    <td><input type="text" placeholder="id projet" name="id_project"></td>
+                </tr>
+                <tr>
+                    <td>Source de la plainte</td>
+                    <td>
+                        <select name="source">
+                            <option value="" selected>Choisir la source de la plainte</option>
+                            <option value="quality">Qualité des travaux</option>
+                            <option value="quote">Soumission</option>
+                            <option value="communication">Communication</option>
+                            <option value="other">Autre</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Statut de la plainte</td>
+                    <td>
+                        <select name="status">
+                            <option value="" selected>Choisir le statut de la plainte</option>
+                            <option value="solved">Résolu</option>
+                            <option value="lawsuit">Poursuite</option>
+                            <option value="ongoing">En cours</option>
+                            <option value="visitor">Visiteur</option>
+                            <option value="other">Autre</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Priorité de la plainte</td>
+                    <td>
+                        <select name="priority">
+                            <option value="" selected>Choisir la priorité de la plainte</option>
+                            <option value="green">Vert</option>
+                            <option value="yellow">Jaune</option>
+                            <option value="red">Rouge</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Date du suivi</td>
+                    <td><input type="date" name="followup_date"></td>
+                </tr>
+                <tr>
+                    <td>Commentaires</td>
+                    <td><textarea name="comments" placeholder="Commentaires"></textarea></td>
+                </tr>
+                <tr>
+                    <td>Ajouter la plainte</td>
+                    <td><input type="submit" name="add" value="Ajouter"></td>
+                </tr>
+            </table>
+        </form>
+    </div>
+    
+    <div style="width:33%; float:right;">
+        <form action="" method="post">
+            <table id="contractors">
+                <th colspan="2">Chercher une plainte</th>
+                <tr>
+                    <td>Prénom</td>
+                    <td><input type="text" placeholder="Prénom" name="firstname"></td>
+                </tr>
+                <tr>
+                    <td>Nom de famille</td>
+                    <td><input type="text" placeholder="Nom de famille" name="lastname"></td>
+                </tr>
+                <tr>
+                    <td>Uid de la plainte</td>
+                    <td><input type="text" placeholder="Uid de la plainte" name="co_uid"></td>
+                </tr>
+                <tr>
+                    <td>Chercher</td>
+                    <td><input type="submit" name="search" value="Chercher"></td>
+                </tr>
+            </table>
+        </form>
+    </div>
+    
+    <div style="clear:both;"></div>
+    
+    <div style="width:100%;">
+    \{{
+    if cgidata.search then
+        if (complaints.nbrows < 1 || complaints.nbrows eq '') then
+            "Aucun résultat";
+            nothing = 1;
+        endif
+    else
+        complaints = sql("SELECT co.*, c.company_name, c.contact_lg, c.contact_email, c.contact_phone, c.uid as cuid, 
+            cl.uid as cluid, a.phone1, a.phone2, cl.email, c.contact_firstname, c.contact_gender, c.contact_lastname, cl.gender, cl.firstname, cl.lastname
+            FROM sr_complaints co 
+            LEFT JOIN sr_contractor c ON c.uid = co.uid_contractor
+            LEFT JOIN sr_project p ON p.uid = co.uid_project
+            LEFT JOIN sr_client cl ON cl.uid = p.uid_client
+            LEFT JOIN sr_address a ON a.uid = p.uid_address
+            WHERE (isnull(co.status) OR co.status <> 'solved' OR co.status = '') AND (isnull(co.status) OR co.status <> 'visitor' OR co.status = '')
+            ORDER BY co.followup_date ASC, co.priority = 'red' DESC, co.priority = 'yellow' DESC, co.priority = 'green' DESC");
+            //(co.followup_date <= now() OR isnull(co.followup_date) OR co.followup_date = '0000-00-00')
+            //AND 
+    endif
+
+    if nothing eq '1' then
+    
+    else
+    
+        for c in complaints.rows do
+            if c.priority eq 'red' then
+                style = "background-color:red;";
+            elseif c.priority eq 'yellow' then
+                style = "background-color:yellow; color:black";
+            elseif c.priority eq 'green' then
+                style = "background-color:green;";
+            endif
+            }}
+            <hr>
+            
+            <div style="width:35%; float:left;">
+                <form action="" method="post">
+                    <table id="contractors">
+                        <th colspan="2" style="\{{style}}">Plainte à gérer - uid:\{{c.uid}}</th>
+                        <tr>
+                            <td>Projet</td>
+                            <td>\{{c.uid_project}}</td>
+                        </tr>
+                        <tr>
+                            <td>Client</td>
+                            <td>\{{c.gender .+ ' ' .+ c.firstname .+ ' ' .+ c.lastname .+ ' (uid - ' .+ c.cluid .+ ')'}}</td>
+                        </tr>
+                        <tr>
+                            <td>Coordonnées du client</td>
+                            <td>
+                                Courriel: \{{c.email}}<br>
+                                Téléphone: \{{c.phone1}} \{{c.phone2}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Entrepreneur</td>
+                            <td>\{{c.company_name .+ ' uid - ' .+ c.cuid}}</td>
+                        </tr>
+                        <tr>
+                            <td>Coordonnées de l'entrepreneur</td>
+                            <td>
+                                Nom: \{{c.contact_gender .+ ' ' .+ c.contact_firstname .+ ' ' .+ c.contact_lastname}}<br>
+                                Courriel: \{{c.contact_email}}<br>
+                                Téléphone: \{{c.contact_phone}}<br>
+                                Langue: \{{c.contact_lg}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Source</td>
+                            <td>\{{c.source}}</td>
+                        </tr>
+                        <tr>
+                            <td>Statut</td>
+                            <td>
+                                <select name="status">
+                                    <option value="">Choisir le statut de la plainte</option>
+                                    <option value="solved" \{{if c.status eq 'solved' then 'selected'; endif}}>Résolu</option>
+                                    <option value="lawsuit" \{{if c.status eq 'lawsuit' then 'selected'; endif}}>Poursuite</option>
+                                    <option value="ongoing" \{{if c.status eq 'ongoing' then 'selected'; endif}}>En cours</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Priorité</td>
+                            <td>
+                                <select name="priority">
+                                    <option value="" selected>Choisir la priorité de la plainte</option>
+                                    <option value="green" \{{if c.priority eq 'green' then 'selected'; endif}}>Vert</option>
+                                    <option value="yellow" \{{if c.priority eq 'yellow' then 'selected'; endif}}>Jaune</option>
+                                    <option value="red" \{{if c.priority eq 'red' then 'selected'; endif}}>Rouge</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Prochain suivi</td>
+                            <td>\{{c.followup_date}}</td>
+                        </tr>
+                        
+                    </table>
+                </div>
+                <div style="width:30%; float: left;">
+                    <table id="contractors">
+                        <input type="hidden" name="uid_complaint" value="\{{c.uid}}">
+                        <th colspan="2">Ajouter un suivi</th>
+                        <tr>
+                            <td>Commentaire</td>
+                            <td><textarea name="add_comments" placeholder="Ajouter un commentaire"></textarea></td>
+                        </tr>
+                        <tr>
+                            <td>Nouvelle date de suivi</td>
+                            <td><input type="date" name="next_followup"></td>
+                        </tr>
+                        <tr>
+                            <td>Ajouter</td>
+                            <td><input type="submit" name="add_history" value="Ajouter"></td>
+                        </tr>
+                    </form>
+                </table>
+            </div>
+            \{{
+                history = sql("SELECT * FROM sr_complaints_history WHERE uid_complaint = ? ORDER BY sn_cdate DESC", c.uid);
+            }}
+            
+            <div style="width:35%; float:left">
+                <table id="contractors">
+                    <tr>
+                        <th>Date et heure</th>
+                        <th>Suivi</th>
+                    </tr>
+                    \{{for h in history.rows do}}
+                    <tr>
+                        <td>\{{h.sn_cdate}}</td>
+                        <td>\{{h.description}}</td>
+                    </tr>
+                    \{{endfor}}
+                </table>
+                
+            </div>
+            <div style="clear:both;"></div>
+            
+        \{{endfor}}
+                    
+            
+        </div>
+    \{{endif}}
+\{{endif}}

@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+		<title>{{ campaign.rows.subject; }}</title>
+	</head>
+  <body>
+	  {{ 
+		%include "/extenso/functions/sn_ct.snc"; 
+		%include "/extenso/functions/sn_pages.snc"; 
+
+
+		site_config = sql(single:true,"select * from sn_configs");
+    
+		use user; use code;
+		lg = user.rows.lg;
+		if lg eq "" then
+			lg="en";
+		endif
+    	
+    	cgidata = cgidata();
+        status = sql(single:"true","SELECT * FROM sed_directmail_status WHERE uid='?'",cgidata.uid_status);
+    	campaign = sql(single:"true","SELECT * FROM sed_directmail_campaign WHERE uid='?'",status.rows.uid_campaign);
+        config=sql(single:true, "select * from sed_directmail_config_newsletter");
+        ctx_track=sql(single:true, "select * from ressources where code='directmail_tracking'");
+    	fb=sql(single:true, "SELECT * FROM socials where name_fr = 'Facebook'");
+		urltrack=site_config.rows.url_prod .+ ctx_track.rows{'url_'.+lg} .+ ctx_track.rows{'file_'.+lg} .+ "?u=" .+ code .+ "&url=";
+
+		function urltrack(url)
+			use urltrack;
+			return urltrack .+ urlencode(url);
+		endf
+        
+	  }}
+    
+    <div style="margin:0 auto;width:600px;">
+        <table cellspacing="0" cellpadding="0" border="0">
+            <!-- Row for logo and website link =============== -->
+            <tr>
+                <td width="600">
+                    <div style="border-right:50px solid #e3e0e2;border-left:50px solid #e3e0e2;border-top:25px solid #e3e0e2;border-bottom:25px solid #e3e0e2;">
+                        <table cellspacing="0" cellpadding="0" border="0" style="background-color:#e3e0e2;">
+                            <tr>
+                                <td width="300">
+                                  <img src="{{site_config.rows.url_prod;config.rows.logo;}}" width="200">
+                                </td>
+                                <td width="200" align="right" style="text-algin:right;">
+                                    <a href="{{config.rows{'link_'.+lg};}}" style="font-family:arial,sans-serif;border-top:10px solid #1b1b3c;border-right:10px solid #1b1b3c;border-bottom:10px solid #1b1b3c;border-left:10px solid #1b1b3c;background-color:#1b1b3c; color:#ffffff; font-size:14px;text-decoration:none;">
+            						{{config.rows{'link_title_'.+lg};}}
+            					</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+              <td width="600">
+                <div style="border-right:50px solid #ffffff;border-left:50px solid #ffffff;border-top:5px solid #ffffff;border-bottom:5px solid #ffffff;">
+                	<p style="margin:0;font-family:arial,sans-serif;color:#1b1b3c;font-weight:bold;"> {{campaign.rows.name;}} </p>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td width="600" style="background-color:#ededed;">
+                <div style="border-right:50px solid #ededed;border-left:50px solid #ededed;border-top:40px solid #ededed;border-bottom:30px solid #ededed;">
+                  <h2 style="margin:0;font-family:arial,sans-serif;font-size:20px;line-height:25px;font-weight:normal;color:#1b1b3c;">
+                  	<a style="text-decoration:none; color:#1b1b3c;" href="#"> {{campaign.rows.ck;}} </a>
+                  </h2>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td width="600" halign="center">
+                <div style="border-right:50px solid #ffffff;border-left:50px solid #ffffff;border-top:10px solid #ffffff;border-bottom:30px solid #ffffff;text-align:center;">
+                  <p style="margin-top:0;margin-bottom:10px;font-family:arial,sans-serif;font-size:17px;line-height:22px;font-weight:normal;color:#1b1b3c;"> Suivez-nous </p>
+                  <table cellspacing="0" cellpadding="0" border="0">
+                    <tbody>
+                      <tr>
+                        <td width="250" align="right">
+                          <a style="border-right:10px solid #ffffff;display:block;" href="{{fb.rows{'url_'.+lg};}}">
+                            <img width="45" height="45" style="border:0px;" src="{{site_config.rows.url_prod;fb.rows.directmail_image}}">
+                          </a>
+                        </td>
+                        <td width="250" align="left">
+                          <a style="border-left:10px solid #ffffff;display:block;" href="#">
+                            <img width="45" height="45" style="border:0px;" src="{{site_config.rows.url_prod;}}/module/sed/directmail/image/twitter_circle_color-48.png">
+                          </a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>  
+            <tr style="background-color:#ededed;">
+              <td width="600">
+                <div style="border-right:50px solid #ededed;border-left:50px solid #ededed;border-top:20px solid #ededed;border-bottom:30px solid #ededed;text-align:center;">
+                  <table cellspacing="0" cellpadding="0" border="0">
+                    <tbody>
+                      <tr>
+                        <td width="250">
+                          <p style="margin:0;font-family:arial,sans-serif;font-size:13px;color:#1b1b3c;">
+                            {{config.rows.address;}}
+                          </p>
+                          </td>
+                          <td width="250">
+                            <p style="margin:0;font-family:arial,sans-serif;font-size:13px;color:#1b1b3c;">
+                              {{config.rows{'coordinated_'.+lg};}}
+                            </p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+	            </div>
+              </td>
+            </tr>
+            <tr>
+              <td width="600" style="background-color:#1b1b3c;">
+                <div style="border-right:50px solid #1b1b3c;border-left:50px solid #1b1b3c;border-top:10px solid #1b1b3c;border-bottom:10px solid #1b1b3c;text-align:center;">
+	                <p style="margin:0;font-family:arial,sans-serif;font-size:13px;color:#dcd8da;"> {{config.rows{'copyright_'.+lg};}} </p>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td width="600" style="background-color:#ededed;">
+                <div style="border-right:50px solid #ededed;border-left:50px solid #ededed;border-top:20px solid #ededed;border-bottom:30px solid #ededed;text-align:center;">
+                	<a style="margin:0;font-family:arial,sans-serif;font-size:13px;color:#1b1b3c;" href="{{site_config.rows.url_prod; pages('unsubscribe_from_email',lg); "?code="; code}}"> Vous pouvez retirer votre nom de la liste d’envoi en cliquant ici </a>
+                </div>
+              </td>
+            </tr>
+      </table>
+    </div>
+    
+    <img src="{{site_config.rows.url_prod; "/extenso/module/sed/directmail/"; lg; "/tracking.snc?code="; code}}">
+    
+  </body>
+</html>

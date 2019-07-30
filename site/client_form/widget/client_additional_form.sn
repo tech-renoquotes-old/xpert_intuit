@@ -1,0 +1,507 @@
+{{
+    /*
+        @title client_form
+        Description: This widget is the form used to register additional and non-obligatory from a client.
+        
+        @author louis.jhonny@sednove.com
+        
+        @version 1.0 2017-04-18
+        @version 1.1 2017-09-26 : send a free quote to contractor.
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    %include "/site/package/all.sn";
+        //session 
+    %include "/extenso/functions/sessions.snc"; 
+}}
+
+
+<!-- confirmation header -->
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator_v2.sn";
+    
+    //organize sn_uploads directory
+    current_month = datetime(format:"%m");
+    current_day = datetime(format:"%d");
+    current_year = datetime(format:"%Y");
+    
+    destination = "/sn_uploads/projects/prj_" .+ current_year .+ "_" .+ current_month .+ "/";
+    
+    if !(-e destination) then
+        mkdir(owner:"rwx",group:"rwx",other:"x",destination);
+    endif
+    
+    if-e destination then
+        a = stat(destination);
+    else
+        destination = "/sn_uploads";
+    endif
+    //finish organizing
+    
+    cgidata = cgidata(disable_upload:false, directory:destination);  
+    connection = connection();
+
+    // validate server side
+    if (validator.validate(data:cgidata) || cgidata.freeQuote eq 'yes') then
+        // check if an email has been submitted for this client
+        if(cgidata.email.length() <= 0) then
+            client = insert(
+            table:"sr_client",
+            fields:{
+            "firstname":cgidata.name,
+            "address":cgidata.address,
+            "lang":"{{lg.rows.lg}}",
+            "languages": '3',
+            "to_qualify": 'yes',
+            'ip': connection.client_ip
+            });
+
+        else
+        
+        // Check for existing client in the database and merge it. 
+            existing = sql(single:true,"SELECT c.uid FROM sr_client c INNER JOIN sr_address a ON a.uid_client = c.uid 
+                            WHERE c.email = '?' OR (a.phone1 = '?' AND a.zip = '?')", cgidata.email, cgidata.phone, cgidata.postal_code);
+
+            if (existing.nbrows > 0) then
+                client = existing.rows;
+
+                u = update(tables: "sr_client", fields: {
+                    'address': cgidata.address,
+                    'email' : cgidata.email,
+                    'to_qualify': 'yes',
+                    'ip': connection.client_ip
+                }, uid: client.uid);
+                
+                
+            else
+                client = insert(
+                    table:"sr_client",
+                    fields:{
+                        "firstname":cgidata.name,
+                        "email":cgidata.email,
+                        "address":cgidata.address,
+                        "lang":"{{lg.rows.lg}}",
+                        "languages": '3',
+                        "to_qualify": 'yes',
+                        'ip': connection.client_ip
+                    }
+                );
+            endif
+        endif
+        
+        if(cgidata.ext1 ne '') then
+            phone1 = cgidata.phone .+ ' ext:' .+ cgidata.ext1;
+        else
+            phone1 = cgidata.phone;
+        endif
+        
+        if(cgidata.ext2 ne '') then
+            phone2 = cgidata.phone2 .+ ' ext:' .+ cgidata.ext2;
+        else
+            phone2 = cgidata.phone2;
+        endif
+        
+        address = insert(
+            table:"sr_address",
+            fields:{
+                "uid_client":client.uid,
+                "city":cgidata.locality,
+                "street_no":cgidata.street_number,
+                "street":cgidata.route,
+                "zip":cgidata.postal_code,
+                "province":cgidata.administrative_area_level_1,
+                "country":cgidata.country,
+                "phone1": phone1,
+                "phone2": phone2
+            }
+        );
+        
+        // //adwords de session  venant de google
+        // adwords = session_get("adwords");
+        // adwords = parse_query_string(adwords); 
+        // first_page_visited = session_get("url");
+       
+        //Cherche les adwors dans les cookies
+        cookies = cookies();
+        cookie_data = unstringnify(cookies.soumissionrenovation);
+        
+        adwords = parse_query_string(cookie_data.adwords); 
+        first_page_visited = cookie_data.url;
+        first_visited = cookies.first_visited;// not necessarely with adword
+        
+        //Test
+        //first_page_visited = '1234567891023456789202345678930234567894023456789502345678960234567897023456789802345678990234678910';
+        
+        
+        void insert(table:'sr_debug', fields:{'description':'test_cre  photo arg','text':request.args});
+
+
+        configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+        site= (lg.rows.lg  eq 'en')?'https://renoquotes.com':'https://soumissionrenovation.ca';
+        
+        //v1.02
+        description = cgidata.description;
+        description = html2text(description);//empêche script de passer
+
+            project = insert(
+                table:"sr_project",
+                fields:{
+                    "uid_client":client.uid, 
+                    "description":description,
+                    "file1": (cgidata.file1.sn_fullname ne '') ? site.+cgidata.file1.sn_fullname : '' ,
+                    "link1": '<a href="'.+site.+cgidata.file1.sn_fullname.+'"  target="_blank">'.+cgidata.file1.sn_fullname.+'</a>',
+                    "file2": (cgidata.file2.sn_fullname ne '') ? site.+cgidata.file2.sn_fullname : '' ,
+                    "link2": '<a href="'.+site.+cgidata.file2.sn_fullname.+'"  target="_blank">'.+cgidata.file2.sn_fullname.+'</a>',
+                    "file3": (cgidata.file3.sn_fullname ne '') ? site.+cgidata.file3.sn_fullname : '' ,
+                    "link3": '<a href="'.+site.+cgidata.file3.sn_fullname.+'"  target="_blank">'.+cgidata.file3.sn_fullname.+'</a>',
+                    "file4": (cgidata.file4.sn_fullname ne '') ? site.+cgidata.file4.sn_fullname : '' ,
+                    "link4": '<a href="'.+site.+cgidata.file4.sn_fullname.+'"  target="_blank">'.+cgidata.file4.sn_fullname.+'</a>',
+                    "file5": (cgidata.file5.sn_fullname ne '') ? site.+cgidata.file5.sn_fullname : '' ,
+                    "link5": '<a href="'.+site.+cgidata.file5.sn_fullname.+'"  target="_blank">'.+cgidata.file5.sn_fullname.+'</a>',
+                    "uid_address":address.uid,
+                    "max_quotes": configs.rows.number_of_quotes,
+                    "status": "new",
+                    "adwords_pos": adwords.pos,
+                    "adwords_net": adwords.net,
+                    "adwords_ad": adwords.ad,
+                    "adwords_kw": adwords.kw,
+                    "adwords_url": first_page_visited,
+                    "adwords_region": adwords.region,
+                    "adwords_adgroup": adwords.adgroupid,
+                    "adwords_campaign": adwords.campaignid,
+                    "adwords_cre": adwords.cre,
+                    "due_date": "Flexible",
+                    "first_url": first_visited,
+                    "ip": connection.client_ip
+                }
+            );
+            
+        if(cgidata.freeQuote eq 'yes') then
+            project::connectFreeProjectContractor(project.uid, cgidata.cuid);
+            if(cgidata.more_quotes ne "on") then
+                void update(tables:'sr_project', fields: {
+                    'status': 'free'
+                }, uid: project.uid);
+            else
+                automail::quoteRequestToClient(project.uid);
+                automail::quoteRequestToAdmin(project.uid);
+            endif
+        else
+            automail::quoteRequestToClient(project.uid);
+            automail::quoteRequestToAdmin(project.uid);
+        endif   
+
+        void insert(table:'sr_debug', fields:{'description':'Client confirmation uid='.+' ','text':project.uid.+ '  first_url='.+first_visited});
+    else
+        validator.errors;
+        stop();
+        
+    endif
+    
+}}
+
+
+
+\{{
+    client = sql(single:true,"
+        SELECT  firstname, lastname, email, address, sr_address.phone1 as phone, sr_address.phone2 as phone2, sr_project.description as description, sr_project.file1 as file1,
+                sr_project.file2 as file2, sr_project.file3 as file3, sr_project.file4 as file4, sr_project.file5 as file5 
+        FROM sr_client 
+        INNER JOIN sr_address ON sr_address.uid_client = sr_client.uid 
+        INNER JOIN sr_project ON sr_project.uid_client = sr_client.uid 
+        WHERE sr_client.uid='?' AND sr_project.uid='?' AND sr_address.uid='?'"
+        ,client.uid, project.uid, address.uid);
+        
+}}
+
+<!-- confirmation header end -->
+
+<style>
+    #upload_files>div{
+        position:relative;
+    }
+    #upload_files > div > input {
+        margin:3px 0px;
+    }
+    #upload_files > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+</style>
+
+<div class="container" >
+    <div class="row">
+
+        <!-- Second Column -->
+        <div  class="col-md-6">
+            <!--<div id="ajax_success" class="alert alert-success" style="display:none">-->
+            <!--    {{sn_ct("contractor_profile Super! Nous avons enregistré les modifications. Entre temps, vous pouvez fournir les informations additionelles ci-dessous pour accelerer votre demande de soumission. ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+            <!--    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> -->
+            <!--</div>-->
+            <div id="ajax_error" class="alert alert-danger" style="display:none">
+                {{sn_ct("contractor_profile Une erreur est survenu!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+            </div>
+            <h2>
+                {{sn_ct("Veuillez vérifier les informations que vous nous avez envoyées", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}    
+            </h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>{{sn_ct("Votre nom:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.firstname}}&nbsp;\{{client.rows.lastname}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre email:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.email}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre numéro de téléphone:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.phone}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre second numéro de téléphone:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.phone2}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Votre adresse: ", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.address}}</th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("La description de vos travaux:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                            <td>\{{client.rows.description}}</th>
+                        </tr>
+                        <tr>
+                            <td colspan="2">{{sn_ct("Vous pouvez ajouter des informations additionelles dans la section", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>       
+            
+            
+            \{{if client.rows.file1 ne "" then}}
+                <div class="container">
+                    <h4>{{sn_ct(" Fichiers :", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h4>
+                    <div class="list-group">
+                        {{for (i=1;i<6;i++) do}}
+                            \{{if client.rows.file{{i}} ne "" then }}
+                                <a target="_blank" href="\{{client.rows.file{{i}} }}" class="list-group-item">
+                                    \{{if basename(client.rows.file{{i}}) =~:i "\.(png|jpe?g)$" then}}
+                                        <img src="\{{client.rows.file{{i}}}}?size=48x48&crop"> 
+                                    \{{else}}
+                                        <i class="fa fa-file-o" aria-hidden="true" style="font-size:18px"></i> 
+                                    \{{endif}}
+                                    <span> \{{basename(client.rows.file{{i}})}}</span>
+                                </a>
+                            \{{endif}}
+                        {{endfor}}
+                
+                    </div>
+                </div>
+            \{{endif}}
+            
+        </div><!-- end first column-->
+        
+        <!-- Second Column -->
+        <div  class=" col-md-6 ">
+            <h2>
+                {{sn_ct("client_additional_form Aidez-nous à trouver les entrepreneurs les mieux adaptés à vos travaux en remplissant ces quelques questions additionelles!", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}    
+            </h2>
+            <div class="well custom-well">
+                <form class="form-horizontal" action="{{pages('confirmation_soumission', lg.rows.lg, table:'pages')}}" id="edit_client" name="edit_client" method="POST">
+                    <input type="hidden" name="project_uid" id="project_uid" value="\{{project.uid}}">
+                    <!--<fieldset class="form-group">-->
+                    <!--    <label for="budget" class="control-label col-md-4">-->
+                    <!--        Budget-->
+                    <!--    </label>-->
+                    <!--    <div class="col-md-8">-->
+                    <!--        <input class="form-control" placeholder="{{sn_ct(edit:false,'En CAN : ex. 250.45')}}" type="text" name="budget" id="budget" value="">-->
+                    <!--    </div>-->
+                    <!--</fieldset>-->
+                    <!--<fieldset style="display:none" class="form-group" id='budget_select'>-->
+                    <!--    <label for="budget_type" class="control-label col-md-4">-->
+                    <!--        {{sn_ct(edit:true,"Ce budget inclut les matériaux?")}}-->
+                    <!--    </label>-->
+                    <!--    <div class="col-md-8">-->
+                    <!--        <select class="form-control LoNotSensitive" name="budget_type" id="budget_type" value="">-->
+                    <!--            <option selected value=''>{{sn_ct(edit:false,'Choisissez une option')}}</option>-->
+                    <!--            <option value="1" >{{sn_ct(edit:false,"budget pour main d'oeuvre uniquement")}}</option>-->
+                    <!--            <option value="2" >{{sn_ct(edit:false,"budget pour main d'oeuvre + matériaux")}}</option>-->
+                    <!--        </select>-->
+                    <!--    </div>-->
+                    <!--</fieldset>-->
+                    <fieldset class="form-group">
+                        <label for="duration" class="control-label col-md-4">
+                            {{sn_ct("Delai d'execution des travaux?", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control LoNotSensitive" name="duration" id="duration" value="">
+                                <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option>{{sn_ct(edit:true,"Flexible selon les disponibilités des entrepreneurs")}}</option>
+                                <option>{{sn_ct(edit:true,"Dès que possible (urgent)")}}</option>
+                                <option>{{sn_ct(edit:true,"Moins d'une semaine")}}</option>
+                                <option>{{sn_ct(edit:true,'Une à deux semaines')}}</option>
+                                <option>{{sn_ct(edit:true,'3 à 4 semaines')}}</option>
+                                <option>{{sn_ct(edit:true,'1 à 2 mois')}}</option>
+                                <option>{{sn_ct(edit:true,'3 à 4 mois')}}</option>
+                                <option>{{sn_ct(edit:true,'6 à 12 mois')}}</option>
+                                <option>{{sn_ct(edit:true,'12 mois et plus')}}</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    <fieldset class="form-group">
+                        <label class="control-label col-md-4" for="house_type">
+                            {{sn_ct("Type de service", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control LoNotSensitive" name="house_type" id="house_type" value="">
+                                <option selected value='' >{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                \{{service = sql("SELECT name_long_? as name FROM sr_service WHERE active = 'yes' ORDER BY name_long_?", "{{lg.rows.lg}}", "{{lg.rows.lg}}");
+                                for s in service.rows do}}
+                                <option>\{{s.name}}</option>
+                                \{{endfor}}
+                            </select>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset class="form-group">
+                        <label class="control-label col-md-4" for="is_owner">
+                            {{sn_ct("Êtes-vous propriétaire?", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control LoNotSensitive" name="is_owner" id="is_owner" value="">
+                                <option selected value='' >{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option>{{sn_ct(edit:true,'Propriétaire')}}</option>
+                                <option>{{sn_ct(edit:true,'Locataire')}}</option>
+                                <option>{{sn_ct(edit:true,'En processus d\'achat (Offre d\'achat acceptée)')}}</option>
+                                <option>{{sn_ct(edit:true,'En processus d\'achat (Aucune offre d\'achat acceptée)')}}</option>
+                                <option>{{sn_ct(edit:true,'Condo')}}</option>
+                                <!--<option>{{sn_ct(edit:true,'Je suis entrepreneur et je cherche un sous-contractant')}}</option>-->
+                                <option>{{sn_ct(edit:true,'Autre')}}</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset class="form-group">
+                        <label class="control-label col-md-4" for="best_reach">
+                            {{sn_ct("Meilleur moyen pour vous joindre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <table>
+                                <tr>
+                                    <td width="50%">
+                                    <select class="form-control LoNotSensitive" name="best_reach" id="best_reach" value="">
+                                        <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                        <option>{{sn_ct(edit:true,'Par téléphone')}}</option>
+                                        <option>{{sn_ct(edit:true,'Par email')}}</option>
+                                        <option>{{sn_ct(edit:true,'Par sms/texto')}}</option>
+                                        <option>{{sn_ct(edit:true,'Autre')}}</option>
+                                        </select>
+                                    </td>
+                                    <td width="50%">
+                                    <select class="form-control LoNotSensitive" name="moment" id="moment" value="">
+                                        <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                        <option>{{sn_ct(edit:true,'En tout temps')}}</option>
+                                        <option>{{sn_ct(edit:true,'Matin')}}</option>
+                                        <option>{{sn_ct(edit:true,'Mi-journée')}}</option>
+                                        <option>{{sn_ct(edit:true,'Le jour')}}</option>
+                                        <option>{{sn_ct(edit:true,'Soir')}}</option>
+                                    </select>
+                                    </td>
+                                </tr>
+                                
+                            </table>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset class="form-group">
+                        <label for="comm" class="control-label col-md-4">
+                            {{sn_ct("Langue de communication", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <select class="form-control" name="comm" id="comm" value="">
+                                <option selected value=''>{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option value='1'>{{sn_ct(edit:true,'french')}}</option>
+                                <option value='2'>{{sn_ct(edit:true,'english')}}</option>
+                                <option value='3'>{{sn_ct(edit:true,'both')}}</option>
+                            </select>
+                        </div>
+                    </fieldset>
+        
+                    <fieldset class="form-group">
+                        <label for="comments" class="control-label col-md-4">
+                            {{sn_ct("commentaire additionnel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </label>
+                        <div class="col-md-8">
+                            <textarea class="form-control LoNotSensitive" name="comments" id="comments"></textarea>    
+                        </div>
+                    </fieldset>
+                    <div class="form-group">
+                        <div class="col-md-offset-4 col-md-8">
+                            <button id="submit_edit_client" name="submit_edit_client" type="submit" class="btn btn-primary">
+                                {{sn_ct(edit:false,"client_form_additional Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                            </button>
+                        </div>
+                    </div>
+        
+                </form>
+            </div>
+        </div><!-- end second column -->
+    </div><!-- end row -->
+</div><!-- end container -->
+
+
+<script>
+$('#ajax_success').show();
+</script>
+
+<script>
+$(document).ready(function(){
+    $("#edit_client").submit(function(e) {
+        e.preventDefault();    
+    
+            if ($("#budget").val() == "" 
+                && $("#duration").val() == "" 
+                && $("#house_type").val() == ""
+                && $("#best_reach").val() == ""
+                && $("#comments").val() == ""
+                && $("#is_owner").val() == ""){
+            }else{
+                $(this).unbind('submit').submit();
+            }
+        });
+        
+        $('#budget').on('keyup', function(){
+            if($(this).val() == ""){
+                $('#budget_select').hide();
+            }else{
+               $('#budget_select').show(); 
+            }
+            
+        })
+    
+    })
+    
+</script>

@@ -1,0 +1,222 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">    
+<title>{{ page.rows{"meta_title_" .+ lg.rows.lg};}}</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!--[if lt IE 9]>
+   <script>
+      document.createElement('header');
+      document.createElement('nav');
+      document.createElement('section');
+      document.createElement('article');
+      document.createElement('aside');
+      document.createElement('footer');
+   </script>
+<![endif]-->
+
+<meta name="sednove_lg" content="{{lg.rows.lg}}">
+<meta name="sednove_uid" content="{{page.rows.uid}}">
+<meta name="sednove_url" content="{{pageurl}}">
+<meta name="sednove_section" content="{{page.rows.section}}">
+<meta name="sednove_date" content="{{datetime(format:"%Y-%m-%d")}}">
+
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+<link href="/css/{{lg.rows.lg}}/styles.css" rel="stylesheet">
+
+{{ seo = sql(single:true,"select * from sn_configs"); }}
+
+{{  if page.rows{"meta_description_" .+ lg.rows.lg} ne "" then
+        meta_description = page.rows{"meta_description_" .+ lg.rows.lg} ;
+    else
+        meta_description = seo.rows{"meta_description_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"meta_keywords_" .+ lg.rows.lg} ne "" then
+        meta_keywords = page.rows{"meta_keywords_" .+ lg.rows.lg} ;
+    else
+        meta_keywords = seo.rows{"meta_keywords_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"meta_generator_" .+ lg.rows.lg} ne "" then
+        meta_generator = page.rows{"meta_generator_" .+ lg.rows.lg} ;
+    else
+        meta_generator = seo.rows{"meta_generator_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"meta_author_" .+ lg.rows.lg} ne "" then
+        meta_author = page.rows{"meta_author_" .+ lg.rows.lg} ;
+    else
+        meta_author = seo.rows{"meta_author_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"meta_robots_" .+ lg.rows.lg} ne "" then
+        meta_robots = page.rows{"meta_robots_" .+ lg.rows.lg} ;
+    else
+        meta_robots = seo.rows{"meta_robots_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"google_site_verification_" .+ lg.rows.lg} ne "" then
+        google_site_verification = page.rows{"google_site_verification_" .+ lg.rows.lg} ;
+    else
+        google_site_verification = seo.rows{"google_site_verification_" .+ lg.rows.lg} ;
+    endif
+}}
+
+<meta name="description" content="{{ meta_description; }}" />
+<meta name="keywords" content="{{ meta_keywords; }}" />
+<meta name="generator" content="{{ meta_generator; }}" />
+<meta name="author" content="{{ meta_author; }}"> 
+<meta name="robots" content="{{ meta_robots; }}"> 
+<meta name="google-site-verification" content="{{ google_site_verification; }}"/>
+
+<!-- GEO LOCALISATION -->
+
+{{  if page.rows{"DC_title_" .+ lg.rows.lg} ne "" then
+        DC_title = page.rows{"DC_title_" .+ lg.rows.lg} ;
+    else
+        DC_title = seo.rows{"DC_title_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"geo_region_" .+ lg.rows.lg} ne "" then
+        geo_region = page.rows{"geo_region_" .+ lg.rows.lg} ;
+    else
+        geo_region = seo.rows{"geo_region_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"geo_placename_" .+ lg.rows.lg} ne "" then
+        geo_placename = page.rows{"geo_placename_" .+ lg.rows.lg} ;
+    else
+        geo_placename = seo.rows{"geo_placename_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"geo_position_" .+ lg.rows.lg} ne "" then
+        geo_position = page.rows{"geo_position_" .+ lg.rows.lg} ;
+    else
+        geo_position = seo.rows{"geo_position_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"icbm_" .+ lg.rows.lg} ne "" then
+        icbm = page.rows{"icbm_" .+ lg.rows.lg} ;
+    else
+        icbm = seo.rows{"icbm_" .+ lg.rows.lg} ;
+    endif
+}}
+
+<meta name="DC.title" content="{{ DC_title; }}" /> 
+<meta name="geo.region" content="{{ geo_region; }}" />
+<meta name="geo.placename" content="{{ geo_placename; }}" /> 
+<meta name="geo.position" content="{{ geo_position; }}" /> 
+<meta name="ICBM" content="{{ icbm; }}" /> 
+
+<!-- OPEN GRAPH -->
+
+{{  if page.rows{"og_site_name_" .+ lg.rows.lg} ne "" then
+        og_site_name = page.rows{"og_site_name_" .+ lg.rows.lg} ;
+    else
+        og_site_name = seo.rows{"og_site_name_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_description_" .+ lg.rows.lg} ne "" then
+        og_description = page.rows{"og_description_" .+ lg.rows.lg} ;
+    else
+        og_description = seo.rows{"og_description_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_url_" .+ lg.rows.lg} ne "" then
+        og_url = page.rows{"og_url_" .+ lg.rows.lg} ;
+    else
+        og_url = seo.rows{"og_url_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_" .+ lg.rows.lg} ne "" then
+        og_image = page.rows{"og_image_" .+ lg.rows.lg} ;
+    else
+        og_image = seo.rows{"og_image_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_type_" .+ lg.rows.lg} ne "" then
+        og_image_type = page.rows{"og_image_type_" .+ lg.rows.lg} ;
+    else
+        og_image_type = seo.rows{"og_image_type_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_width_" .+ lg.rows.lg} ne "" then
+        og_image_width = page.rows{"og_image_width_" .+ lg.rows.lg} ;
+    else
+        og_image_width = seo.rows{"og_image_width_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{  if page.rows{"og_image_height_" .+ lg.rows.lg} ne "" then
+        og_image_height = page.rows{"og_image_height_" .+ lg.rows.lg} ;
+    else
+        og_image_height = seo.rows{"og_image_height_" .+ lg.rows.lg} ;
+    endif
+}}
+
+{{ if og_site_name ne "" then }}
+<meta property="og:site_name" content="{{ og_site_name; }}" /> 
+{{ endif }}
+{{ if og_description ne "" then }}
+<meta property="og:description" content="{{ og_description; }}" />
+{{ endif }}
+{{ if og_url ne "" then }}
+<meta property="og:url" content="{{ og_url; }}" /> 
+{{ endif }}
+{{ if og_image ne "" then }}
+<meta property="og:image" content="{{ og_image; }}" /> 
+{{ endif }}
+{{ if og_image_type ne "" then }}
+<meta property="og:image:type" content="{{ og_image_type; }}" /> 
+{{ endif }}
+{{ if og_image_width ne "" then }}
+<meta property="og:image:width" content="{{ og_image_width; }}" /> 
+{{ endif }}
+{{ if og_image_height ne "" then }}
+<meta property="og:image:height" content="{{ og_image_height; }}" /> 
+{{ endif }}
+
+<!-- Others metas -->
+{{ 
+for (m=1;m<=5;++m) do
+	if page.rows{"meta_name" .+ m} ne "" && page.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg} ne "" then 
+		}}<meta name="{{ page.rows{"meta_name" .+ m}; }}" content="{{ page.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg}; }}"/>{{
+	elseif seo.rows{"meta_name" .+ m} ne "" && seo.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg} ne "" then 
+		}} <meta name="{{ seo.rows{"meta_name" .+ m}; }}" content="{{ seo.rows{"meta_value" .+ m .+ "_" .+ lg.rows.lg}; }}"/>{{
+	endif
+endfor
+}}
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/jquery-ui.min.js"></script>
+<script src="/js/{{lg.rows.lg}}/site.js"></script>
+<script src="//oss.maxcdn.com/jquery.form/3.50/jquery.form.min.js"></script>
+
+
+
+<meta name="sednove_lg" content="{{lg.rows.lg}}">
+<meta name="sednove_uid" content="{{page.rows.uid}}">
+<meta name="sednove_url" content="{{pageurl}}">
+<meta name="sednove_section" content="{{page.rows.section}}">
+<meta name="sednove_date" content="{{datetime(format:"%Y-%m-%d")}}">
+\{{
+	r = request();
+   	void sql("INSERT DELAYED INTO sn_search_siteindex (sn_cdate,sn_mdate,url,nbhit,page,date_publication,lg,nbref,section) values 
+		(NOW(), NOW(),'?','1','?',NOW(),'{{lg.rows.lg}}',0, '?') 
+   		on duplicate key update nbhit = nbhit + 1,date_publication=NOW()",r.uri,"{{pageurl}}","{{page.rows.section}}");
+}}

@@ -1,0 +1,82 @@
+{{  
+    // --------------------------------------------------------------------------
+    // Name:        How does it work
+    //
+    // Description: Displays how our service works in 3 steps
+    //
+    // Version:      1.0 2018-01-09 15:20 Michel Jodoin
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    
+    use lg;
+    use widget;
+}}
+
+<style>
+    .how_does_it_work_big img{
+        max-width:100%;
+    }
+    .how_does_it_work_big .number{
+        width:35px;
+        height:35px;
+        border-radius: 50%;
+        border: 1px solid #eeeeee;
+        background-color:#00517e;
+        font-size:22px;
+        font-weight:bold;
+        text-align:center;
+        color:#ffffff;
+        float:left;
+        margin-top:15px;
+    }
+    @media screen and (max-width :991px) {
+        .small_left {
+            float:left;
+        }   
+        .small_right {
+            float:right;
+        }
+    }
+    @media screen and (min-width :991px) {
+        .big_left {
+            float:left;
+        }   
+        .big_right {
+            float:right;
+        }
+    }
+</style>
+
+<div class="how_does_it_work_big">
+    <div class="col-xs-12 col-sm-6 col-md-6 big_left small_left">
+        <div class="number">1</div>
+        <p>{{sn_ct("Vous avez un besoin !", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</p>
+    </div>
+    <div class="col-xs-12 col-sm-6 col-md-6 big_right small_right">
+        <img src="/widgets/uploads/506926-636238695730179167-16x9_3.jpg">
+    </div>
+    
+    <div class="clearfix"></div>
+    
+    <div class="col-xs-12 col-sm-6 col-md-6 big_right small_left">
+        <div class="number">2</div>
+        <p>{{sn_ct("Envoyez-nous votre demande !", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</p>
+    </div>
+    <div class="col-xs-12 col-sm-6 col-md-6 big_left small_right">
+        <img src="/widgets/uploads/628691-636517867090965872-16x9_3.jpg">
+    </div>   
+    
+    
+    <div class="clearfix"></div>
+    
+    <div class="col-xs-12 col-sm-6 col-md-6 big_left small_left">
+        <div class="number">3</div>
+        <p>{{sn_ct("Choisissez le professionnel qualifié qui convient à vos critères!", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</p>
+    </div>    
+    <div class="col-xs-12 col-sm-6 col-md-6 big_right small_right">
+        <img src="/widgets/uploads/536419-636235386953106513-16x9_1.jpg">
+    </div>
+</div>
+
+<div class="clearfix"></div>

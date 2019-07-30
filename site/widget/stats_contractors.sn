@@ -1,0 +1,1089 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+   //session 
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+    void timeout(15);
+    
+}}
+
+\{{
+    use user;
+    if(!user.uid) then
+        redirect(uri:"/index.sn"); 
+    endif
+}}
+<link href="/css/fr/styles.css" rel="stylesheet">
+<style>
+.contractors {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.contractors td, .customers th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.contractors tr:nth-child(even){background-color: #f2f2f2;}
+
+.contractors tr:hover {background-color: #ddd;}
+
+.contractors th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: center;
+    background-color: #00517e;
+    color: white;
+}
+.stats_contractor a {
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #fff;
+    background-color: #337ab7;
+    border-color: #2e6da4;
+}
+.stats_contractor input[type=submit] {
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #fff;
+    background-color: #337ab7;
+    border-color: #2e6da4;
+}
+.stats_contractor button{
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #fff;
+    background-color: #337ab7;
+    border-color: #2e6da4;
+}
+</style>
+<div style="background-color:white;" class="stats_contractor">
+    
+    <div style="padding:30px;">
+<br><br>
+<form action="" method="post">
+    <input type="text" placeholder="id entrepreneur" name="id_contractor">
+    <input type="submit">
+</form>
+\{{       
+    
+cgidata = cgidata();
+
+fullname=user.firstname .+ " " .+ user.lastname;
+
+if 1 == 1 then
+
+    
+        }}
+        
+        
+        
+        <form action="" method="post">
+            <input type="submit" name="next" value="{{sn_ct(edit:false,'Prochain')}}">
+            <select name="uid_service">
+                <option value="">Choisir un service</option>
+                \{{services = sql("SELECT uid, name_long_fr FROM sr_service WHERE active = 'yes' ORDER BY name_long_fr");
+                for s in services.rows do}}
+                    <option \{{if s.uid eq cgidata.uid_service then "selected"; endif}} value="\{{s.uid}}">\{{s.name_long_fr}}</option>
+                \{{endfor}}
+            </select>
+            <select name="uid_territory">
+                <option value="">Choisir un territoire</option>
+                \{{territories = sql("SELECT uid, name_fr FROM sr_territory WHERE active = 'yes' ORDER BY name_fr");
+                for t in territories.rows do}}
+                    <option \{{if t.uid eq cgidata.uid_territory then "selected"; endif}} value="\{{t.uid}}">\{{t.name_fr}}</option>
+                \{{endfor}}
+            </select>
+            <input type="hidden" name="id_contractor" value="\{{cgidata.id_contractor}}">
+        </form>
+        
+        
+        \{{
+        
+        if cgidata.fail then
+            void sql("UPDATE sr_contractor SET locked_by = '', last_call_failed = now(), number_calls_failed = (ifnull(number_calls_failed,0)+1) WHERE uid = '?'", cgidata.previous);
+        endif
+        if cgidata.success then
+            void sql("UPDATE sr_contractor SET last_call_date = date(now()), last_followup_by = '?' WHERE uid = '?'", fullname, cgidata.previous);
+            if cgidata.booking then
+                void sql("UPDATE sr_contractor SET interested_in_new_option = 'yes' WHERE uid = '?'",cgidata.previous);
+            endif
+        endif
+
+        if cgidata.invalid_rbq then
+            contractor = sql(single:true, "SELECT contact_email, contact_lg, uid FROM sr_contractor WHERE uid = '?'", cgidata.previous);
+            automail::rbq_deactivated(contractor.rows.contact_email, contractor.rows.contact_lg, contractor.rows.uid);
+            automail::rbq_unsub_cesgm(cgidata.previous);
+            void sql("UPDATE sr_contractor SET leaving_reason = 'RBQ', date_unregistered = date(now()), verified = 'no', comments = concat(comments, ' - Désinscrit pour la RBQ le ', date(now())) WHERE uid = '?'", cgidata.previous);
+            "Entrepreneur #".+cgidata.previous.+' désinscrit pour la RBQ';
+        endif
+        
+        if cgidata.valid_rbq then
+            contractor = sql(single:true, "SELECT contact_email, contact_lg, uid FROM sr_contractor WHERE uid = '?'", cgidata.previous);
+            automail::rbq_reactivated(contractor.rows.contact_email, contractor.rows.contact_lg, contractor.rows.uid);
+            void sql("UPDATE sr_contractor SET leaving_reason = '', date_unregistered = '', active = 'yes', verified = 'yes', comments = concat(comments, ' - Réinscrit pour la RBQ le ', date(now())), rbq_exp = date(now()) WHERE uid = '?'", cgidata.previous);
+            "Entrepreneur #".+cgidata.previous.+' Réinscrit pour la RBQ';
+        endif
+        
+        
+            
+        if cgidata.next then
+            next = sql(single:true,"select c.uid, c.last_call_date, co.count, sum(lead_price), max(pc.accepted_date)
+                from sr_contractor c
+                LEFT JOIN (
+                select count(*) as count, uid_contractor
+                from sr_project_contractor
+                where sn_cdate > DATE_SUB(CURDATE(), INTERVAL 1 month)
+                GROUP BY uid_contractor) as co ON co.uid_contractor = c.uid
+                inner join sr_project_contractor pc ON pc.uid_contractor = c.uid
+                INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid AND ct.uid_territory = '?'
+                INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid AND cs.uid_service = '?'
+                where (c.last_call_date is null or c.last_call_date = '0000-00-00' or c.last_call_date < DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+                and c.active = 'yes'
+                and c.verified = 'yes'
+                and (locked_by is null or locked_by = '' or locked_by = '?')
+                and (last_call_failed < DATE_SUB(CURDATE(), INTERVAL 2 day) or last_call_failed is null or last_call_failed = '0000-00-00')
+                and c.contact_lg = '?'
+                and (enable_vacation <> 'yes' OR enable_vacation is null OR (enable_vacation = 'yes' AND reactivate_date < curdate()))
+                GROUP BY c.uid
+                ORDER BY co.count DESC
+                LIMIT 1", cgidata.uid_territory, cgidata.uid_service, fullname, "{{lg.rows.lg}}");
+            cgidata.id_contractor = next.rows.uid;
+            
+            void sql("UPDATE sr_contractor SET locked_by = '?' WHERE uid = '?'", fullname, next.rows.uid);
+            
+        endif
+        
+        }}
+        <br>
+        <form action="" method="post">
+            <input type="hidden" name="previous" value="\{{cgidata.id_contractor}}">
+            <input type="submit" name="fail" value="{{sn_ct(edit:false,'Non rejoint')}}">
+            <input type="submit" name="success" value="{{sn_ct(edit:false,'Rejoint')}}">
+        </form>
+        \{{
+    
+    if user then
+    
+        if cgidata.id_contractor then
+            contractor = sql(single:true,"SELECT ifnull(c.enable_delay_filter,'no') as filter_enabled, c.leaving_reason, c.rbq, c.from_active_hour, c.to_active_hour, c.active, c.verified, c.reactivate_date, 
+            c.deactivate_date, c.credit_threshold, c.contact_title, c.email_cc, c.email, c.number_calls_failed, c.last_call_date, c.comments, c.uid, c.contact_gender, c.contact_firstname, c.contact_lastname, 
+            c.contact_phone, c.contact_email, c.company_name, c.username, c.seo, c.website, c.fbsite, c.company_desc, date(c.sn_cdate) as sub_date, c.languages, p.company_logo, p.banner_1, d.prefix, c.ne,
+            c.insurance_company, c.insurance_number, c.contact_lg, c.date_unregistered, c.company_phone, c.enable_vacation, c.reactivate_date, c.deactivate_date, c.email_accounting, c.leaving_reason_other
+            FROM sr_contractor c 
+            LEFT JOIN sr_contractor_profil p ON p.uid_contractor = c.uid 
+            LEFT JOIN sr_dialer_prefix d ON d.first_digits = left(replace(c.contact_phone,'(',''),3)
+            WHERE c.uid = '?' 
+            GROUP BY c.uid", cgidata.id_contractor);
+            if contractor.nbrows > 0 then
+                photos = sql("SELECT photo FROM sr_gallery WHERE active = 'yes' AND uid_contractor = '?' LIMIT 6", cgidata.id_contractor);
+                reviews = sql("SELECT contractor_reply, client_comment, client_satisfaction, uid_project, evaluation_date, comment_verified FROM sr_project_contractor WHERE uid_contractor = '?' AND client_satisfaction >= 1 ORDER BY evaluation_date DESC", cgidata.id_contractor);
+                certification = sql("SELECT lic_name, lic_number FROM sr_additional_license WHERE uid_contractor = '?'", cgidata.id_contractor);
+                complaints = sql("SELECT * FROM sr_complaints WHERE uid_contractor = '?'", cgidata.id_contractor);
+                address = sql(single:true, "SELECT a.street_no, a.street, a.zip, c.name_fr, t.name_fr as territory, uid_city FROM sr_address a LEFT JOIN sr_city c ON c.uid = a.uid_city LEFT JOIN sr_territory t ON t.uid = c.uid_territory WHERE a.uid_contractor = ?", cgidata.id_contractor);
+                
+                project_sent = sql(single:true,"SELECT count(uid) as count, max(sn_cdate) as maxdate FROM sr_project_contractor WHERE sn_cdate > (DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND uid_contractor = '?'", cgidata.id_contractor);
+                project_bought = sql(single:true,"SELECT count(uid) as count FROM sr_project_contractor WHERE accepted_date > (DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND lead_price > 0 AND uid_contractor = '?'", cgidata.id_contractor);
+                sales_year = sql("SELECT year(accepted_date) as year, sum(lead_price) as sales FROM sr_project_contractor WHERE uid_contractor = '?' AND year(accepted_date) >= 2016 AND lead_price > 0 GROUP BY year(accepted_date) ORDER BY year(accepted_date) DESC", cgidata.id_contractor);
+                credit_ratio = sql(single:true,"
+                    SELECT round(c.credits/count(pc.uid)*100,2) as ratio, c.credits, count(pc.uid) as count, r.rebate
+                    FROM sr_project_contractor pc
+                    LEFT JOIN (
+                        SELECT count(c.uid) as credits, pc.uid_contractor
+                        FROM sr_credit c
+                        INNER JOIN sr_project_contractor pc ON pc.uid = c.uid_project_contractor
+                        WHERE c.accepted = 'yes'
+                        AND (c.legit_request is null OR c.legit_request = 'no' OR c.legit_request = '')
+                        AND pc.uid_contractor = '?') as c
+                        ON c.uid_contractor = pc.uid_contractor
+                    LEFT JOIN (
+                        SELECT count(*) as rebate, pc.uid_contractor
+                        FROM sr_project_contractor pc
+                        WHERE pc.accepted_rebate = 'yes'
+                        AND pc.accepted_date > 0
+                        AND pc.uid_contractor = '?'
+                        ) as r ON r.uid_contractor = pc.uid_contractor
+                    WHERE pc.uid_contractor = '?'
+                    AND pc.lead_price > 0
+                    AND pc.accepted_date > 0
+                    ", cgidata.id_contractor, cgidata.id_contractor, cgidata.id_contractor);
+                territory = sql("SELECT t.name_? as name, pt.count, ct.min_amount, ct.max_amount, pt2.count as count2
+                    FROM sr_contractor c
+                    INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+                    INNER JOIN sr_territory t ON t.uid = ct.uid_territory
+                    LEFT JOIN (
+                        SELECT t.uid, count(pc.uid) as count
+                        FROM sr_contractor c 
+                        LEFT JOIN sr_project_contractor pc ON c.uid = pc.uid_contractor 
+                        LEFT JOIN sr_project p ON p.uid = pc.uid_project 
+                        LEFT JOIN sr_address a ON a.uid = p.uid_address
+                        LEFT JOIN sr_city ci ON ci.uid = a.uid_city
+                        LEFT JOIN sr_territory t ON t.uid = ci.uid_territory
+                        WHERE c.uid = '?'
+                        AND pc.accepted_date > 0
+                        GROUP BY t.uid
+                    ) as pt ON pt.uid = t.uid
+                    LEFT JOIN (
+                        SELECT t.uid, count(pc.uid) as count
+                        FROM sr_contractor c 
+                        LEFT JOIN sr_project_contractor pc ON c.uid = pc.uid_contractor 
+                        LEFT JOIN sr_project p ON p.uid = pc.uid_project 
+                        LEFT JOIN sr_address a ON a.uid = p.uid_address
+                        LEFT JOIN sr_city ci ON ci.uid = a.uid_city
+                        LEFT JOIN sr_territory t ON t.uid = ci.uid_territory
+                        WHERE c.uid = '?'
+                        AND pc.sn_cdate > (DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+                        GROUP BY t.uid
+                    ) as pt2 ON pt2.uid = t.uid
+                    WHERE c.uid = '?'
+                    ORDER BY t.name_? ASC
+                    ", "{{lg.rows.lg}}", cgidata.id_contractor, cgidata.id_contractor, cgidata.id_contractor, "{{lg.rows.lg}}");
+                service = sql("SELECT s.name_long_? as name, ps.count, ps2.count as count2
+                    FROM sr_contractor c
+                    INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+                    INNER JOIN sr_service s ON s.uid = cs.uid_service
+                    LEFT JOIN (
+                        SELECT s.uid, count(pc.uid) as count
+                        FROM sr_contractor c 
+                        LEFT JOIN sr_project_contractor pc ON c.uid = pc.uid_contractor 
+                        LEFT JOIN sr_project p ON p.uid = pc.uid_project 
+                        LEFT JOIN sr_service s ON s.uid = p.uid_service
+                        WHERE c.uid = '?'
+                        AND pc.accepted_date > 0
+                        GROUP BY s.uid
+                    ) as ps ON ps.uid = s.uid
+                    LEFT JOIN (
+                        SELECT s.uid, count(pc.uid) as count
+                        FROM sr_contractor c 
+                        LEFT JOIN sr_project_contractor pc ON c.uid = pc.uid_contractor 
+                        LEFT JOIN sr_project p ON p.uid = pc.uid_project 
+                        LEFT JOIN sr_service s ON s.uid = p.uid_service
+                        WHERE c.uid = '?'
+                        AND pc.sn_cdate > (DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
+                        GROUP BY s.uid
+                    ) as ps2 ON ps2.uid = s.uid
+                    WHERE c.uid = '?'
+                    ORDER BY s.name_long_? ASC
+                    ", "{{lg.rows.lg}}", cgidata.id_contractor, cgidata.id_contractor, cgidata.id_contractor, "{{lg.rows.lg}}");
+                project_type = sql("SELECT t.name_? as name, pt.count
+                    FROM sr_contractor c
+                    INNER JOIN sr_project_type_contractor ptc ON ptc.uid_contractor = c.uid
+                    INNER JOIN sr_project_type t ON t.uid = ptc.uid_project_type
+                    LEFT JOIN (
+                        SELECT p.uid_project_type, count(pc.uid) as count
+                        FROM sr_contractor c 
+                        LEFT JOIN sr_project_contractor pc ON c.uid = pc.uid_contractor 
+                        LEFT JOIN sr_project p ON p.uid = pc.uid_project 
+                        WHERE c.uid = '?'
+                        AND pc.accepted_date > 0
+                        GROUP BY p.uid_project_type
+                    ) as pt ON pt.uid_project_type = t.uid
+                    WHERE c.uid = '?'
+                    ORDER BY t.name_? ASC
+                    ", "{{lg.rows.lg}}", cgidata.id_contractor, cgidata.id_contractor, "{{lg.rows.lg}}");
+                if contractor.rows.languages == 3 then
+                    language_contractor = "{{sn_ct(edit:false,'Bilingue')}}";
+                elseif contractor.rows.languages == 2 then
+                    language_contractor = "{{sn_ct(edit:false,'Anglais')}}";
+                elseif contractor.rows.languages == 1 then
+                    language_contractor = "{{sn_ct(edit:false,'Français')}}";
+                endif
+                billing = contractor::getCurrentBilling(cgidata.id_contractor);
+                billing_footer = contractor::getBillingFooterByProv(billing,cgidata.id_contractor);
+                
+                }}
+                <div class="col-md-12">
+                    <table class="contractors" id="basic_info">
+                    <tr>
+                        <th colspan="6"><input type="text" id="company_name" onchange="save_ajax(this)" style="color:black;" value="\{{contractor.rows.company_name}}"> (id \{{contractor.rows.uid}}) <img style="float:right;" title="afficher details" width="32px" src="/sn_uploads/icon/top-arrow-Icon.png" onclick="toggle_basic_info(this)"></th>
+                    </tr>
+                        <tr>
+                            <td>{{sn_ct("S'est inscrit le")}}</td>
+                            <td>\{{contractor.rows.sub_date}}</td>
+                            <td>{{sn_ct("Personne contact")}}</td>
+                            <td>
+                                <select id="contact_gender" onchange="save_ajax(this)">
+                                    <option value="">Genre</option>
+                                    <option value="m" \{{if contractor.rows.contact_gender eq 'm' then}}selected\{{endif}}>M.</option>
+                                    <option value="f" \{{if contractor.rows.contact_gender eq 'f' then}}selected\{{endif}}>Mme</option>
+                                </select>
+                                <input type="text" id="contact_firstname" onchange="save_ajax(this)" placeholder="Prénom" value="\{{contractor.rows.contact_firstname}}">
+                                <input type="text" id="contact_lastname" onchange="save_ajax(this)" placeholder="Nom de famille" value="\{{contractor.rows.contact_lastname}}">
+                                <br>Position:<input type="text" id="contact_title" onchange="save_ajax(this)" placeholder="Position" value="\{{contractor.rows.contact_title}}"></td>
+                            <td>Numéro d'entreprise</td>
+                            <td>
+                                <input type="text" id="ne" onchange="save_ajax(this)" value="\{{contractor.rows.ne}}"> <img height="24px" src="/sn_uploads/copy-to-clipboard.png" onclick="copy(this, 'ne')">
+                            </td>
+                            
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Adresse")}}</td>
+                            <td>
+                                <input type="text" id="street_no" onchange="save_ajax_address(this)" placeholder="No civique" value="\{{address.rows.street_no}}">
+                                <input type="text" id="street" onchange="save_ajax_address(this)" placeholder="Rue" value="\{{address.rows.street}}">
+                                <select id="uid_city" onchange="save_ajax_address(this)">
+                                    <option value="">Choisir une ville</option>
+                                    \{{
+                                        cities = sql("SELECT uid, name_fr FROM sr_city WHERE active = 'yes' ORDER BY name_fr");
+                                        for c in cities.rows do
+                                        }}
+                                            <option value="\{{c.uid}}" \{{if c.uid == address.rows.uid_city then}}selected\{{endif}}>\{{c.name_fr}}</option>
+                                        \{{
+                                        endfor
+                                    }}
+                                </select>
+                                <input type="text" id="zip" onchange="save_ajax_address(this)" placeholder="Code postal" value="\{{address.rows.zip}}">
+                                \{{' (' .+ address.rows.territory .+ ')'}}</td>
+                            <td>{{sn_ct("Téléphone")}}</td>
+                            <td>
+                                <input type="text" id="contact_phone" onchange="save_ajax(this)" value="\{{contractor.rows.contact_phone}}"><a href="sip:\{{contractor.rows.prefix}}\{{str_replace('-','',str_replace(')','',str_replace('(','',str_replace(' ', '',contractor.rows.contact_phone))))}}">Appeler</a>
+                                <input type="text" id="company_phone" onchange="save_ajax(this)" value="\{{contractor.rows.company_phone}}"><a href="sip:\{{contractor.rows.prefix}}\{{str_replace('-','',str_replace(')','',str_replace('(','',str_replace(' ', '',contractor.rows.company_phone))))}}">Appeler</a>
+                            </td>
+                            <td rowspan="2">RBQ</td>
+                            <td rowspan="2">
+                                <input type="text" id="rbq" onchange="save_ajax(this)" value="\{{contractor.rows.rbq}}"> <img height="24px" src="/sn_uploads/copy-to-clipboard.png" onclick="copy(this, 'rbq')">
+                                <br><br>
+                                <form action="" method="post">
+                                    <input type="hidden" name="previous" value="\{{cgidata.id_contractor}}">
+                                    <input type="submit" name="valid_rbq" value="Inscription RBQ">
+                                </form>
+                                <br>
+                                <form action="" method="post">
+                                    <input type="hidden" name="previous" value="\{{cgidata.id_contractor}}">
+                                    <input type="submit" name="invalid_rbq" value="Désinscription RBQ">
+                                </form>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Usager")}}</td>
+                            <td>                                
+                                \{{contractor.rows.username}}
+                                - <a href="/fr/extranet-login?contractor_email=\{{contractor.rows.email}}" target="_blank">{{sn_ct("Se connecter")}}</a>
+                                \{{if contractor.rows.username then}}- <button type="submit" onclick="contractorForgotPassword('\{{contractor.rows.uid}}')">{{sn_ct("Mot de passe oublié")}}</button>\{{endif}}
+                                - <button type="submit" onclick="contractorActivation('\{{contractor.rows.uid}}')">{{sn_ct("Renvoie du courriel de bienvenue")}}</button>
+                            </td>
+                            <td>{{sn_ct("Courriel principal")}}</td>
+                            <td><input type="text" id="contact_email" onchange="save_ajax(this)" value="\{{contractor.rows.contact_email}}"> <img height="24px" src="/sn_uploads/copy-to-clipboard.png" onclick="copy(this, 'contact_email')"></td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Actif")}}</td>
+                            <td>
+                                <input type="checkbox" value="yes" onchange="save_ajax(this, 'yes', 'active_since')" id="active" \{{if contractor.rows.active eq 'yes' then}}checked\{{endif}}>
+                                <input type="hidden" id="active_since">
+                            </td>
+                            <td>{{sn_ct("Courriel projet")}}</td>
+                            <td>
+                                {{sn_ct("Premier courriel")}}: <input type="text" id="email" onchange="save_ajax(this)" value="\{{contractor.rows.email}}"> <img height="24px" src="/sn_uploads/copy-to-clipboard.png" onclick="copy(this, 'email')"><br>
+                                {{sn_ct("Deuxièment courriel")}}: <input type="text" id="email_cc" onchange="save_ajax(this)" value="\{{contractor.rows.email_cc}}"> <img height="24px" src="/sn_uploads/copy-to-clipboard.png" onclick="copy(this, 'email_cc')"><br>
+                                Comptabilité: <input type="text" id="email_accounting" onchange="save_ajax(this)" value="\{{contractor.rows.email_accounting}}"> <img height="24px" src="/sn_uploads/copy-to-clipboard.png" onclick="copy(this, 'email_accounting')">
+                                
+                            </td>
+                            <td>Assurances</td>
+                            <td>
+                                Compagnie: <input type="text" id="insurance_company" onchange="save_ajax(this)" placeholder="Compagnie d'assurance" value="\{{contractor.rows.insurance_company}}">
+                                <br>Numéro de police: <input type="text" id="insurance_number" onchange="save_ajax(this)" placeholder="Numéro de police" value="\{{contractor.rows.insurance_number}}">
+                            </td>
+                            
+                        </tr>
+                        <tr>
+                            <td>Raison de désinscription</td>
+                            <td>
+                                <select id="leaving_reason" onchange="save_ajax(this, 'no', 'date_unregistered')">
+                                    <option value="">Choisir une raison de départ</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'La compagnie nexiste plus' then}}selected\{{endif}} value="La compagnie nexiste plus">La compagnie n'existe plus</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Jamais décroché de contrats' then}}selected\{{endif}} value="Jamais décroché de contrats">Jamais décroché de contrats</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Clients ne veulent que des prix' then}}selected\{{endif}} value="Clients ne veulent que des prix">Clients ne veulent que des prix</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Ses services sont trop spécialisés' then}}selected\{{endif}} value="Ses services sont trop spécialisés">Ses services sont trop spécialisés</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Ne veut pas payer par projet' then}}selected\{{endif}} value="Ne veut pas payer par projet">Ne veut pas payer par projet</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'RBQ' then}}selected\{{endif}} value="RBQ">RBQ</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Demande de crédit' then}}selected\{{endif}} value="Demande de crédit">Demande de crédit</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Nos prix sont trop élevés' then}}selected\{{endif}} value="Nos prix sont trop élevés">Nos prix sont trop élevés</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Trop occupé' then}}selected\{{endif}} value="Trop occupé">Trop occupé</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Plainte' then}}selected\{{endif}} value="Plainte">Plainte</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Refus_Inscription' then}}selected\{{endif}} value="Refus_Inscription">Refus_Inscription</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Aucune information sur la raison' then}}selected\{{endif}} value="Aucune information sur la raison">Aucune information sur la raison</option>
+                                    <option \{{if contractor.rows.leaving_reason eq 'Autre' then}}selected\{{endif}} value="Autre">Autre</option>
+                                </select>
+                                Date de désinscription: <input type="date" id="date_unregistered" onchange="save_ajax(this, 'no')" value="\{{contractor.rows.date_unregistered}}"><br>
+                                Si autre, raison: <input type="text" id="leaving_reason_other" onchange="save_ajax(this, 'no')" placeholder="Raison" value="\{{contractor.rows.leaving_reason_other}}">
+                            </td>
+                            <td>Langue parlé</td>
+                            <td>
+                                <select id="contact_lg" onchange="save_ajax(this)">
+                                    <option value="">Choisir une langue</option>
+                                    <option \{{if contractor.rows.contact_lg eq 'fr' then}}selected\{{endif}} value="fr">Français</option>
+                                    <option \{{if contractor.rows.contact_lg eq 'en' then}}selected\{{endif}} value="en">English</option>
+                                </select>
+                            </td>
+                            <td>{{sn_ct("Dernier suivi")}}</td>
+                            <td>\{{contractor.rows.last_call_date}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Vérifié")}}</td>
+                            <td>
+                                <input type="checkbox" value="yes" onchange="save_ajax(this, 'yes')" id="verified" \{{if contractor.rows.verified eq 'yes' then}}checked\{{endif}}> 
+                            </td>
+                            <td>{{sn_ct("Limite de compte")}}</td>
+                            <td>
+                                \{{money_format(contractor.rows.credit_threshold)}} - {{sn_ct("Solde du compte")}}: \{{money_format(billing_footer.solde)}} - 
+                                <button type="submit" onclick="notifyUnpaidBalanceToContractor('\{{contractor.rows.uid}}')">{{sn_ct("Envoie du courriel de solde du compte")}}</button>
+                            </td>
+                            
+                            <td>{{sn_ct("Nb d'appel non rejoint")}}</td>
+                            <td>\{{contractor.rows.number_calls_failed}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Vacances")}}</td>
+                            <td>
+                                <input type="checkbox" value="yes" onchange="save_ajax(this, 'yes')" id="enable_vacation" \{{if contractor.rows.enable_vacation eq 'yes' then}}checked\{{endif}}>
+                                Date de début: <input type="date" id="deactivate_date" onchange="save_ajax(this, 'no')" value="\{{contractor.rows.deactivate_date}}">
+                                Date de fin: <input type="date" id="reactivate_date" onchange="save_ajax(this, 'no')" value="\{{contractor.rows.reactivate_date}}">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Commentaires internes")}}</td>
+                            <td colspan="5"><textarea style="width:100%;resize: none;" onclick="auto_grow(this)" onkeyup="auto_grow(this)" onchange="save_ajax(this)" id="comments">\{{contractor.rows.comments}}</textarea></td>
+                        </tr>
+                    </table>
+                    
+                    <br>
+                    
+                    <table class="contractors" id="stats">
+                        <tr>
+                            <th colspan="4">Utilisation de notre service <img style="float:right;" title="afficher details" width="32px" src="/sn_uploads/icon/top-arrow-Icon.png" onclick="toggle_stats(this, 'no')"></th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Achats par année")}}</td>
+                            <td colspan="3">                    
+                                
+                                    \{{for s in sales_year.rows do}}
+                                        <div style="float:left; margin-right:20px;">
+                                            <b>\{{s.year}} (Total: \{{s.sales}}$)</b>
+                                            <ul style="list-style: none;">
+                                                \{{
+                                                sales_month = sql("SELECT monthname(accepted_date) as month, sum(lead_price) as sales FROM sr_project_contractor WHERE uid_contractor = '?' AND year(accepted_date) = ? AND lead_price > 0 GROUP BY month(accepted_date) ORDER BY month(accepted_date) ASC", cgidata.id_contractor, s.year);
+                                                for m in sales_month.rows do}}
+                                                    <li>\{{m.month}}: \{{m.sales}}$</li>
+                                                \{{endfor}}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    \{{endfor}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Ratio de crédits")}}</td>
+                            <td>\{{credit_ratio.rows.ratio}}% (\{{credit_ratio.rows.credits .+ "/" .+ credit_ratio.rows.count}}) - Projets à rabais: \{{credit_ratio.rows.rebate}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Nombre de projet envoyé dans les 30 derniers jours")}}</td>
+                            <td>\{{project_sent.rows.count}} ({{sn_ct("Dernier reçu le")}} \{{project_sent.rows.maxdate}})</td>
+                            <td>{{sn_ct("Nombre de projet accepté dans les 30 derniers jours")}}</td>
+                            <td>\{{project_bought.rows.count}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Langue des projets")}}</td>
+                            <td>\{{language_contractor}}</td>
+                            <td>{{sn_ct("Filtre du délai activé")}}</td>
+                            <td>\{{contractor.rows.filter_enabled}}</td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Date de vacances")}}</td>
+                            <td>\{{contractor.rows.deactivate_date}} - \{{contractor.rows.reactivate_date}}</td>
+                            <td>{{sn_ct("Heure de réception des projets")}}</td>
+                            <td>\{{contractor.rows.from_active_hour}} - \{{contractor.rows.to_active_hour}}</td>
+                        </tr>
+                    </table>
+                    
+                    <br>
+                    
+                    <table class="contractors">
+                        <tr>
+                            <th>Services / Territoires / Type de projet <img style="float:right;" title="afficher details" width="32px" src="/sn_uploads/icon/down-arrow-Icon.png" onclick="toggle_filters(this)"></th>
+                        </tr>
+                    </table> 
+                    
+                    <table class="contractors filters" style="width:32%; float:left; margin-right:1%">
+                        <th>{{sn_ct("Service")}}</th>
+                        <th>{{sn_ct("Nombre de projet pris (à vie)")}}</th>
+                        <th>{{sn_ct("Nombre de projet reçu (30 jours)")}}</th>
+                        \{{for s in service.rows do}}
+                            <tr>
+                                <td>\{{s.name}}</td>
+                                <td>\{{s.count}}</td>
+                                <td>\{{s.count2}}</td>
+                            </tr>
+                        \{{endfor}}
+                    </table>
+                    
+                    <table class="contractors filters" style="width:42%; float:left; margin-right:1%">
+                        <th>{{sn_ct("Territoire")}}</th>
+                        <th>{{sn_ct("Nombre de projet pris (à vie)")}}</th>
+                        <th>{{sn_ct("Nombre de projet reçu (30 jours)")}}</th>
+                        <th>$ minimum</th>
+                        <th>$ maximum</th>
+                        \{{for t in territory.rows do}}
+                            <tr>
+                                <td>\{{t.name}}</td>
+                                <td>\{{t.count}}</td>
+                                <td>\{{t.count2}}</td>
+                                <td>\{{t.min_amount}}</td>
+                                <td>\{{t.max_amount}}</td>
+                            </tr>
+                        \{{endfor}}
+                    </table>
+                    
+                    <table class="contractors filters" style="width:22%; float:left">
+                        <!--<tr>-->
+                        <!--    <th colspan="2">{{sn_ct("Achats par type de projet dans son profil")}}</th>-->
+                        <!--</tr>-->
+                        <th>{{sn_ct("Type")}}</th>
+                        <th>{{sn_ct("Nombre de projet pris")}}</th>
+                        \{{for t in project_type.rows do}}
+                            <tr>
+                                <td>\{{t.name}}</td>
+                                <td>\{{t.count}}</td>
+                            </tr>
+                        \{{endfor}}
+                    </table>
+                    
+                    <br>
+                    
+                    <table class="contractors" id="profile_info">
+                        <tr>
+                            <th colspan="4">{{sn_ct("Page de profil de l'entrepreneur")}} <img style="float:right;" title="afficher details" width="32px" src="/sn_uploads/icon/down-arrow-Icon.png" onclick="toggle_profile_info(this)"></th>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Page publique")}}</td>
+                            <td colspan="3">
+                                \{{if contractor.rows.contact_lg eq 'en' then}}
+                                    <a target="_blank" href="https://renoquotes.com/contractor/\{{contractor.rows.seo}}">https://renoquotes.com/contractor/\{{contractor.rows.seo}}</a>
+                                \{{else}}
+                                    <a target="_blank" href="https://soumissionrenovation.ca/entrepreneur/\{{contractor.rows.seo}}">https://soumissionrenovation.ca/entrepreneur/\{{contractor.rows.seo}}</a>
+                                \{{endif}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>{{sn_ct("Site web")}}</td>
+                            <td>
+                                <input style="width:100%" type="text" id="website" onchange="save_ajax(this)" value="\{{contractor.rows.website}}">
+                                <br><a target="_blank" href="\{{contractor.rows.website}}">\{{contractor.rows.website}}</a>
+                            </td>
+                            <td>Facebook</td>
+                            <td>
+                                <input style="width:100%" type="text" id="fbsite" onchange="save_ajax(this)" value="\{{contractor.rows.fbsite}}">
+                                <br><a target="_blank" href="\{{contractor.rows.fbsite}}">\{{contractor.rows.fbsite}}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Logo</td>
+                            <td><img src="\{{contractor.rows.company_logo}}" height="100px"></td>
+                            <td>{{sn_ct("Bannière")}}</td>
+                            <td><img src="\{{contractor.rows.banner_1}}" height="100px"></td>
+                        </tr>
+                        <tr>
+                            <td>Photos</td>
+                            <td colspan="3"> 
+                                \{{for p in photos.rows do}}
+                                <img src="\{{p.photo}}" height="100px">
+                                \{{endfor}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Description</td>
+                            <td colspan="3">\{{contractor.rows.company_desc}}</td>
+                        </tr>
+                        <tr>
+                            <td>Certifications</td>
+                            <td>
+                                <ul columns="4">
+                                \{{for c in certification.rows do}}
+                                    <li>\{{c.lic_name}}</li>
+                                    <li>\{{c.lic_number}}</li>
+                                \{{endfor}}
+                                </ul>
+                            </td>
+                        </tr>
+                        
+                    </table>
+
+                    <br>
+                    
+                    <table class="contractors">
+                        <tr>
+                            <th>Satisfaction des clients <img style="float:right;" title="afficher details" width="32px" src="/sn_uploads/icon/down-arrow-Icon.png" onclick="toggle_surveys(this)"></th>
+                        </tr>
+                    </table> 
+                    
+                    <table class="contractors surveys" style="width:49%; float:left;">
+                        <tr>
+                            <th colspan="6">{{sn_ct("Sondages")}} </th>
+                        </tr>
+                        <tr>
+                            <th>{{sn_ct("Date de l'évaluation")}}</th>
+                            <th>{{sn_ct("Projet")}}</th>
+                            <th>{{sn_ct("Note")}} / 5</th>
+                            <th>{{sn_ct("Commentaire du client")}}</th>
+                            <th>{{sn_ct("Réponse de l'entrepreneur")}}</th>
+                            <th>{{sn_ct("Sondage publié?")}}</th>
+                        </tr>
+                        \{{for r in reviews.rows do}}
+                            <tr>
+                                <td>\{{r.evaluation_date}}</td>
+                                <td>\{{r.uid_project}}</td>
+                                <td>\{{r.client_satisfaction}}</td>
+                                <td>\{{r.client_comment}}</td>
+                                <td>\{{r.contractor_reply}}</td>
+                                <td>\{{r.comment_verified}}</td>
+                            </tr>
+                        \{{endfor}}
+                    </table>
+                    
+                    <table class="contractors surveys" style="width:49%; float:right;">
+                        <tr>
+                            <th colspan="6">{{sn_ct("Plaintes")}}</th>
+                        </tr>
+                        <tr>
+                            <th>Date</th>
+                            <th>Uid</th>
+                            <th>{{sn_ct("Statut")}}</th>
+                            <th>Source</th>
+                            <th>{{sn_ct("Priorité")}}</th>
+                            <th>{{sn_ct("Commentaires")}}</th>
+                        </tr> 
+                        \{{for c in complaints.rows do}}
+                        <tr>
+                            <td>\{{c.sn_cdate}}</td>
+                            <td><a target="_blank" href="/widgets/fr/complaints_followup.snc?search=1&co_uid=\{{c.uid}}">\{{c.uid}}</a></td>
+                            <td>\{{c.status}}</td>
+                            <td>\{{c.source}}</td>
+                            <td>\{{c.priority}}</td>
+                            <td>\{{c.comments}}</td>
+                        </tr>
+                        
+                        \{{endfor}}
+                    </table>
+
+                    <br>
+
+                    <table class="contractors emails" id="show_emails">
+                        <tr>
+                            <th colspan="4">{{sn_ct("Derniers 50 courriels reçus")}} <img style="display:none;" id="ajax_loader" src="/sn_uploads/ajax-loader.gif"> <img style="float:right;" title="afficher details" width="32px" src="/sn_uploads/icon/down-arrow-Icon.png" onclick="toggle_emails(this)"></th>
+                        </tr>
+                        <tr>
+                            <td id="email_ratio">{{sn_ct("Taux d'ouverture des courriels")}} </td>
+                        </tr>
+                        <tr>
+                            <th>{{sn_ct("Sujet")}}</th>
+                            <th>{{sn_ct("Reçu le")}}</th>
+                            <th>{{sn_ct("1iere ouverture")}}</th>
+                            <th>{{sn_ct("Dernière ouverture")}}</th>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="clearfix"></div>
+                
+                <br>
+                <br>
+                
+                <div style="width:100%">
+                    Projet gratuit
+                    <form action="" method="post">
+                        <input type="text" name="id_project" placeholder="id project">
+                        <input type="hidden" name="id_contractor" value="\{{cgidata.id_contractor}}">
+                        <input type="submit" name="project_free">
+                    </form>
+                </div>
+            
+                \{{if cgidata.project_free then
+                    if cgidata.id_project then
+                        pc = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE uid_contractor = '?' AND uid_project = '?'", cgidata.id_contractor, cgidata.id_project);
+                        project::acceptProjectContractor(pc.rows.uid, 0);
+                    endif
+                endif}}
+                
+                <script>
+                document.title = "\{{contractor.rows.company_name}} - Stats Entrepreneurs";
+                
+                // set a contractor to verified
+                function contractor_verify(e, uid){
+                    $.ajax({
+                		type: "post",
+                		data:{
+                			"contractor_verify": 1,
+                			"uid": uid
+                		},
+                		url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                		success:function(data){
+                            alert( "Changement effectué" );
+                		}
+                    });
+                }
+                
+                // send an email to the contractor to reset password
+                function contractorForgotPassword(uid){
+                    $.ajax({
+                		type: "post",
+                		data:{
+                			"contractorForgotPassword": 1,
+                			"uid": uid
+                		},
+                		url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                		success:function(data){
+                            alert( "Courriel envoyé" );
+                		}
+                    });
+                }
+                
+                // send an email to the contractor to reset password
+                function contractorActivation(uid){
+                    $.ajax({
+                		type: "post",
+                		data:{
+                			"contractorActivation": 1,
+                			"uid": uid
+                		},
+                		url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                		success:function(data){
+                            alert( "Courriel envoyé" );
+                		}
+                    });
+                }
+                
+                // send an email to the contractor with his unpaid balance
+                function notifyUnpaidBalanceToContractor(uid){
+                    $.ajax({
+                        type: "post",
+                        data:{
+                            "notifyUnpaidBalanceToContractor": 1,
+                            "uid": uid
+                        },
+                        url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                        success:function(data){
+                            alert( "Courriel envoyé" );
+                        }
+                    });
+                }
+                
+                function toggle_basic_info(e){
+                    $("#basic_info").children('tbody').children('tr').not(':first').fadeToggle();
+                    if (e.src == 'https://ssr.sednove.com/sn_uploads/icon/top-arrow-Icon.png') {
+                        e.src = '/sn_uploads/icon/down-arrow-Icon.png';
+                    } else {
+                        e.src = '/sn_uploads/icon/top-arrow-Icon.png';
+                    }
+                }
+                
+                function toggle_stats(e){
+                    $("#stats").children('tbody').children('tr').not(':first').fadeToggle();
+                    if (e.src == 'https://ssr.sednove.com/sn_uploads/icon/top-arrow-Icon.png') {
+                        e.src = '/sn_uploads/icon/down-arrow-Icon.png';
+                    } else {
+                        e.src = '/sn_uploads/icon/top-arrow-Icon.png';
+                    }
+                }
+                
+                $("#profile_info").children('tbody').children('tr').not(':first').fadeToggle();
+                function toggle_profile_info(e){
+                    $("#profile_info").children('tbody').children('tr').not(':first').fadeToggle();
+                    if (e.src == 'https://ssr.sednove.com/sn_uploads/icon/top-arrow-Icon.png') {
+                        e.src = '/sn_uploads/icon/down-arrow-Icon.png';
+                    } else {
+                        e.src = '/sn_uploads/icon/top-arrow-Icon.png';
+                    }
+                }
+                
+                $(".surveys").fadeToggle();
+                function toggle_surveys(e){
+                    $(".surveys").fadeToggle();
+                    if (e.src == 'https://ssr.sednove.com/sn_uploads/icon/top-arrow-Icon.png') {
+                        e.src = '/sn_uploads/icon/down-arrow-Icon.png';
+                    } else {
+                        e.src = '/sn_uploads/icon/top-arrow-Icon.png';
+                    }
+                }
+                
+                $(".filters").fadeToggle();
+                function toggle_filters(e){
+                    $(".filters").fadeToggle();
+                    if (e.src == 'https://ssr.sednove.com/sn_uploads/icon/top-arrow-Icon.png') {
+                        e.src = '/sn_uploads/icon/down-arrow-Icon.png';
+                    } else {
+                        e.src = '/sn_uploads/icon/top-arrow-Icon.png';
+                    }
+                }
+                
+                var show_email = 'no';
+                $(".emails").children('tbody').children('tr').not(':first').fadeToggle();
+                function toggle_emails(e){
+                    $(".emails").children('tbody').children('tr').not(':first').fadeToggle();
+                    if (e.src == 'https://ssr.sednove.com/sn_uploads/icon/top-arrow-Icon.png') {
+                        e.src = '/sn_uploads/icon/down-arrow-Icon.png';
+                    } else {
+                        e.src = '/sn_uploads/icon/top-arrow-Icon.png';
+                    }
+                    if (show_email == 'no') {
+                        show_email = 'yes';
+                        $.ajax({
+                    		type: "post",
+                    		data:{
+                    			"show_emails": 1,
+                    			"uid_contractor": \{{cgidata.id_contractor}}
+                    		},
+                    		url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                    		beforeSend: function(){
+                                $('#ajax_loader').show();
+                            },
+                            complete: function(){
+                                $('#ajax_loader').hide();
+                            },
+                    		success:function(data, statusText, xhr){
+                    		    //email ratio
+                    		    var emails = xhr.getResponseHeader('X-emails_ratio');
+                    		    var emails = JSON.parse(emails);
+                    		    
+                    		    html = "";
+                    		    
+                                emails.forEach(function(value,key){
+                                    html += " - " + value.opened + " / " +  value.received + " ( " + Math.round(value.opened / value.received * 100) +  "%)";
+                                });
+
+                                $('#email_ratio').append(html);
+                    		    
+                    		    //email list
+                    		    var emails = xhr.getResponseHeader('X-emails');
+                    		    var emails = JSON.parse(emails);
+                    		    
+                    		    html = "";
+                    		    
+                                emails.forEach(function(value,key){
+                                    html += "<tr>";
+                                    html += "<td>" + value.subject.decode() + "</td>";
+                                    html += "<td>" + value.sn_cdate + "</td>";
+                                    html += "<td>" + value.first_open + "</td>";
+                                    html += "<td>" + value.last_open + "</td>";
+                                    html += "</tr>"
+                                });
+
+                                $('#show_emails').append(html);
+                    		}
+                        });
+                    }
+                }
+                
+                String.prototype.encode = function(encoding) {
+                   var result = "";
+        
+                   var s = this.replace(/\r\n/g, "\n");
+        
+                   for(var index = 0; index < s.length; index++) {
+                       var c = s.charCodeAt(index);
+        
+                       if(c < 128) {
+                           result += String.fromCharCode(c);
+                       }
+                       else if((c > 127) && (c < 2048)) {
+                           result += String.fromCharCode((c >> 6) | 192);
+                           result += String.fromCharCode((c & 63) | 128);
+                       }
+                       else {
+                           result += String.fromCharCode((c >> 12) | 224);
+                           result += String.fromCharCode(((c >> 6) & 63) | 128);
+                           result += String.fromCharCode((c & 63) | 128);
+                       }
+                   }
+        
+                   return result;
+               };
+        
+        
+               String.prototype.decode = function(encoding) {
+                   var result = "";
+        
+                   var index = 0;
+                   var c = c1 = c2 = 0;
+        
+                   while(index < this.length) {
+                       c = this.charCodeAt(index);
+        
+                       if(c < 128) {
+                           result += String.fromCharCode(c);
+                           index++;
+                       }
+                       else if((c > 191) && (c < 224)) {
+                           c2 = this.charCodeAt(index + 1);
+                           result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                           index += 2;
+                       }
+                       else {
+                           c2 = this.charCodeAt(index + 1);
+                           c3 = this.charCodeAt(index + 2);
+                           result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                           index += 3;
+                       }
+                   }
+        
+                   return result;
+               };
+               
+                function auto_grow(element) {
+                    element.style.height = "5px";
+                    element.style.height = (element.scrollHeight)+"px";
+                }
+                
+                function save_ajax(e, checkbox, update_second_field) {
+                    if (checkbox == 'yes') {
+                        var value = document.getElementById(e.id).checked ? 'yes' : 'no';
+                    } else {
+                        var value = e.value;
+                    }
+                    $.ajax({
+                        type: "post",
+                        data:{
+                            "save_ajax": 1,
+                            "uid_contractor": \{{cgidata.id_contractor}},
+                            "field": e.id,
+                            "value": value,
+                            "second_field": update_second_field
+                        },
+                        url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                        success:function(data, statusText, xhr){
+                            if (update_second_field) {
+                                var today = new Date();
+                                var dd = today.getDate();
+                                var yyyy = today.getFullYear();
+                                var mm = today.getMonth() + 1;
+                                if(dd<10) 
+                                {
+                                dd='0'+dd;
+                                }
+                                
+                                if(mm<10) 
+                                {
+                                mm='0'+mm;
+                                }
+                                console.log (dd +"-"+ mm+"-" + yyyy);
+                                document.getElementById(update_second_field).value = yyyy +"-"+ mm+"-" + dd;
+                            }
+                            $('<img id="checkmark-' +e.id + '" height="24px" style="position:absolute; display:inline-block; z-index:10;" src="/sn_uploads/check-512.png">').insertAfter('#' + e.id);
+                            sleep(2000).then(() => {
+                                $('#checkmark-' + e.id).remove();
+                            });
+                            
+                        }
+                    });
+                }
+                
+                function save_ajax_address(e) {
+                    console.log(e.id);
+                    console.log(e.value);
+                    $.ajax({
+                        type: "post",
+                        data:{
+                            "save_ajax_address": 1,
+                            "uid_contractor": \{{cgidata.id_contractor}},
+                            "field": e.id,
+                            "value": e.value
+                        },
+                        url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                        success:function(data, statusText, xhr){
+                            $('<img id="checkmark-' +e.id + '" height="24px" style="position:absolute; display:inline-block; z-index:10;" src="/sn_uploads/check-512.png">').insertAfter('#' + e.id);
+                            sleep(5000).then(() => {
+                                $('#checkmark-' + e.id).remove();
+                            });
+                            
+                        }
+                    });
+                }
+                function copy(e, id) {
+                    var copyText = document.getElementById(id);
+                    copyText.select();
+                    document.execCommand("copy");
+                    $('<img id="checkmark-' +e.id + '" height="24px" style="position:absolute; display:inline-block; z-index:10;" src="/sn_uploads/check-512.png">').insertAfter(e);
+                    sleep(5000).then(() => {
+                        $('#checkmark-' + e.id).remove();
+                    });
+                }
+
+                function sleep(ms) {
+                  return new Promise(resolve => setTimeout(resolve, ms));
+                }
+                </script>
+                </div>
+                <script src="https://leaverou.github.io/stretchy/stretchy.min.js" async></script>
+            
+            \{{
+            else
+            "Aucun entrepreneur trouvé";
+            endif
+            "</div>";
+        endif
+    
+    else 
+        "Vous devez être connecté";
+    endif
+endif
+    
+}}
+</div>

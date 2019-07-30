@@ -1,0 +1,20 @@
+
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+
+    %include "/site/package/all.sn";
+    }}
+
+\{{
+    cgidata = cgidata();
+    
+if cgidata.useremail ne '' then
+    void sql("UPDATE sr_contractor SET tracking_hoptimize = 'yes' where contact_email = '?'", cgidata.useremail);
+endif
+
+}}

@@ -1,0 +1,15 @@
+<!-- BLOC ==================
+	 DIVIDER FULL WIDTH -->
+<tr >
+	<td height="30">
+	   <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-top:35px solid #transparent;">
+			<tr>
+				<td width="35">&nbsp;</td>
+				<td width="530">
+					&nbsp;
+				</td>
+				<td width="35">&nbsp;</td>
+			</tr>
+		</table>
+	</td>
+</tr>

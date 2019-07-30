@@ -1,0 +1,29 @@
+{{
+    /*
+        @title 			sr_client_form_email_admin_contractor_requestc13
+        Description		Contractor participation to a resquest
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    prenom = "Etienne";
+    nom = "Cright";
+    telephone = "(438) 456-7890";
+    courriel = "etienne@sednove.com";
+    entreprise = "Sednove";
+    formulaire = "(514) 456-7890";
+    url = "http://www.sednove.com";
+    id = "11345";   
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

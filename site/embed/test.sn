@@ -1,0 +1,33 @@
+use extranet_user;
+//cgidata =cgidata();
+cgidata.last_user = extranet_user.uid;
+
+p = sql(single:true, "SELECT user()as user, now() as date1, TIMESTAMPDIFF(MINUTE, last_mod, now()) as age FROM sr_test1 WHERE uid = '?'", cgidata.uid);
+
+'<div class="alert alert-danger">Attention!!!  dernière modification il y a ='.+ p.rows.age    .+       ' minutes</div>';
+ '<div class="alert ">'.+  p.rows.user   .+'</div>';
+
+ '<div class="alert ">'.+  p.rows.user   .+'</div>';
+//'<button  onclick="confirm('Do you want to submit?')"  >Send?</button>';
+'<button    >Send?</button>';
+
+//////////
+  txt="Es-tu sûr";
+
+'<input type="submit" onclick="return confirm('.+ txt .+')">';
+ '<div class="alert ">'.+  txt   .+'</div>';
+
+void insert(table:'sr_debug', fields:{'description':'avant sr_test1','text':'1234567'});
+
+cgidata.last_mod=p.rows.date1;
+cgidata.last_mod_minutes = p.rows.age;
+
+// visible
+/*
+if (cgidata.uid ne '' && cgidata.visible eq 'yes') then
+	p = sql(single:true, "SELECT visible FROM sr_test1 WHERE uid = '?'", cgidata.uid);
+	if (p.rows.visible ne 'yes') then
+     	alert('yes');   
+	endif
+endif
+*/

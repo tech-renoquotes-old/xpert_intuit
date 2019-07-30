@@ -1,0 +1,95 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+   // use lg;
+
+
+// 	cookie = cookies();
+// 	cookie;	"<br>";				
+//     cookie = { 'username' : "Berna", 'project' : 1234, 'client_ip' : "192.168.12.15", 'date' : datetime(), 'test':'test1' };
+//     cookie;
+//     cookie.sednove;"<br>";
+//     cookie.first_visited;"<br>";
+//     cookie.sn_cookies;
+
+
+}}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<br>
+<a>Lien: <input id="openW" value="http://www.w3schools.com/html/tryit.asp?filename=tryhtml_default"></a>
+<button  onclick="openLink($('#openW').val())">Suit lien</button>
+<!-- faire 8 tab-->
+<a>
+<input  id="input1"><button onclick="sendChar">Send Char</button>
+</a>
+
+
+<br>
+<select  >
+    <option value="1">Choisir une option.</option>
+    <option id="opt1" value="2">Toyota</option>
+    
+</select>
+<button onclick="rotate_photo(this,25)">GO</button> 
+
+ <script>
+    function sendChar(){
+        inputField = $("#input1");
+        inputField.sendKeys('0123456789');
+
+    }
+ 	function rotate_photo(elem,angle){
+       if (confirm(" contractor_edit_photo Êtes-vous certain de vouloir tourner cette photo vers la droite ?")){
+            var photo_uid = $("#opt1").val(1234);
+//             $.ajax({
+//                 type: "post",
+//                 data:{
+//                     "photo_uid": photo_uid,
+//                     "rotation": angle
+//                 },
+//                 url: "/test/",
+//                 success:function(result){
+//                     // $('img[data-uid='+photo_uid+']').attr('src', result + '')
+//                     //     .parent().attr({
+//                     //         'href': result,
+//                     //         'data-source': result
+//                     //     });
+//                     console.log(result);
+//                 }
+//             });  
+        }
+    }
+</script>
+<script>
+    function openLink(link1){
+        window.open(link1);
+    }
+
+    function test_ajax(){
+        console.log("entree ajax");
+        if (confirm("Êtes-vous certain ?")){
+             $.ajax({
+                type: "post",
+                data:{
+                    "test": 12
+                    
+                },
+                url: "/notebd/ajax_test.sn",
+                success:function(result){
+                      console.log(result);
+                }
+            });  
+        }
+    }
+</script>
+<script>
+    function openInNewTab(url) {
+        var win = window.open(url, '_blank');
+        win.focus();
+    }
+
+    
+    
+</script>

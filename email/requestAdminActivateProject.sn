@@ -1,0 +1,46 @@
+{{
+    /*
+        @title 			requestAdminActivateProject
+        Description		Email to an admin for a request to activate a client account.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-08
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    // Info client
+    idClient = "11546";
+    prenom = "Marc-André";
+    nom = "Cright";
+    sexe = "Masculin";
+    adresse = "791, avenue Saint-Denis";
+    ville = "Saint-Lambert";
+    codePostal = "J4P 2G4";
+    langue = "Français";
+    bilingue = "Bilingue";
+    courriel = "macright@sednove.com";
+    telephoneMaison = "(450) 123-4567";
+    telephoneBureau = "(450) 671-9307";
+    telephoneCell = "(514) 123-4567";
+    
+    // Informations sur le projet
+    idProjet = "32543";
+    service = "Service";
+    description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at porttitor sem.";
+    dateTravaux = "2016-07-07";
+    prix = "0,00$";
+    nombreSoumissions = "0";
+    projetHash = "Projet Hash";
+
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

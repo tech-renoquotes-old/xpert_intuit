@@ -1,0 +1,31 @@
+{{
+use orderID;
+use terminalID;
+use formattedAmount;
+use formattedDatetime;
+use cardnumber;
+use cardexpiry;
+use cardtype;
+use name;
+use hash;
+use cvv;
+use currency;
+use terminalType;
+use transactionType;
+
+}}<?xml version="1.0" encoding="UTF-8"?>
+<PAYMENT>
+	<ORDERID>{{orderID}}</ORDERID>
+	<TERMINALID>{{terminalID}}</TERMINALID>
+	<AMOUNT>{{formattedAmount}}</AMOUNT>
+	<DATETIME>{{formattedDatetime}}</DATETIME>
+	<CARDNUMBER>{{cardnumber}}</CARDNUMBER>
+	<CARDTYPE>{{cardtype}}</CARDTYPE>
+	<CARDEXPIRY>{{cardexpiry}}</CARDEXPIRY>
+	<CARDHOLDERNAME>{{name}}</CARDHOLDERNAME>
+	<HASH>{{hash}}</HASH>
+	<CURRENCY>{{currency}}</CURRENCY>
+	<TERMINALTYPE>{{terminalType}}</TERMINALTYPE>
+	<TRANSACTIONTYPE>{{transactionType}}</TRANSACTIONTYPE>
+	<CVV>{{cvv}}</CVV>
+</PAYMENT>

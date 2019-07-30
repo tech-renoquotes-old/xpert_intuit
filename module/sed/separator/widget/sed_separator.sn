@@ -1,0 +1,38 @@
+<!-- ===== STYLE FOR THE HR-->
+{{ /*
+    	@title	sed_separator
+    	Description:Widget to display separator in the page
+        @author gamila@sednove.com
+    	@version 1.0 2016-06-21 08:49:42 
+    
+    */
+    use widget;
+    use lg;	
+    use uid;
+	use table;
+	wdgseparator = sql(single:true,"SELECT * FROM sed_separator where uid_widget='?'", widget.rows.uid_widget_list);
+	if wdgseparator.rows.uid eq '' then
+        void sql("INSERT INTO sed_separator (uid,color,width_line,space,style_border,uid_widget) 
+                VALUES ('?','000000','5','20','solid','?')",widget.rows.uid_widget_list,widget.rows.uid_widget_list );
+    endif
+ }}
+<style>
+  .cs hr.cs_hr {
+      border-image: none;
+      height: 0px;
+      box-sizing: content-box;
+  }
+  .cs hr.cs_hr:after{
+    visibility: hidden;
+    display: block;
+    font-size: 0;
+    content: " ";
+    clear: both;
+    height: 0;
+  }
+</style>
+
+
+<div style="padding-top: {{wdgseparator.rows.space}}px;padding-bottom: {{wdgseparator.rows.space}}px;">
+    <hr class="cs_hr" style="margin:0;border-width: {{wdgseparator.rows.width_line}}px 0px 0px;border-style: {{wdgseparator.rows.style_border}} none none;border-color: #{{wdgseparator.rows.color}};" />    
+</div>

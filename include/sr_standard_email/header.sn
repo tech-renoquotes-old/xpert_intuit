@@ -1,0 +1,71 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    use lg;
+}}
+\{{
+    site = sql(single:true,"select url_prod from sn_configs"); 
+    site = site.rows.url_prod;
+}}
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <title>Courriel</title>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+    /* paragraph */
+    
+    p {
+        color: #616161;
+        line-height: 16px;
+        font-family: Open Sans, Arial, Helvetica, sans-serif;
+    }
+    </style>
+    <style type="text/css">
+      /* BOILERPLATE STYLES */
+          #outlook a{padding:0;}
+          .ReadMsgBody{width:100%;} .ExternalClass{width:100%;}
+          .ExternalClass, .ExternalClass span, .ExternalClass td, .ExternalClass div {line-height: 100%;}
+          body, table, td, a{-webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;}
+          table, td{mso-table-lspace:0pt; mso-table-rspace:0pt;}
+          img {-ms-interpolation-mode:bicubic;}
+          body {height:100% !important; margin:0 !important; padding:0 !important; width:100% !important;}
+          img {border:0; height:auto; line-height:100%; outline:none; text-decoration:none;}
+          
+          div[style*="margin: 16px 0;"] {margin: 0 !important;}
+    </style>
+</head>
+    <body style="margin:0; padding: 0px;border:0;color:#616161;background-color:#dfdfdf;" border="0">
+        
+    <table style="margin:0;padding:0;border:0;color:#616161;background-color:#dfdfdf;" cellpadding="0" cellspacing="0" width="100%" border="0">
+        <tr>
+            <td align="center">
+                    <table border="0" cellpadding="0" cellspacing="0" width="600" style="width:600px;">
+                        <tr>
+                            <td>
+
+                                <table cellpadding="0" cellspacing="0" width="600" height="100">
+                                  <tr>
+                                    <td align="center" style="text-align: center;background:#dfdfdf;padding:0;border-bottom:6px #f9b842 solid;" height="100">
+                                    	<img src="https://xpertsource.com/sn_uploads/LogoXpertSource_Hor_Coul-2x_3.png" alt='{{sn_ct("standard_email_template SoumissionRenovations.ca", edit:false)}}' width="250"/>
+                                    </td>
+                                    <td align="center" style="text-align: center;background:#00517e;color:#fac45f;font-weight:bold;padding:0;border-bottom:6px #f9b842 solid;" height="100">
+                                    	<table cellpadding="0" cellspacing="0" width="100%">
+                                    		<tr>
+                                    			<td width="40" style="text-align:right;">
+                                    				<img src="\{{site}}/sn_uploads/email/call_us.png" alt="Call us" width="20"/>&nbsp;&nbsp;
+                                    			</td>
+                                    			<td width="100">
+                                    				<span style="font-family:Open Sans, Arial, Helvetica, sans-serif;"><a href="tel:{{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}" style="color:#fac45f;text-decoration:none;font-size:17px;">{{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}</a></span>
+                                    			</td>
+                                    		</tr>
+                                    	</table>	 
+                                    </td>
+                                  </tr>
+                                </table>     
+                            </td>
+                        </tr>
+                        <tr>
+                        	<td bgcolor="#FFF" valign="top" style="padding-top:40px ;padding-bottom:40px ;background:#FFF;padding-left:35px;padding-right:35px;">
+                        	    
+                        	 {{/* Email body starts here */}}
+                        	 

@@ -1,0 +1,33 @@
+{{
+    // Initialise cookie
+    cookies = cookies();
+    if cookies.soumissionrenovation == undefined then
+    	date = datetime();
+    	adwords = request.args;
+    	cookie = { 'url' : request.hostname .+ request.uri, 'adwords' : adwords, 'date' : date };
+    	threemonth=datetime(extended:true,op:"+3b",format:"%Sednove2");
+    	cookies(name:"soumissionrenovation",value:cookie,path:"/",expiry:threemonth);
+    endif 
+    
+    
+    // Get cookie and adwords
+    cookies = cookies();
+    cookie_data = unstringnify(cookies.soumissionrenovation);
+    cookie_data.adwords;
+
+}}
+
+
+
+
+
+\{{
+address = 'H1A';
+}}
+
+    
+<div class="col-md-12">
+    <p><a href="https://www.google.ca/maps/?q=\{{address}}" target="_blank"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>
+    <!--<p><a href="https://www.google.ca/maps/?q=\{{address}}" target="_blank"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>-->
+</div>
+

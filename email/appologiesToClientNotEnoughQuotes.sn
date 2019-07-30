@@ -1,0 +1,46 @@
+{{
+    /*
+        @title 			appologiesToClientNotEnoughQuotes
+        Description		Email for the client when there is no quotes for his project. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use project;
+	use service;
+	
+	uid_client = project.rows.uid_client;
+    
+    nom = project.rows.lastname;
+    prenom = project.rows.firstname;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if project.rows.gender eq "f" then
+    	titre = mme;
+    elseif project.rows.gender eq "m" then
+    	titre = mr;
+    endif
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+<br>
+<span style="font-size:small">\{{uid_client}}</span>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

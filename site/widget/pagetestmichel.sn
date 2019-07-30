@@ -1,0 +1,52 @@
+
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+   //session 
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    void timeout(15);
+    
+}}
+
+\{{
+    cgidata = cgidata();
+    
+    test = sql("
+        SELECT pc.uid_contractor, sum(i.amount), min(pc.accepted_date), max(pc.accepted_date), s.service
+        FROM sr_project_contractor pc
+        INNER JOIN sr_invoice i ON i.uid_project_contractor = pc.uid
+        INNER JOIN sr_project p ON p.uid = pc.uid_project
+        INNER JOIN sr_service s ON s.uid = p.uid_service
+        WHERE (i.completed is null OR i.completed <> 'yes')
+        AND pc.accepted_date < '2019/06/01'
+        GROUP BY uid_contractor, s.uid
+        
+    ");
+    }}
+    <table>
+        <th>qui</th>
+        <th>combien</th>
+        <th>service</th>
+\{{
+    for t in test.rows do
+    balance = contractor::getCurrentBilling(t.uid_contractor);
+        billing_footer = contractor::getBillingFooterByProv(balance,t.uid_contractor);
+        }}
+        <tr>
+            <td>\{{t.uid_contractor}}</td>
+            <td>\{{billing_footer.solde}}</td>
+            <td>\{{t.service}}</td>
+        </tr>
+        \{{
+        
+
+    endfor
+}}
+   </table>

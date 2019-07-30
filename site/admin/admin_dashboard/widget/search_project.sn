@@ -1,0 +1,713 @@
+{{
+
+/*
+	@title		preload
+
+	Preload is executed for each request. This is used to set certain
+	directory with security like extranet or staging.
+
+	This version check for the following directories:
+
+	/staging
+	/staging/extenso
+	/staging/extenso/extranet
+	/html/extranet
+	/html/extenso/extranet
+
+	users are read from the table sn_users and users.
+
+	sn_users is used for extenso.
+	user is for the extranet.
+
+	@author		2016-01-11 09:06:19 laplante@sednove.com
+
+	@version	1.0 2016-01-11 09:08:12 laplante@sednove.com
+
+	@param		cookies
+	@return		user
+	@return		extranet_user
+*/
+
+%include "/extenso/functions/sn_ct.snc";
+%include "/extenso/functions/sn_pages.snc";
+%include "/extenso/functions/sessions.snc";
+%include '/site/package/all.sn';
+
+use page;
+use lg;
+}}
+
+\{{
+    
+   cgidata = cgidata();
+   
+    stats = sql(single:true,"select q2.count as today_me, q1.count as last7days_me, q3.count as lastweek_me, q4.count as today_team, q5.count as last7days_team, q6.count as lastweek_team
+    from 
+    (
+    select count(*) as count from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q1
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status = 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q2
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q3
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q4
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q5
+    CROSS JOIN
+    (
+    SELECT count(*) as count FROM sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q6", user.username, user.username, user.username);
+
+    
+    subject =addslashes(cgidata.subject); 
+    //subject = cgidata.subject;
+    i=0;
+    
+    if(cgidata.projectID ne "") then
+        if(cgidata.action eq 'rewrite') then
+            void sql("DELETE from sr_project_contractor WHERE uid_project = ? AND isnull(hidden) AND isnull(accepted) AND isnull(accepted_rebate)", cgidata.projectID);
+            headers_out('X-rewrite', 1);
+        endif
+        history = sql("SELECT f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_project = '?' ORDER BY f.uid DESC", cgidata.projectID);
+        headers_out('X-result', history.rows);
+    endif
+    
+    service = "SELECT name_? as name, uid FROM sr_service WHERE active='yes' GROUP BY name";
+
+    project = 'SELECT c.locked, s.name_{{lg.rows.lg}} as service_name, 
+                p.sn_mdate, activated_by, p.project_type, p.uid, p.uid_service, 
+                p.uid_subservice, p.uid_secondary_service, 
+                p.uid_client, p.description, p.status, 
+                p.lead_price, p.due_date, p.estimate_duration, 
+                p.uid_address, a.uid_city, a.province, 
+                a.street_no, a.street, a.zip
+                FROM sr_project p
+                INNER JOIN sr_client c ON c.uid = p.uid_client
+                LEFT JOIN sr_service s ON s.uid = p.uid_service
+                LEFT JOIN sr_address a ON a.uid = p.uid_address
+                WHERE p.uid = "' .+ subject .+'" 
+                OR p.activated_by LIKE "%' .+ subject .+'%" 
+                OR description LIKE "%' .+ subject .+'%"
+    ';
+    
+    
+    sub = "SELECT uid, name_? as name, lead_price FROM sr_subservice WHERE uid_service = '?'";
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = '1'");
+    
+    if (cgidata.action eq 'cancel') then
+        //nbrprj = sql(single:true,"SELECT count(*) as nbr FROM sr_project WHERE uid_client = '?' AND status = 'new'", cgidata.clientID);
+            
+        project::followup(uid_msg:7, clientID:cgidata.clientID, uid_project:cgidata.uid_project, username:user.username, comments:cgidata.comment);
+        project::cancel_project(cgidata.uid_project);
+
+        history = sql("SELECT f.uid, f.uid_project, f.when_to_callback, f.followup_agent, f.sn_cdate, f.comments, f.msg_uid, fm.message_{{lg.rows.lg}} as msg FROM sr_followup f INNER JOIN sr_followup_msg fm ON fm.uid = f.msg_uid WHERE  uid_client = '?' ORDER BY f.uid DESC", cgidata.clientID);
+        headers_out('X-result', history.rows);
+    endif
+    
+}}
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="/js/encode.js"></script>
+<style>
+
+    .cs-main-content{
+        padding-top:0;
+    }
+
+    .table > tbody > tr > td {
+         vertical-align: middle;
+    }
+    
+    .infos_client{
+        width:100%;
+        max-height:400px;
+        border:solid 1px #ddd;
+        margin-bottom:5px;
+        margin-top:5px;
+        overflow-y:scroll;
+    }
+    
+    .infos_project{
+        width:100%;
+        border:solid 1px #ddd;
+        height:auto;
+        margin-bottom:5px;
+        margin-top:5px;
+    }
+    
+    object{
+        width: 100%;
+    }
+    
+    
+    .history{
+        width:100%;
+        border:solid 1px #bcd1e2;
+        margin-bottom:5px;
+        margin-top:5px;
+        background-color: #eee;
+        text-align:center;
+    }
+    
+    .history_title{
+        width:100%;
+        background-color:#00517e;
+        color:#fff;
+        height:30px;
+        text-align:center;
+        font-size:18px;
+        padding-top:2px;
+    }
+    
+    .history_tab{
+        width:100%;
+        padding:8px;
+    }
+    
+
+    .stats{
+        width:100%;
+        height:150px;
+        max-height:200px;
+        border:solid 1px #ddd;
+        margin-right:5px;
+        margin-bottom:5px;
+        margin-top:5px;
+        overflow:hidden;
+        background-image:url("/sn_uploads/images/client_management_photo.jpeg");
+        background-position: right;
+        background-size:800px;
+        background-repeat:no-repeat;
+        background-color:#c1cddb;
+    }
+    
+    .search_result{
+        width:100%;
+        border:solid 1px #ddd;
+        margin-bottom:5px;
+        margin-top:5px;
+        padding:8px;
+    }
+    
+    .search_obj{
+        width:100%;
+        height:150px;
+        max-height:180px;
+        border:solid 1px #ddd;
+        margin-bottom:5px;
+        margin-top:5px;
+        padding:8px;
+    }
+
+    .matrix{
+        width:100%;
+        background-color:#eee;
+        border:solid 1px #fff;
+        opacity:0.8;
+        margin-left:10px;
+
+    }
+    
+
+    .matrix td{
+        width:25%;
+        height:20px;
+        border:solid 1px #ddd;
+        padding: 5px;
+    }
+    
+    .matrix th{
+        width:25%;
+        height:20px;
+        border:solid 1px #ddd;
+        padding: 5px;
+    }
+    
+    
+    .action_list td{
+        border:none;
+        padding:10px
+    }
+    
+    
+    #result_tab{
+        width:100%;
+        color:#337ab7;
+        font-size:12px;
+    }
+    
+    #result_tab tr{
+        cursor:pointer;
+    }
+    
+
+    .trhover {
+        background-color:#fac45f;
+    }
+
+
+    .navigation{
+        width:100%;
+    }
+    
+    /* Styling pagination nav default links container*/
+    .navContainer {
+        width: auto;
+        text-align: center;
+        margin-left:auto;
+        margin-right:auto;
+    }
+    
+    .custom_nav {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    
+    /* Styling pagination nav right next button link*/
+    .next_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: right;
+        padding-left: 30px;
+        padding-right: 10px;
+        background: url("/sn_uploads/icon/arrow_prev.png") no-repeat left;
+        background-size: 20px;
+        border: solid 1px #ccc;
+    }
+    
+    .next_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .next_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    
+    /* Styling pagination nav right button link*/
+    .right_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: left;
+        padding-left: 10px;
+        padding-right: 30px;
+        background: url("/sn_uploads/icon/arrow_next.png") no-repeat right;
+        background-size: 20px;
+        border: solid 1px #ccc;
+
+    }
+    
+    .right_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .right_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+
+    
+    /* Styling pagination nav standalone links*/
+    .linkStyle{
+        float:left;
+        min-width:30px;
+        height: 30px;
+        line-height: 30px;
+        border: solid 1px #ccc;
+        padding: 2px;
+    }
+    
+    .linkStyle:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    /* Styling pagination nav page interval links*/
+    .linkStyle a:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle a:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle a:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    
+
+</style>
+
+
+<input name="username" id="username" type="hidden" value="\{{user.username}}"/>
+<input type="hidden" name="selected_project" id="selected_project" />
+
+<div class="lock_error" style="display:none">
+    <span style="width:100%;color:red">{{sn_ct("message : Ce projet est vérrouillé!<br>voulez-vous le déverrouiller?")}}</span>
+</div>
+
+
+<div class="row">
+    <div class="stats">
+        <div class='col-md-4' style="height:100px;margin-top:25px;margin:bottom:25px">
+            <table class="matrix">
+                <tr>
+                    <th style="border-right:solid 1px #ddd;background-color:#fff">
+                        <span style="color:#00517e;font-size:14px;font-weight:bold">{{sn_ct("Projets activés")}}</span>
+                    </th>
+                    <th>
+                        <span>{{sn_ct("clients Aujourd'hui", publish:"/extenso/publish/pages.sn",  uids:page.rows.uid)}}</span>
+                    </th>
+                    <th>
+                        <span>{{sn_ct("clients Derniers 7 jours", publish:"/extenso/publish/pages.sn",  uids:page.rows.uid)}}</span>
+                    </th>
+                    <th>
+                        <span>{{sn_ct("clients Dernière semaine :", publish:"/extenso/publish/pages.sn",  uids:page.rows.uid)}}</span>
+                    </th>
+                </tr>
+                <tr>
+                    <th style="border-right:solid 1px #ddd;border-top:solid 1px #ddd;">
+                        {{sn_ct("clients Par moi :", publish:"/extenso/publish/pages.sn",  uids:page.rows.uid)}}
+                    </th>
+                    <td>
+                       \{{stats.rows.today_me}}
+                    </td>
+                    <td>
+                        \{{stats.rows.last7days_me}}
+                    </td>
+                    <td>
+                        \{{stats.rows.lastweek_me}}
+                    </td>
+                </tr>
+                <tr>
+                    <th style="border-right:solid 1px #ddd;border-top:solid 1px #ddd;">
+                       {{sn_ct("clients Par l'équipe :", publish:"/extenso/publish/pages.sn",  uids:page.rows.uid)}} 
+                    </th>
+                    <td>
+                       \{{stats.rows.today_team}}
+                    </td>
+                    <td>
+                        \{{stats.rows.last7days_team}}
+                    </td>
+                    <td>
+                        \{{stats.rows.lastweek_team}}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3" style="padding-right:5px;padding-left:0">
+        <div class="history">
+            <div class="history_title">
+                {{sn_ct("Historique des suivis")}}
+            </div>
+            <table class="table" id="history_tab">
+                
+                <tr>
+                    <td></td><td></td><td></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-4" style="padding-left:5px;padding-right:0">
+        <div class="search_obj">
+            <form name="search_form" action="" method="POST" >
+                <fieldset class="form-group" style="margin-bottom:0">
+                    <div class="col-md-12">
+                        <h2>{{sn_ct("Recherche projets", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h2>
+                        <input class="form-control" type="text" name="subject" id="subject" value="\{{cgidata.subject}}">
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Objet de recherche obligatoire')}}" data-validator-error="search"></span>
+                    </div>
+                </fieldset>
+                <fieldset class="form-group">
+                    <div class="col-md-12" style="padding-top:0;padding-bottom:0">
+                        <button name="search" type="submit" class="btn btn-primary" style="float:right">
+                            {{sn_ct("search_project Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        <div class="search_result">
+            <h5>{{sn_ct("Resultats de la recherche")}} \{{if(cgidata.subject ne "" && total.nbrows > 0) then}} \{{total.nbrows}} {{sn_ct("projets trouvés")}} \{{endif}}</h5>
+            <hr style="margin-top:5px;margin-bottom:5px">
+            
+            \{{if(cgidata.subject ne "") then}}
+            \{{xquery = sql(project .+ ' ORDER BY p.sn_mdate DESC LIMIT 50')}}
+                \{{if(xquery.nbrows > 0) then}}
+                <form name="client_form" >
+                    <table class="table table-sm table-hover result_tab" id="result_tab" >
+                        <thead style="background-color:#4f4f4f;color:#fac45f;">
+                        <tr class="thead"><th>{{sn_ct("No. projet")}}</th><th>{{sn_ct("Dernière modification")}}</th><th>{{sn_ct("Activé par")}}</th><th>{{sn_ct("Statut")}}</th><th>{{sn_ct("Service")}}</th><th>{{sn_ct("Entrepreneurs")}}</th></tr>
+                        </thead>
+                        <tbody class="res_query" id="res_query">
+                        \{{if(cgidata.subject ne "") then}}
+                            \{{(xquery eq "")? "<t><td colspan='5' align='center'>Aucun résultat trouvé</td></tr>": ""}}
+                            \{{for p in xquery.rows do}}
+                            \{{pc = sql("SELECT * from sr_project_contractor WHERE uid_project = '?' AND accepted_date IS NOT NULL", p.uid)}}
+                                <tr class="bodyrows" onclick="lookup_project(\{{p.uid}}, \{{p.uid_client}})">
+                                    <td align='left'>#\{{p.uid}}</td>
+                                    <td align='left'>\{{p.sn_mdate}}</td>
+                                    <td align='left'>\{{p.activated_by}}</td>
+                                    <td align='left'>\{{p.status}}</td>
+                                    <td align='left'>\{{p.service_name}}</td>
+                                    <td align='left'>\{{pc.nbrows}}</td>
+                                </tr>
+                            \{{endfor}}
+                        \{{endif}}
+                        <tbody>
+                    </table>
+                </form>
+                \{{else}}
+                    <div class="alert alert-warning" >{{sn_ct("Aucun résultat n'a été retourné")}}</div>
+                \{{endif}}
+            \{{else}}
+                <div class="alert alert-warning" >{{sn_ct("Aucun résultat n'a été retourné")}}</div>
+            \{{endif}}
+            
+        </div>
+    </div>
+    <div class="col-md-5" style="padding-left:5px;padding-right:0">
+        <div class="infos_project">
+            <div class="project_data">
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="communications" style="display:none">
+    <div class="client_updated">
+        <span style="width:100%;font-size:18px;color:green">{{sn_ct("mise-a-jour du client completée!")}}</span>
+    </div>
+    
+    <div class="rewrite_confirm">
+        <span style="width:100%;font-size:18px;color:green">{{sn_ct("La ré-écriture du projet est completée!")}}</span>
+    </div>
+    
+    <div class="project_updated">
+        <span style="width:100%;font-size:18px;color:green">{{sn_ct("mise-a-jour du projet completée!")}}</span>
+    </div>
+    
+    <div class="cancel" >
+        <span><h4>{{sn_ct("Vous êtes sur le point d'annuler ce projet. Voulez-vous continuer?")}}</h4></span>
+    </div>
+</div>
+
+
+<script>
+
+    function rewrite(uid){
+        $.ajax({
+            type: "POST",
+            data: {'projectID':uid,'action':'rewrite'},
+            success: function(data, statusText, xhr) {
+                var res = xhr.getResponseHeader('X-rewrite');
+                
+                if(res == 1){
+                    
+                    $('.rewrite_confirm').dialog({
+                        modal: true, title: '{{sn_ct(edit:false,"confirmation")}}', zIndex: 9, width:'450px', resizable: false,
+                        buttons: {
+                            Ok: function () {
+                                $(this).dialog("close");
+                            }
+                        },
+                        
+                        close: function (event, ui) {
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    function getHistory(uid,from){
+        $.ajax({
+            type: "POST",
+            data: {'projectID':uid,'action':from, 'calldate':$('#callback_date').val(), 'calltime':$('#callback_time').val(), 'uid_project':$('#selected_project').val(),'subject':$('#subject').val(), 'message':$('#message').val()},
+            beforeSend: function(){
+                
+                if(uid == ''){
+                    $('.followup_error').dialog({
+                        modal: true,
+                        title: "{{sn_ct(edit:false,'suivi - Erreur')}}",
+                    });
+                    return false;
+                }
+            },
+            
+            success: function(data, statusText, xhr) {
+                var res = xhr.getResponseHeader('X-result');
+                res = res.decode();
+                
+                res = jQuery.parseJSON(res);
+                var p = xhr.getResponseHeader('X-cancelled');
+                
+                $('#history_tab').empty();
+                $('#history_tab').html('<tr><td></td><td></td></tr>');
+                
+                if(from == 'cancel'){
+                    $('#client_list_' + uid).empty();
+                    $('#history_tab').html('<tr><td></td><td></td></tr>');
+                    $('.project_data').html("");
+                    
+                }else{
+                    $.each(res, function(key,value){
+                        if(value.when_to_callback == null){
+                            when = ' - ';
+                        }else{
+                            when = value.when_to_callback
+                        }
+                        
+                        $('#history_tab tr:last').after('<tr><td>' + value.sn_cdate + ' &nbsp; </td><td>#'+ value.uid_project + ' - ' + value.msg + ' ' + when + '<font color="#00517e" style="font-weight:bold;"> [' + value.followup_agent + '] </span></td></tr>');
+                    });
+                }
+            }
+        });
+    }
+    
+    
+    $('.bodyrows').click(function() {
+        $('.bodyrows').removeClass('trhover');
+        $(this).addClass('trhover');
+    }); 
+    
+    //display history and detailed information of selected project 
+    function lookup_project(uid_project, uid_client){
+        var lg = "{{lg.rows.lg}}";
+        getHistory(uid_project,"");
+        $('.project_data').html('<object style="overflow:hidden" width="100%" height="700px" data="\{{configs.rows.url_staging}}/intranet/'+lg+ '/widget_client_projects?clid=' + uid_client  + '&puid=' + uid_project + '&scope=all">');
+    }
+    
+    $('.linkStyle').click(function(e){
+        e.preventDefault();
+        var subject = "\{{cgidata.subject}}";
+        var link = "{{pages('projet_similaire', lg.rows.lg, table:'pages')}}" + $(this).attr('href');
+
+        $.ajax({
+            url: link,
+            type: "POST",
+            data:{'subject':subject},
+            beforeSend: function(){
+            },
+            
+            success: function(data, statusText, xhr) {
+                var ctrl = $('.res_query');
+                var res = xhr.getResponseHeader('X-result');
+                var nav = xhr.getResponseHeader('X-nav');
+                res = res.decode();
+                $('.res_query').html();
+                $('.res_query').html(res);
+                $('.navigation').html(nav);
+                
+            }
+        });
+        
+    });
+    
+    $('.right_arr').click(function(e){
+        e.preventDefault();
+        var subject = "\{{cgidata.subject}}";
+        var link = "{{pages('projet_similaire', lg.rows.lg, table:'pages')}}" + $(this).attr('href');
+        $.ajax({
+            url: link,
+            type: "POST",
+            data:{'subject':subject},
+            beforeSend: function(){
+            },
+            
+            success: function(data, statusText, xhr) {
+                var ctrl = $('.res_query');
+                var res = xhr.getResponseHeader('X-result');
+                var nav = xhr.getResponseHeader('X-nav');
+                
+                res = res.decode();
+                $('.res_query').html();
+                $('.res_query').html(res);
+                $('.navigation').html(nav);
+            }
+        });
+        
+    });
+    
+    
+    function cancel_project(uid){
+        if(isLocked(uid)){
+            $('.cancel').dialog({
+                modal: true, title: '{{sn_ct(edit:false,"Suivi - Annulation du projet")}}' + '(#'+ $("#selected_project").val() +')', zIndex: 9, width: '450px', resizable: false,
+                buttons: {
+                    Yes: function () {
+                        getHistory(uid,'cancel');
+                        $(this).dialog("close");
+                        look_for_project(uid);                      
+                    },
+                    
+                    No: function () {                                                                 
+                        $(this).dialog("close");
+                    }
+                },
+                
+                close: function (event, ui) {
+                }
+            });
+        }else{
+            $('.lock_error').dialog({
+                modal: true,
+                title: "{{sn_ct(edit:false,'Admin - Erreur')}}",
+            });
+        }
+    }
+    
+</script>

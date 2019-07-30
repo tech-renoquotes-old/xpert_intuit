@@ -1,0 +1,70 @@
+{{
+    /*
+        @title 			sendUnreachableNoticeToClient
+        Description		Send a notice to client that he is unreachable. 
+        
+        @author 		louis.jhonny@gmail.com
+        
+		@version		1.0 2018-02-06 louis.jhonny@gmail.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+	use client;
+}}
+
+\{{
+    use contractor;
+    use lg;
+    use gender;
+    
+    token = substr(contractor.rows.token,0,48);
+    company = contractor.rows.company_name;
+    client_lastname = contractor.rows.lastname;
+    client_firstname = contractor.rows.firstname;
+	
+    
+    if(lg eq 'fr') then
+        service = contractor.rows.name_fr;
+        title = (gender eq 'f')? 'Mme.':'Mr.';
+    else
+        service = contractor.rows.name_en;
+        title = (gender eq 'f')? 'Mme.':'Sr.';
+    endif
+    
+	if(contractor.rows.no_quote eq 'yes') then
+		quote_text = "{{sn_ct(edit:false,'il vous a donné un prix')}}";
+	else
+		quote_text = "{{sn_ct(edit:false,'il ne vous a pas donné de prix')}}";
+	endif
+
+    if(contractor.rows.reason == 1) then
+		reason = "{sn_ct(edit:false,'il est impossible de vous rejoindre')}}";
+    endif
+    
+
+}}
+
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+        </span>
+    </span>
+</div>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

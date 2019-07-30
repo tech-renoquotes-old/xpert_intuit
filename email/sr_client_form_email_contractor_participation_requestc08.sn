@@ -1,0 +1,32 @@
+{{
+    /*
+        @title 			sr_client_form_email_contractor_participation_requestc08
+        Description		Contractor participation to a resquest
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	titre = "Mr";
+    prenom = "Marc-André";
+    adresse = "791, ave Saint-Georges";
+    telephoneMaison = "(438) 456-7890";
+    telephoneBureau = "(438) 456-7891";
+    telephoneCell = "(514) 456-7890";
+    courriel = "macright@sednove.com";
+    travauxAFaire = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at porttitor sem.  Aliquam erat volutpat. Donec placerat nisl magna, et faucibus arcu condimentum sed.";
+    infoAdd = "Lorem ipsum dolor sit amet. Donec placerat nisl magna, et faucibus arcu condimentum sed.";
+    id = "11345";
+   
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

@@ -1,0 +1,50 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a ckeditor field
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+
+    
+	use field;
+	use lg;
+	use field_title;
+	use field_name;
+	use declaration;
+	
+	
+}}
+<div class="form-group">
+    <label for="email">{{ 
+        field_title;
+        if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+            }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+        endif
+    }}</label>
+    
+    <textarea class="form-control" id="ck-{{ field_name }}" name="{{ field_name }}" 
+        rows="{{ if isdigit(field.rows.textarea_nbrow) && field.rows.textarea_nbrow != 0 then field.rows.textarea_nbrow; else '4';endif}}"
+		cols="{{ if isdigit(field.rows.textarea_nbcol) && field.rows.textarea_nbcol != 0 then field.rows.textarea_nbcol; else '80';endif}}"
+	{{
+        if field.rows.onChange ne "" then 
+            ' onChange="';  parse(state:0,field.rows.onChange);  '"'; 
+        endif 
+        declaration;
+    }}></textarea>
+    <script type="text/javascript" src="/extenso/ckeditor/ckeditor.js"></script>
+    <script language="javascript">
+		ckeditor_{{field_name}} = CKEDITOR.replace( 'ck-{{field_name}}', { 
+			toolbarStartupExpanded : false,
+			language : '{{lg.rows.lg}}',
+			toolbar : '{{field.rows.ck_toolbar}}',
+			bodyClass : 'cs',
+			contentsCss : '{{field.rows{"ck_css_" .+ lg}; }}'
+			{{ if field.rows.width ne "" then }} ,width: "{{field.rows.width}}" {{ endif }}
+			{{ if field.rows.height ne "" then }} ,height: "{{field.rows.height}}" {{ endif }}
+		});
+	</script>
+</div>

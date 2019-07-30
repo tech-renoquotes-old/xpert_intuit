@@ -1,0 +1,26 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Widget X-form - Default view
+	
+		This view implement the default view for a form for the widget xform.
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+
+		@author		laplante@sednove.com
+
+		@param		use widget_content
+	*/
+	// --------------------------------------------------------------------------
+
+	use widget_content;
+
+//widget_content;
+}}
+<div class="row">
+ <div class="col-md-12">
+   
+{{widget_content;}}
+   
+  </div>
+</div>

@@ -1,0 +1,23 @@
+{{
+    // --------------------------------------------------------------------------
+    // Name:        Widget code
+    //
+    // Description: use to implement a code in a page
+    //
+    // Version:     1.0 2015-05-31 13:15:47 laplante@sednove.com
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc";
+
+    use widget;     // widget variable is from function sn_widgets
+
+    // loop threw the content if any single or multiple
+    if widget.rows.table_name ne '' && widget.rows.table_name ne 'none' then
+        for widget_content sql("select * from ? where uid_widget = '?'", widget.rows.table_name, widget.rows.uid_widget_list) do
+                widget_content.rows.code;
+        endfor
+    else
+        //"Default view without content";
+    endif
+
+}}

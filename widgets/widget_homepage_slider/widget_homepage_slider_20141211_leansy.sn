@@ -1,0 +1,34 @@
+{{
+
+	use uid;
+	use table;
+	use widget;
+	use lg;
+}}
+<!-- Slider -->
+<script type="text/javascript">
+	$(document).ready(function(){
+		$('.bxslider').bxSlider({
+			mode: 'fade',
+			auto:true,
+			speed: '600',
+			controls : false,
+			pause : '2000',
+			adaptiveHeight: true,				  
+			infiniteLoop: true,
+			responsive: true,
+			slideMargin: 0
+		 });
+	 });
+</script>
+<div class="full-width bgLightGray hidden-xs hidden-sm">
+	<div class="container">
+		<div id="slider" >      
+		  <ul class="bxslider">
+			{{ for parten sql("select * from widget_homepage_slider where actif = 'oui' and uid_widget = '?' order by sn_custom", widget.rows.uid_widget_list) do }}
+			<li {{ if sn_nb > 0 then dq((style="display:none;")); endif }}><img class="img_slider" src="{{parten.rows.image}}" alt="{{parten.rows['alt_' .+ lg.rows.lg]}}" /></li>
+			{{ endfor }}
+		  </ul>
+		</div>
+	</div>                
+</div>

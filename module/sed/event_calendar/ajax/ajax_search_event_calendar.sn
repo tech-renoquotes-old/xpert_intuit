@@ -1,0 +1,15 @@
+{{
+	use lg;
+}}
+\{{ 
+	%include "/functions/{{lg.rows.lg}}/calendar_search.sn";
+	lg_dyn = "{{lg.rows.lg}}";
+    ressource_dyn ="{{ressource.rows.uid}}";
+	cgidata = cgidata();
+	
+	if cgidata.op eq "search" then
+		get_calendar_items(cgidata.month, cgidata.category);
+	else
+		error("Invalid operation");
+	endif
+ }} 

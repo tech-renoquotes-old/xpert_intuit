@@ -1,0 +1,274 @@
+{{
+    /*
+        @title contractor_create_login
+        Description: Creates a username and password for the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+<!--<link rel="stylesheet" href="/css/bootstrap-social.css">-->
+<style>
+.divider {
+  height: 2px;
+  width:100%;
+  //display:block; /* for use on default inline elements like span */
+  margin: 9px 0;
+  overflow: hidden;
+  background-color: #e5e5e5;
+}
+</style>
+<link rel="stylesheet" href="/css/bootstrap-social.css">
+
+\{{
+    cgidata = cgidata();
+    contractor = sql(single:true, "SELECT uid FROM sr_contractor WHERE token='?' AND token != '' AND (username='' OR username IS null)", cgidata.token);
+    void insert(table:'sr_debug', fields:{'description':'contractor.nbrows','text':contractor.nbrows});
+/*    if contractor.nbrows == 0 then
+        redirect("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+        stop();
+    endif
+*/
+}}
+<div id="fb-root"></div>
+<script type="text/javascript">
+//<![CDATA[
+window.fbAsyncInit = function() {
+   FB.init({
+     appId      : '1804360176488616', // App ID
+     channelURL : '', // Channel File, not required so leave empty
+     status     : true, // check login status
+     cookie     : true, // enable cookies to allow the server to access the session
+     oauth      : true, // enable OAuth 2.0
+     xfbml      : false  // parse XFBML
+   });
+};
+// logs the user in the application and facebook
+function login(){
+FB.getLoginStatus(function(r){
+     if(r.status === 'connected'){
+         alert('Connecté');
+            window.location.href = 'fbconnect.php';
+     }else{
+        FB.login(function(response) {
+                if(response.authResponse) {
+              //if (response.perms)
+                      alert('vient de seconnecté');
+                    window.location.href = 'fbconnect.php';
+            } else {
+                 alert('Not connected');
+              // user is not logged in
+            }
+     },{scope:'email'}); // which data to access from user profile
+ }
+});
+}
+// Load the SDK Asynchronously
+(function() {
+   var e = document.createElement('script'); e.async = true;
+   e.src = document.location.protocol + '//connect.facebook.net/en_US/all.js';                
+   document.getElementById('fb-root').appendChild(e);
+}());
+//]]>
+</script>
+
+
+
+
+
+<!--<a class="btn btn-block btn-social btn-facebook" href='#' onclick='login();'>Facebook Login</a>-->
+
+
+    <!--<form role="form" method="post" action="{{pages(table:'pages','extranet_login',lg.rows.lg)}}">-->
+    <!--    <div class="form-group">-->
+    <!--          <button type="submit" class="btn btn-primary pull-left" value="rg"  name="use_fb">-->
+    <!--              <i class="fa right"></i>{{ sn_ct("sed_login Regular",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}-->
+    <!--          </button>-->
+    <!--          <button type="submit" class="btn btn-primary pull-right"  value="fb"   name="test">-->
+    <!--              <i class="fa right"></i>{{ sn_ct("sed_login Facebook",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}-->
+    <!--          </button>-->
+    <!--            <a class="btn btn-block btn-social btn-facebook" onclick="login();" href='#'>-->
+    <!--                <span class="fa fa-facebook"></span> Sign in with Facebook-->
+    <!--            </a>        -->
+    <!--        </div>-->
+    <!--</form>-->
+    <a class="btn btn-block btn-social btn-facebook" onclick="login();" href='#'>
+        <span class="fa fa-facebook"></span> Sign in with Facebook
+    </a>        
+    <a class="btn btn-block b" onclick="login();">
+        <span class="fa fa-facebook"></span> Connection régulière
+    </a> 
+	<div class="divider">
+		<span>OU   123499999</span>
+	</div>
+OU
+	<div class="checkbox">
+        <input type="checkbox" name="fld1_locale" value="true" id="fld1_locale">
+        <label class="mexCheck" for="fld1_locale"><span class="check"></span>Lier au compte Facebook</label>    
+    </div>
+    <fieldset class="form-group">
+        <div class="checkbox nomargin1 form-control1">
+            <input class="checkbox form-control " type="checkbox" name="connect_fb_to_account" id="connect_fb_to_account" value="no"  >
+            <label for="connect_fb_to_account" class="control-label ">
+                {{sn_ct("sed_login    Relier mon compte à Facebook.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </label>
+        </div>    
+    </fieldset>    
+
+    
+    
+    
+    <h1>
+        
+        {{sn_ct("contractor_create_login Nouvel identifiant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+    </h1>
+    <div class="row">
+        <div class="col-md-3"></div>
+        <div class="col-md-6">
+        <form action="{{sn_pages('ajax_create_login', lg.rows.lg, table:'ressources')}}" id="create_login" name="create_login" method="POST">
+                <fieldset class="form-group" style="margin-bottom:30px">
+                    <label for="username" class="control-label">
+                        {{sn_ct("contractor_create_login Nouvel identifiant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="username" id="username" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("contractor_create_login Identifiant trop court ou existe déjà", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="username"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="password" class="control-label">
+                        {{sn_ct("contractor_create_login Nouveau mot de passe", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="password" name="password" id="password" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("contractor_create_login Le mot de passe doit contenir au moins 6 caractères, 1 lettre majuscule, 1 lettre minuscule et 1 chiffre ", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="password"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="password2" class="control-label">
+                        {{sn_ct("contractor_create_login Confirmer le mot de passe", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="password" name="password2" id="password2" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("contractor_create_login Les deux mots de passe doivent être pareil", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="password2"></span>
+                </fieldset>
+                
+                <input type="hidden" name="token" value="\{{cgidata.token}}">
+                
+                <button class="btn btn-primary pull-right" type="submit">{{sn_ct("contractor_create_login Soumettre", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>
+            </form>
+        </div>    
+        <div class="col-md-3"></div>
+    </div>
+{{
+    // include the validator for contractor_create_login
+    %include "/site/contractor_create_login/include/validator.sn";
+}}
+\{{
+    // validate client side
+    validator.validateJS(form:'create_login');    
+}}
+<script>
+    function confirm_password(password2){
+        password1 = $("input#password").val();
+        if (password1 === password2){
+            return true;
+        }
+        return false;
+    }
+    
+    // send form via ajax
+    $('form[name=create_login]').ajaxForm({
+        resetForm:true,
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                location.replace("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+            }
+        }    
+    });   
+    
+</script>
+
+<div class="row light-gray">
+		<div class="content hubReg">
+			<div class="contForm">
+			
+		    <div class="social">
+				<a class="facebook" title="Se connecter avec Facebook" href="https://idphub.account.acer.com/pf/adapter2adapter.ping?IdpAdapterId=FBSSO&amp;SpSessionAuthnAdapterId=SSOAL&amp;TargetResource=https://account.acer.com/sso/social?pcp21c=bb9803b233fa46abb4be9e14b5fb921f"><span>Se connecter avec Facebook</span></a>
+				<a class="gplus" title="Se connecter avec Google" href="https://idphub.account.acer.com/pf/adapter2adapter.ping?IdpAdapterId=GOSSO&amp;SpSessionAuthnAdapterId=SSOAL&amp;TargetResource=https://account.acer.com/sso/social?pcp21c=bb9803b233fa46abb4be9e14b5fb921f"><span>Se connecter avec Google</span></a>
+			</div>
+			<div class="divider">
+				<span>ou</span>
+			</div>
+			
+
+		
+
+	<div class="field">
+        
+          
+          
+            <input type="text" name="fld3" value="" id="fld3" class=" " placeholder="Courriel">
+          
+        
+	    <span class="placeholderText" style="display: none;">Courriel</span>
+	    
+	    
+	    	<span class="fieldMand" style="display: none;">Ce champ est obligatoire.</span>
+	    
+	</div>
+
+
+
+		
+
+	<div class="field">
+	    <input type="password" name="fld4" value="" id="fld4" class=" " placeholder="Mot de passe">
+	    <span class="placeholderText" style="display: none;">Mot de passe</span>
+	    
+	    
+	    	<span class="fieldMand" style="display: none;">Ce champ est obligatoire.</span>
+	    
+	</div>
+
+
+
+		
+		<div class="checkbox">
+    
+      
+        <input type="checkbox" name="fld1_locale" value="true" id="fld1_locale">
+      
+      
+    
+	<label class="mexCheck" for="fld1_locale"><span class="check"></span>Rester connecté</label>    
+</div>
+
+	<input type="hidden" name="fld1v" value="bb9803b233fa46abb4be9e14b5fb921f" id="fld1v">
+	
+				 
+
+<input class="btn" id="button:ln8" name="button:ln8" type="submit" value="Connexion">
+
+
+
+	
+
+
+
+
+	
+	<a href="/sso/reset" class="lost-password">Mot de passe oublié?</a>
+	<a href="/sso/create/bb9803b233fa46abb4be9e14b5fb921f" class="lost-password">Créer un compte</a>
+	<a href="http://www.acer.com/ac/fr/CA/content/acerid-account">Pourquoi s'inscrire?</a>
+
+
+
+			</div>
+		</div>
+	</div>

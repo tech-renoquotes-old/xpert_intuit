@@ -1,0 +1,105 @@
+{{
+    /*
+        @title 			customEmailToClient
+		Description		Send custom email to customer. 
+        
+        @author 		louis.jhonny@gmail.com
+        
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+	use client;
+}}
+
+\{{
+    use project;
+	use message;
+	use choices;
+
+	uid_project = project.rows.uid;
+	client_email = project.rows.email;
+	client_firstname = project.rows.firstname;
+	client_lastname = project.rows.lastname;
+	client_gender = project.rows.gender;
+
+	client_gender = (client_gender eq 'm')?'Mr.':'Mme.';
+}}
+<div>
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+</div>
+                        
+                        <ul>
+                            \{{if(choices.chx0) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point0">{{sn_ct(edit:false,"L'adresse complète incluant la ville et le code postal où doit s'effectuer le projet")}}</span>
+                            </li>
+                            \{{endif}}
+
+                            \{{if(choices.chx1) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point1">{{sn_ct(edit:false,"Les dimensions actuelles et/ou voulues des surfaces et endroits à rénover")}}</span>
+                            </li>
+                            
+                            \{{endif}}
+
+                            \{{if(choices.chx2) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point2">{{sn_ct(edit:false,"Les délais à respecter pour commencer ou terminer les travaux")}}</span>
+                            </li>
+                            \{{endif}}
+
+                            \{{if(choices.chx3) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point3">{{sn_ct(edit:false,"Le budget approximatif que vous avez à allouer au projet (Montant à ne pas dépasser ou fourchette de prix)")}}</span>
+                            </li>
+                            \{{endif}}
+                            \{{if(choices.chx4) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point4">{{sn_ct(edit:false,"Si vous avez une offre d'achat acceptée")}}</span>
+                            </li>
+                            \{{endif}}
+
+                            \{{if(choices.chx5) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point5">{{sn_ct(edit:false,"Si vous avez les plans de construction ou d'agrandissement")}}</span>
+                            </li>
+                            \{{endif}}
+
+                            \{{if(choices.chx6) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point6">{{sn_ct(edit:false,"Les personnes responsables de la prise de décision quant à l'entrepreneur qui fera les travaux")}}</span>
+                            </li>
+                            \{{endif}}
+                          
+                           \{{if(choices.chx7) then}}
+                            <li>
+                                <span class="col-xs-11 points" id="point7">{{sn_ct(edit:false,"L'adresse complète incluant la ville et le code postal où doit s'effectuer le projet")}}</span>
+                            </li>
+                            \{{endif}}                         
+
+                            \{{if(message ne "") then}}
+                            <li>
+                                \{{message}}
+                            </li>
+                            \{{endif}}
+                        </ul>
+
+
+
+<p>{{sn_ct(edit:false,"Si vous ne vouliez qu'une approximation ou idée de combien vous coûterait votre projet, nous vous invitons à consulter le guide de prix ci-dessous")}}<br/>
+<a href="{{sn_ct(edit:false,'https://soumissionrenovation.ca/guide-prix-renovations')}}" target="_blank">{{sn_ct(edit:false,'https://soumissionrenovation.ca/guide-prix-renovations')}}</a></p>
+<p>{{sn_ct(edit:false,"Pour toutes questions, pour apporter des modifications ou des précisions à votre demande vous pouvez nous joindre du lundi au vendredi de 9h à 17h au <b>1 855 239-7836</b>")}}</p>
+
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

@@ -1,0 +1,10 @@
+if (cgidata.uid ne '' && cgidata.status eq 'active') then
+	owner_id = sql(single:true,"SELECT sn_muid FROM sr_project WHERE uid = ?", cgidata.uid);
+	owner_id = owner_id.rows.sn_muid;
+
+	owner_name = sql(single:true,"SELECT username FROM sn_users WHERE uid = ?",owner_id);
+	owner_name = owner_name.rows.username;
+	owner = owner_name .+ "_" .+ owner_id;
+
+	//void sql("UPDATE sr_project SET activated_by = ?", owner)
+endif

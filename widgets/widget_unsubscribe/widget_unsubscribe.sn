@@ -1,0 +1,35 @@
+{{
+    /*
+    	@title	sr_unsub
+    	Description:Widget for the unsubscribe from contractor form
+        @author bbduc@yahoo.com
+    	@version 1.0 2017-01-16 bbduc@yahoo.com
+    	
+    
+    */
+    
+	%include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    use page; 
+	use lg;
+}}
+
+\{{ cgidata = cgidata(); }}
+\{{remove_me = false;
+        // remove me from the list
+    if(cgidata.enlever eq 'oui')then
+            remove_me = true;
+            void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 3 WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id);
+    endif
+
+if remove_me then}}
+
+<div id="annulation" class="alert alert-info" style="display:none1"> 
+    <h2> {{sn_ct(edit:true,"contractor_form Vous êtes maintenant désabonné", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2> <br>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close"   onclick="this.parentElement.style.display='none'"      >&times;</a>
+</div>
+
+\{{endif}}
+<a href="\">    <h2> {{sn_ct(edit:true,"contractor_form Retour", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2> <br>
+ </a>
+

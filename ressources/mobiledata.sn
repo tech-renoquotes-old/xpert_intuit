@@ -1,0 +1,19 @@
+\{{
+	cgidata = cgidata();
+	
+	mbadm = base64_decode(cgidata.mbadm);
+	secret = base64_decode(cgidata.secret);
+	
+	if secret eq "im0bile" then
+		rspmsg = {"firstname":"Jhonny", "lastname":"Louis", "msg":"welcome to srmobile!"};
+	endif
+	
+	message = stringnify(rspmsg);
+	error = stringnify({"error":"connection error using " .+ mbadm .+ "username"});
+	
+	if secret eq "im0bile" then
+	    message;
+	else
+	    error;
+	endif
+}}

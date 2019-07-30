@@ -1,0 +1,350 @@
+{{
+    /*
+        @title contractor_dashboard
+        Description: This widget displays the dashboard with the actions that the contractor can do once logged in.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-19
+        @version 1.01 
+        @version 1.02 2017-02-10 taxe by prov  
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    %include '/site/package/all.sn';
+}}
+
+<style>
+    .cs .nomargin{
+        margin:0;
+    }
+    .dashboard_group{
+        margin:-7px -7px 13px -7px;
+        clear:both;
+    }
+    .dashboard_group:after{
+        visibility: hidden;
+        display: block;
+        font-size: 0;
+        content: " ";
+        clear: both;
+        height: 0;
+    }
+    .dashboard_group .dashboard_item_container{
+        width:33.3334%;
+        float:left;
+        padding:7px;
+    }
+    .dashboard_group .dashboard_item_ratio{
+        border-radius:5px;
+        border-bottom-right-radius:0;
+        border-bottom-left-radius:0;
+        padding-bottom:42%;
+        width:100%;
+        position:relative;
+        
+        border-bottom:3px #00517e solid;
+        background-repeat:no-repeat;
+        background-position:10px center;
+        background-size:auto 70%;
+    }
+    
+    .dashboard_group .dashboard_item_position{
+        border-radius:5px;
+        border-bottom-right-radius:0;
+        border-bottom-left-radius:0;
+        position:absolute;
+        width:100%;
+        height:100%;
+        top:0;
+        left:0;
+        background-color:#dfdfdf;
+        background-repeat:no-repeat;
+        background-position:10px center;
+        background-size:auto 70%;
+    }
+    
+    .dashboard_group .dashboard_item_ratio:hover{
+        border-bottom:3px #002a41 solid;
+        background-color:#00517e;
+    }
+    .dashboard_group .dashboard_item_ratio:hover a{
+        color:#d9efef;
+    }
+    .dashboard_group .dashboard_item_ratio:hover .dashboard_item_position{
+        background:none!important;
+    }
+    
+    .dashboard_group .dashboard_item_position .dtable{
+        width:100%;
+        height:100%;
+        display:table;
+        float:right;
+    }
+    .dashboard_group .dashboard_item_position .dtable a{
+        display:table-cell;
+        vertical-align:middle;
+        text-align:center;
+        padding:0 15px;
+        text-decoration:none;
+        font-size:14px;
+        font-weight:bold;
+        padding-left:35%;
+    }
+    .pull-right-md{
+        float:right;
+    }
+    .cs .big_text{
+        font-size:24px;
+        color:#737672;
+        margin:5px 0;
+    }
+    .cs .med_text{
+        font-size:18px;
+    }
+    .cs .dashboard_comment{
+        margin-top:30px;
+    }
+    .cs .dashboard_comment h2{
+        margin:0 0 15px 0;
+    }
+    @media(max-width:991px){
+        .pull-right-md{
+            float:none;
+        }
+    }
+    
+    @media (max-width:768px){
+        .dashboard_group .dashboard_item_container{
+            width:50%;
+        }
+        .dashboard_group .dashboard_item_ratio{
+            padding-bottom:20%;
+        }
+        .dashboard_group .dashboard_item_position .dtable{
+            width:100%;
+        }
+        .dashboard_group .dashboard_item_position .dtable a{
+            padding-left:60px;
+        }
+    }
+    @media (max-width:640px){
+        .dashboard_group .dashboard_item_ratio{
+            padding-bottom:0;
+            height:70px;
+        }
+        .dashboard_group .dashboard_item_container{
+            width:100%;
+            float:none;
+        }
+    }
+</style>
+
+\{{  
+    use extranet_user;
+    contractor = sql(single:true, "SELECT balance, credit_threshold FROM sr_contractor WHERE uid='?'", extranet_user.uid);
+    contractor_cc = sql(single:true, "SELECT count(*) as nbr_cc FROM sr_cc WHERE uid_contractor='?'", extranet_user.uid);
+    nbr_cc = contractor_cc.rows.nbr_cc;
+}}
+<div class="row">
+    <div class="col-md-4 pull-right-md">
+        <div class="well custom-well">
+            <h2 class="panel-title">{{sn_ct("contractor_dashboard Solde de votre comptre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
+            <div>
+                <p class="big_text">
+                    \{{
+                    billing = contractor::getCurrentBilling(extranet_user.uid);
+                   //v1.02
+                    billing_footer = contractor::getBillingFooterByProv(billing,extranet_user.uid);
+                   // billing_footer = contractor::getBillingFooter(billing);
+                    }}
+                    \{{money_format(billing_footer.solde, "{{lg.rows.lg}}");}}
+                </p>
+            </div>
+            <div>
+                <p>
+                    {{sn_ct("contractor_dashboard Limite de votre compte : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    <b>\{{money_format(contractor.rows.credit_threshold, "{{lg.rows.lg}}");}}</b> 
+                </p>
+            </div>
+            <a href="{{pages(table:'pages','sr_contractor_current_bill',lg.rows.lg)}}" class="btn btn-primary">{{sn_ct("contractor_dashboard Payer votre compte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+            
+        </div>
+      
+        <b> {{sn_ct("contractor_dashboard Nombre de cartes de crédit à votre dossier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}: \{{nbr_cc}}    </b>
+        <div class="panel panel-warning "   id="cc_panel"  >
+            <div class="panel-heading mt-sm"   id="cc_warning">
+                <h2 class="panel-title">{{sn_ct("contractor_dashboard Vous n'avez pas de carte de crédit à votre dossier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
+            </div>
+            <div class="panel-body">
+                <a href="{{pages(table:'pages','sr_contractor_add_credit_card',lg.rows.lg)}}" class="btn btn-highlight">{{sn_ct("contractor_dashboard Inscrire une carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="row nomargin">
+            <h2>
+                {{sn_ct("contractor_dashboard Gestion de votre compte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                |<a href="/sn_uploads/Guide_SoumissionRenovation.pdf"><i class="fa fa-file-pdf-o" aria-hidden="true"  title="{{sn_ct(edit:false,"contractor_dashboard Guide du site", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">&nbsp;{{sn_ct("contractor_dashboard Guide", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</i></a>
+            </h2>
+            <div class="dashboard_group">
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/crayon_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/crayon.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_profile',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Modifier vos informations", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a> 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/carte_credit_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/carte_credit.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_credit_cards',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Vos carte de crédits", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/facture_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/facture.png);">
+                            <div class="dtable">
+                                 <a href="{{pages(table:'pages','sr_contractor_current_bill',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Facture courante", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/client_ref_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/client_ref.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_get_project_credit',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Se faire créditer un client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/rabais_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/rabais.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_supplier_discounts',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Obtenir des rabais avec des fournisseurs", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/liste_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/liste.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_billing_history',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Historique des factures payées", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row nomargin">
+            <h2>
+                {{sn_ct("contractor_dashboard Votre entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </h2>
+            <div class="dashboard_group">
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/photo_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/photo.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_edit_photo',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Édition galerie photos", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/liste_services_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/liste_services.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_services',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Liste des services", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/liste_lieux_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/liste_lieux.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_territories',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Liste des territoires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/non_repondu_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/non_repondu.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_unanswered_projects',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Projet(s) non répondu", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/rabais_projet_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/rabais_projet.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_discounted_projects',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Projet(s) à rabais", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard_item_container">
+                    <div class="dashboard_item_ratio" style="background-image:url(/sn_uploads/icon/liste_clients_over.png);">
+                        <div class="dashboard_item_position" style="background-image:url(/sn_uploads/icon/liste_clients.png);">
+                            <div class="dtable">
+                                <a href="{{pages(table:'pages','sr_contractor_clients',lg.rows.lg)}}">
+                                    {{sn_ct("contractor_dashboard Liste des clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>       
+        
+        
+    </div>
+</div>
+<script>
+        var nbr_cc = \{{nbr_cc}};
+    //    if (typeof(nbr_cc) == "undefined")  {
+       if (nbr_cc != "")  {
+            $("#cc_panel").removeClass("panel-warning");
+            $("#cc_warning").hide();
+         }
+</script>

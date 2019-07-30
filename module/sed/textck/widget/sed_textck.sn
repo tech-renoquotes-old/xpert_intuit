@@ -1,0 +1,30 @@
+{{
+    /*
+    	@title	sed_textck
+    	Description:Use to display the text html
+        @author gamila@sednove.com
+    	@version 1.0 2016-06-21 10:00:00 Version initial
+    
+    */
+	use widget;
+	use lg;
+	textck = sql(single:true, "select * from sed_textck where uid_widget = '?'", widget.rows.uid_widget_list);
+    
+    if textck.nbrows   == 0 then
+        verif_ctx = sql(single:true,"SELECT uid FROM sed_textck WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	    if verif_ctx.nbrows == 0 then
+            // Set default content
+            fields = {
+                    "uid" : widget.rows.uid_widget_list,
+                    "uid_widget":widget.rows.uid_widget_list
+            };
+            for l sql("select * from sn_languages where active = 'yes'") do
+                fields{"text_" .+ l.rows.lg} = "Text " .+ l.rows.lg;
+            endfor
+	        void insert(table:"sed_textck",fields:fields);
+	    endif
+        textck = sql(single:true, "select * from sed_textck where uid_widget = '?'", widget.rows.uid_widget_list);
+    endif
+ 
+    textck.rows{'text_'.+ lg.rows.lg};
+}}

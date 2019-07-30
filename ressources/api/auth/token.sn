@@ -1,0 +1,34 @@
+\{{
+	%include "/packages/api.sn";
+	
+	use context;
+	
+    cgidata = cgidata();
+	
+	if cgidata.username eq '' || cgidata.password eq '' then
+		// anonymous token
+		token = api::generate_token(cgidata.api_key, null, context.ip);
+		api::response(data:{
+			'api_token': token
+		});
+	else		
+		// user token
+		user = sql("SELECT uid, username, password FROM sn_api_user WHERE username = '?' AND active = 'yes'", cgidata.username);
+		if user.nbrows == 1 then
+			if user.rows[0].password eq cgidata.password then
+				// good credentials
+				token = api::generate_token(cgidata.api_key, user.rows[0].uid, context.ip);
+				api::response(data:{
+					'token': token
+				});
+			else
+				// bad password
+				api::response(error: 'Bad Credentials');
+			endif
+		else
+			// bad username
+			api::response(error: 'Bad Credentials');
+		endif
+	endif
+
+}}

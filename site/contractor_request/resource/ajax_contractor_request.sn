@@ -1,0 +1,45 @@
+{{
+    /*
+        @title ajax_contractor_request
+        Description: Sends a email to an admin to approve the contractor request.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-21
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_request/include/validator.sn";
+    
+    cgidata = cgidata();
+    connection = connection();
+
+ 
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+        contractor = {
+            "contact_firstname":cgidata.name,
+            "contact_phone":cgidata.phone,
+            "contact_email":cgidata.email,
+            "company_name":cgidata.company_name,
+            "ip": connection.client_ip,
+            "url":cgidata.url
+        };
+        
+        void insert(table:'sr_debug', fields:{'description': cgidata.email,'text':cgidata.company_name});
+        automail::notifyAdminContractorRequestInformation(contractor);
+        
+
+    endif
+
+
+}}

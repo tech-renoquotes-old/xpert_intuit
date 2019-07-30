@@ -1,0 +1,30 @@
+{{
+    /*
+        @title 			suggestProjectToContractor
+        Description		Sends en email to a contractor to suggest him a free client.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-07-21
+        @mod       		1.1   ajout de reference
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+\{{
+	use manager;
+    
+    manager_name = manager.rows.firstname .+ ' ' .+ manager.rows.lastname;
+    manager_phone = manager.rows.phone;
+    manager_email = manager.rows.email;
+    manager_photo = manager.rows.photo;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

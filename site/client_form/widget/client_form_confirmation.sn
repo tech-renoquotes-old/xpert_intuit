@@ -1,0 +1,214 @@
+{{
+    /*
+        @title client_form_confirmation
+        Description: This widget is the confirmation message after a client fills a form.
+        
+        @author madupuis@sednove.comapi
+        
+        @version 1.0 2016-07-19
+        @version 1.01 2017-01-20  Adwords
+        @version 1.02 2017-02-14  add  first_visited = cookies.first_visited   (créé quand on entre dans la page sans requete(?))
+        @version 1.03 2017-03-10  description escaped
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+        //session 
+    %include "/extenso/functions/sessions.snc"; 
+
+}}
+<style>
+    .table>tbody>tr, .table>tbody>tr>td{
+        border:none;
+    }
+</style>
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator.sn";
+    
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/");  
+    connection = connection();
+    
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+    
+        // Check for existing client in the database and merge it. 
+        existing = sql(single:true, "SELECT * FROM sr_client WHERE email = '?'", cgidata.email);
+        if (existing.nbrows > 0) then
+            client = existing.rows;
+            void update(tables: "sr_client", fields: {
+                'address': cgidata.address,
+                'to_qualify': 'yes',
+                'ip': connection.client_ip
+            }, uid: client.uid);
+        else
+            client = insert(
+                table:"sr_client",
+                fields:{
+                    "firstname":cgidata.name,
+                    "email":cgidata.email,
+                    "address":cgidata.address,
+                    "lang":"{{lg.rows.lg}}",
+                    "languages": '3',
+                    "to_qualify": 'yes',
+                    'ip': connection.client_ip
+                }
+            );
+        endif
+
+        address = insert(
+            table:"sr_address",
+            fields:{
+                "uid_client":client.uid,
+                "city":cgidata.locality,
+                "street_no":cgidata.street_number,
+                "street":cgidata.route,
+                "zip":cgidata.postal_code,
+                "province":cgidata.administrative_area_level_1,
+                "country":cgidata.country,
+                "phone1": cgidata.phone
+            }
+        );
+        // //adwords de session  venant de google
+        // adwords = session_get("adwords");
+        // adwords = parse_query_string(adwords); 
+        // first_page_visited = session_get("url");
+       
+        //Cherche les adwors dans les cookies
+        cookies = cookies();
+        cookie_data = unstringnify(cookies.soumissionrenovation);
+        
+        adwords = parse_query_string(cookie_data.adwords); 
+        first_page_visited = cookie_data.url;
+        first_visited = cookies.first_visited;// not necessarely with adword
+        
+        //Test
+        //first_page_visited = '1234567891023456789202345678930234567894023456789502345678960234567897023456789802345678990234678910';
+        
+        
+        void insert(table:'sr_debug', fields:{'description':'test_cre  photo arg','text':request.args});
+
+
+        configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+        site= (lg.rows.lg  eq 'en')?'https://renoquotes.com':'https://soumissionrenovation.ca';
+        
+        //v1.02
+        description = cgidata.description;
+        description = html2text(description);//empêche script de passer
+        
+        project = insert(
+            table:"sr_project",
+            fields:{
+                "uid_client":client.uid, 
+                "description":description,
+                "file1": (cgidata.file1.sn_fullname ne '') ? site.+cgidata.file1.sn_fullname : '' ,
+                "link1": '<a href="'.+site.+cgidata.file1.sn_fullname.+'"  target="_blank">'.+cgidata.file1.sn_fullname.+'</a>',
+                "file2": (cgidata.file2.sn_fullname ne '') ? site.+cgidata.file2.sn_fullname : '' ,
+                "link2": '<a href="'.+site.+cgidata.file2.sn_fullname.+'"  target="_blank">'.+cgidata.file2.sn_fullname.+'</a>',
+                "file3": (cgidata.file3.sn_fullname ne '') ? site.+cgidata.file3.sn_fullname : '' ,
+                "link3": '<a href="'.+site.+cgidata.file3.sn_fullname.+'"  target="_blank">'.+cgidata.file3.sn_fullname.+'</a>',
+                "file4": (cgidata.file4.sn_fullname ne '') ? site.+cgidata.file4.sn_fullname : '' ,
+                "link4": '<a href="'.+site.+cgidata.file4.sn_fullname.+'"  target="_blank">'.+cgidata.file4.sn_fullname.+'</a>',
+                "file5": (cgidata.file5.sn_fullname ne '') ? site.+cgidata.file5.sn_fullname : '' ,
+                "link5": '<a href="'.+site.+cgidata.file5.sn_fullname.+'"  target="_blank">'.+cgidata.file5.sn_fullname.+'</a>',
+                "uid_address":address.uid,
+                "max_quotes": configs.rows.number_of_quotes,
+                "status": "new",
+                "adwords_pos": adwords.pos,
+                "adwords_net": adwords.net,
+                "adwords_ad": adwords.ad,
+                "adwords_kw": adwords.kw,
+                "adwords_url": first_page_visited,
+                "adwords_region": adwords.region,
+                "adwords_adgroup": adwords.adgroupid,
+                "adwords_campaign": adwords.campaignid,
+                "adwords_cre": adwords.cre,
+                "first_url": first_visited
+            }
+        );
+        /*  for test     
+            Update adwords de project
+              //?region=mtl&net=g&cre=146204715289&campaignid=250098300&adgroupid=18001996140&pos=1t4&kw=Entrepreneur Général
+              //?region=mtl&net=g&ad=annonce&url=www.olaola.com&cre=17171717&campaignid=250098300&adgroupid=18001996140&pos=1t4&kw=Entrepreneur Général
+         */ 
+        //session del
+       // session_del("adwords");
+        
+        
+        
+     //   url = cgidata.url;
+     //   first_visited = cgidata.first_visited;
+        void insert(table:'sr_debug', fields:{'description':'Client confirmation uid='.+' ','text':project.uid.+ '  first_url='.+first_visited});
+
+        automail::quoteRequestToClient(project.uid);
+        automail::quoteRequestToAdmin(project.uid);
+    else
+        validator.errors;
+        stop();
+        
+    endif
+}}
+
+\{{
+    client = sql(single:true,"
+        SELECT  firstname, lastname, address, sr_address.phone1 as phone, sr_project.description as description, sr_project.file1 as file1,
+                sr_project.file2 as file2, sr_project.file3 as file3, sr_project.file4 as file4, sr_project.file5 as file5 
+        FROM sr_client 
+        INNER JOIN sr_address ON sr_address.uid_client = sr_client.uid 
+        INNER JOIN sr_project ON sr_project.uid_client = sr_client.uid 
+        WHERE sr_client.uid='?' AND sr_project.uid='?' AND sr_address.uid='?'"
+        ,client.uid, project.uid, address.uid);
+}}
+
+<h2>
+    {{sn_ct("client_form_confirmation Veuillez vérifier les informations que vous nous avez envoyé", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}    
+</h2>
+<div class="table-responsive">
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>{{sn_ct("client_form_confirmation Votre nom:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.firstname}}&nbsp;\{{client.rows.lastname}}</th>
+            </tr>
+            <tr>
+                <td>{{sn_ct("client_form_confirmation Votre numéro de téléphone:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.phone}}</th>
+            </tr>
+            <tr>
+                <td>{{sn_ct("client_form_confirmation Votre adresse: ", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.address}}</th>
+            </tr>
+            <tr>
+                <td>{{sn_ct("client_form_confirmation La description de vos travaux:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.description}}</th>
+            </tr>
+        </tbody>
+    </table>
+</div>       
+
+
+\{{if client.rows.file1 ne "" then}}
+    <div class="container">
+        <h4>{{sn_ct("client_form_confirmation Fichiers :", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h4>
+        <div class="list-group">
+            {{for (i=1;i<6;i++) do}}
+                \{{if client.rows.file{{i}} ne "" then }}
+                    <a target="_blank" href="\{{client.rows.file{{i}} }}" class="list-group-item">
+                        \{{if basename(client.rows.file{{i}}) =~:i "\.(png|jpe?g)$" then}}
+                            <img src="\{{client.rows.file{{i}}}}?size=48x48&crop"> 
+                        \{{else}}
+                            <i class="fa fa-file-o" aria-hidden="true" style="font-size:18px"></i> 
+                        \{{endif}}
+                        <span> \{{basename(client.rows.file{{i}})}}</span>
+                    </a>
+                \{{endif}}
+            {{endfor}}
+    
+        </div>
+    </div>
+\{{endif}}

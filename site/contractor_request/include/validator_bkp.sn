@@ -1,0 +1,24 @@
+{{
+    /*
+        @title validator for contractor_request
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-21
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        name: 'required',
+        email: 'required,email',
+        phone: 'phone',
+        company_name: 'required'
+    );
+    validator.setAntibotDelay(4);
+}}
+

@@ -1,0 +1,50 @@
+{{
+    /*
+        @title ajax_add_territory
+        Description: Add a list of territory
+        
+        @author bbduc@yahoo.com
+        
+        @version 1.0 2016-11-29
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+
+    cgidata = cgidata();
+    use extranet_user;
+    
+//  services ajoutés
+/*
+4709,Entrepreneur général,23,57,58,66,67,37,74,100,1,59,104,97,98,91,64,65,110,103,96,108,36,20,69,119,70,123,73,45,76,113,92,118,122,121,78,80,79,93,61,83,112,84
+4710,Paysagiste,54,55,51,90,95,56,52,32,53,124,1
+4711,Entrepreneur non-général,57,58,66,37,74,1,59,97,91,64,103,29,108,36,69,119,70,73,72,45,76,113,118,78,79,93,61,83,112,84
+*/
+
+services = sql("SELECT * FROM sr_contractor_service WHERE uid_contractor = '?'", cgidata.uid_groupe);
+
+if services.nbrows > 0 then
+    for i in services.rows do
+        void insert(table:'sr_contractor_service', fields:{'uid_contractor':cgidata.uid,'uid_service':i.uid_service,'approved':'yes'});
+        //void insert(table:'sr_log', fields:{'uid_contractor':cgidata.uid,'uid_project_contractor':,'uid_project':, 'email_to': ''  ,'description':'uid_service=','value':i});
+        //i.uid_service;
+    endfor
+endif
+
+
+//void insert(table:'sr_log', fields:{'uid_contractor':cgidata.uid,'uid_project_contractor':123,'uid_project':456, 'email_to': ''  ,'description':'uid_groupe='.+cgidata.uid_groupe,'value':extranet_user.uid});
+//txt = "54,55,51,90,95,56,52,32,53,124,1";
+//for i split(txt) do 
+    //void insert(table:'sr_contractor_service', fields:{'uid_contractor':4710,'uid_service':i});
+//endfor 
+
+
+}}
+

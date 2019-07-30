@@ -1,0 +1,24 @@
+
+
+
+{{
+    
+    cgidata = cgidata();
+    if(cgidata.token eq 'pwwbkvv7abqzonnvztpea91ich7vprwdorbt4w4') then
+        thisurl =  "http://ssr.sednove.ca/fr/generate-rvn-rprt.xml"; 
+        res = curl(sslversion:6, url: thisurl, file: '/html/adwreport.xml', header: 'Content-type: text/xml');
+
+        // result = str_replace('<html>','',res.post);
+        // result .+= str_replace('</html>','',result);
+        // result .+= str_replace('<header>','',result);
+        // result .+= str_replace('</header>','',result);
+        // result .+= str_replace('<title>','',result);
+        // result .+= str_replace('</title>','',result);
+        // result .+= str_replace('<body>','',result);
+        // result .+= str_replace('</body>','',result);
+        res.post;
+    else
+        http_status(404); 
+
+    endif
+}}

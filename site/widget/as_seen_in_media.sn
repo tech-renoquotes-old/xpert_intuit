@@ -1,0 +1,170 @@
+{{  
+    // --------------------------------------------------------------------------
+    // Name:        As seen in the media
+    //
+    // Description: Displays where we appeared in the media
+    //
+    // Version:      1.0 2018-01-09 15:20 Michel Jodoin
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    
+    use lg;
+    use widget;
+}}
+
+<style> 
+#inner {
+    margin: 0 auto; 
+}
+  .widget-image-text-ck {margin:0 0 30px 0;}
+  .widget-image-text-ck > .box {text-align:center;padding-top:20px;}
+  .widget-image-text-ck > .box img {display:block; margin:0 auto;}
+  .widget-image-text-ck > .box h4 {margin:16px 0 4px 0;}
+  
+  @media screen and (max-width :640px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:left;}
+  }
+   @media screen and (max-width :991px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:none;}
+      .widget-image-text-ck > .box:nth-child(3n+1) {clear:left;}
+      .widget-image-text-ck > .box:last-child{
+          float:none;
+          margin:auto;
+          clear:both;
+      }
+  }
+  
+      .img-circle {
+        border-radius: 50%;
+    }
+    .btn_centered {
+        text-align: center;
+    }
+
+    .btn_right {
+        text-align: right;
+    }
+
+    .btn_left {
+        text-align: left;
+    }
+    
+    .widget-image-text-ck h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .widget-image-text-ck p{
+        margin:15px 0 5px 0;
+    }
+    .widget-image-text-ck .wdg_image{
+        min-height:150px;
+        display:table;
+        width:100%;
+    }
+    .widget-image-text-ck .wdg_image_container{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .wdg_spotlight_container{
+        position:relative;
+    }
+    .wdg_spotlight_container .mask{
+        background-size:cover;background-repeat:no-repeat;background-position:center;
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+    }
+    .wdg_spotlight_container .single_box{
+        max-width:600px;
+        margin:auto;
+        float:none;
+    }
+    .wdg_spotlight_container .wdg_title{
+        text-align:center;
+        position:relative;
+        top:0;
+    }
+    .wdg_spotlight_container .wdg_title h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .wdg_spotlight_container .wdg_title>*{
+        margin:10px 0;
+    }
+    @media (max-width:768px){
+        .wdg_spotlight_container{
+            /*this remove the user padding in mobile*/
+            padding:0!important;
+         }
+        .wdg_spotlight_container .wdg_title{
+            top:0px;
+        }
+    }
+</style>
+
+<div class="wdg_spotlight_container" style="background-color:#FFFFFF;padding:10px 0;">
+    <div class="mask" style="background-color:#FFFFFF;opacity:0;"></div>
+    
+    <div class="container" style="background-color:#FFFFFF; width:100%; max-width: 100%;">
+        
+            <div class="wdg_title">
+                <h3 style="color:#00517e;">
+                    {{sn_ct(edit:true,"SoumissionRenovation.ca dans les médias", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </h3>
+            </div>
+        
+        
+        <div class="row widget-image-text-ck">
+            
+                    <div class="col-xs-12 col-sm-4 col-md-2 box">
+                        <div class="wdg_image">
+                            <div class="wdg_image_container"><a target="_blank" href="http://www.ledevoir.com/economie/actualites-economiques/515540/la-renovation-simplifiee"><img class="img-responsive" src="/sn_uploads/devoir_1_1.png" style="height:125px;"></a>
+                            </div>
+                        </div>
+                    </div>
+            
+                    <div class="col-xs-12 col-sm-4 col-md-2 box">
+                        <div class="wdg_image">
+                            <div class="wdg_image_container"><a target="_blank" href="http://plus.lapresse.ca/screens/c84cd958-b46c-4e4f-a394-ac5f366b1bc9%7C_0.html"><img class="img-responsive" src="/sn_uploads/LaPressePlus.svg?maxw=500&maxh=500" style="height:125px;"></a>
+                            </div>
+                        </div>
+                    </div>
+            
+                    <div class="col-xs-12 col-sm-4 col-md-2 box">
+                        <div class="wdg_image">
+                            <div class="wdg_image_container"><a target="_blank" href="https://desjardinscentrenord.com/2017/01/programme-creavenir-soumissionrenovation-ca/"><img class="img-responsive" src="/sn_uploads/desjardins.svg?maxw=500&maxh=500" style="height:125px;"></a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xs-12 col-sm-4 col-md-2 box">
+                        <div class="wdg_image">
+                            <div class="wdg_image_container"><a target="_blank" href="https://devenirentrepreneur.com/fr/michel-jodoin-1a225/"><img class="img-responsive" src="/sn_uploads/touch-512_1.png" style="height:125px;"></a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xs-12 col-sm-4 col-md-2 box" style="float:left; clear: inherit">
+                        <div class="wdg_image">
+                            <div class="wdg_image_container"><a target="_blank" href="http://www.styleathome.com/how-to/organizing-ideas/article/finding-peace-and-quiet-through-design-5-ways-to-reduce-noise-in-your-home"><img class="img-responsive" src="{{sn_ct(edit:false,'/sn_uploads/logo_1.png')}}" style="height:125px;"></a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xs-12 col-sm-4 col-md-2 box" style="float:left; clear: inherit">
+                        <div class="wdg_image">
+                            <div class="wdg_image_container"><a target="_blank" href="https://www.youtube.com/watch?v=YQ2yt-lZkc0"><img class="img-responsive" src="{{sn_ct(edit:false,'/sn_uploads/matv-fr-2.png')}}" style="height:125px;"></a>
+                            </div>
+                        </div>
+                    </div>
+            
+        </div>
+        
+    </div>
+</div>
+<div class="clearfix"></div>

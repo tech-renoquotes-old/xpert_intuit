@@ -1,0 +1,257 @@
+{{
+  
+class Notification 
+
+    
+
+    method Notification(lang, page, contractor)
+        this.lg = lang;
+        this.page = page;
+        this.contractor = contractor;
+        access = sql("SELECT uid_notification FROM sr_notification_access WHERE uid_contractor = ifnull('?',0) AND access = 'allow'", contractor);
+        this.access = access.rows;
+    endm
+
+    
+    /*
+    *get all notifications for this page 
+    *
+    */
+    method getNotifications()
+            noty = sql(
+                "SELECT nt.uid, nt.notification_label_? as label, nt.notification_desc_? as message, nt.notification_type as mtype, nt.notification_scope as scope, nt.start_date, nt.end_date, nh.uid_page 
+                FROM sr_notyHandler nh INNER JOIN sr_notifications nt 
+                ON nh.uid = nt.uid_handler WHERE nh.uid_page = ? 
+                AND nt.notification_state = 'start' 
+                AND (now() BETWEEN start_date AND end_date)
+                AND 
+                (nt.uid NOT IN (SELECT uid_notification FROM sr_notification_access WHERE uid_contractor = ifnull(?,0)) 
+                OR nt.uid IN (SELECT uid_notification FROM sr_notification_access WHERE uid_contractor = ifnull(?,0) AND access = 'allow')
+                )", this.lg, this.lg, this.page, this.contractor, this.contractor
+            );
+            
+            i = 0;
+                
+            for res in noty.rows do
+                if(res.scope eq 'everyone') then
+                    notifications[i] = res;
+                    i++;
+                else
+                    for c in this.access do
+                        if(res.uid == c.uid_notification) then
+                            notifications[i] = res;
+                            i++;
+                            break;
+                        endif
+                    endfor
+                endif
+            endfor
+            
+            return notifications;
+    endm
+    
+    
+    /*
+    *@args uid_contractor integer
+    *@args uid_notification integer
+    *@return 0 if notification is already allowed access
+    *@return 1 if no access has been granted to notification before.
+    *@return 2 if user denied an existing notification than it will be set to allow.
+    *@return -1 if notification ID 
+    */
+    method startCustomNotification(uid_contractor, uid_notification)
+    //check if notification exists
+        noty_exists = sql(single:true, "SELECT nt.uid, nt.notification_label_? as label, nt.notification_desc_? as message, nt.notification_type as mtype, nt.notification_scope as scope, nt.start_date, nt.end_date, nh.uid_page 
+            FROM sr_notyHandler nh INNER JOIN sr_notifications nt 
+            ON nh.uid = nt.uid_handler 
+            HAVING nt.uid = '?'
+            AND scope = 'custom'
+            ", this.lg, this.lg, uid_notification
+        );
+        
+        contractor_exists = sql(single:true, "SELECT * FROM sr_contractor where uid = '?'", uid_contractor);
+        
+        
+        if(noty_exists.nbrows > 0 && contractor_exists.nbrows > 0) then
+        
+            void sql("UPDATE sr_notifications SET
+            notification_state = 'start' WHERE uid = ?"
+            ,uid_notification
+            );
+        
+            newAccess = sql("SELECT uid_notification FROM sr_notification_access WHERE uid_contractor = ifnull(?,0) AND uid_notification = ?", uid_contractor, uid_notification);
+            
+            if(newAccess.nbrows == 0) then
+                void insert(table: "sr_notification_access", fields: {
+                    'uid_contractor': uid_contractor,
+                    'uid_notification': uid_notification,
+                    'access': 'allow'
+                });
+                //return when access is not present in sr_notification_access
+                return 1;
+            else
+                void sql("update sr_notification_access set
+                access = 'allow' where uid_contractor = ? AND uid_notification = ?"
+                ,uid_contractor, uid_notification
+                );
+                    
+                //return when notification access already exists but not allowed.
+                return 2;
+            endif
+        else
+            //return when notification id does not exist.
+            return -1;
+        endif
+    endm
+    
+    /*
+    *@args uid_contractor integer
+    *@args uid_notification integer
+    *@return 1 if no access has been granted to notification before.
+    *@return 2 if user denied an existing notification than it will be set to allow.
+    *@return -1 if notification ID 
+    */
+    method ceaseCustomNotification(uid_contractor, uid_notification)
+    //check if notification exists
+        noty_exists = sql(single:true, "SELECT nt.uid, nt.notification_label_? as label, nt.notification_desc_? as message, nt.notification_type as mtype, nt.notification_scope as scope, nt.start_date, nt.end_date, nh.uid_page 
+            FROM sr_notyHandler nh INNER JOIN sr_notifications nt 
+            ON nh.uid = nt.uid_handler 
+            HAVING nt.uid = '?'
+            AND scope = 'custom'
+            ", this.lg, this.lg, uid_notification
+        );
+        
+        contractor_exists = sql(single:true, "SELECT * FROM sr_contractor where uid = '?'", uid_contractor);
+        
+        
+        if(noty_exists.nbrows > 0 && contractor_exists.nbrows > 0) then
+            newAccess = sql("SELECT uid_notification FROM sr_notification_access WHERE uid_contractor = ifnull(?,0) AND uid_notification = ?", uid_contractor, uid_notification);
+            
+            if(newAccess.nbrows == 0) then
+                void insert(table: "sr_notification_access", fields: {
+                    'uid_contractor': uid_contractor,
+                    'uid_notification': uid_notification,
+                    'access': 'never'
+                });
+                //return when access is not present in sr_notification_access
+                return 1;
+            else
+                void sql("update sr_notification_access set
+                access = 'never' where uid_contractor = ? AND uid_notification = ?"
+                ,uid_contractor, uid_notification
+                );
+                    
+                //return when notification access already exists but not allowed.
+                return 2;
+            endif
+        else
+            //return when notification id does not exist.
+            return -1;
+        endif
+    endm
+
+
+    /*
+    *
+    *
+    *
+    */
+    method ceaseNotification(uid_notification)
+    //check if notification exists
+        noty_exists = sql(single:true, "SELECT nt.uid, nt.notification_label_? as label, nt.notification_desc_? as message, nt.notification_type as mtype, nt.notification_scope as scope, nt.start_date, nt.end_date, nh.uid_page 
+            FROM sr_notyHandler nh INNER JOIN sr_notifications nt 
+            ON nh.uid = nt.uid_handler 
+            WHERE nt.uid = '?'
+            ", this.lg, this.lg, uid_notification
+        );
+
+        if(noty_exists.nbrows > 0) then
+            if(noty_exists.rows.scope eq 'everyone') then
+                void sql("UPDATE sr_notifications SET
+                    notification_state = 'stop' where uid = ?"
+                    ,uid_notification
+                );
+                return true;
+                
+            elseif(noty_exists.rows.scope eq 'custom') then
+                void sql("UPDATE sr_notifications SET
+                    notification_state = 'stop' where uid = ?"
+                    ,uid_notification
+                );
+                
+                void sql("UPDATE sr_notification_access SET
+                    access = 'never' where uid_notification = ?"
+                    ,uid_notification
+                );
+                return true;
+            endif
+        else
+            return false;
+        endif
+    endm
+    
+    
+    /*
+    *
+    *
+    *
+    */
+    method allowNotification(uid_notification)
+    //check if notification exists
+        noty_exists = sql(single:true, "SELECT nt.uid, nt.notification_label_? as label, nt.notification_desc_? as message, nt.notification_type as mtype, nt.notification_scope as scope, nt.start_date, nt.end_date, nh.uid_page 
+            FROM sr_notyHandler nh INNER JOIN sr_notifications nt 
+            ON nh.uid = nt.uid_handler 
+            WHERE nt.uid = '?'
+            ", this.lg, this.lg, uid_notification
+        );
+
+        if(noty_exists.nbrows > 0) then
+            if(noty_exists.rows.scope eq 'everyone') then
+                void sql("UPDATE sr_notifications SET
+                    notification_state = 'start' where uid = ?"
+                    ,uid_notification
+                );
+                return true;
+                
+            elseif(noty_exists.rows.scope eq 'custom') then
+                void sql("UPDATE sr_notifications SET
+                    notification_state = 'start' where uid = ?"
+                    ,uid_notification
+                );
+                
+                void sql("UPDATE sr_notification_access SET
+                    access = 'allow' where uid_notification = ?"
+                    ,uid_notification
+                );
+                return true;
+            endif
+        else
+            return false;
+        endif
+    endm
+    
+
+    /*
+    *
+    *
+    *
+    */
+    method startNotification(uid_contractor)
+    
+    endm
+
+    /*
+    *
+    *
+    *
+    */
+
+    method abortNotification(uid_notification)
+        
+    endm
+
+    
+endc
+
+
+}}

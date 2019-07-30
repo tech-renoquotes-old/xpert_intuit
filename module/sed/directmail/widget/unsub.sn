@@ -1,0 +1,51 @@
+{{
+	%include "/extenso/functions/sn_ct.snc";
+
+	use lg;
+}}
+
+\{{ cgidata = cgidata(); }}
+\{{ if cgidata.s eq "t" && cgidata.unsub ne "" then }}
+	\{{ if cgidata.code ne "" then }}
+		\{{
+			info = decrypt(value:cgidata.code,key:"sednoveextensomm",error:t);
+			if t.errcode != 0 then
+				}}<strong>{{sn_ct("Invalid code for unsubscribe", publish:"/extenso/publish/sn_widgets.sn", uids:"68", module:'directmail')}}</strong>\{{
+			else
+				if cgidata.unsub eq "all" then
+					void sql("delete from sed_directmail_unsub where email = '?'", info.email);
+					void insert(table:"sed_directmail_unsub",snc:true,fields:{
+						"email":info.email,
+						"all_list":"yes"
+					});
+				else
+					check = sql("select uid from sed_directmail_unsub where email = '?' and list = '?'", info.email, info.list);
+					if check.nbrows == 0 then
+						void insert(table:"sed_directmail_unsub",snc:true,fields:{
+							"email":info.email,
+							"list":info.list,
+							"all_list":"no"
+						});
+					endif
+				endif
+				}}<p>{{sn_ct("We are sorry to see you leave", publish:"/extenso/publish/sn_widgets.sn", uids:"68", module:'directmail')}}</p>\{{
+			endif
+		}}
+	\{{ else }}
+		<strong>{{sn_ct("Invalid code for unsubscribe", publish:"/extenso/publish/sn_widgets.sn", uids:"68", module:'directmail')}}</strong>
+	\{{ endif }}
+\{{ else }}
+
+<form method="post" action="?" name="directmail_unsub">
+	<input type="hidden" name="s" value="t">
+	<input type="hidden" name="code" value="\{{cgidata.code}}">
+
+	<p>{{sn_ct("Do you want to unsubscribe from:", publish:"/extenso/publish/sn_widgets.sn", uids:"68", module:'directmail')}}</p>
+	<ul>
+		<li>{{sn_ct("This list:", publish:"/extenso/publish/sn_widgets.sn", uids:"68", module:'directmail')}}<input type="radio" name="unsub" value="list"></li>
+		<li>{{sn_ct("All list:", publish:"/extenso/publish/sn_widgets.sn", uids:"68", module:'directmail')}}<input type="radio" name="unsub" value="all"></li>
+	</ul>
+	<p><input type="submit" name="ok"></p>
+</form>
+
+\{{ endif }}

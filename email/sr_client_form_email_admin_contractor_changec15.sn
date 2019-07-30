@@ -1,0 +1,35 @@
+{{
+    /*
+        @title 			sr_client_form_email_admin_contractor_changec15
+        Description		Admin - Contractor change
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    prenom = "Etienne";
+    nom = "Carrier";
+    telephone = "(438) 456-7890";
+    courriel = "etienne@sednove.com";
+    position =	"Directeur artistique, UX/UI";
+    adresse = "791, avenue Saint-Charles";
+    ville = "Saint-Lambert";
+    codePostal = "J3L0M5";
+    siteInternet = "http://www.sednove.com";
+    assureur = "Desjardins";
+    police = "14545";    
+    compta = "viovlad@mail.ru";
+    destinataire = "viovlad@mail.ru";
+    cc = "viovlad@mail.ru";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

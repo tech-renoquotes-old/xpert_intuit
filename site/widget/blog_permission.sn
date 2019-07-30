@@ -1,0 +1,75 @@
+\{{
+
+    cgidata = cgidata();
+
+}}
+
+<style>
+table {
+    width:100%;
+}
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 5px;
+    text-align: left;
+}
+table#t01 tr:nth-child(even) {
+    background-color: #eee;
+}
+table#t01 tr:nth-child(odd) {
+  background-color:#fff;
+}
+table#t01 th {
+    background-color: black;
+    color: white;
+}
+</style>
+
+
+    <div>
+        <script type="text/javascript" src="https://mottie.github.io/tablesorter/js/jquery.tablesorter.js"></script>
+        
+        <!--<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>-->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.12/css/dataTables.bootstrap.min.css" rel="stylesheet"/>
+        <!--  <script type="text/javascript" src="/js/jquery.tablesorter.js"></script> -->
+        \{{
+        if cgidata.blog_uid ne '' then
+         
+            b = sql(single:true,"select user() as user, uid,used_by, last_mod  from sed_blog_article ba where uid ='?'",cgidata.blog_uid);
+           
+            if b.rows.used_by  eq '' then
+                void update(tables:'sed_blog_article', uid: cgidata.blog_uid, fields:{'used_by':user.username});
+            endif
+        endif
+          
+          
+          
+        }}
+        <h1 align="center" > RÉSERVATION D'ARTICLES</h1>
+        <h2>Selectionnez l'article que vous voulez réserver</h2>
+        <form   >
+            <div class="input-group">
+                <span class="input-group-addon"  href="javascript:void(0)" onclick="" id="btnsearch" ><i class="fa fa-search" ></i></span> 
+                <input type="text" class="form-control" name="s" id="s" placeholder="Recherche">
+            </div>
+
+            <table  id="tblprojet"  class="tablesorter">
+                    <thead>
+                        <tr>
+                            <th>uid</th><th>Titre</th><th>used_by</th><th>used</th><th>last mod</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       
+                        \{{for b  sql("select user() as user, ba.* from sed_blog_article ba where  title like '%?%' or ba.uid like '?'   order by ba.uid desc, ba.used_by desc limit 20",cgidata.s,cgidata.s) do}}
+                            <tr>
+                              <td><button  onclick=""  name="blog_uid" value="\{{b.rows.uid}}">\{{b.rows.uid}}</button></td><td>\{{b.rows.title}}</td></td><td>\{{b.rows.used_by}}</td><td>\{{b.rows.used}}</td><td>\{{b.rows.sn_mdate}}</td>
+                            </tr>   
+                        \{{endfor}}
+                        \{{"user=";user.username;}}
+                    </tbody>
+            </table>
+        </form>

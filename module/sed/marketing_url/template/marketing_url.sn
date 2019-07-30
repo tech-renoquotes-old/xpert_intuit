@@ -1,0 +1,6 @@
+{{ use url; datetime(); }}
+\{{
+	datetime();
+	void sql("update sed_marketing_url set nb = nb + 1 WHERE uid = '{{url.rows.uid}}'");
+	redirect(code:301,"{{use url;url.rows.url_final}}");
+}}

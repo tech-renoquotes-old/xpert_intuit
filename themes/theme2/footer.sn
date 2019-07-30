@@ -1,0 +1,135 @@
+{{ 
+	//
+	// Name:		footer
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com...
+	//
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	%include "/extenso/functions/sn_widgets.snc"; 
+
+	use lg;
+	use ressource;
+}}
+
+
+ <style type="text/css">
+        .cs .sed-footer {
+            padding: 0 0 40px 0;
+        }
+        /* ROW 1 ================================*/
+        .cs_footer_logo_block{
+            border-bottom: 1px solid #C0C0C0;
+            padding-top: 30px;
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+            background-color: rgba(255,255,255,0.15);
+        }
+        .cs_footer_logo{
+            display: block;
+            margin-bottom: 20px;
+        }
+        .cs_footer_logo img{
+            width:100%;
+            max-width: 175px;
+            max-height: 100px;
+        }
+        .cs_footer_tagline{
+            font-size: 22px;
+            letter-spacing: 0.1em;
+            display: block;
+        }
+        .cs_footer_copyrights{
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            display: block;
+        }
+        .cs_footer_nav .nav_item{
+            margin-right: 12px;
+            padding-right: 12px;
+            border-right:1px solid #999999;
+        }
+        .cs_footer_nav .nav_item:last-child{
+            margin-right: 0;
+            padding-right: 0;
+            border-right:none;
+        }
+        .cs_footer_social_media{
+            display: block;
+            margin-top: 15px;
+        }
+        .sed-footer .social-media-list a .fa{
+            margin-right: 5px;
+            font-size: 20px;
+        }
+        .sed-footer .social-media-list .social-media-title{
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        @media screen and (max-width: 990px) {
+            .cs_footer_nav{
+                margin-bottom: 30px;
+                text-align: center;
+            }
+            .cs_footer_social_media{
+                margin-bottom: 30px;
+                text-align: center;
+                padding: 10px 0;
+                border-bottom: 1px solid #C0C0C0;
+                border-top: 1px solid #C0C0C0;
+            }
+            .col2{
+                margin-bottom: 30px;
+                text-align: center;
+            }
+            .col3{
+                text-align: center;
+            }
+        }
+</style>
+    
+    
+
+<div class="container-full sed-footer no-print">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12 text-center cs_footer_logo_block">
+                <div class="cs_footer_logo">
+                    {{ logo_client = sql(single:true,"select * from sn_configs where uid = '1'");}}
+                    <a href="/"><img src="{{logo_client.rows.logo}}"></a>
+                </div>
+                <div class="cs_footer_tagline">
+                	{{sn_ct("TAGLINE / MOT DE LA FIN", lg:lg.rows.lg, publish:"/publish/ressources.sn", uids:ressource.rows.uid)}}
+                </div>
+                <div class="cs_footer_copyrights">
+                	© \{{datetime(format:"%Y");}} 
+                    {{sn_ct("SedNove Inc. Tous droits réservés.", lg:lg.rows.lg, publish:"/publish/ressources.sn", uids:ressource.rows.uid)}}
+                </div>
+            </div>
+            <div class="clearfix"></div>
+            <div class="col-md-5">
+
+                {{ %include "/includes/call_menu_sitemap.sn"; }}
+                
+                <div class="cs_footer_social_media">
+                    <div class="social-media-list">
+						<span class="social-media-title">{{ sn_ct("Suivez-nous") }}</span>
+                        {{ %include "/includes/call_social_media_list.sn"; }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-3 col-md-offset-1 col2">
+                {{sn_ct("footer_theme2_cola", lg:lg.rows.lg, publish:"/publish/ressources.sn", uids:ressource.rows.uid, format:fck)}}
+            </div>
+            <div class="col-sm-6 col-md-3 col3">
+                {{sn_ct("footer_theme2_colb", lg:lg.rows.lg, publish:"/publish/ressources.sn", uids:ressource.rows.uid, format:fck)}}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{{ google = sql(single:true, "select google_analytics from seo"); google.rows.google_analytics; }}

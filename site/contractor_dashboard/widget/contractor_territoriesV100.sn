@@ -1,0 +1,312 @@
+{{
+    /*
+        @title contractor_territories
+        Description: This widget displays the territories of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-01
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+\{{
+    use extranet_user;
+    contractor_territories = sql("
+        SELECT t.uid, t.name_{{lg.rows.lg}}  as name
+        FROM sr_territory t
+        INNER JOIN sr_contractor_territory ct ON t.uid=ct.uid_territory
+        WHERE t.active='yes'
+        AND ct.uid_contractor='?'
+        ", extranet_user.uid
+    );
+
+    main_territory = sql(single:true,"SELECT t.uid, t.name_{{lg.rows.lg}}  as name FROM sr_territory t INNER JOIN sr_contractor c ON c.uid_territory=t.uid WHERE t.active='yes' AND c.uid='?'", extranet_user.uid);
+}}
+<style>
+    .clonable {
+        display:none!important; 
+    }
+    .region_label{
+        display:inline-block;
+        margin:0px 5px 15px;
+    }
+    .label.label-default{
+        display:inline-block;
+        font-size:90%;
+        padding: .6em;
+    }
+</style>
+
+<div id="ajax_success" class="alert alert-success" style="display:none"> 
+    {{sn_ct("contractor_territories Vos région ont bien été modifiées.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div id="ajax_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_territories Une erreur est survenu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+<script>
+    $(".close").on("click", function(){
+       $(this).parent().hide(); 
+    });
+</script>
+
+
+<form action="{{ sn_pages('ajax_change_territories', lg.rows.lg, table:'ressources')}}" id="change_territories" name="change_territories" method="POST">
+    <div class="row">
+        <div class="col-md-6">
+            <fieldset class="form-group">
+{{/*                <label for="province" class="control-label">
+                    {{sn_ct("contractor_territories Province ou territoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </label>    
+                <select class="form-control" name="province" id="province">
+                    <!--<option value="AB">Alberta</option>-->
+                    <!--<option value="BC">British Columbia</option>-->
+                    <!--<option value="MB">Manitoba</option>-->
+                    <!--<option value="NB">New Brunswick</option>-->
+                    <!--<option value="NL">Newfoundland and Labrador</option>-->
+                    <!--<option value="NS">Nova Scotia</option>-->
+                    <!--<option value="ON">Ontario</option>-->
+                    <!--<option value="PE">Prince Edward Island</option>-->
+                    <!--<option value="QC">Quebec</option>-->
+                    <!--<option value="SK">Saskatchewan</option>-->
+                    <!--<option value="NT">Northwest Territories</option>-->
+                    <!--<option value="NU">Nunavut</option>-->
+                    <!--<option value="YT">Yukon</option>-->
+                    <option value="">{{sn_ct(edit:false,"contractor_territories Choisir une province", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    {{for provinces sql("SELECT uid, name_".+lg.rows.lg.+" as name  FROM sr_province    ORDER BY name_".+lg.rows.lg.+"  ASC") do}}
+                        <option value="P{{provinces.rows.uid}}">{{provinces.rows.name}}</option>
+                    {{endfor}}
+                </select>
+                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="province"></span>
+*/}}
+            </fieldset>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <fieldset class="form-group">
+                <label for="region_selector" class="control-label">
+                    {{sn_ct("contractor_territories Régions secondaires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </label> 
+ {{/*           
+                <div class="P">
+                    <select class="form-control" id="region_selector" data-validator-name="territory">
+                        <option value="">{{sn_ct(edit:false,"contractor_territories Choisir une région", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                        {{for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name  FROM sr_territory WHERE active='yes'  ORDER BY name_".+lg.rows.lg.+"  ASC") do}}
+                            <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                        {{endfor}}
+                    </select>
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="territory"></span>
+                </div>
+
+                <div class ="container1">                       
+                    {{for provinces sql("SELECT uid, name_".+lg.rows.lg.+" as name FROM sr_province    ORDER BY name_".+lg.rows.lg.+"  ASC") do}}
+                       <div class="P{{provinces.rows.uid}}">
+                            <select class="form-control" id="region_selector2" data-validator-name="territory">
+                                <option value="">{{sn_ct(edit:false,"contractor_territories Choisir une région", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}--{{provinces.rows.uid}}</option>
+                                {{for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name  FROM sr_territory WHERE active='yes' and uid_province = '?'  ORDER BY name_".+lg.rows.lg.+"  ASC",provinces.rows.uid) do}}
+                                    <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                                {{endfor}}
+                            </select>
+                        </div>
+                    {{endfor}}
+                </div>
+<script>
+    // cache les div  pour débuter
+    $(document).ready(function () {
+        $('#province').bind('change', function () {
+            var elements = $('div.container1').children().hide(); // hide all the elements
+            var value = $(this).val();
+    
+            if (value.length) { // if somethings' selected
+                elements.filter('.' + value).show(); // show the ones we want
+            }
+        }).trigger('change'); // Setup the initial states
+    });
+</script>
+            Choisir une Province:
+*/}}            
+            <div class="PP">
+                <select  class="form-control" id="region_selector3" data-validator-name="territory">
+                    {{  last_province = ""; start = true;
+    //                    for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name,uid_province   FROM sr_territory WHERE active='yes'   ORDER BY uid_province, name_".+lg.rows.lg.+"  ASC") do
+                        for territory sql("SELECT t.uid, t.name_".+lg.rows.lg.+" as name, t.uid_province,  p.name_".+lg.rows.lg.+" as province  
+                                               FROM sr_territory t inner join sr_province p
+                                                ON t.uid_province = p.uid
+                                                WHERE active='yes'   
+                                                ORDER BY p.name_".+lg.rows.lg.+"  , t.name_".+lg.rows.lg.+ " ASC
+                            " )do
+                                            
+                                            
+                            if last_province ne territory.rows.province && !start then
+                                '</optgroup>';
+                                 start = true;
+                            endif
+                            if last_province ne territory.rows.uid_province &&  start then
+                                '<optgroup label = "'.+ territory.rows.province .+'">';
+                                start = false;
+                                last_province = territory.rows.province;
+                            endif    
+                    }}
+                                <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                    {{
+                            
+                        endfor
+                        '</optgroup>';
+                    }}
+    
+                </select>
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="territory"></span>
+            </div>
+
+
+
+
+                <script>
+                    // display clicked regions in a label, remove the region from the select
+                    $("#region_selector3").on("change", function(){
+                        // get the region value
+                        var region_id = $(this).val();  console.log(region_id);
+                       // var region_text = $(this).children("option").filter(":selected").text(); console.log(region_text);
+                        var region_text =$("#region_selector3 option:selected" ).text(); console.log(region_text);
+                        // if a region is selected
+                        if (region_id){
+                            $(this).children("option").filter(":selected").appendTo("#region_temp");
+                            // check if region is already added
+                            if ($("#selected_regions").find("div."+region_id).length == 0){
+                                // clone the region skeleton
+                                var new_region = $("div.clonable").clone();
+                                $(new_region).removeClass("clonable");
+                                
+                                // add class to prevent adding same region multiple times
+                                $(new_region).addClass(region_id);
+                                
+                                // put the region text in the labe;
+                                $(new_region).find("span").prepend(region_text);
+                                
+                                // put the region value in the input
+                                $(new_region).find("input").val(region_id);
+                                
+                                //append the region label to the region division
+                                $("#selected_regions").append(new_region);
+                            }
+                        }
+                    });
+                    
+                    // function to delete a region label and reput the region in the select
+                    function delete_label(elem){
+                        if (confirm("{{sn_ct(edit:false,"contractor_territories Êtes-vous certain de vouloir supprimer ce territoire ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){
+                            $("#region_temp option[value="+$(elem).parents(".region_label").find("input").val()+"]").appendTo("#region_selector3");
+                            $("#region_selector3").val("");
+                            $(elem).parents(".region_label").remove();
+                            validator_revalidate("add_contractor", "territory");
+                        }
+                    }
+                </script>
+            </fieldset>
+            <div id="selected_regions"></div>
+        </div>
+        
+        <div class="col-md-6   ">
+            <fieldset class="form-group">
+                <label for="main_territory" class="control-label">
+                    {{sn_ct("contractor_territories Régions principale", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </label> 
+                        <select class="form-control  " id="main_territory" name="main_territory" data-validator-name="main_territory">
+                            <option value="">{{sn_ct(edit:false,"contractor_territories Choisir une région", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            {{  last_province = ""; start = true;
+            //                    for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name,uid_province   FROM sr_territory WHERE active='yes'   ORDER BY id_province, name_".+lg.rows.lg.+"  ASC") do
+                                for territory sql("SELECT t.uid, t.name_".+lg.rows.lg.+" as name, t.uid_province,  p.name_".+lg.rows.lg.+" as province  
+                                                       FROM sr_territory t inner join sr_province p
+                                                        ON t.uid_province = p.uid
+                                                        WHERE active='yes'   
+                                                        ORDER BY p.name_".+lg.rows.lg.+ ", t.name_".+lg.rows.lg.+ " ASC
+                                                    ")do
+                                                    
+                                                    
+                                    if last_province ne territory.rows.province && !start then
+                                        '</optgroup>';
+                                         start = true;
+                                    endif
+                                    if last_province ne territory.rows.uid_province &&  start then
+                                        '<optgroup label = "'.+ territory.rows.province .+'">';
+                                        start = false;
+                                        last_province = territory.rows.province;
+                                    endif    
+                            }}
+                                        <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                            {{
+                                    
+                                endfor
+                                '</optgroup>';
+                            }}
+
+{{/*                     //old without province
+                            {{for territory sql("SELECT uid, name_".+lg.rows.lg.+" as name FROM sr_territory WHERE active='yes' ORDER BY name_".+lg.rows.lg.+"  ASC") do}}
+                                <option \{{if main_territory.rows.uid eq "{{territory.rows.uid}}" then}}selected \{{endif}} value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                            {{endfor}}
+*/}}
+                        </select>
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="territory"></span>    
+             </fieldset>
+            {{sn_ct("contractor_territories Région principale texte", format:'ck', lg:lg.rows.lg,  publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </div>
+        
+
+
+
+        
+    </div> <!-- end row  -->
+
+    <button type="submit" class="btn btn-primary btn-block">
+        {{sn_ct(edit:false,"contractor_territories Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </button>
+</form>
+
+<!-- region skeleton -->
+<div class="clonable region_label">
+    <span class="label label-default">&nbsp;<i class="fa fa-times" aria-hidden="true" onclick="delete_label(this);"></i></span>    
+    <input type="hidden" name="territory">
+</div>
+<!-- temporary select where regions are moved when labeled -->
+<select id="region_temp" style="display:none"></select>  
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/change_territories_validator.sn";
+    // validate client side
+    validator.validateJS(form:'change_territories');
+}}
+
+<script>
+
+
+    // Bind change_territories form to ajaxform plugin to send the form via ajax
+    $('form[name=change_territories]').ajaxForm({
+        success:function(data, status, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                console.log(data);
+                $("#ajax_success").show();
+            }
+            else if (xhr.getResponseHeader("X-error")){
+                $("#ajax_error").show();
+            }
+        }
+    });      
+    
+    \{{for t in contractor_territories.rows do}}
+        $("#region_selector3").val("\{{t.uid}}"); 
+        $("#region_selector3").trigger("change"); 
+    \{{endfor}}
+                    
+</script>

@@ -1,0 +1,44 @@
+{{
+    //
+    // Name:        call_social_media_list
+    //
+    // Description: Permet de publier la liste des réseaux sociaux pour le menu top.
+    //
+    // Table: 		socials
+    //
+    // Parameters:  none so far
+	//				use cgidata
+	//				use lg
+    //
+    // Version:     1.0 2015-05-28 etienne@sednove.com initial version
+    //
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+
+    use lg;          // Loop from the publish
+
+	
+}}
+
+
+{{ sociallist = sql("select * from socials where active = 'yes' order by sn_custom"); }}
+
+{{if sociallist.rows ne "" then }}
+
+      <div class="social-media-list">
+      {{ for social sql("select * from socials where active = 'yes' order by sn_custom") do }}
+          <a href="{{social.rows['url_' .+ lg.rows.lg]}}" target="_blank">
+          {{if social.rows.directmail_image ne "" then }} 
+                <img src="{{ social.rows.directmail_image;}}">
+          {{else }}
+              <i class="{{social.rows.link_class}}"></i>
+          {{endif }} 
+          </a>
+      {{ endfor }}
+      </div>
+
+
+
+{{ endif }}

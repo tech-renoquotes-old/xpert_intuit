@@ -1,0 +1,26 @@
+{{%include '/site/package/all.sn';}}
+\{{// Saturday 11:30pm
+
+//page 12
+
+for project sql("   
+            SELECT * 
+            FROM sr_project 
+            WHERE DATEDIFF(now(), active_date) > 28 
+			AND DATEDIFF(now(), active_date) < 90
+            AND status IN ('active','completed','inactive-incomplete','cancelled-after-qualification') 
+            AND (satisfaction_survey_sent IS NULL OR satisfaction_survey_sent != 'yes')
+        ") do
+    time = time();
+    //Il faut prendre le token de sr_project_contractor et non de sr_project
+    token = hash(algo:"sha512", project.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:999999));
+    void update(tables: 'sr_project', fields: {
+        'token': token
+    }, uid: project.rows.uid);
+    automail::sendSatisfactionSurveyToClient(project.rows.uid);
+    void update(tables: 'sr_project', fields: {
+        'satisfaction_survey_sent': 'yes'
+    }, uid: project.rows.uid); 
+endfor
+
+}}

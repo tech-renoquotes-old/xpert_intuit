@@ -1,0 +1,1229 @@
+{{ 
+	//
+	// Name:		header : Display header of the page
+	//
+	// Parameters:	The header depend on the selected theme.
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	//
+	//              1.01 2017-03-23 Michel - I've added a button to return to the dashboard
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc";
+	
+	theme_color = sql(single:true,"SELECT * FROM sn_theme_color");
+    use lg;
+    use ressource;
+}}
+
+\{{
+    use extranet_user; 
+    use page;
+    
+    //load notifications capabilities
+    %include '/class/notifications.sn';
+    //instanciate profil generator class
+    lang = "{{lg.rows.lg}}";
+    noty = new Notification(lang, page.uid, extranet_user.uid);
+    notifications = noty.getNotifications('all');
+    custom_notifications = noty.getNotifications('custom');
+    i = 0;
+    
+    
+    acc_manager = sql(single:true,"SELECT DISTINCT u.firstname, u.lastname, u.phone, u.email, u.photo
+                    FROM sr_contractor c INNER JOIN sn_users u ON c.account_manager = u.uid
+                    WHERE c.uid = '?'", extranet_user.uid);
+    
+}}
+
+    <link rel="stylesheet" href="/css/notify.css" type="text/css" />
+    <script src="/js/notify.js"></script>
+    
+    <link href="/js/noty-3/lib/noty.css" rel="stylesheet"></script>
+    <script src="/js/noty-3/lib/noty.js" type="text/javascript"></script>
+
+
+<style>
+     /* COLOR FOR THE TOP MENU - Wrapper width*/
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    
+    /* menu top full */
+    .cs .menu-top-full {
+        padding: 0 8px;
+        border-bottom: 1px solid #E7E7E7;
+    }
+    
+    /* menu top - wrapper */
+    .cs .menu-top-wrapper {
+        
+    }
+    /*align vertical middle code*/
+    .cs .top_header_h{
+        height:35px;
+        line-height:35px;
+    }
+    .cs .top_header_h nav{
+        height:100%;
+        line-height:initial;
+        display:table;
+    }
+    .cs .top_header_h nav a{
+        vertical-align:middle;
+        padding-left:20px;
+        display:table-cell;
+        font-size:15px;
+        font-weight:bold;
+    }
+    .cs .top_header_h nav a:hover{
+        text-decoration:underline;
+    }
+    .cs .top_header_h .login{
+        padding:0 0 0 30px;
+        position:relative;
+    }
+    .cs .top_header_h .login:before{
+        content:'';
+        background:url(/sn_uploads/icon/connexion_icon.png) no-repeat;
+        width:34px;
+        height:22px;
+        display:block;
+        background-size:auto 200%;
+        background-position:top;
+        overflow:hidden;
+        position:absolute;
+        left:0;
+    }
+    .cs .top_header_h .login:hover:before{
+        background-position:bottom;
+    }
+    .cs .cities_enum{
+        background:#00517e;
+        padding:7px 0;
+        font-size:15px;
+        font-weight:bold;
+        text-align:center;
+        color:#5896B4;
+    }
+    .cs .header .model-2{
+        border-bottom:6px #f9b842 solid;
+        background:#FFF;
+    }
+    /*-----------------------------*/
+    /* menu top */
+    .cs .menu-top {
+        float: right;
+    }
+
+
+    .cs .menu-top a,
+    .cs .menu-top a:focus {
+        outline: 0;
+    }
+    /* menu top - level 1 */
+
+    /*.cs .menu-top .item-link {
+        float: left;
+        color: #666666;
+        padding: 5px 8px;
+        font-size: 13px;
+        line-height: 16px;
+        text-decoration: none;
+    }*/
+
+    .cs .menu-top .item-link.on, .cs .menu-top > .item-link:hover {
+        text-decoration: none;
+        color: #999999;
+    }
+
+    @media screen and (max-width: 997px) {
+        .menu-top-full {
+            display: none;
+        }
+        /*.cs .menu-top .item-link {
+            display: inline;
+            float: left;
+            margin: 0px 1% 1% 0px !important;
+            color: #666666;
+            padding: 5px 10px;
+            width: 49%;
+            font-size: 12px;
+            line-height: 16px;
+            text-decoration: none;
+            background-color: rgba(0, 0, 0,0.08);
+        }*/
+        .cs .menu-top {
+            float: none;
+            padding: 0 0 0 1%;
+        }
+        .cs .menu-top-wrapper {
+            padding: 0px;
+        }
+        .cs .menu-top-full .container-fluid {
+            padding-right: 0px;
+            padding-left: 0px;
+            padding-bottom:0px;
+            padding-top:0px;
+        }
+        .cs .menu-top-full {
+            padding: 0px;
+        }
+    }
+    @media screen and (min-width: 998px) {
+        .menu-top-full {
+            display: block!important;
+        }
+    }
+    /* ==============================================
+    CSS FOR THE MAIN NAV
+    is a temporrary class to protect menu style
+    ============================================== */
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    /* logo-1 */
+
+    .cs .logo-1 {
+        display: inline-block;
+        margin: 5px 0 16px 0px;
+        vertical-align: bottom;
+        max-width: 250px;
+        max-height: 50px;
+        margin-top: 17px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .logo-1 {
+            display: none;
+        }
+        .cs .container-full.header .col-md-4,.cs .container-full.header .col-md-8{
+            float:none;
+            width:100%;
+        }
+    }
+    /* menu main - mobile control */
+
+    .cs .menu-main-mobile-control {
+        display: none;
+        padding: 10px 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn {
+        display: inline-block;
+        margin: 0 10px 0 0;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 6px 9px;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover {
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn,
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:focus {
+        outline: 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn .fa {
+        font-size: 24px;
+        color: #4d4d4d;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover .fa {
+        color: #417bad;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main-mobile-control {
+            display: block;
+        }
+    }
+
+    .cs .logo-2 {
+        vertical-align: bottom;
+        width: 100%;
+        max-width: 160px;
+        max-height: 70px;
+        margin: 0;
+    }
+    /* menu main - wrapper */
+
+    .cs .menu-main-wrapper {
+        min-height: 75px;
+        padding-top: 15px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs.model-2 {
+            padding: 0;
+        }
+        .cs .menu-main-wrapper {
+            display: none;
+            padding-top: 0px;
+            /*position: absolute;*/
+            right: 0;
+            left: 0;
+            padding: 0;
+            z-index: 600;
+        }
+        .cs .container-full.header .col-menu{
+            padding:0;
+        }
+        .cs .menu-main-wrapper.on-js {
+            display: block;
+            background-color: #fff;
+        }
+    }
+    /* menu main */
+
+    .cs .menu-main {
+        padding: 5px 0 0 15px;
+        float: right;
+    }
+
+    .cs .menu-main-wrapper .container-fluid {
+        padding: 0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main {
+        	padding-top: 0;
+            padding-left: 0;
+            padding-right: 0;
+            float: none;
+        }
+    }
+
+    .cs .menu-main a,
+    .cs .menu-main a:focus {
+        outline: 0;
+    }
+    /* menu main - level 1 */
+
+    .cs .menu-main > .item {
+        float: left;
+        position: relative;
+        margin: 0 5px 5px 0;
+    }
+
+    .cs .menu-main > .item.separator {
+        border-left: 1px solid #7d7d7d;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item {
+            float: none;
+            position: static;
+            margin: 0;
+        }
+    }
+
+    .cs .menu-main > .item:last-child {
+        margin-right: 0;
+    }
+
+    .cs .menu-main > .item > .item-link {
+        display: block;
+        margin: 0 0 0 30px;
+        padding: 10px 0;
+        font-size: 16px;
+        line-height: 18px;
+        text-decoration: none;
+        color: #666666;
+    }
+
+    .cs .menu-main > .item.on-js > .item-link {
+        color: #000000;
+    }
+
+    .cs .menu-main > .item > .item-link:hover {
+        text-decoration: none;
+        color: #{{theme_color.rows.header_highlight_color}};
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-link {
+            background: #f8f8f8;
+            margin: 0;
+            padding: 10px 14px;
+            border-bottom: none;
+        }
+        .cs .menu-main > .item.on > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item.on-js > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item > .item-link:hover {
+            background: #e0e0e0;
+            border-bottom: none;
+        }
+    }
+    /* menu main - level 2 */
+
+    .cs .menu-main > .item > .item-children {
+        display: none;
+        position: absolute;
+        z-index: 600;
+        left: -50%;
+        top: 100%;
+        width: 200px;
+        border-bottom: none;
+        background: #e0e0e0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-children {
+            position: static;
+            width: auto;
+            border-bottom: 0;
+            border-top: 0px solid #ffffff;
+        }
+        .cs .item-group .item-link {
+            padding-right: 20px;
+        }
+        .cs .item-group > .item-link::after {
+            content: "+";
+            float: right;
+            color: #{{theme_color.rows.header_highlight_color}};
+        }
+        .cs .menu-main > .item.on-js > .item-link::after {
+            content: "-";
+            color: #{{theme_color.rows.header_highlight_color}};
+        }
+    }
+
+
+    @media screen and (min-width: 501px) {
+        /*.cs .menu-main > .item:hover > .item-children {display:block;}*/
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link {
+        display: block;
+        border-top: 1px solid #cccccc;
+        padding: 7px 14px 7px 25px;
+        font-size: 14px;
+        line-height: 18px;
+        color: #4d4f53;
+        text-decoration: none;
+    }
+
+    .cs .menu-main > .item > .item-children > .item:first-child > .item-link {
+        border-top: 0;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link.on {
+        background: #d8d8d8;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link:hover {
+        text-decoration: none;
+      	color:#ffffff;
+        background: #{{theme_color.rows.header_highlight_color}};
+    }
+    /* Underline From Left ======================================  */
+
+    .menu-main > .item>.item-link {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -moz-osx-font-smoothing: grayscale;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .menu-main>.item>.item-link:before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: 0;
+        right: 100%;
+        bottom: 0;
+        background: #{{theme_color.rows.header_highlight_color}};
+        height: 2px;
+        -webkit-transition-property: right;
+        transition-property: right;
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+        -webkit-transition-timing-function: ease-out;
+        transition-timing-function: ease-out;
+    }
+
+    .menu-main>.item>.item-link:hover:before,
+    .menu-main>.item>.item-link:focus:before,
+    .menu-main>.item>.item-link:active:before {
+        right: 0;
+    }
+
+	/* SOCIAL MEDIA LIST ========== =*/
+
+      /* ======= Color for the text link */
+      {{ if theme_color.rows.menu_top_link_color ne "" then}}
+      .cs .menu-top-full .social-media-list a {
+          color:#{{theme_color.rows.menu_top_link_color}};
+      }
+      {{endif}}
+
+      /* ======= Color for the hover text link */
+      {{ if theme_color.rows.menu_top_link_color_hover ne "" then}}
+      .cs .menu-top-full .social-media-list a:hover {
+          color:#{{theme_color.rows.menu_top_link_color_hover}};
+      }
+      {{endif}}
+        
+        .cs .menu-main-mobile-control .menu-main-mobile-btn{background:none;float:left;}
+        .cs .logo-mobile{float:left;display:block;}
+        
+        /* Sub nav CSS
+        ***********************/
+        .cs .menu-main > .item > .item-link{
+            margin:0;
+        }
+        .cs .menu-main > .item {
+            margin: 0 35px 5px 0;
+        }
+        .cs .item.item-group{
+            position:initial;
+            
+        }
+        .cs .item.item-group .item-children{
+            animation-name: submenu_anim;
+            animation-timing-function: cubic-bezier(0.64, 0.57, 0.67, 1.53);
+            animation-duration: .3s;
+            width:100%;
+            left:0;
+            padding:30px 0;
+            background:#000;
+        }
+        @keyframes submenu_anim{
+            0%   {opacity:0;top:110%;}
+            100% {opacity:1;top:100%;}
+        }
+        .cs .item.item-group:hover .item-children{
+            opacity:1;
+            display:block;
+            
+        }
+        .cs .item.item-group:hover .item-children:before{
+            display:block;
+            position:absolute;
+            top:-25px;
+            content:'';
+            width:100%;
+            height:25px;
+        }
+        .cs .item.item-group>a{
+            position:relative;
+            overflow: visible;
+        }
+        .cs .item.item-group>a:hover:after{
+            position:absolute;
+            content:'';
+            width: 0; 
+            height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 10px solid black;
+            left:50%;
+            margin-left:-10px;
+            top:53px;
+        }
+        .cs .model-2{
+            position:relative;
+        }
+        .cs .pt.model-2 .container-fluid{
+            position:initial;
+        }
+        .cs .col-md-8.col-menu{
+            position:initial;
+        }
+        
+        .cs .menu-main > .item > .item-children > .item > .item-link{
+            width:33.33334%;
+            float:left;
+            border:none;
+            color:#FFF;
+        }
+        @media (max-width:997px){
+            .cs .menu-main .item.on-js > .item-children {
+                display: block;
+            }
+            .cs .menu-main-wrapper{
+                border-top:1px #eeeeee solid;
+            }
+            .cs .menu-main > .item {
+                margin: 0;
+            }
+            .cs .item.item-group:hover .item-children{
+                display:none;
+            }
+            .cs .item.item-group.on-js .item-children{
+                display:block;
+            }
+            .cs .menu-main > .item > .item-link{
+                background:#FFF;
+            }
+            .cs .menu-main > .item > .item-children > .item > .item-link{
+                width:100%;
+                float:none;
+                border:none;
+                color:#FFF;
+            }
+            .cs .item.item-group>a:hover:after{
+                border:none;
+                height:auto;
+                width:auto;
+                left:initial;
+                top:initial;
+                content: "+";
+                float: right;
+                color: #007ed9;
+                position: relative;
+                z-index: 1;
+            }
+            .cs .item.item-group .item-children{
+                padding:5px 0;
+            }
+            .cs .js_mobile_sticky .sticky{
+                max-height:100%;
+                overflow:auto;
+            }
+        }
+        /**********************/
+        
+      .cs .menu-top-full .social-media-list {
+          float: left;
+          margin-left: 10px;
+      }
+      .cs .menu-top-full .phone {
+          float: left;
+          font-size:17px;
+          display:block;
+          text-decoration:none;
+          color:#fac45f;
+      }
+
+      .cs .menu-top-full .social-media-list a {
+          margin-left: 5px;
+          font-size: 22px;
+          text-decoration:none;
+      }
+
+      @media screen and (max-width: 997px) {
+          .cs .menu-top-full .social-media-list {
+              float: none;
+              width: 100%;
+              margin-left: 0px;
+              text-align: center;
+              margin-bottom: 5px;
+          }
+          .cs .menu-top-full .social-media-list a {
+              margin-left: 5px;
+              margin-right: 5px;
+              font-size: 22px;
+          }
+      }
+      
+      .cs .menu-top-wrapper .col-nb1{
+          width:30%;
+      }
+      .cs .menu-top-wrapper .col-nb2{
+          width:22%;
+          float:right;
+      }
+      .cs .menu-top-wrapper .col-nb3{
+          width:48%;
+          text-align:center;
+      }
+      @media (max-width:1170px){
+          .cs .menu-top-wrapper .col-nb1{
+              width:50%;
+          }
+          .cs .menu-top-wrapper .col-nb2{
+              width:50%;
+              float:right;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              float:right;
+          }
+          .cs .menu-top-wrapper .col-nb3{
+              clear:both;
+              width:100%;
+          }
+          .cs .row-col-nb{
+              margin:0;
+          }
+      }
+      @media (max-width:768px){
+          .cs .menu-top-wrapper .col-nb1 .social-media-list{
+              display:none;
+          }
+    
+      }
+      @media (max-width:560px){
+          .cs .menu-top-wrapper .col-nb1{
+              width:100%;
+              text-align:center;
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb1 .phone{
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2{
+              width:100%;
+              text-align:center;
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              float:none;
+          }
+          .cs .menu-top-wrapper .col-nb2 nav{
+              margin:auto;
+          }
+          .cs .menu-top-wrapper .col-nb3{
+              height:auto;
+              float:none;
+          }
+      }
+      
+    /*Section extranet
+    ****************************/
+    .cs h1,.cs h2, .cs h3{
+        margin-top:0;
+    }
+    .cs .title-extranet{
+        background:#e8e8e8;
+    }
+    .cs .title-extranet .container-fluid{
+        margin:auto;
+        max-width:1200px;
+    }
+    .cs .title-extranet h1{
+        margin:0;
+    }
+    .cs .title-extranet .cell-center{
+        padding:20px 0;
+    }
+    .cs .table-center{
+        display:table;
+        width:100%;
+        height:100%;
+    }
+    .cs .cell-center{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .cs .user_box{
+        display:table;
+        height:50px;
+        padding-left:40px;
+        position:relative;
+    }
+    .cs .user_box.login:before{
+        top:50%;
+        margin-top:-11px;
+    }
+    .cs .user_box>div{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .cs .user_box .user_pic{
+        font-size:32px;
+        text-align:center;
+        padding:0 5px;
+    }
+    .cs .user_box .username{
+        font-size:16px;
+        padding:0 5px;
+    }
+    /*form*/
+    .cs .btn-delete{
+        min-width:initial;
+        height:50px;
+        width:50px;
+        line-height:50px;
+        padding:0;
+        color:#FFF;
+        font-size:25px;
+        border:none;
+    }
+    .cs .panel-custom{
+        padding-top:0;
+        padding-bottom:0;
+        display:table;
+        height:50px;
+        margin:0;
+    }
+    .cs .panel-custom>div{
+        padding:0 10px;
+        vertical-align:middle;
+        display:table-cell;
+    }
+    .cs .panel-custom .panel-value{
+        font-size:2em;
+    }
+    /*-*/
+    @media (max-width:997px){
+        .cs .menu-main-wrapper{
+            min-height:initial;
+            padding:15px 0;
+        }
+    }
+    /***************************/
+    @media(max-width:768px){
+        .cs .table-center{
+            display:block;
+        }
+        .cs .cell-center{
+            display:block;
+            padding:10px 0;
+        }
+        .cs .cell-center h1{
+            margin:0;
+        }
+    }
+    
+    .cs.sed h1 {
+        font-size: 2.15em;
+    }
+    
+    .notyCount{
+        color: #f9b842;
+        font-size: 20px;
+        font-weight: bold;
+    }
+    
+    .notification_box{
+        position: relative;
+        float: right;    
+        
+    }
+    
+    .assistant_contact{
+        width:300px;
+        background-color:#eee;
+        border:solid #999 1px;
+        display:none;
+        position:absolute;
+        z-index:3;
+    }
+    
+    .infos_title{
+        width:100%;
+        height:40px;
+        background-color: #333;
+        color:#f9b842;
+        font-size:18px;
+        font-style:bold;
+        padding-left:10px;
+        padding-top:5px;
+        border-bottom:solid #999 1px;
+        
+    }
+    </style>
+
+
+
+<div id="noty_container" class="noty_container" style="display:none" >
+<div id='userid' class='userid' name='userid' style="display:none">\{{extranet_user.uid}}</div>
+<div id='show_status'class='show_status' name='show_status'>0</div>
+\{{ for msg in notifications do }}
+        <div id='msgid_\{{i}}' class='msgid' name='msgid' style="display:none">\{{msg.uid;}}</div>
+        <div id='caption_\{{i}}' class='caption' name='caption'>\{{msg.label;}}</div>
+        <div id='msg_\{{i}}' class='messages' name='messages'>\{{msg.message;}}</div>
+        <div id='type_\{{i}}' class='mtype' name='mtype' style="display:none">\{{msg.mtype;}}</div>
+        <div id='start_\{{i}}' class='startdate' name='startdate' style="display:none">\{{msg.startDate;}}</div>
+        <div id='end_\{{i}}' class='enddate' name='enddate' style="display:none">\{{msg.endDate;}}</div>
+        \{{i++}}
+\{{endfor}}
+
+
+</div>
+
+    
+<!-- MENU-TOP ============================================= -->
+<div class="js_mobile_sticky no-print">
+    <div>
+        <!--top menu removed.  To be it back, put this back without comments-->
+        <!--<div class="container-full menu-top-full">
+            
+          	<div class="pt clearfix container">
+        		<div class="menu-top-wrapper clearfix">
+        		    <div class="row">
+        		        <div class="col-xs-4 top_header_h col-nb1">
+        		            <a class="phone" href="tel:1-855-239-7836">
+        		                <i class="fa fa-comment" aria-hidden="true"></i> {{sn_ct("header_extranet 1 855 239-7836,",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}
+        		            </a>
+        		        </div>
+        		        <div class="col-xs-3 top_header_h col-nb2">
+                        <div class="notification_box">
+                            <span class="notyCount"></span>
+                            <a href="javascript:void(0);" title='Notifications' onclick='noty_on_off()'>
+                            <img width="40px" src="/sn_uploads/icon/notification_icon.png" alt="Notifications"/>
+                            </a></b>
+                        </div>
+        		        </div>
+        		        <div class="col-xs-3 top_header_h col-nb2">
+        		            <nav class="menu-top clearfix">
+        		            	{{// Implement language change
+                    			for l sql("select * from sn_languages where active = 'yes' and lg != '?'", lg.rows.lg) do
+                    				}}
+                    				<a class="item-link"  href="\{{page{"url_{{l.rows.lg }}"};}}">{{l.rows.lgname}}</a>
+                    				{{
+                    			endfor }}
+                    		</nav>
+        		        </div>
+        		    </div>
+        			
+              	</div>
+            </div>
+            
+        </div> untill here for the top menu-->
+        <!-- END MENU TOP-->
+
+        <!-- MENU-PRINCIPAL ============================================= -->
+        <div class="container-full header">
+            <div class="js_desk_sticky">
+            	<div class="pt model-2 clearfix">
+                    <div class="container">
+                        <div class="row">
+                            <!-- CLIENT LOGO AREA ======================= -->
+                            <div class="col-md-4">
+                                {{ // Call for the logo
+                                logo_client = sql(single:true,"select * from sn_configs where uid = '1'");
+                                
+                                }}
+                                <a href="{{pages("sr_contractor_dashboard", lg.rows.lg,table:"pages")}}"><img src="{{logo_client.rows{"logo_" .+lg.rows.lg};}}" alt="Soumission Rénovation" class="logo-1"></a>
+                                
+                                <!-- MOBILE LOGO AND MENU ICON ====================-->
+                                <div class="menu-main-mobile-control clearfix">
+                                    <a href="javascript:void(0);" class="menu-main-mobile-btn" onclick="menu_main_toggle_mobile('.menu-main-wrapper');">
+                                    	<i class="fa fa-bars"></i>
+                                    </a>
+                                    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg,table:"pages")}}" class="logo-mobile">
+                                    	<img src="{{logo_client.rows{"logo_" .+lg.rows.lg};}}" alt="Soumission Rénovation" class="logo-2">
+                                    </a>
+                                </div>
+                            </div>
+                            <!-- END Client logo area -->
+                            
+                            
+                            <div class="col-md-8">
+                                <div class="menu-main-wrapper clearfix">
+                                    <div class="container-fluid">
+                                        \{{if(acc_manager.nbrows > 0) then}}
+                                        <nav class="assistant">
+                                        	<div style="float:left" class="assistant_icon">
+                                        	    <a href="#" style="text-decoration:none">
+                                        	        <img border='0' width='40px' src='https://renoquotes.com/sn_uploads/icon/support_assistance.png'/>
+                                        	    </a>
+                                        	   {{sn_ct("acc_manager Votre gestionnaire de compte",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}
+
+                                            <div>
+                                                
+                                            <div class="assistant_contact" >
+                                            <div class="infos_title">{{sn_ct(" acc_manager Votre assistance",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}</div>
+                                                <table class='table'><tr><td style="vertical-align:middle;word-wrap:break-word;"><h2 style="margin-left:10px; display:block">\{{acc_manager.rows.firstname}} \{{acc_manager.rows.lastname}}</td><td style="text-align:right">\{{if(acc_manager.rows.photo ne "") then}}<img width="80px" src="\{{acc_manager.rows.photo}}" />\{{endif}}</td></h4></tr></table>
+                                                <label style="margin-left:10px">{{sn_ct("acc_manager Courriel: ",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}</label> <a href="mailto:\{{acc_manager.rows.email}}">\{{acc_manager.rows.email}}</a> <br>
+                                                <label style="margin-left:10px">{{sn_ct("acc_manager Téléphone: ",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}</label> \{{acc_manager.rows.phone}} <br>
+                                                <!--<label style="margin-left:10px">{{sn_ct("acc_manager Horaire: ",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}</label> \{{acc_manager.rows.call_schedule}}-->
+                                            </div>
+                                                
+                                            <script>
+                                                $('.assistant').on('click', function(){
+                                                    if($('.assistant_contact').is(':visible')){
+                                                        $('.assistant_contact').hide();
+                                                    }else{
+                                                        $('.assistant_contact').show();
+                                                    }
+                                                });
+                                                
+                                                jQuery(document).click(function(e) {
+                                                    var target = e.target; //target div recorded
+                                                    if (!jQuery(target).is('.assistant_contact') ) {
+                                                        //jQuery(this).fadeOut(); //if the click element is not the above id will hide
+                                                    }
+                                                })
+                                                
+                                                
+                                            </script>
+                                        </nav><!--menu-assistant-->
+                                        \{{endif}}
+                                        <nav class="menu-main clearfix">
+                                        	<div class="user_box login">
+                                                <div class="username">
+                                                    <div>
+                                                        {{sn_ct("Bienvenue,",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}} \{{extranet_user.contact_firstname; " "; extranet_user.contact_lastname;}}
+                                                    </div>
+                                                    <div>
+                                                        <b><a href="javascript:void(0);" onclick="logout_extranet()">
+                                                            {{sn_ct("Déconnexion",publish:"/publish/ressources.sn", edit:true, uids:ressource.rows.uid)}}
+                                                        </a></b>
+                                                    </div>
+                                        	    </div>
+                                        	</div>
+                                        	
+                                            <script>
+                                                function logout_extranet(){
+                                                	$.ajax({
+                                                        type: "post",
+                                                        url: "{{ sn_pages('ajax_extranet_logout', lg.rows.lg, table:'ressources')}}",
+                                                        success:function(result){
+                                                            location  = "{{pages(table:'pages','accueil',lg.rows.lg)}}";
+                                                        }
+                                                    }); 
+                                                };
+                                            </script>
+                                            
+                                        </nav><!--menu-main-->
+                                        
+
+                                        
+                                    </div><!--container-fluid-->
+                                </div><!--menu-main-wrapper-->
+                            </div><!--end col-md-8-->
+                        </div><!--end row-->
+                        
+                    </div><!--container-fluid-->
+                </div><!--end model-2-->
+            </div>
+            
+        </div><!--/.container-full-->
+        <!-- END MENU PRINCIPAL -->
+    </div>
+</div>
+
+
+
+<div class="title-extranet">
+    <div class="container">
+            <div class="table-center">
+                <div class="cell-center">
+                <h2>
+                    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg,table:"pages")}}" class="btn btn-primary">{{sn_ct("header_extranet Retour au tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+                </h2>
+                </div>
+                <div class="cell-center">
+                    <h1>
+                        \{{ 
+                            use page;
+                            page_title = sql(single:true, "SELECT title_{{lg.rows.lg}} as title FROM pages WHERE uid='?'", page.uid);
+                            page_title.rows.title;
+                        }}
+                    </h1>
+                </div>
+                <div class="cell-center no-print">
+                    {{ %include "/site/contractor_dashboard/include/dashboard_navigation.sn"}}
+                </div>
+            </div>
+      
+    </div>
+</div>
+
+<script>
+    /*
+    *javascript function to load notifications
+    *
+    */
+    function getNotifications(){
+        $.ajax({
+            type: 'POST',
+            data: {'submit':true}, // An object with the key 'submit' and value 'true;
+            success: function (data) {
+                    
+                n = 0;
+                userid = $(data).find('#userid').text();
+                for (i=0; i < $(data).find('.messages').length; i++){
+                    var message = $(data).find('#msg_' + i ).html();
+                    var label = $(data).find('#caption_' + i ).text();
+                    var mtype = $(data).find('#type_' + i ).text();
+                    var startdate = $(data).find('#start_' + i ).text();
+                    var enddate = $(data).find('#end_' + i ).text();
+                    var notyID = $(data).find('#msgid_' + i ).text();
+                    var isDisplayed = $('.show_status').html();
+                
+                    Number.prototype.padLeft = function(base,chr){
+                    var  len = (String(base || 10).length - String(this).length)+1;
+                    return len > 0? new Array(len).join(chr || '0')+this : this;
+                    }
+                                
+                    var d = new Date,
+                    dformat = [d.getFullYear().padLeft(), 
+                        (d.getMonth()+1).padLeft(),
+                        d.getDate().padLeft()].join('-') +' ' +
+                        [d.getHours().padLeft(),
+                        d.getMinutes().padLeft(),
+                        d.getSeconds().padLeft()].join(':');
+                            
+                    if(!notyID == "" && !message == ""){
+                        show_notifications(mtype, label, message, 'topRight', true, i, notyID, userid);
+                        n++;
+                    }
+                }
+                        
+            $('.notyCount').html(n);
+            }
+        });
+            
+        $('.show_status').html(1);
+    }
+    
+
+    function show_notifications(msgtype, msglbl, message, msglayout, modal, index, msgid, userid){
+        var notification = {};
+        
+        notification[index] = new Noty({
+        type: msgtype,
+        layout: msglayout,
+        theme: 'mint',
+        text: '<h4>'+msglbl+'</h4><hr>'+message,
+        progressBar: true,
+        closeWith: ['click', 'button'],
+        animation: {
+        open: 'noty_effects_open',
+        close: 'noty_effects_close',
+        },
+        buttons: [
+            Noty.button('OK', 'btn btn-success', function () {
+            notification[index].close();
+            }, {id: 'button1', 'data-status': 'ok'}),
+
+            Noty.button('{{sn_ct("Never show me again", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}', 'btn btn-error', function () {
+                
+                $.ajax({
+                    url: "{{sn_pages('ajax_update_notifications', lg.rows.lg, table:'ressources')}}",
+                    type: 'POST',
+                    data: {'access':'never','msgid':msgid,'userid':userid}, // An object with the key 'submit' and value 'true;
+                    success: function (data) {
+                    }
+                });  
+            notification[index].close();
+            })
+        ]
+        }).show();
+    }
+    
+    
+    
+    function noty_on_off(){
+        if($('.show_status').html() == 1){
+            Noty.closeAll();
+            $('.show_status').html(0);
+        }else{
+            getNotifications();
+        }
+    }
+    
+    
+    
+</script>
+
+<!-- JS FOR THE NAV ============================================= -->
+<script>
+	/* main menu : when click on an item of level 1, show/hide level 2 */
+	function menu_main_toggle_children(bo){
+		$(bo).parent().siblings().removeClass("on-js").end().toggleClass("on-js");
+	}
+
+    /* main menu : mobile view : show/hide */
+            function menu_main_toggle_mobile(sel) {
+                $(sel).toggleClass("on-js");
+                $(".cs .menu-top-full").slideToggle("slow");
+            }
+            
+            
+    /*JS FOR FIXED NAV (DESKTOP)
+    ============*/
+    
+    /*$(window).bind("scroll.sticky_desktop", function(){
+       stickyThis($('.js_desk_sticky'));
+    });
+    $(window).bind("scroll.sticky_mobile", function(){
+       stickyThis($('.js_mobile_sticky'));
+       hideOnScroll($('.js_mobile_sticky'));
+    });*/
+    
+    var lastScrollTop = 0;
+    function hideOnScroll(target){
+        var st = $(window).scrollTop();
+        if (st > lastScrollTop){
+           target.children('div:first').css('top','-'+target.children('div:first').height()+'px');
+        } else {
+          target.children('div:first').css('top','0px');
+        }
+        lastScrollTop = st;
+    }
+    /*
+     * Sticky the element if the top of the element is out of the window
+     */
+    function stickyThis(target){
+    	var target_top = target.position().top;
+    	if(target_top<$(window).scrollTop()){
+    	   target.css('height',target.height()+'px');
+    	   target.children('div:first').addClass('sticky');
+    	}
+    	else{
+    	    target.children('div:first').removeClass('sticky');
+    	    target.removeAttr('style');
+    	}
+    }
+    //--->
+</script>
+<style>
+    /*Sticky css*/
+    .js_desk_sticky>.sticky{
+        position:fixed;
+        top:0;
+        left:0;
+        right:0;
+        z-index:1;
+    }
+    @media(max-width:997px){
+        .cs .js_desk_sticky>.sticky{
+            position:relative;
+        }
+        .cs .js_desk_sticky{
+            height:auto!important;
+        }
+        .cs .js_mobile_sticky>.sticky{
+            position:fixed;
+            top:0;
+            left:0;
+            right:0;
+            z-index:1;
+            -webkit-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            -moz-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            -o-transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1); 
+            transition: top 0.4s cubic-bezier(0.3, 0, 0.2, 1);
+        }
+    }
+</style>
+
+<script>
+    $(document).ready(function(){
+        if($('.show_status').html() == 0){;
+            getNotifications();
+
+        }
+    })
+</script>

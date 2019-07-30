@@ -1,0 +1,55 @@
+{{
+    table_dest = 'sed_blog_media';
+    table_from = 'wp_comments';
+
+    select_query_from_src = "
+        SELECT p1.guid as image, post_title as title, wp_postmeta.post_id FROM wp_postmeta
+        INNER JOIN wp_posts p1 ON wp_postmeta.meta_value = p1.ID
+        WHERE meta_key = 'image'
+        AND wp_postmeta.post_id IN (SELECT p2.ID FROM wp_posts p2 WHERE p2.post_status = 'publish' AND p2.post_type = 'post')
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'type': "'photo'",
+        'uid_article' : "post_id",
+        'title' : "title",
+        'image' : "image" // OR file ?
+    };
+    
+    %include 'migration.sn';
+    
+    
+    images = [];
+    for post sql(db:db_from, "
+            SELECT post_content
+            FROM wp_posts 
+            WHERE post_status = 'publish' 
+            AND post_type = 'post'
+            AND post_content LIKE '%[gallery%'
+        ") do
+        imageIDs = resub(post.rows.post_content, "^.+\[gallery.*ids=\"([0-9,]*)\".*$", "$1", "s");
+        for image in explode(',',imageIDs) do
+            push(images, image);
+        endfor
+    endfor
+    
+    select_query_from_src = "
+        SELECT guid, post_parent
+        FROM wp_posts 
+        WHERE ID IN (".+implode(',',images).+")
+        ";
+    
+    fields = {
+        'type': "'photo'",
+        'uid_article' : "post_parent",
+        'image' : "guid"
+    };
+    
+    
+    %include 'migration.sn';
+    

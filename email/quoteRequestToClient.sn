@@ -1,0 +1,53 @@
+{{
+    /*
+        @title 			quoteRequestToClient
+        Description		Email to an admin for a request to activate a client account. 
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+    use client_info;
+    use uid_project;
+    use project_number;
+    project_count = project_number.rows.count;
+    uid_client = client_info.uid;
+    nom = client_info.name;
+    puid = client_info.puid;
+    lang = client_info.language;
+    
+    if(lang eq 'fr') then
+        cancel_project_link = 'https://xpertsource.com/fr/annuler-un-projet?cl=' .+ uid_client .+ '&prj=' .+ hash(puid);
+    else
+        cancel_project_link = 'https://xpertsource.com/en/cancel-a-project?cl=' .+ uid_client .+ '&prj=' .+ hash(puid);
+    endif
+    
+    use cancel_project_link;
+    
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+<br />
+
+<p>
+        \{{ if(lg.rows.lg eq 'fr') then }} 
+            Si vous souhaitez annuler ce projet, cliquez ici: &nbsp;<a href="\{{cancel_project_link}}">Annuler mon projet </a>
+        \{{else}} 
+            If you wish to cancel this project please, click here: &nbsp;<a href="\{{cancel_project_link}}">Cancel my project </a>
+        \{{endif}}
+</p>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

@@ -1,0 +1,101 @@
+{{
+%include "/extenso/functions/sn_session.snc"; 
+%include "/extenso/functions/sn_ct.snc";    
+
+config = config(); 
+use ressource;
+use lg;  
+}}
+\{{ 
+cgidata=cgidata();
+errors = {};
+err_count = 0;
+
+if cgidata.submit_contact eq "sent" then
+    req_fields = ["name","phone","subject","message"];
+    for field in req_fields do
+        if cgidata[field] eq "" then
+            errors{field} = true;
+            err_count = err_count + 1;
+        endif
+    endfor
+    
+    if cgidata.email ne "" && cgidata.email !~ "^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$" then
+        errors{"email"} = true;
+        err_count = err_count + 1;
+    endif  
+    
+    newsletter = cgidata.newsletter;
+    if newsletter ne "yes" then
+        newsletter = "no";
+    endif     
+      
+    if err_count == 0 then        
+        // <!-- Insert into contacts -->
+        res = insert(table:"contacts",fields:{
+            "name_{{lg.rows.lg}}": cgidata.name,
+            "email": cgidata.email,
+            "phone": cgidata.phone,
+            "subject": cgidata.subject,
+            "message": cgidata.message,
+            "adate": datetime(),
+            "lg":"{{lg.rows.lg}}",
+            "newsletter": newsletter
+        });
+        
+        contact = sql(single:true,"SELECT * FROM contacts WHERE uid='?'", lastuid());
+        
+        // <!-- Send contact email -->
+        from_email = "{{sn_ct(edit:false,"contact email_from", publish:"/publish/ressources.sn",uids:ressource.rows.uid,module:"contacts")}}";
+        if from_email !~ "^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$" then
+            from_email = "leansy@sednove.com";
+        endif  
+        to_email = "{{sn_ct(edit:false,"contact email_to", publish:"/publish/ressources.sn",uids:ressource.rows.uid,module:"contacts")}}";
+        if to_email !~ "^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$" then
+            to_email = from_email;
+        endif                         
+        email(
+            from:cgidata.email,
+            to:to_email,
+            subject:"{{sn_ct(edit:false,"contact new contact message!", publish:"/publish/ressources.sn",uids:ressource.rows.uid,module:"contacts")}}",
+            ct:"text/html",
+            file:"/modules/contacts/emails/{{lg.rows.lg}}/widget_contact_form_email.snc"
+        );
+        
+        // <!-- Send newsletter confirmation -->
+        if newsletter eq "yes" then
+            email(
+                from:from_email,
+                to:cgidata.email,
+                subject:"{{sn_ct(edit:false,"Newsletter confirmation subject", publish:"/publish/ressources.sn",uids:ressource.rows.uid,module:"contacts")}}",
+                ct:"text/html",
+                file:"/modules/contacts/emails/{{lg.rows.lg}}/widget_contact_form_email_confirmation.snc",
+                error:email_error
+            );   
+            if email_error.errmsg eq "" then
+                 void sql("UPDATE contacts SET newsletter_confirmation_status='sent' WHERE uid='?'",res.uid); 
+            endif
+        endif
+        }}
+            {
+                "message" : "1",
+                "email_err" : "{{email_error.errmsg}}"
+            }
+        \{{  
+    else
+        }}
+            {
+                "error" : 2, 
+                "message" : "Invalid data"
+            }
+        \{{                      
+    endif           
+else
+    }}
+        {
+            "error" : 1, 
+            "message" : "Invalid operation"
+        }
+    \{{
+endif
+}}

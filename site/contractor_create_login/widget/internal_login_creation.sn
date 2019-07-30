@@ -1,0 +1,177 @@
+{{
+    /*
+        @title contractor_create_login
+        Description: Creates a username and password for the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";   
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    
+    if(cgidata.u) then
+        contractor = sql(single:true, "SELECT uid, username FROM sr_contractor WHERE token='?' AND token != ''", cgidata.token);
+        if contractor.nbrows == 0 then
+            redirect("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+            stop();
+        endif
+    else
+        contractor = sql(single:true, "SELECT uid FROM sr_contractor WHERE token='?' AND token != '' AND (username='' OR username IS null)", cgidata.token);
+        if contractor.nbrows == 0 then
+            redirect("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+            stop();
+        endif
+    endif
+}}
+    <h1>
+        {{sn_ct("creation_identifiant_interne Nouvel identifiant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+    </h1>
+    <div class="row">
+        <div class="col-md-3"></div>
+        <div class="col-md-6">
+        <form action="{{sn_pages('ajax_create_login', lg.rows.lg, table:'ressources')}}" id="create_login" name="create_login" method="POST">
+                <fieldset class="form-group" style="margin-bottom:30px">
+                    <label for="username" class="control-label">
+                        {{sn_ct("creation_identifiant_interne identifiant existant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="old_username" id="old_username" disabled value="\{{contractor.rows.username}}">
+                </fieldset>
+                
+                <fieldset class="form-group" style="margin-bottom:30px">
+                    
+                    <table>
+                        <tr>
+                            <td>
+                            <label for="" class="control-label">
+                                {{sn_ct("creation_identifiant_interne Creer un nouvel identifiant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                            </label>&nbsp;
+                            </td>
+                            <td>
+                            <input class='checkbox' type='checkbox' name='enable_new_usr' id='enable_new_usr'>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <input style="display:none;" class="form-control" type="text" name="username" id="username" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("creation_identifiant_interne Identifiant trop court ou existe déjà", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="username"></span>
+                    <br>
+                    <hr>
+ 
+                </fieldset>
+                <fieldset class="form-group">
+                    <label for="password" class="control-label">
+                        {{sn_ct("creation_identifiant_interne Nouveau mot de passe", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="password" name="password" id="password" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("creation_identifiant_interne Le mot de passe doit contenir au moins 6 caractères, 1 lettre majuscule, 1 lettre minuscule et 1 chiffre ", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="password"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="password2" class="control-label">
+                        {{sn_ct("creation_identifiant_interne Confirmer le mot de passe", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="password" name="password2" id="password2" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("creation_identifiant_interne Les deux mots de passe doivent être pareil", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="password2"></span>
+                </fieldset>
+                <input type="hidden" id='uExists' name="uExists" value="">
+                <input type="hidden" id='token' name="token" value="\{{cgidata.token}}">
+                <input type="hidden" id='usr' name="usr" value="\{{cgidata.u}}">
+                <button class="btn btn-primary pull-right" id='create_login_submit'  name='create_login_submit' type='submit'>{{sn_ct("creation_identifiant_interne Soumettre", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>
+            </form>
+        </div>    
+        <div class="col-md-3"></div>
+    </div>
+{{
+    // include the validator for contractor_create_login
+    %include "/site/contractor_create_login/include/validator_intern.sn";
+}}
+\{{
+    // validate client side
+    validator.validateJS(form:'create_login');    
+}}
+
+
+
+
+<script>
+    $('#enable_new_usr').click(function(){
+        if($(this).is(":checked")){
+           $('#username').show(); 
+        }else{
+            $('#username').hide();    
+        }
+    });
+
+    function confirm_password(password2){
+        password1 = $("input#password").val();
+        if (password1 === password2){
+            return true;
+        }
+        return false;
+    }
+    
+</script>
+
+<script>
+$(document).ready(function(){
+    
+    $("#create_login").submit(function(e) {
+        e.preventDefault();
+        
+        $.ajax({
+            url: "{{sn_pages('ajax_check_username_availability', lg.rows.lg, table:'ressources')}}",
+            data:{"value": $('#username').val()},
+            dataType: "text",
+            type: "POST",
+            success: function(data) {
+                submit_form(data);
+            }
+        });
+            
+    });
+});
+    
+</script>
+
+<script>
+    function submit_form(data){
+        formData = {old_username: $('#old_username').val(), username: $('#username').val(), password: $('#password').val(), password2: $('#password2').val(), token: $('#token').val(), usr: $('#usr').val()}
+
+        if(data == "OK"){
+          
+            $.ajax({
+                url: "{{sn_pages('ajax_create_login', lg.rows.lg, table:'ressources')}}",
+                data: formData,
+                type: "POST",
+                success: function(data, statusText, xhr) {
+                    alert(xhr.getResponseHeader("X-cgidata"));
+                    if (xhr.getResponseHeader("X-success")){
+                        location.replace("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+                    }
+                }
+            });
+        
+        }else{
+            $.ajax({
+                url: "{{sn_pages('ajax_create_login', lg.rows.lg, table:'ressources')}}",
+                data: formData,
+                type: "POST",
+                success: function(data, statusText, xhr) {
+                    if (xhr.getResponseHeader("X-success")){
+                        location.replace("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+                    }
+                }
+            });
+        }
+    }
+
+</script>

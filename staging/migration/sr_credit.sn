@@ -1,0 +1,32 @@
+{{
+    table_dest = 'sr_credit';
+    table_from = 'tbl_credit_client';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'       : 'idtbl_credit_client',
+        'uid_project_contractor' : 'id_client,id_entrepreneur::(SELECT uid FROM sr_project_contractor WHERE uid_project = ? AND uid_contractor = ? LIMIT 1)',
+        'reason'    : 'raison',
+        'called'    : "appels::IF('?', 'yes', 'no')",
+        'voicemail' : "voicemail::IF('?', 'yes', 'no')",
+        'email'     : "courriel::IF('?', 'yes', 'no')",
+        'call1_date' : 'date_appel1',
+        'call2_date' : 'date_appel2',
+        'call3_date' : 'date_appel3',
+        'explanation' : 'explications',
+        'accepted'  : "accepte::IF('?', 'yes', 'no')",
+        'sn_cdate'  : 'date_demande',
+        'no_quote'  : "jamais_soumission::IF('?', 'yes', 'no')",
+        'refusal_reason' : 'RaisonRefus',
+        'completed' : "accepte::IF('?' = '', '', 'yes')"
+    };
+    
+    %include 'migration.sn';
+    
+    

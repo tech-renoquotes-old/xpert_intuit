@@ -1,0 +1,198 @@
+{{ 
+     /*
+	    @title		 view_event_details_1
+
+	    use to dispaly the template of details of all the event
+	
+    	@author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47 laplante@sednove.com
+    	
+	*/
+	use lg;
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	use page;
+// CALL FOR THE THEME COLOR CHOSEN BY THE CLIENT
+theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'");
+}}
+\{{
+	
+	cgidata = cgidata();
+	
+	title = substr(cgidata.seo,1);
+	
+	event = sql(single:true, "SELECT * FROM sed_event WHERE seo_{{lg.rows.lg}} = '?'", title);
+
+	//if event.rows.uid eq "" && "{{page.rows.code}}" ne "calendar" then 
+    //	redirect("{{ pages('calendar', lg.rows.lg);}}");
+		//"event";event;
+//	endif
+	
+	prev_event = sql(single:true, "SELECT * FROM sed_event WHERE date < '?' ORDER BY date DESC", event.rows.date);
+
+	next_event = sql(single:true, "SELECT * FROM sed_event WHERE date > '?' ORDER BY date ASC", event.rows.date);
+	
+}}
+<style type="text/css">
+
+	hr {
+		border-color: #cfcfcf;
+	}
+	.title {
+      	color: #{{theme_color.rows.header_highlight_color}};
+		font-size:18px;
+		font-weight: 600;
+	}
+	.back-drop {
+		background-color: #f0f0f0;
+      	margin-bottom: 30px;
+		padding: 20px;
+	}
+	#map-canvas {
+		height:300px;
+		width: 100%;
+	}
+</style>
+<div class="row">
+<hr/>
+	<a href="{{ pages('calendar', lg.rows.lg); }}" class="btn btn-default">{{ sn_ct("Retour", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_event")}}</a>
+	<div class="pull-right">
+		<label>{{ sn_ct("Events:", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_contact")}}</label>
+		\{{ if prev_event.rows.uid ne "" then }}
+			<a href="\{{ '/{{ lg.rows.lg }}/calendar-details/'; prev_event.rows.seo_{{lg.rows.lg}}; }}" class="btn btn-default">{{ sn_ct("Previous", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_event")}}</a>
+		\{{ endif }}
+		
+		\{{ if next_event.rows.uid ne "" then }}
+			<a href="\{{ '/{{ lg.rows.lg }}/calendar-details/'; next_event.rows.seo_{{lg.rows.lg}}; }}" class="btn btn-default">{{ sn_ct("Next", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_event")}}</a>
+		\{{ endif }}
+	</div>
+<hr/>
+</div>
+
+<div class="row">
+	<div class="col-md-4 back-drop">
+		<div>
+			\{{ "<label class='title'>"; event.rows.title_{{lg.rows.lg}}; "</label>";}}
+		</div>
+		<hr/>
+		
+		<div>
+			\{{
+			    
+				date_number = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.date, format:"%d");
+				if event.rows.end_date ne "" then 
+					end_date_number = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%d");
+				else
+					end_date_number = date_number;
+				endif
+				date_year_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.date, format:"%Y");
+				date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.date, format:"%B");
+				date_day_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.date, format:"%A");
+				date_time = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.date, format:"%Hh%M");
+				
+				if date_number != end_date_number then
+					end_date_year_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%Y");
+					end_date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%B");
+					end_date_day_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%A");
+					end_date_time = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%Hh%M");
+				endif
+			    end_date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%B"); ;
+				end_date_year_name = datetime(lg:"{{lg.rows.lg;}}",date: event.rows.end_date, format:"%Y");
+				"<label class='title'>"; //datetime(date:event.rows.date, lg : "{{lg.rows.lg}}", format:"%d %B %Y"); 
+				
+				if ((date_number eq end_date_number)  && (date_month_name eq end_date_month_name) && (date_year_name eq end_date_year_name)) || ( event.rows.end_date eq   '0000-00-00 00:00:00' )   then
+				        date_number .+ "   " .+ date_month_name  .+ "   " .+date_year_name ;" ";
+				        
+				elseif  date_month_name eq end_date_month_name && date_year_name eq end_date_year_name then
+						date_number .+ " - " .+ end_date_number .+ "   " .+ date_month_name.+ "   " .+ end_date_year_name ;" ";
+						
+				elseif  date_year_name eq end_date_year_name  && (date_number ne end_date_number ||  date_month_name ne end_date_month_name ) then 
+				       date_number .+ "  " .+ date_month_name .+ " - " .+ end_date_number .+ "  " .+ end_date_month_name.+ " " .+ end_date_year_name ;" ";
+				else   
+				  
+					date_number .+ "  " .+ date_month_name .+ "  " .+ date_year_name ;"- ";
+					end_date_number .+ "  " .+ end_date_month_name.+ " " .+ end_date_year_name ;" ";
+				endif
+		
+			/*	if date_number eq end_date_number || event.rows.end_date eq "0000-00-00 00:00:00" || date_month_name eq end_date_month_name then
+					date_month_name; " ";
+				else
+					end_date_number .+ " - " .+ end_date_month_name.+ "-" .+ end_date_year_name ;" ";
+				endif
+				
+				if  date_month_name eq end_date_month_name && date_year_name eq end_date_year_name then
+						date_number .+ " - " .+ end_date_number .+ "-" .+ date_month_name.+ " - " .+ end_date_year_name ;" ";
+				else
+					date_year_name .+ " - " .+ end_date_year_name;
+				endif*/
+				
+				"</label><br/>";
+				
+				datetime(date:event.rows.date, lg : "{{lg.rows.lg}}", format:"%A"); 
+				
+          		
+          		
+				date_time = datetime(date:event.rows.date, lg : "{{lg.rows.lg}}", format:"%Hh%M"); 
+          		if date_time ne "00h00" then;
+          			" | ";
+          			date_time;
+          		endif;
+			}}
+		</div>
+
+		\{{ if event.rows.contact_{{lg.rows.lg}} ne "" then }}
+			<hr/>
+			<div>
+				<label>\{{ event.rows.contact_{{lg.rows.lg}}; }} </label>
+			</div>
+		\{{ endif }}
+		\{{ if event.rows.image ne "" then }}
+			<hr/>
+			<div >
+				<img src="\{{ event.rows.image }}" class="img-responsive"/>
+			</div>
+		\{{ endif }}
+      
+      \{{ if event.rows.address_map ne "" then }}
+          <script src="https://maps.googleapis.com/maps/api/js"></script>
+          <script type="text/javascript">
+              var geocoder, map;
+
+              function initialize(){
+                  var mapCanvas = document.getElementById('map-canvas');
+                  set_marker_from_adr("\{{event.rows.address_map;}}");
+              }
+
+              function set_marker_from_adr(address) {
+                  geocoder = new google.maps.Geocoder();
+                  geocoder.geocode({
+                      'address': address
+                  }, function(results, status) {
+                      if (status == google.maps.GeocoderStatus.OK) {
+                          var myOptions = {
+                              zoom: 16,
+                              center: results[0].geometry.location,
+                              mapTypeId: google.maps.MapTypeId.ROADMAP
+                          }
+                          map = new google.maps.Map(document.getElementById("map-canvas"), myOptions);
+
+                          var marker = new google.maps.Marker({
+                              map: map,
+                              position: results[0].geometry.location
+                          });
+                      }
+                  });
+              }
+              google.maps.event.addDomListener(window, 'load', initialize);
+          </script>
+      	   <hr/>
+          <div id="map-canvas">
+
+          </div>
+      \{{ endif }} 
+	</div>
+	<div class="col-md-8">
+		\{{ event.rows.text_{{lg.rows.lg}} }}
+	</div>
+</div>
+

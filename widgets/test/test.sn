@@ -1,0 +1,6 @@
+{{
+<!--%include 'site/package/all.sn';-->
+
+<!--token = project::generateProjectContractorToken(6385, 6312);-->
+<!--automail::suggestProjectToContractor(token);-->
+<!--}}-->

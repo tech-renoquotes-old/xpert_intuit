@@ -1,0 +1,13 @@
+
+{{
+    cgidata = cgidata();
+    use extranet_user;
+
+    void sql("DELETE FROM sr_cc WHERE uid='?' AND uid_contractor='?'", cgidata.cc_uid, extranet_user.uid);
+    available_cc = sql(single:true,"select count(*) as nbr from sr_cc where uid_contractor = '?'", extranet_user.uid);
+    
+    if(available_cc.rows.nbr == 0) then
+        void sql("UPDATE sr_contractor SET credit_cards = 'no', credit_threshold = 100 where uid = '?'", extranet_user.uid);
+    endif
+
+}}

@@ -1,0 +1,26 @@
+{{
+    /*
+        @title 			suggestProjectToContractor
+        Description		Sends en email to a contractor to suggest him a free client.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-07-21
+        @mod       		1.1   ajout de reference
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

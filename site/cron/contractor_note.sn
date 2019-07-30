@@ -1,0 +1,70 @@
+{{%include '/site/package/all.sn';}}
+\{{// Sunday at 11h30pm
+//   @version 1.0
+//   @version 1.01 bbduc@yahoo.com  ajout de age
+//   @version 1.02 louis.jhonny@gmail.com (deduction de 3 points pour entrepreneur dont c_sndate > 180 jours et/ou sans projet depuis plus de 180 jours)
+//page 13
+
+for contractor sql("
+        SELECT  c.uid, c.active, TIMESTAMPDIFF(DAY, max(c.sn_cdate), now()) as c_age,
+                IF(specialist = 'yes', 1, 0) as specialist,
+                IF(credit_cards = 'yes', 3, 0) as credit_cards,
+                note_sr,
+                (
+                    SELECT IFNULL(AVG(pc.client_satisfaction), 3)
+                    FROM sr_project_contractor pc 
+                    WHERE pc.accepted = 'yes' 
+                    AND pc.uid_contractor = c.uid
+                ) as avg_satisfaction_project,
+                (
+                    SELECT count(*)
+                    FROM sr_credit cr
+                    WHERE cr.accepted = 'yes'
+					AND (cr.legit_request is null OR cr.legit_request = 'no')
+                    AND cr.uid_project_contractor IN (SELECT pc.uid FROM sr_project_contractor pc WHERE pc.uid_contractor = c.uid)
+                ) as nb_accepted_credits,
+                (
+                    SELECT count(*)
+                    FROM sr_project_contractor pc 
+                    WHERE pc.uid_contractor = c.uid
+                    AND pc.accepted = 'yes'
+                ) as nb_accepted_projects,
+                (
+                    SELECT TIMESTAMPDIFF(DAY, max(accepted_date), now()) as age
+                    FROM sr_project_contractor   pc
+                    WHERE pc.uid_contractor = c.uid
+                    AND  accepted = 'yes'
+                    GROUP BY pc.uid_contractor 
+                ) as last_project_age
+        FROM sr_contractor c
+        WHERE c.active = 'yes'
+        GROUP BY c.uid
+    ") 
+    do
+    taux_credit = (contractor.rows.nb_accepted_projects == 0)? 0 : (contractor.rows.nb_accepted_credits / contractor.rows.nb_accepted_projects);
+    
+        // age of contractor since first inscription to now, no deduction needed
+        if(contractor.rows.c_age < 180) then   
+            point_age = 0;
+        
+        // age of last accepted project greater than 6 months or no project since then, 
+        elseif(contractor.rows.last_project_age > 180 || contractor.rows.last_project_age == null) then     
+            point_age = 3;
+            
+        // anything else than set before, no deduction    
+        else
+            point_age = 0;
+        endif
+
+        note = 0.0 // make sure its a double
+             + contractor.rows.avg_satisfaction_project
+             + contractor.rows.specialist 
+             + contractor.rows.credit_cards
+             + contractor.rows.note_sr 
+             - taux_credit * 3
+             - point_age
+            ;
+            
+    void update(tables: 'sr_contractor', fields:{'note_global': note}, uid: contractor.rows.uid);
+endfor
+}}

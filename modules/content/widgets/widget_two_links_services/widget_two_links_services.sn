@@ -1,0 +1,47 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+	%include "/extenso/functions/sn_ct.snc"; 
+
+	wcontent = sql(single:true, "select * from widget_two_links_services where uid = '?'", widget.rows.uid_widget_list);
+}}
+
+{{ if wcontent.rows.actif eq "oui" then 
+
+	if wcontent.rows.type_url eq "interne" then
+			p = sql(single:true,"select * from pages where uid = '?'", wcontent.rows.url_interne);
+			if p.nbrows == 1 then
+				target = "_self";
+				url = p.rows{"folder_" .+ lg.rows.lg} .+ p.rows{"page_" .+ lg.rows.lg} .+ ".snc";
+			endif
+		else
+			target = "_blank";
+			url = wcontent.rows{"url_externe_" .+ lg.rows.lg};
+		endif
+		
+		if wcontent.rows.type_url2 eq "interne" then
+			p = sql(single:true,"select * from pages where uid = '?'", wcontent.rows.url_interne2);
+			if p.nbrows == 1 then
+				target2 = "_self";
+				url2 = p.rows{"folder_" .+ lg.rows.lg} .+ p.rows{"page_" .+ lg.rows.lg} .+ ".snc";
+			endif
+		else
+			target2 = "_blank";
+			url2 = wcontent.rows{"url_externe2_" .+ lg.rows.lg};
+		endif }}
+		
+	<div class="container-full bck-pale-gray bg-1">
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="col-50 cta-service web"><a target="{{target}}" href="{{url}}">{{wcontent.rows{'titre_'.+ lg.rows.lg};}}</a></div>
+					<div class="col-50 cta-service branding"><a target="{{target2}}" href="{{url2}}">{{wcontent.rows{'titre2_'.+ lg.rows.lg};}}</a></div>     
+				</div>
+			</div>
+		</div>
+	</div>
+	
+{{ endif }}

@@ -1,0 +1,74 @@
+{{
+    /*
+        @title validator for create_login form
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+            username: 'required,minlen:6,word,ajax:',
+            password: 'required,minlen:6,passwd_number,passwd_uppercase,passwd_lowercase',
+            password2: 'required,func:confirm_password',
+            token:'required'
+    );  
+}}
+
+
+{{
+    cgidata = cgidata();  
+    // validate server side
+        
+        
+    if(cgidata.username eq "") then
+        contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?'", cgidata.token);
+            if contractor.nbrows > 0 then
+                res = update(
+                    tables:"sr_contractor",
+                    uid: contractor.rows.uid,
+                    fields:{
+                        "username": ""
+                    }
+                );
+                // if no error
+                if res.sqlcode == 0 then
+                    cgidata.username = cgidata.old_username;
+                    deletectx(cgidata,'usr');
+                endif
+            endif
+        endif
+        headers_out("X-cgidata", cgidata);
+        
+
+    if (validator.validate(data:cgidata)) then
+        if(cgidata.usr) then
+            contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?'", cgidata.token);
+        else
+            contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?' AND (username='' OR username IS null)", cgidata.token);
+        endif
+        
+        if contractor.nbrows > 0 then
+            res = update(
+                tables:"sr_contractor",
+                uid: contractor.rows.uid,
+                fields:{
+                    "username": cgidata.username,
+                    "password": hash(algo:'sha512', cgidata.password .+ md5(contractor.rows.company_name)),
+                    "sn_salt_password":md5(contractor.rows.company_name),
+                    "sn_hash_password":"sha512"
+                }
+            );
+            // if no error
+            if res.sqlcode == 0 then
+                headers_out("X-success", 1);
+            endif
+        endif
+    endif
+}}

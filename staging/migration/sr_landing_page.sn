@@ -1,0 +1,21 @@
+{{
+    table_dest = 'sr_landing_page';
+    table_from = 'tbl_landing_page';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+      //  'uid'         : 'idTBL_landing_page',
+        'short_name'  : 'Shortname',
+        'phone'       : 'Tel',
+        'city_fr'     : 'aVille',
+        'city_en'     : 'VilleEN'
+    };
+    
+    %include 'migration.sn';
+    

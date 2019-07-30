@@ -1,0 +1,9 @@
+{{
+    cgidata = cgidata();  
+    
+    exists = sql("SELECT uid FROM sr_contractor WHERE username='?'", cgidata.value);
+    if exists.nbrows == 0 then
+        "OK"; //for the validator to pass
+    endif
+    
+    

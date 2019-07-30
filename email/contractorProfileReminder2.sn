@@ -1,0 +1,38 @@
+{{
+    /*
+        @title 			contractorProfileReminder2
+        Description		Email for the contractor for a follow up after a phone call Day 4.
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    %include "/extenso/functions/sn_pages.snc";
+    use email;
+    use lg;
+}}
+
+\{{
+	use name;
+    use contact_email;
+    use url_link;
+    use id_appels_entrepreneurs;
+    
+    
+    nom = name;
+    courriel = contact_email;
+    page_inscription = url_link .+'?id=' .+ id_appels_entrepreneurs;
+    page_desinscription = url_link  .+ '_' .+ '?id=' .+ id_appels_entrepreneurs .+ '&enlever=oui';
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

@@ -1,0 +1,60 @@
+{{
+	%include "/extenso/functions/sn_ct.snc"; 
+	use uid;
+	use table;
+	use lg;
+	dir_nouvelles="/fr/equipe_chambre/";
+	// if lg.rows.lg eq "en"  then
+	// 	dir_nouvelles="/en/news/";
+	// endif
+	
+	resource = sql(single:true, "select uid from ressources where code = 'widget_team_list'"); 
+}}
+\{{
+    config=config();    
+    sql_select = "member_team.active='yes'";
+    if config.site ne "staging" then 
+        sql_select = sql_select .+ " AND member_team.production='yes'"; 
+    endif  
+    
+	count = 0;
+    for content sql("select * from member_team where " .+ sql_select .+ " ORDER BY activation_year") do
+        if count%3 == 0 then }} 
+        <div class="row"> 
+        \{{ endif }}
+            <div class="col-md-4">
+                <div class="w-box inverse">
+                    <a href="?team_seo=\{{content.rows.uid}}">
+                        <div class="figure">
+                             \{{
+                                if content.rows.image ne "" && -e content.rows.image then
+                                    img = content.rows.image;
+                                else
+                                    img = "http://placehold.it/270x270&text=" .+ content.rows.firstname .+ " " .+ content.rows.lastname;
+                                endif
+                            }}                           
+                            <img class="img-responsive" src="\{{img}}" alt="\{{content.rows.firstname .+ " " .+ content.rows.lastname;}}" />
+                            <div class="figcaption">
+                                <ul class="social-icons text-right">
+                                    <li class="text">
+                                        {{ sn_ct(edit:false,"View my profile", publish:"/publish/ressources.sn", uids:resource.rows.uid);}}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </a>
+                    <h2>\{{content.rows.firstname .+ " " .+ content.rows.lastname;}} </h2>
+                    <p>\{{content.rows.role}}</p>
+                </div>
+            </div>
+        \{{
+        count = count + 1;
+        if count%3 == 0 || count==content.nbrows then 
+        }} 
+        </div> 
+        \{{ endif
+    endfor            
+}}
+
+
+					

@@ -1,0 +1,49 @@
+{{
+    %include 'pivotal.sn';
+    
+    pivotal = new Pivotal("33002", "SandboxSecret002");
+    
+    // Only needed for saving a card
+    merchantref = "1670".+random(min:10, max:99999);
+    
+    // Only needed for save card and payment with card
+    cardnumber = "4444333322221111";
+    cardexpiry = "1218";
+    cardtype = "VISA";
+    name = "John Doe";
+    cvv = "1234";
+
+    // Only needed for payments
+    orderID = 1141.+random(min:100, max:99999);
+    currency = "CAD";
+	amount = 123.45;
+	
+
+    // card = pivotal.save_card(merchantref:merchantref,cardtype:cardtype,cardnumber:cardnumber,cardexpiry:cardexpiry,name:name,cvv:cvv);
+    // if (card.success) then
+    //     // card.reference;
+    // else
+    //     //ERROR card.error
+    // endif
+    
+    
+	
+    // payment = pivotal.payment_card(orderID:orderID,amount:amount,currency:currency,cardtype:cardtype,cardnumber:cardnumber,cardexpiry:cardexpiry,name:name,cvv:cvv);
+    // if (payment.success) then
+    //     // payment.uniqueref;
+    // else
+    //     //ERROR payment.error
+    // endif
+    
+    
+    
+    payment = pivotal.payment_ref(orderID:orderID,amount:amount,currency:currency,cardnumber:cardnumber);
+    payment;
+    if (payment.success) then
+        // payment.uniqueref;
+    else
+        //ERROR payment.error
+    endif
+    
+    
+    

@@ -1,0 +1,80 @@
+<!--- style a enelver lors de la copie d extenso de roger tremblay -->
+<style>
+.panel-group .panel-heading {
+    padding: 14px 15px;
+    position: relative;
+}
+.panel-group .panel-heading i {
+    content: "+";
+    font-size: 12px;
+    margin-top: -8px;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+}
+.panel.panel-default > a > .panel-heading{
+    background-color: #f5f5f5 !important;
+    border-color: #ddd;
+    color: #333;
+}
+.panel-collapse{
+	display: none;
+}
+.collapse{
+	visibility: visible;
+}
+.panel-heading{
+	cursor:pointer;
+}
+</style>
+<div class="widget">
+	<div id="accordion" class="panel-group">	
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	listeid="";
+	condlist="";
+	for content sql("select * from widget_accordeon where actif='yes' and uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list) do
+}}
+		<div class="panel panel-default">
+
+				<div class="panel-heading">
+					<h4 class="panel-title">{{content.rows{'titre_'.+lg.rows.lg} }} <i class="glyphicon glyphicon-plus"></i></h4>
+				</div>
+
+			<div style="height: auto;" class="panel-collapse collapse" id="collapse_{{content.rows.uid}}">
+				<div class="panel-body">
+					<p>
+						{{content.rows{'description_'.+lg.rows.lg} }}
+					</p>
+				</div>
+			</div>
+		</div>
+{{
+	listeid= "#collapse_".+content.rows.uid .+condlist.+listeid;
+	condlist=",";
+	endfor
+	//*/
+}}		
+	</div>
+
+<!-- JS -->
+<script type="text/javascript">
+  $(document).ready(function($) {
+    $('#accordion').find('.panel-heading').click(function(){
+
+      //Expand or collapse this panel
+      $('.glyphicon').removeClass('glyphicon-minus').addClass('glyphicon-plus');
+      $(this).find('.glyphicon').toggleClass('glyphicon-plus glyphicon-minus');
+      $(this).next('.panel-collapse').slideToggle('fast');
+
+      //Hide the other panels
+      $(".panel-collapse").not($(this).next()).slideUp('fast');
+
+    });
+  });
+</script>
+</div>

@@ -1,0 +1,112 @@
+<style>
+.accordion {margin-top:30px;}
+.accordion.panel-default {border:0; box-shadow:none;}
+.accordion .panel-heading {position:relative;  border:0; border-radius:0; padding:14px 0; background-color:#f5f5f5; cursor:pointer;}
+.accordion .panel-heading h4 {margin:0; padding:0 10px;}
+.accordion .panel-heading i {position:absolute; right:15px; top:14px; font-size: 12px; color:#3289c7;}
+.accordion .panel-body {margin:0 auto; max-width:760px;}
+.accordion.panel-default > .panel-heading + .panel-collapse > .panel-body {border-top: 0;}
+.accordion .panel-collapse {display:none;}
+.accordion .collapse {visibility:visible;}
+</style>
+<div class="widget">
+	<div id="accordion" class="panel-group">
+\{{
+    config=config();    
+    file_select = "active='yes'";
+    if config.site ne "staging" then 
+        file_select = file_select .+ " AND production='yes'";     
+    endif  
+}}	
+{{
+	use widget;
+	use lg;
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+}} 
+	\{{for content sql("select * from widget_accordeon_files where active='yes' and uid_widget = '?' ORDER BY sn_custom", "{{widget.rows.uid_widget_list}}") do
+        files = sql("select * from accordeon_files where " .+ file_select .+ " AND uid_accordeon='?' ORDER BY sn_custom", content.rows.uid);
+    	if files.nbrows>0 then 
+    }}
+    	   <div class="accordion panel panel-default">
+    			<div class="panel-heading panel-heading{{sn_nb1}}">
+					<h4 class="panel-title">\{{content.rows.title_{{lg.rows.lg}} }} <i class="glyphicon glyphicon-plus"></i></h4>
+				</div>
+    			<div style="height: auto;" class="panel-collapse collapse" id="collapse_\{{content.rows.uid}}">
+    				<div class="panel-body">				    
+                    \{{ for file in files.rows do }}
+              				\{{ if file.type eq "file" then 
+									if file.file eq "" || !-e file.file then 
+										continue;
+									endif 
+								endif 
+							}}
+                            <p style="float:right;margin-left:10px;">
+								\{{ if file.type eq "file" then }}
+									\{{ if file.file ne "" && -e file.file then }}
+										<a href="\{{file.file}}" target="_blank" class="btn btn-primary" style="text-transform: uppercase;">
+											\{{extension(file.file)}}
+										</a>
+									\{{ endif }}  
+								\{{ elseif file.type eq "internal" then }}
+									\{{ internal_page = 
+											sql(single:true, "SELECT page_{{lg.rows.lg}} as page, folder_{{lg.rows.lg}} as dir FROM pages WHERE uid = '?'", file.internal_link);
+										link = internal_page.rows.dir .+ internal_page.rows.page;
+									}}
+									<a href="\{{link}}" \{{ if file.new_tab eq "yes" then }} target="_blank" \{{endif}} class="btn btn-primary" style="text-transform: uppercase;">
+										\{{file.link_text_{{lg.rows.lg}} }}
+									</a>
+								\{{ elseif file.type eq "external" then }}
+									<a href="\{{file.external_link}}" \{{ if file.new_tab eq "yes" then }} target="_blank" \{{endif}} class="btn btn-primary" style="text-transform: uppercase;">
+										\{{file.link_text_{{lg.rows.lg}}}}
+									</a>
+								\{{ endif }}
+                            </p> 
+                            <h5>\{{file['title_{{lg.rows.lg}}']}}</h5>
+                            <p style="border-bottom: solid 1px #f5f5f5; padding-bottom: 10px;">\{{file['text_{{lg.rows.lg}}']}}</p>   
+
+                      <div class="clearfix"></div>
+                    \{{ endfor }}                
+    				</div>
+    			</div>
+    		</div> 
+        \{{ endif }}
+    \{{ endfor }}	
+	  
+    {{ if content.nbrows == sn_nb1 then}}
+		  <script type="text/javascript">
+			 //Expand the last panel - Patch for the parallax plugin
+		      $('.glyphicon').removeClass('glyphicon-minus').addClass('glyphicon-plus');
+		      $('.panel-heading{{sn_nb1}}').find('.glyphicon').toggleClass('glyphicon-plus glyphicon-minus');
+		      $('.panel-heading{{sn_nb1}}').next('.panel-collapse').slideToggle('fast');
+		  </script>
+    {{ endif }}
+</div>
+
+ 
+</div>
+
+<!-- JS -->
+<script type="text/javascript">
+  $(document).ready(function($) {
+  
+  	// Close the last accordion tab when the document is ready - Patch for the parallax plugin
+	setTimeout(function(){
+	  $(".panel-collapse").slideUp('fast');
+	  $('.glyphicon-minus').removeClass('glyphicon-minus').addClass('glyphicon-plus');
+	}, 400);
+	
+    $('#accordion').find('.panel-heading').click(function(){
+      //Expand or collapse this panel
+      if($(this).find('.glyphicon').hasClass('glyphicon-plus')){
+           $('.glyphicon').removeClass('glyphicon-minus');
+          $('.glyphicon').addClass('glyphicon-plus');
+         }      
+   	  $(this).find('.glyphicon').toggleClass('glyphicon-plus glyphicon-minus');
+      $(this).next('.panel-collapse').slideToggle('fast');
+
+      //Hide the other panels
+      $(".panel-collapse").not($(this).next()).slideUp('fast');
+    });
+  });
+</script>

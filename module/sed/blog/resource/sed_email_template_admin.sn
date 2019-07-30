@@ -1,0 +1,155 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+
+}}
+
+\{{
+    use article_uid;  
+    use article_title;
+    use comment_text;
+    use site_config;
+    use blog_config;
+    use config;
+    
+    url = site_config.rows.url_prod;
+    
+}}
+
+
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <title>Titre du courriel</title>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+    /* paragraph */
+    
+    p {
+        color: #616161;
+        font-size: 14px;
+        line-height: 16px;
+        font-family: Open Sans, Arial, Helvetica, sans-serif;
+    }
+    </style>
+    <style type="text/css">
+      /* BOILERPLATE STYLES */
+          #outlook a{padding:0;}
+          .ReadMsgBody{width:100%;} .ExternalClass{width:100%;}
+          .ExternalClass, .ExternalClass span, .ExternalClass td, .ExternalClass div {line-height: 100%;}
+          body, table, td, a{-webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;}
+          table, td{mso-table-lspace:0pt; mso-table-rspace:0pt;}
+          img {-ms-interpolation-mode:bicubic;}
+          body {height:100% !important; margin:0 !important; padding:0 !important; width:100% !important;}
+          img {border:0; height:auto; line-height:100%; outline:none; text-decoration:none;}
+          
+          div[style*="margin: 16px 0;"] {margin: 0 !important;}
+    </style>
+</head>
+
+    <body style="margin:0; padding: 0px;border:0;color:#616161;background-color:#DDDDDD;" border="0">
+        
+    <table style="margin:0;padding:0;border:0;color:#616161;background-color:#DDDDDD;" cellpadding="0" cellspacing="0" width="100%" border="0">
+        <tr>
+            <td>
+                <center>
+                    <table border="0" cellpadding="0" cellspacing="0" width="600" height="200">
+                        <tr>
+                            <td>
+                                <br/>
+                                <table cellpadding="0" cellspacing="0" border="0" height="200" width="600">
+                                    <tr>
+                                        <td background="\{{url}}\{{blog_config.rows.email_admin_default_image}}" bgcolor="#bababa" valign="top" style="background-repeat:no-repeat;" width="600" height="200">
+                                          <!--[if gte mso 9]>
+                                          <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:200px;background-repeat:no-repeat">
+                                            <v:fill type="tile" src="\{{url}}\{{blog_config.rows.email_admin_default_image}}" color="#bababa" />
+                                            <v:textbox inset="0,0,0,0">
+                                          <![endif]-->
+                                              <div style="height:200px;">
+
+                                                    <table cellpadding="0" cellspacing="0" border="0">
+                                                        <tr>
+                                                            <td width="35">&nbsp;</td>
+                                                            <td width="265" height="200" valign="middle" style="height:200px;vertical-align:middle;">
+                                                                <img src="\{{url}}\{{blog_config.rows.email_admin_default_image}}" style="display:block; width:200px;" width="200">
+                                                            </td>
+                                                            
+                                                        </tr>
+                                                    </table>  
+                                                </div>
+                                                  <!--[if gte mso 9]>
+                                                    </v:textbox>
+                                                    </v:rect>
+                                                 <![endif]-->
+                                        </td>
+                                    </tr>
+
+                                </table>
+    
+                            </td>
+                        </tr>
+            
+                        
+            
+            
+                        <!-- TEXT -->
+                        <tr style="background-color:#FFFFFF;">
+                            <td>
+                                <table border="0" cellpadding="0" cellspacing="0" style="border-top:35px solid #FFFFFF;border-bottom:35px solid #FFFFFF;">
+                                	<tr>
+                                		<td width="35">&nbsp;</td>
+                                		<td style="text-align:left;font-size:16px;color:#616161;font-weight:bold;border-right:10px #FFF solid;" valign="middle">
+                                			
+                                			    <span style="font-family:Open Sans,Arial,Helvetica,sans-serif;">
+                            			        {{sn_ct("blog Un commentaire à été soumis pour cet article",edit:false)}}
+                                			    <br>
+                                			    <a href="\{{url}}{{pages(table:'pages','blog_detail',lg.rows.lg)}}?uid=\{{article_uid}}">\{{article_title}}</a><br>
+                                			    <br>
+                                			    {{sn_ct("blog Voici le commentaire : ",edit:false)}}
+                                			    </span>
+                                		</td>
+                                		
+                                		<td width="35">&nbsp;</td>
+                                	</tr>
+                                	
+                            	</table>
+     
+                            </td>
+                        </tr>
+            			<!-- BLOC   -->
+            			<tr style="background-color:#F1F1F1;">
+                            <td>
+                               <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-top:35px solid #F1F1F1;border-bottom:35px solid #F1F1F1;">
+                                	<tr>
+                                		<td width="35">&nbsp;</td>
+                                		<td width="530" height="45">
+                                			<div style="color:#616161;font-size:14px;font-weight:bold;">
+                                				<span style="font-family:Open Sans,Arial,Helvetica,sans-serif;">
+                                					<span style="font-weight:normal;font-size:13px;">
+                                					    \{{comment_text}}
+													</span>
+													<br>
+													<br>
+													<span style="font-weight:normal;font-size:14px;">
+    												\{{ucfirst(datetime(format:"%B %d %Y, %H:%M:%S  "))}}
+													</span>
+                                				</span>
+                                			</div>
+                                		</td>
+                                		<td width="35">&nbsp;</td>
+                                	</tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </center>
+            </td>
+        </tr>
+    </table>
+        
+    </body>
+</html>

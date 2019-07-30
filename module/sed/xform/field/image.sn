@@ -1,0 +1,37 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a image from a table
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+	%include "/module/sed/package/sed_util.sn";
+	
+	use field;
+	use lg;
+	use field_title;
+	use field_name;
+	use declaration;
+	
+}}
+<div class="form-group">
+    <label for="{{ field_name }}" class="control-label">{{ field_title }}
+        {{
+            if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+                }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+            endif
+        }}
+    </label>
+    
+    <input type="file" class="form-control" id="{{ field_name }}" name="{{ field_name }}" {{
+        if field.rows.onChange ne "" then 
+            ' onChange="';  parse(state:0,field.rows.onChange);  '"'; 
+        endif 
+        declaration;
+    }}>
+    
+</div>

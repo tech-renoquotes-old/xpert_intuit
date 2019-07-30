@@ -1,0 +1,36 @@
+{{  
+    // --------------------------------------------------------------------------
+    // Name:        client_more_services
+    //
+    // Description: Goal is to capture the client's answer when they click a button in the email projectActivatedClient
+    //
+    // Version:     1.0 2019-01-08 Michel Jodoin
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/site/package/automail.sn"; 
+    
+    use lg;
+    use widget;
+}}
+
+\{{
+    cgidata = cgidata();
+
+    if cgidata.p then
+        if cgidata.s then
+            if cgidata.m then
+                who = sql(single:true, "SELECT uid_client FROM sr_project WHERE uid = '?' AND minute(active_date) = '?'", cgidata.p, cgidata.m);
+                if who.nbrows == 1 then
+                    automail::NotifyAdminClientWantsMoreService(who.rows.uid_client, cgidata.s);
+                    }}
+                    <div class="alert alert-success">
+                        {{sn_ct("client_more_services Texte pour remercier le client",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </div>
+                    \{{
+                endif
+            endif
+        endif
+    endif
+    
+}}

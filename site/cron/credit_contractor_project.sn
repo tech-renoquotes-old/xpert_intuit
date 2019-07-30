@@ -1,0 +1,68 @@
+{{%include '/site/package/all.sn';}}
+
+\{{// Every 10 minutes
+
+/*
+	@version 1.0 2018-02-02    crediter un entrepreneur suivant la reponse du client
+*/
+
+   for credit sql("SELECT  cr.uid, cr.uid_project, cr.accepted, cr.reason, cr.refusal_reason, cr.feed_id, cr.feed_date, cr.feed_text, time_to_sec(timediff(now(),cr.feed_date))/60 as elapsed 
+                    FROM sr_credit cr 
+                    INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor 
+                    WHERE (cr.feed_id <> '' OR cr.feed_id IS NOT NULL) 
+                    AND (cr.feed_date <> '' OR cr.feed_date IS NOT NULL)
+                    AND (cr.accepted = '' OR cr.accepted = 'no' OR cr.accepted is null)
+                    AND (cr.refusal_reason = '' OR isnull(cr.refusal_reason))
+                    ORDER by cr.feed_date DESC") do
+                    
+        refusal_reason1 = "Un prix a été donné et le projet est annulé/donné";
+        refusal_reason3 = "Un prix n'à pas été donné et le projet est toujours disponible";
+        refusal_reason4 = "Un prix à été donné et le projet est toujours disponible";
+        
+        credit.rows.elapsed;
+        
+        if(credit.rows.elapsed >= 10 && credit.rows.feed_id == 1) then
+			void sql("UPDATE sr_credit SET accepted = 'no', refusal_reason = '?' WHERE uid = '?'", refusal_reason1, credit.rows.uid);
+
+            void update(
+                 tables:"sr_project",
+                 uid: credit.rows.uid_project,
+                 fields: {
+                 	"status": 'cancelled-after-qualification',
+                    "comments": p.comments .+ ' (Le client a annulé le projet [' .+ datetime(format:'%Y-%m-%d %H:%M:%S') .+ '])'
+                 }
+               	);
+
+			automail::notifyContractorCreditRefusedReason1(credit.rows.uid);
+			void insert(table:'sr_debug', fields:{'description':'Cron credit contractor project: elapsed '.+ credit.rows.elapsed.+' mins','text':'Credit refused for uid_credit: '.+credit.rows.uid});
+        
+		elseif(credit.rows.elapsed >= 10 && credit.rows.feed_id == 2) then
+			void sql("UPDATE sr_credit SET accepted = 'yes' WHERE uid = '?'", credit.rows.uid);
+
+            void update(
+                 tables:"sr_project",
+                 uid: credit.rows.uid_project,
+                 fields: {
+                 	"status": 'cancelled-after-qualification',
+                    "comments": p.comments .+ ' (Le client a annulé le projet [' .+ datetime(format:'%Y-%m-%d %H:%M:%S') .+ '])'
+                 }
+               	);
+            
+			automail::creditApproved(credit.rows.uid);
+     		void insert(table:'sr_debug', fields:{'description':'Cron credit contractor project: elapsed '.+ credit.rows.elapsed.+' mins','text':'Credit approved for uid_credit: '.+credit.rows.uid});
+		
+		elseif(credit.rows.elapsed >= 10 && credit.rows.feed_id == 3) then
+            void sql("UPDATE sr_credit SET accepted = 'no', refusal_reason = '?' WHERE uid = '?'", refusal_reason3, credit.rows.uid);
+			automail::notifyContractorCreditRefusedReason3(credit.rows.uid);
+			void insert(table:'sr_debug', fields:{'description':'Cron credit contractor project: elapsed '.+ credit.rows.elapsed.+' mins','text':'Credit refused - reason3 for uid_credit: '.+credit.rows.uid});
+
+        elseif(credit.rows.elapsed >= 10 && credit.rows.feed_id == 4) then
+			"credit elapsed time > 10 mins and feed_id ==4";
+            void sql("UPDATE sr_credit SET accepted = 'no', refusal_reason = '?' WHERE uid = '?'", refusal_reason4, credit.rows.uid);
+			automail::notifyContractorCreditRefusedReason4(credit.rows.uid);
+			void insert(table:'sr_debug', fields:{'description':'Cron credit contractor project: elapsed '.+ credit.rows.elapsed.+' mins','text':'Credit refused - reason4 for uid_credit: '.+credit.rows.uid}); 
+        endif
+        
+    endfor
+
+}}

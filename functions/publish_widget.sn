@@ -1,0 +1,73 @@
+{{
+    %include "/extenso/functions/sn_publish.snc";
+
+	function publish_widget() 
+
+		config = config();
+
+		if uid != undefined then
+			widget = sql(single:true, "select * from sn_widgets where uid = '?'", uid);
+		elseif widget_code != undefined then
+			widget = sql(single:true, "select * from sn_widgets where widget_code = '?'", widget_code);
+		else
+			error("uid or widget_code must be defined");
+		endif
+
+
+		if output eq "json" then
+			json = [] ;
+		endif
+
+		ct_publish = "/publish/sn_widgets.sn";
+
+		if widget.rows.widget_global eq "yes" || widget.rows.publish eq "yes" then
+			if output eq "html" then
+				"<p>"; "Uid:";uid; "&nbsp;"; ut; widget.rows.code;"</p>";
+			endif
+			for lg sql("select lg,lgname from sn_languages where active = 'yes'") do
+				if output eq "html" then
+					"<p style='font-weight:bold;'>"; lg.rows.lgname; "</p>";
+					"<ul>";
+				endif
+				url = "/widgets/" .+ lg.rows.lg .+ "/";
+				dir = "/" .+ config.site .+ url;
+				file = widget.rows{"widget_code"} .+ ".snc";
+				active = widget.rows{"active"};
+				template = widget.rows{"code"};
+				mkdir(dir);
+				if output eq "json" then
+					push(json,{"url":url,"dir":dir,"file":file,"uid":uid,"template":template,"lg":lg});
+				endif
+				ct_lg = lg.rows.lg;
+				ct_uids = widget.rows.uid;
+				void generate(file:dir .+ file,template:template,compile:true,delcompile:false);
+				if output eq "html" then
+					if widget.rows.loadin eq "inline" then
+						"<a href='javascript:void(0);'"; dq((onClick="sn_load(')); url; file;  dq((');")); ">"; url .+ file; " ("; dir .+ file; ")</a>";
+					elseif widget.rows.loadin eq "iframe" then
+						"<a href='javascript:void(0);'"; dq((onClick="sn_load(')); url; file;  dq((',{'iframe':true});")); ">"; url .+ file; " ("; dir .+ file; ")</a>";
+					else
+						"<a target='_blank' href='"; url .+ file; "'>"; url .+ file; " ("; dir .+ file; ")</a>";
+					endif
+					"</ul><br />";
+				endif
+			endfor
+
+			// Publish page that read this widget
+			if publish_page && widget.rows.widget_global eq "no" || widget.rows.publish eq "yes" then
+				for pages sql("select DISTINCT uid_page,table_name from sn_widgets_list where widget_code = '?'", widget.rows.widget_code) do
+					res = sn_publish(publish_widget:false,output:output,pages.rows.table_name,pages.rows.uid_page,config.site); 
+				endfor
+			endif
+
+		else
+			if output eq "too many output pl" then 
+				sn_ct_extenso("This widget does not need to be publish");
+			endif
+		endif
+		if output eq "json" then
+			return json;
+		endif
+
+    endf
+}}

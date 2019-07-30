@@ -1,0 +1,214 @@
+{{ 
+    //
+    // Name:        menu_principal
+    //
+    // Description: Permet de publier le menu principal
+    //  
+    // Parameters:  none so far
+	//				use cgidata 
+	//				use lg
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version
+    //
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    
+    use lg;          // Loop from the publish      
+
+	site_config = sql(single:true,"select * from sn_configs");
+	
+	// menu_principal
+	menu_json = sql(single:true,wantarray:true,"select json from sn_menus where code = 'menu_principal'");
+	if menu_json.rows[0] eq '' then
+		menu = [];
+	else
+		menu = unstringnify(menu_json.rows[0]);
+	endif
+}}
+
+\{{ 
+    use page;
+}}
+
+                  
+{{ 
+	function display_menu(menu, lg, level) 
+ 	
+
+	    use reqdata;
+		for item in menu do 
+			menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+			if menu_item.rows.active eq "yes" then
+				if menu_item.rows.type eq "page" then
+					pg = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+					if pg.nbrows == 1 then
+						}}
+						\{{ 
+							active=''; 
+							if page.uid=='{{menu_item.rows.uid_page}}' then 
+								active=' on';
+							endif
+						}}
+						<div class="item {{menu_item.rows.class}}\{{active}}">
+							<a href="{{pg.rows{"folder_" .+ lg.rows.lg};if pg.rows{"page_" .+ lg.rows.lg} ne "index" then pg.rows{"page_" .+ lg.rows.lg}; endif}}" class="item-link">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						</div><!--item-1-->
+						{{
+					endif
+				elseif menu_item.rows.type eq "url" then
+					}} 
+					<div class="item {{menu_item.rows.class}}">
+						<a target="{{menu_item.rows{"target"};}}" href="{{menu_item.rows{"url_" .+ lg.rows.lg};}}" class="item-link">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+					</div><!--item-1-->
+					{{
+				elseif menu_item.rows.type eq "group" then
+					}}
+					\{{ active=''; }}
+					{{
+					if item.children != undefined then
+						// <!-- Get all page ID from children -->
+						children = stringnify(item.children);
+						arr = explode("\"uid_page\":\"",children); 
+						puids = {};
+						for v in arr do
+							tmp = explode("\"",v,1);
+							if length(tmp) > 0 then
+								puid = (int)tmp[0];
+								if puid > 0 then
+									puids{puid}=1;
+								endif
+							endif
+						endfor                                    
+						}}
+						\{{
+						puids={{puids}};
+						// <!-- If one child has the current page ID his parent is active -->
+						if puids{page.uid} then
+							active=' on';
+						endif 
+						}}
+						{{
+					endif
+				}} 
+					<div class="item\{{active}}">
+						<a href="javascript:void(0);" class="item-link" onclick="menu_main_toggle_children(this);">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a>
+						<div class="item-children">
+							{{
+								if item.children != undefined then
+									new_level = level + 1;
+									display_menu(item.children, lg, new_level);
+								endif
+							}}
+						</div>
+					</div><!--item-->
+				{{
+				endif
+			endif
+		endfor 
+	endf
+}}
+
+<!--script type="text/javascript">
+    function show_first_child(el){
+        var url = $(el).next().find("a").first().attr("href");
+        if (url){
+            location.href = url;
+        }
+    }
+</script-->
+
+<div class="pt clearfix">
+	<div class="container-fluid">
+		<img class="logo-1" src="/images/logo-sednove.png" alt="Sednove"> 
+		<div class="menu-main-mobile-control clearfix">
+			<a href="javascript:void(0);" class="menu-main-mobile-btn" onclick="menu_main_toggle_mobile('.menu-main-wrapper');"><i class="fa fa-bars"></i></a><a href="/"><img class="logo-2" src="/images/logo-sednove-2.png" alt="Sednove"></a>
+		</div>
+	</div><!--container-fluid-->
+	<div class="menu-main-wrapper clearfix">
+		<div class="container-fluid">
+			<nav class="menu-main clearfix">
+				{{ display_menu(menu, lg, 0); }}
+				
+			</nav><!--menu-main-->
+		</div><!--container-fluid-->
+	</div><!--menu-main-wrapper-->
+</div>
+
+<script>
+	/* main menu : when click on an item of level 1, show/hide level 2 */
+	function menu_main_toggle_children(bo){
+		$(bo).parent().siblings().removeClass("on-js").end().toggleClass("on-js");
+	}
+
+	/* main menu : mobile view : show/hide */
+	function menu_main_toggle_mobile(sel){
+		$(sel).toggleClass("on-js");
+	}
+</script>
+<style>
+	/* .pt is a temporrary class to protect menu style */
+	.cs .pt .clearfix:before {content:" "; display:table;}
+	.cs .pt .clearfix:after {content:" "; display:table; clear:both;}
+	
+	/* logo-1 */
+	.cs .pt .logo-1 {display:inline-block;margin:0 0 16px 10px;vertical-align:bottom;max-width:150px;}
+	@media screen and (max-width :500px) {
+		.cs .pt .logo-1 {display:none;}
+	}
+
+	/* menu main - mobile control */
+	.cs .pt .menu-main-mobile-control {display:none;padding:5px 0;}
+	.cs .pt .menu-main-mobile-control .menu-main-mobile-btn {display:inline-block;margin:0 10px;background:rgba(0,0,0,0.05);padding:6px 9px;}
+	.cs .pt .menu-main-mobile-control .menu-main-mobile-btn:hover {background:rgba(0,0,0,0.06);}
+	.cs .pt .menu-main-mobile-control .menu-main-mobile-btn, 
+	.cs .pt .menu-main-mobile-control .menu-main-mobile-btn:focus {outline:0;}
+	.cs .pt .menu-main-mobile-control .menu-main-mobile-btn .fa {font-size:20px;color:#428bca;}
+	.cs .pt .menu-main-mobile-control .menu-main-mobile-btn:hover .fa {color:#417bad;}
+	@media screen and (max-width :500px) {
+		.cs .pt .menu-main-mobile-control {display:block;}
+	}
+	.cs .pt .logo-2 {vertical-align:bottom;max-width:180px;margin:5px 0;}
+
+	/* menu main - wrapper */
+	.cs .pt .menu-main-wrapper {background:#ffffff;border-top: solid 1px #d8d8d8;border-bottom: solid 1px #cccccc; }
+	@media screen and (max-width :500px) {
+		.cs .pt .menu-main-wrapper {display:none;}
+		.cs .pt .menu-main-wrapper.on-js {display:block;}
+	}
+
+	/* menu main */
+	.cs .pt .menu-main {padding:5px 15px 0 15px;}
+	@media screen and (max-width :500px) {
+		.cs .pt .menu-main {padding-left:0; padding-right:0;}
+	}
+	.cs .pt .menu-main a, 
+	.cs .pt .menu-main a:focus {outline:0;}
+
+	/* menu main - level 1 */
+	.cs .pt .menu-main > .item {float:left; position:relative; margin:0 5px 5px 0; width:100%;}
+	@media screen and (max-width :500px) {
+		.cs .pt .menu-main > .item {float:none; position:static;margin-right:0;}
+	}
+
+	.cs .pt .menu-main > .item:last-child {margin-right:0;}
+	.cs .pt .menu-main > .item > .item-link {display:block; padding:10px 14px; background:#f8f8f8; font-size:13px;line-height:18px; text-decoration:none;color:#666666;}
+	.cs .pt .menu-main > .item.on > .item-link {background:#eeeeee;}
+	.cs .pt .menu-main > .item.on-js > .item-link {background:#eeeeee;}
+	.cs .pt .menu-main > .item > .item-link:hover {text-decoration:none; background:#eeeeee;}
+
+
+	/* menu main - level 2 */
+	.cs .pt .menu-main > .item > .item-children {display:none; position:absolute; z-index:600; left:0; top:100%; width:200px; border-top:5px solid #ffffff; border-bottom: 3px solid #cccccc;background:#e0e0e0;}
+	@media screen and (max-width :500px) {
+		.cs .pt .menu-main > .item > .item-children {position:static; width:auto; border-bottom:0;}
+	}
+	.cs .pt .menu-main .item.on-js > .item-children {display:block;}
+	@media screen and (min-width :501px) {
+		/*.cs .pt .menu-main > .item:hover > .item-children {display:block;}*/
+	}
+	.cs .pt .menu-main > .item > .item-children > .item > .item-link {display:block; border-top:1px solid #cccccc; padding:7px 14px;font-size:12px;line-height:18px;color:#4d4f53;text-decoration:none; }
+	.cs .pt .menu-main > .item > .item-children > .item:first-child > .item-link {border-top: 0;}
+	.cs .pt .menu-main > .item > .item-children > .item > .item-link.on {background:#d8d8d8;}
+	.cs .pt .menu-main > .item > .item-children > .item > .item-link:hover {text-decoration:none; background:#d8d8d8;}
+</style>

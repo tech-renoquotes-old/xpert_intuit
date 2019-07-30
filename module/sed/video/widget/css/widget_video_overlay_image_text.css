@@ -1,0 +1,138 @@
+.cs .container-placeholder-video .logo img{
+    width:210px;
+}
+
+.cs .container-placeholder-video .scroll-down img{
+     width:35px;
+}
+.placeholder-video video {
+      width: 100%;
+}
+
+
+
+.cs .placeholder-video{
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.cs .container-placeholder-video {
+	position: relative;
+}
+
+.cs .container-placeholder-video .heading-text, .cs .container-placeholder-video .text, .cs .container-placeholder-video .logo{
+	 margin: auto;
+  	text-align:center;
+  	width:470px;
+}
+
+.cs .container-placeholder-video .heading-text h1{
+	color:#fff;
+  	font-size:23px;
+    font-family: 'Asap', sans-serif !important;
+    margin-top:0!important;
+}
+
+.cs .container-placeholder-video .text{
+	color:#DFDF00;
+  font-size:12px;
+  font-family: 'Asap', sans-serif!important;
+}
+
+.cs .container-placeholder-video .container-info{
+	position: absolute;
+    top: 40%;
+    width: 100%;
+}
+
+.cs .container-placeholder-video .scroll-down{
+	 bottom: 35px;
+    position: absolute;
+   z-index: 100;
+    text-align: center;
+    width:100%;
+}
+
+.cs .container-placeholder-video .scroll-down .fa{
+     font-size:35px;
+     color:#fff; 
+}
+
+.cs .placeholder-video{
+    position: relative;
+ }
+
+.cs .container-placeholder-video .logo img{
+    width:210px;
+}
+
+.cs .container-placeholder-video .scroll-down img{
+     width:35px;
+}
+
+.cs .container-placeholder-video .scroll-down img:hover{
+     cursor:pointer;
+     animation-name: bounce;
+     animation-duration: 1s;
+     animation-fill-mode: both;
+    animation-iteration-count: infinite;
+} 
+
+.cs .container-placeholder-video .logo-top, .cs .sed-footer .logo{
+    background-image: url('/sn_uploads/zappy_RGB_blanc_jaune.png');
+    display: inline-block;
+    background-size: cover;
+	background-repeat: no-repeat;
+  	height:50px;
+  	width: 150px;
+}
+
+.cs .container-placeholder-video .logo-txt{
+    display: inline-block;
+    white-space: pre;
+    position: absolute;
+    padding-top: 15px;
+    line-height:10px;
+}
+
+.cs .container-placeholder-video .logo-txt::first-line{
+    color:#fff;
+    font-size:10px;
+    font-weight:bold;
+    font-style:initial;
+}
+
+.cs .container-placeholder-video .logo-top img{
+ width:150px;
+}
+
+@media (min-width:768px){
+	.cs .placeholder-video{
+  		height:480px;
+     	position:relative;
+      }
+  	.cs .placeholder-video video{
+   	 	bottom:0;
+    	position:absolute;
+    }
+}
+
+@media (max-width:866px){
+  	.cs .placeholder-video{
+  		height:430px;
+      }
+  .cs .placeholder-video video{
+  		bottom:initial;
+  	}
+}
+
+@media (max-width:768px){
+     .cs .scroll-down, .cs .container-placeholder-video .logo,   .cs .placeholder-video video{
+         display:none;
+      }
+      .cs .container-placeholder-video .heading-text, .cs .container-placeholder-video .text, .cs .container-placeholder-video .logo{
+          width:90%;
+      }
+  
+
+}

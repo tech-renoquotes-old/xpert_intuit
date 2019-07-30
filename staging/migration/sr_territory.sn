@@ -1,0 +1,24 @@
+{{
+    table_dest = 'sr_territory';
+    table_from = 'tbl_territoire';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'       : 'idTBL_Territoire',
+        'name_fr'      : 'Territoire',
+        'name_en'      : 'Territoire',
+        'sn_cdate'  : 'Timestamp',
+        'shortname' : 'Shortname',
+        'region'    : 'GrandeRegion',
+        'active'    : "Actif::IF('?', 'yes', 'no')",
+        'description' : 'Exemple'
+    };
+    
+    %include 'migration.sn';
+    

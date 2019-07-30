@@ -1,0 +1,144 @@
+{{
+    /*
+        @title contractor_payment_ref
+        Description: This widget uses an existing card to make the payment.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+    col_label = ' col-md-4';
+    col_input = 'col-md-8';
+}}
+\{{
+    use hide_payment;
+    // if !hide_payment then
+}}
+
+<style>
+
+    .loader{
+        height:100%;
+        width:100%;
+        position:absolute;
+        left: 0;
+        bottom:0px;
+        filter: alpha(opacity=40);
+        opacity: 0.4;
+        -moz-opacity: 0.4;
+        background-color:#000;
+        border-radius:10px;
+        overflow:hidden;
+        z-index: 2;
+    }
+        
+    .loader img{
+        filter: alpha(opacity=30);
+        opacity: 0.3;
+        -moz-opacity: 0.3;
+        line-height:50%;
+        
+    }
+    
+    .loader_center{
+        margin-top:10%;
+        margin-left:40%;
+    }
+
+</style>
+
+\{{  
+    cgidata = cgidata();
+    use extranet_user;
+    credit_cards = sql("SELECT * FROM sr_cc WHERE uid_contractor='?' ORDER BY priority ASC, uid DESC", extranet_user.uid);   
+}}
+
+<div id="ajax_payment_ref_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_payment_ref Erreur lors du paiement, vérifiez les informations", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+<div id="ajax_payment_ref_success" class="alert alert-success" style="display:none"> 
+    {{sn_ct("contractor_payment_ref Merci! Nous avons reçu votre paiement.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_payment_ref Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div data-hide_after_payment>
+    <h2>
+        {{sn_ct("contractor_payment_ref Paiement avec une carte déjà enregistrée", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </h2>
+    <div class="well custom-well">
+        <div class="loader" style="display:none"><div class="loader_center"><img alt="" src="/sn_uploads/icon/loading3.gif" /></div></div>
+        <form class="form-horizontal" action="{{ sn_pages('ajax_make_payment_ref', lg.rows.lg, table:'ressources')}}" id="make_payment_ref" name="make_payment_ref" method="POST">
+            <div class="form-group">
+                <label for="cc_uid" class="control-label{{col_label;}}">
+                     {{sn_ct("contractor_payment_ref Choisir votre carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                </label>   
+                <div class="{{col_input}}"> 
+                    <select name="cc_uid" class="form-control">
+                        <option value="">{{sn_ct(edit:false,"contractor_payment_ref Choisir votre carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                        \{{for cc in credit_cards.rows do}}
+                            <option value="\{{cc.uid}}">\{{cc.type .+ " **** " .+ cc.last_digits}}</option>
+                        \{{endfor}}
+                    </select>
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="cc_uid"></span>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="{{col_label;}}">    
+                </div>
+                <div class="{{col_input}}">
+                    <input type="submit" class="btn btn-primary" value="{{sn_ct(edit:false,"contractor_payment_ref Payer maintenant", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+                </div>
+            </div>  
+        </form>
+    </div>  
+</div>
+
+
+<script>
+    // Bind add_client form to ajaxform plugin to send the form via ajax
+    $('form[name=make_payment_ref]').ajaxForm({
+        beforeSubmit:function(){
+            $('.loader').show();
+            $("input[type='submit']").prop('disabled', true);
+        },
+        success:function(data, statusText, xhr){
+            $("#ajax_payment_card_error,#ajax_save_cc_error,#ajax_payment_ref_error").hide("swing"); // Hide old error messages
+            
+            if (xhr.getResponseHeader("X-payment_ref_success")){
+                $('form[name=make_payment_ref]').resetForm();
+                $("div[data-hide_after_payment]").hide("swing", function(){
+                    $("#ajax_payment_ref_success").show(); 
+                    \{{ if cgidata.token ne "" && cgidata.accepted eq 'yes' then}}
+                        setTimeout(function(){
+                            location.replace("{{pages('sr_confirmation_accept_project', lg.rows.lg, table:'pages')}}?accepted=yes&token=\{{cgidata.token}}");
+                        }, 2000);
+                    \{{ endif}}                    
+                });
+            }
+            else if (xhr.getResponseHeader("X-payment_ref_error")){
+                $("#ajax_payment_ref_error").show();
+            }
+            $("input[type='submit']").prop("disabled", false);
+        },
+        complete: function(data) {
+            $('.loader').hide();
+        }
+    });    
+    
+    $(".close").on("click", function(){
+        $(this).parents(".alert").hide(); 
+    });
+</script>
+\{{
+// endif
+}}

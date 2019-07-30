@@ -1,0 +1,117 @@
+{{
+    use page;
+    homepage = sql(single:true,"SELECT * FROM pages WHERE code='accueil'");
+}}
+<div class="pg-opt pin">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h2 style="text-transform: uppercase">                    
+                    {{ 
+                        if page.rows.code eq "member-info" then
+                            }}
+                             \{{
+                                cgidata = cgidata();
+                                muid = cgidata.memberid + 0;
+                                company = sql(single:true, "SELECT name FROM member WHERE uid='?'", muid); 
+                                company.rows.name;                               
+                            }}
+                            {{
+                        else
+                            page.rows{"title_" .+ lg.rows.lg};
+                        endif
+                    }}
+                </h2>
+            </div>
+            {{ if false then }}
+            <!-- Rerier le fil d'Ariane sur l'ensemble du site 18/12/2014 --> 
+            <!--
+            {{
+            // Show breadcrumb
+            if page.rows.code eq "member-info" then
+                memberpage = sql(single:true,"SELECT * FROM pages WHERE code='members'");
+                }}
+                <div class="col-md-6">
+                    <ol class="breadcrumb">
+                        <li>
+                            <a href="{{homepage.rows{"folder_" .+ lg.rows.lg};}}">
+                                {{homepage.rows{"title_" .+ lg.rows.lg};}}
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{memberpage.rows{"folder_" .+ lg.rows.lg};}}">
+                                {{memberpage.rows{"title_" .+ lg.rows.lg};}}
+                            </a>
+                        </li>                            
+                    </ol>
+                </div>  
+            {{                          
+            else
+                target_menu_code = "menu_principal";
+                menu = sql(single:true,"SELECT uid,json,code FROM sn_menus WHERE FIND_IN_SET(code, '?')", target_menu_code);
+                
+                // Get the menu_item in the "menu_principal" menu.
+                json = stringnify(menu.rows.json);
+                item_id = 0;
+                for item_menu sql(single:true,"select * from sn_menus_items where table_name='pages' and type='page' and uid_page=?",page.rows.uid) do
+                    patt = "\"uid\":\s*\"" .+ item_menu.rows.uid .+ "\"";   
+                    if json =~ patt then 
+                        item_id = item_menu.rows.uid;
+                    endif
+                endfor
+                
+                // Get the submenu in the "menu_principal" menu.
+                json = unstringnify(menu.rows.json);
+                if item_id > 0 then 
+                    }}                           
+                    <div class="col-md-6">
+                        <ol class="breadcrumb">
+                            <li>
+                                <a href="{{homepage.rows{"folder_" .+ lg.rows.lg};}}">
+                                    {{homepage.rows{"title_" .+ lg.rows.lg};}}
+                                </a>
+                            </li>                                        
+                            {{ "SSSSS"
+                                for item in json do 
+                                    if item.children != undefined then
+                                        children = stringnify(item.children);
+                                        if children =~ patt then 
+                                            children_json = unstringnify(item.children); 
+                                            stop = 0;
+                                            for child in children_json do
+                                                if stop then
+                                                    break;
+                                                endif 
+                                                if child.value.type eq "page" then
+                                                    menu_page = sql(single:true,"select * from ? where uid = '?'", child.value.table_name, child.value.uid_page);
+                                                    if menu_page.nbrows == 1 then 
+                                                        stop = 1;
+                                                        }}
+                                                        <li>
+                                                            <a tabindex="-1" href="{{
+                                                                    menu_page.rows{"folder_" .+ lg.rows.lg};
+                                                                    if menu_page.rows{"page_" .+ lg.rows.lg} ne "index" then
+                                                                        menu_page.rows{"page_" .+ lg.rows.lg};
+                                                                    endif
+                                                                }}">
+                                                                    {{item.value{"name_" .+ lg.rows.lg};}}
+                                                             </a>
+                                                         </li>    
+                                                        {{
+                                                    endif   
+                                                endif       
+                                            endfor
+                                        endif 
+                                    endif 
+                                endfor                                     
+                            }}
+                        </ol>
+                    </div>
+                    {{
+                endif
+            endif
+            }}
+            -->{{ endif}}
+        </div>
+    </div>
+</div>   

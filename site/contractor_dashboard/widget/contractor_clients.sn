@@ -1,0 +1,684 @@
+
+
+<style>
+    input.input_file{
+        width:100%;
+        height:100%;
+        display:inline-block;
+        position:absolute;
+        left:0;
+        top:0;
+        opacity:0;
+        cursor:pointer;
+    }
+    a.input_file{
+        position:relative;
+    }
+    a.file{
+        text-decoration: none;
+        color:inherit;        
+    }
+    [data-validator-error]{
+        min-height:1em;
+        display:inline-block;
+    }
+
+    .navigator_table {
+        width: 100%;
+    }
+
+    
+    /* Styling pagination nav default links container*/
+    .navContainer {
+        width: auto%;
+        text-align: center;
+    }
+    
+    .custom_nav {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    
+    /* Styling pagination nav right next button link*/
+    .next_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: right;
+        padding-left: 30px;
+        padding-right: 10px;
+        background: url("/sn_uploads/icon/arrow_prev.png") no-repeat left;
+        background-size: 20px;
+        border: solid 1px #ccc;
+    }
+    
+    .next_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .next_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    
+    /* Styling pagination nav right button link*/
+    .right_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: left;
+        padding-left: 10px;
+        padding-right: 30px;
+        background: url("/sn_uploads/icon/arrow_next.png") no-repeat right;
+        background-size: 20px;
+        border: solid 1px #ccc;
+
+    }
+    
+    .right_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .right_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+
+    
+    /* Styling pagination nav standalone links*/
+    .linkStyle{
+        float:left;
+        min-width:30px;
+        height: 30px;
+        line-height: 30px;
+        border: solid 1px #ccc;
+        padding: 2px;
+    }
+    
+    .linkStyle:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    /* Styling pagination nav page interval links*/
+    .linkStyle a:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle a:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle a:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+
+
+    .hidden_project{
+        width:100%;
+        text-align: right;
+    }
+    
+    .accepted_hidden_chk{
+        width:100%;
+        text-align: right;
+    }
+    
+    #display_hidden{
+        width:30px;
+    }
+
+
+    .hidden_lst{
+    	width: 100%;
+    	max-height: 300px;
+    	float:left;
+    	overflow:scroll;
+    	border: 1px #ebebeb solid;
+    	padding-left:5px;
+    }
+    
+
+    .desc{
+        width:50%;
+        text-align:left;
+    }
+    
+    
+    .active_date{
+        width:30%;
+        text-align:left;
+    }
+    
+    .actions{
+        width:10%;
+        text-align:left;
+    }
+
+    .price{
+        width:10%;
+        text-align:left;
+    }
+    
+    .itemuid{
+        width:10%;
+        text-align:left;
+        line-height: 100%px;
+    }
+    
+</style>
+
+<script type="text/javascript" src="/js/printThis/printThis.js"></script>
+
+{{
+    /*
+        @title contractor_clients
+        Description: This widget display the list of clients of the contractor with pagination and excel generation feature included
+        
+        @author louis.jhonny@gmail.com
+        
+        @version 1.1 2017-07-20
+        
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/site/package/all.sn";
+    
+    use page;
+    use lg;
+    
+}}
+
+\{{
+    data = cgidata();
+    %include "/site/package/pagination.sn";
+
+    use extranet_user;
+    
+    //envoyer sondage au client
+    if(data.sendSurvey) then
+        p = contractor::expertSendSurveyToClient(data.uid_prj, extranet_user.uid);
+        if(p) then
+            headers_out("X-resp", p);
+        else
+            headers_out("X-failed", 1);
+        endif
+    endif    
+    
+    query_rtotal = "
+        SELECT  count(*) as rtotal FROM sr_project_contractor pc
+        INNER JOIN sr_project p ON pc.uid_project=p.uid
+        INNER JOIN sr_client c ON p.uid_client = c.uid
+        LEFT JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city ci ON a.uid_city = ci.uid
+        WHERE pc.uid_contractor='?'
+        AND pc.accepted='yes'
+        AND (pc.hidden != 'yes' OR pc.hidden IS NULL)
+        ORDER BY pc.accepted_date DESC
+    ";
+
+    query = "
+        SELECT  p.uid, pc.sn_cdate, c.firstname, c.gender, c.lastname, 
+                CONCAT(a.street_no,' ',a.street,', ',ci.name_fr,', ', a.zip) as address, 
+                p.description, pc.comments, pc.amount_contract_report, pc.expected_date,
+                c.email, a.phone1, a.phone2, a.phone3, pc.quote, pc.contract_signed, pc.file, pc.accepted_date, p.additional_info, pc_count.count
+        FROM sr_project_contractor pc
+        INNER JOIN sr_project p ON pc.uid_project=p.uid
+        INNER JOIN sr_client c ON p.uid_client = c.uid
+        LEFT JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city ci ON a.uid_city = ci.uid
+        CROSS JOIN (
+            SELECT pc.uid_project, count(pc.uid) as count
+            FROM sr_project_contractor pc
+            WHERE accepted_date > 0
+            GROUP BY pc.uid_project
+            ) AS pc_count ON pc_count.uid_project = pc.uid_project
+        WHERE pc.uid_contractor=
+        " .+ extranet_user.uid .+ "
+        AND pc.accepted='yes'
+        AND (pc.hidden != 'yes' OR pc.hidden IS NULL)
+    ";
+    
+    query_hidden = "SELECT p.uid, p.description, pc.lead_price, p.due_date, p.active_date
+        FROM sr_project p
+        INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+        WHERE pc.uid_contractor='" .+ extranet_user.uid .+ "' 
+        AND pc.hidden = 'yes'
+        AND pc.accepted='yes'
+        ORDER BY p.active_date DESC
+        ";
+    
+    
+    items_per_page = 20;
+    limit = 100000;
+    
+    if data.page > 0 then
+        page_index = data.page;
+    else
+        page_index = 1;
+    endif
+
+    offset = (page_index - 1) * items_per_page;
+
+    //pagination settings
+    pg = new Pagination
+    (
+        items_per_page, // number of items to display per page
+        12,             // Number of links allowed per page. cannot be empty.
+        offset,         // offset to query 1 page at a time. cannot be empty.
+        query, // the main query used without sorting. cannot be empty
+        limit,
+        "pc.accepted_date",      // Field to sort query from
+        "DESC",       // order by possible value are DESC,ASC (ASC if empty)
+        "{{lg.rows.lg}}"// language to display navigation strings. (english if empty)
+    );
+    
+    //Redraw query;
+    xquery = pg.newQuery();
+
+    totalProjects = query.nbrows; // get all projects
+    //projects = sql(query); // get a list of projects to display as per value of limit.
+
+
+    //query hidden projects
+        i=1;
+        hidden = sql(query_hidden);
+        html .+= "<table id='halflist'>";
+            for item in hidden.rows do
+                price = money_format(item.lead_price,"{{lg.rows.lg}}");
+                alt_color = (i % 2 == 0)? '#eee': '';
+                html .+= "<tr bgcolor='".+ alt_color .+ "' id='".+ item.uid .+"'><td class='itemuid' style='vertical-align:middle'>" .+ item.uid .+ "</td><td class='desc' style='vertical-align:middle'>".+ item.description .+ "</td><td class='active_date' style='vertical-align:middle'>".+ item.active_date .+ "</td><td class='price' style='vertical-align:middle'>".+ price .+"</td></tr>";
+                i++;
+            endfor
+        html .+= "</table>";
+    
+
+if xquery.nbrows > 0 then
+
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/update_project_validator.sn";
+
+    //savexls(projects.rows, "/sn_uploads/testfile.xls");
+}}
+
+
+
+    \{{ 
+        if(data.id == extranet_user.uid) then
+            clientInfo = sql(query);
+            clients[0] = ['project ID', 'Fullname','Address', 'Email','Phone','Referred on', 'Approx. Starting Date', 'Quotes available', 'Contract is signed', 'Montant', 'commentaire', 'Description'];
+            i =1;
+            xlsfile = "/sn_uploads/clients_list_" .+ extranet_user.uid .+ ".xls";
+
+            for p in clientInfo.rows do
+            
+                if (p.'quote' eq '' || p.'quote' eq 'no') then
+                    p.'quote' = 'no';
+                else
+                    p.'quote' = 'yes';
+                endif
+            
+                if (p.contract_signed eq '' || p.contract_signed eq 'no') then
+                    p.contract_signed = 'no';
+                else
+                    p.contract_signed = 'yes';
+                endif
+            
+                fullname=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.firstname .+ " " .+ p.lastname);
+                address=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.address);
+                description=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.description);
+                comments=esc(filter:"utf8latin1,glyphsout,utf8latin1", p.comments);
+    
+                clients[i] = [
+                p.uid,
+                fullname, 
+                address, 
+                p.email, 
+                p.phone1, 
+                p.phone2,
+                p.phone3,
+                p.accepted_date,
+                p.expected_date,
+                p.'quote',
+                p.contract_signed,
+                p.amount_contract_report,
+                comments,
+                description
+                ];
+                i++;
+            endfor
+        
+            savexls(clients
+            ,xlsfile
+            ,true);
+        
+            headers_out("X-success", xlsfile);
+        endif
+        
+    }}
+
+    <div class="row">
+        <div class="accepted_hidden_chk">
+            <label>{{sn_ct("contractor_clients afficher mes projets cachés", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+            <input type='checkbox' id='display_hidden' name='display_hidden' />
+        </div>
+
+        <div class="hidden_project" style="display:none">
+            <table class='table'>
+            <tr bgcolor='#eee' height='35px'><th class='itemuid'>ID</th><th class='desc'>{{sn_ct("contractor_clients Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th><th class='active_date'>{{sn_ct("contractor_clients Activation date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th><th class='price'>{{sn_ct("contractor_clients Price", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th></tr>
+            </table>
+            <div class="hidden_lst">
+                \{{html}}
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row mb-sm">
+        <div class="container-fluid">
+            \{{pg.previous(data.start, page_index, "next_arr");}}
+            \{{pg.navigation(data.start, page_index, "linkStyle");}}
+            \{{pg.next(data.start, page_index, "right_arr");}}
+        </div>
+        <hr />
+        <div class="col-sm-3 no-print">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="print_all('all_clients');">
+                {{sn_ct("contractor_clients Imprimer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+        </div>
+        
+        <div class="col-sm-3 no-print">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="generateXls()">
+                {{sn_ct("contractor_clients Exporter", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+            <a href=""></a>
+        </div>        
+    </div>
+    <div class="panel panel-default project-panel" id="all_clients">
+    \{{for p in xquery.rows do}}
+    <div class="panel panel-default project-panel" id="prj_\{{p.uid}}">
+        <form action="{{ sn_pages('ajax_update_project', lg.rows.lg, table:'ressources')}}" class="update_project" name="update_project_\{{p.uid}}" method="POST">
+            <div class="panel-heading"><h3 class="heading-sm"><b>{{sn_ct("contractor_clients ID", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b> \{{p.uid}}</h3></div>
+            <input type="hidden" name="uid_project" value="\{{p.uid}}">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group font-md">
+                            <label>
+                                {{sn_ct("contractor_clients Référé le", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{(p.accepted_date !='0000-00-00')?contractor::contractorTime(extranet_user.uid,p.accepted_date):''}}
+                            </div>
+                        </div>
+                        <div class="form-group font-md">
+                            <label>
+                                {{sn_ct("contractor_clients Adresse", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                            </label>
+                            <div>
+                                \{{p.firstname .+ " " .+ p.lastname}}<br>
+                                \{{p.address}}<br>
+                                <a href="mailto:\{{p.email}}">\{{p.email}}</a><br>
+                                <a href="tel:\{{p.phone1}}">\{{p.phone1}}</a> <a href="tel:\{{p.phone2}}">\{{p.phone2}}</a> <a href="tel:\{{p.phone3}}">\{{p.phone3}}</a>
+                            </div>
+                        </div>
+                        <div>
+                            <b>{{sn_ct("contractor_clients Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                        </div>
+                        <p>
+                            \{{p.description}}
+                        </p>
+                        \{{if p.additional_info ne '' then}}
+                        <div>
+                            <b>{{sn_ct("contractor_clients Information Additionnelle", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                        </div>
+                        <p>
+                            \{{p.additional_info}}
+                        </p>
+                        \{{endif}}
+                        <div>
+                            <b>{{sn_ct("contractor_discounted_projects Nombre d'entrepreneur(s) déjà référé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}:</b> \{{p.count}}
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Comementaires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                            </label>
+                            <div>
+                                <textarea name="comments" rows="5" class="form-control">\{{p.comments}}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 font-md">
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Montant du contrat", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <input name="amount_contract_report" class="form-control" type="text" value="\{{p.amount_contract_report}}"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Date approximative des travaux", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <input name="expected_date" class="form-control" type="text" value="\{{(p.expected_date !='0000-00-00')?p.expected_date:''}}" placeholder="{{sn_ct("contractor_clients AAAA-MM-JJ",edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"/>
+                                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="expected_date"></span>
+                            </div>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input name="quote" type="checkbox" value="yes" \{{if p.quote eq 'yes' then}}checked\{{endif}}/> {{sn_ct("contractor_clients Soumission déposée", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input name="contract_signed" type="checkbox" value="yes" \{{if p.contract_signed eq 'yes' then}}checked\{{endif}}/> {{sn_ct("contractor_clients Contrat signé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                        </div>
+                        <div class="form-group input-file-group hidden-print">
+                        \{{if p.file ne "" then}}
+                            <a class="file" href="\{{p.file}}" target="_blank"><b>\{{basename(p.file)}}</b></a>
+                            <a href="javascript:void(0)" onclick="if (confirm('{{sn_ct("contractor_clients Êtes-vous certain de vouloir supprimer ce fichier ?", edit:false,publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} ')){delete_file(this)};" class="mb-md btn btn-default btn-block">
+                                {{sn_ct("contractor_clients Supprimer un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                            </a>
+                            <input id="action" name="action" type="hidden" value=""/> 
+                        \{{else}}
+                            <a href="javascript:void(0)" class="mb-md btn btn-primary btn-block input_file">
+                                {{sn_ct("contractor_clients Ajouter un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                                <input class="input_file" name="file" type="file"/>    
+                            </a>
+                        \{{endif}}
+                        </div>
+                        <div class="form-group hidden-print">
+                            <div class='no-print'>
+                                <button class="btn btn-primary btn-block hidden-print" type="submit">
+                                    {{sn_ct("contractor_clients Enregistrer les modifications", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                                <button class="btn btn-default btn-block " onclick="return hide_project(this,'\{{p.uid}}')">
+                                    {{sn_ct("contractor_clients Retirer le client de la liste", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                                <br>
+                                <a class="sendSurvey" style="text-decoration:none" href="javascript:void(0)" onclick="sendSurvey(\{{p.uid}})"><i class="fa fa-star-half-o fa-2x" aria-hidden="true"></i>{{sn_ct("contractor_clients Envoyer sondage de satisfaction", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+                                
+                                <div id="success_\{{p.uid}}" class="alert alert-success" style="display:none">
+                                    {{sn_ct("contractor_clients sondage envoyé au client avec succès!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                                </div>
+                                <div id="failure_\{{p.uid}}" class="alert alert-danger" style="display:none">
+                                    {{sn_ct("contractor_clients Ce sondage a déjà été envoyé au client!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                                </div>                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </form>
+        <button class="btn btn-primary hidden-print" name="print_this_form" onclick="return PrintElem('prj_\{{p.uid}}')">
+            {{sn_ct("contractor_clients Imprimer cette fiche", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </button>
+    </div>
+   
+
+    \{{ validator.validateJS(form:'update_project_'.+p.uid);}}
+    
+    \{{endfor}}
+    <hr />
+    
+    <div class="container-fluid">
+        \{{pg.previous(data.start, page_index, "next_arr");}}
+        \{{pg.navigation(data.start, page_index, "linkStyle");}}
+        \{{pg.next(data.start, page_index, "right_arr");}}
+    </div>
+    </div>
+    
+    
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_clients Vous n'avez présentement aucun client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}
+<script>
+
+//display hidden projects
+    $('#display_hidden').change(function(){
+        if($(this).is(':checked')){
+            ($('.hidden_project').slideDown('slow'));
+        }else{
+            ($('.hidden_project').slideUp('slow'));
+        }
+        
+    });
+
+
+//submit modifications
+    $(".update_project").on('submit', function(){
+        return (confirm('{{sn_ct(edit:false,"contractor_clients Enregistrer les modifications ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}'));
+    });
+
+    // removes a project from the list only for this contractor
+    function hide_project(e,uid_project){
+        if (confirm('{{sn_ct(edit:false,"contractor_clients Êtes-vous certain de vouloir cacher ce projet ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}')){
+            $.ajax({
+                type: "post",
+                data:{
+                    "uid_project": uid_project
+                },
+                url: "{{ sn_pages('ajax_hide_project', lg.rows.lg, table:'ressources')}}",
+                success:function(data){
+                    $(e).parents(".project-panel").hide('swing', function(){$(this).remove()});
+                }
+            });
+        }
+        else{
+            return false;
+        }
+    }
+    
+    // Bind update_project form to ajaxform plugin to send the form via ajax
+    $('form.update_project').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                location.reload(true);
+                console.log(data);
+            }
+        }    
+    }); 
+    
+    $("a.input_file").on("change", function(){
+        $(this).parents("form").submit(); 
+    });
+    
+    function delete_file(e){
+        $("input#action").val("delete_file");
+        $(e).parents("form").submit(); 
+    }
+    
+    function generateXls() {
+        var values = {
+            'file': '/sn_upload/myClients.xls',
+            'id': '\{{extranet_user.uid}}',
+        };
+        
+        $.ajax({
+            type: "POST",
+            data: values,
+            success:function(data, statusText, xhr){
+                if (xhr.getResponseHeader("X-success")){
+                    window.location.assign(xhr.getResponseHeader("X-success"));
+                }
+            }
+        });
+
+    }
+
+    
+    function PrintElem(elem)
+    {   
+       $('#'+elem).printThis({formValues: false,printContainer: false});
+    }
+
+
+    function print_all(elem)
+    {   
+       $('#'+elem).printThis({formValues: false,printContainer: false});
+    }
+
+
+</script>
+
+<script>
+    function sendSurvey(prjID){
+        $('#success_' + prjID).hide();
+        $('#failure_' + prjID).hide();
+        
+        $.ajax({
+            data:{'sendSurvey':'true', 'uid_prj':prjID},
+            method: 'POST',
+            success:function(data, statusText, xhr){
+                console.log(xhr.getResponseHeader('X-resp'));
+                if(xhr.getResponseHeader('X-resp')){
+                    $('#success_' + prjID).show();
+                }else{
+                    $('#failure_' + prjID).show();
+                }
+            }
+        });
+    }    
+</script>

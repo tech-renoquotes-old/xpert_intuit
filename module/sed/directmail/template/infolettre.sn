@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+		<title>{{ if user.lg eq "fr" then }}Infolettre - Test{{ else }}Newletter - Test{{ endif }}</title>
+	</head>
+  <body>
+	  {{ 
+		%include "/extenso/functions/sn_ct.snc"; 
+		%include "/extenso/functions/sn_pages.snc"; 
+
+		site_config = sql(single:true,"select * from sn_configs");
+
+		use user; use code;
+		lg = user.rows.lg;
+		if lg eq "" then
+			lg="en";
+		endif
+    	config = sql(single:"true","SELECT * FROM infolettre_configuration");
+    
+    	cgidata = cgidata();
+        status = sql(single:"true","SELECT * FROM sed_directmail_status WHERE uid='?'",cgidata.uid_status);
+    	campaign = sql(single:"true","SELECT * FROM sed_directmail_campaign WHERE uid='?'",status.rows.uid_campaign);
+
+	  }}
+    	<table cellspacing="0" align="center" border="0" cellpadding="0" style="border-collapse:collapse;width:600;" width="600">
+			<tbody>
+			<!-- Header start -->
+			{{ if cgidata.uid_status ne "" then}}
+			<tr valign="bottom">
+				<td width="300" height="50" style="padding-top:30px;padding-bottom:15px;">
+					{{ filename = esc(filter:"filename,lowercase",campaign.rows.name) .+ "-" .+ campaign.rows.uid .+ ".html"; }}
+					<span style="color:#797979;font-family:arial,helvetica,sans-serif;font-size:11px;">{{sn_ct("difficulté :")}}</span><a href="{{site_config.rows.url_prod;}}/infolettre/{{ filename }}" style="font-weight:bold;color:#797979;font-size:11px;text-decoration:underline;">{{sn_ct("cliquez ici")}}</a>
+				</td>
+				<td width="300" style="text-align:right;padding-top:30px;padding-bottom:15px"> 
+					<span style="color:#797979;font-family:arial,helvetica,sans-serif;font-size:11px;">{{sn_ct("se désabonner :")}}</span><a href="{{site_config.rows.url_prod; pages('unsubscribe_from_email',lg); "?code="; code}}" style="font-weight:bold;color:#797979;font-size:11px;text-decoration:underline;">{{sn_ct("cliquez ici")}}</a>
+				</td>
+			</tr>
+			{{ endif }}
+            <tr>
+				<td colspan="2" width="600" style="border-top:1px dashed #a7a7a7;border-bottom:1px dashed #a7a7a7;">
+					<a href="{{ config.rows{'banner_link_' .+ lg} }}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img border="0" width="600" style="width:600px; height:auto;" src="{{site_config.rows.url_prod; config.rows{'banner_' .+ lg}; }}" /></a>
+				</td>
+			</tr>
+			<!-- Header end -->
+			<!-- Content start -->
+            {{ for content sql("SELECT * FROM infolettre_contenu WHERE active='yes' ORDER BY sn_custom") do }}
+			{{if content.rows.type eq "simple" then }}
+			<tr>
+				<td colspan="2" width="600" style="border-bottom:1px dashed #a7a7a7;">
+					<a href="{{ content.rows{'g_override_link_' .+ lg} }}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img width="600" style="width:600px; height:auto;" border="0" src="{{ site_config.rows.url_prod; content.rows{'g_override_image_' .+ lg} }}" /></a>
+				</td>
+			</tr>
+            {{ elseif content.rows.type eq "double" then }}
+			<tr>
+				<td colspan="2" height="12" width="600"></td>
+			</tr>
+			<tr>
+				<td width="300" height="22" {{if content.rows.middle_border eq "yes" then }}style="border-right:1px dashed #a7a7a7;padding-right:30px;" {{else}}style="padding-left:34px;" {{ endif }}></td>
+				<td width="300" height="22"></td>
+			</tr>
+			<tr valign="top">
+				<!-- left -->
+				<td align="left" width="300" {{if content.rows.middle_border eq "yes" then }}style="border-right:1px dashed #a7a7a7;padding-right:30px;font-size:11px;color:#000000;font-family:verdana;" {{else}}style="{if 0}padding-left:30px;{/if}font-size:11px;color:#000000;font-family:verdana;" {{ endif }}>
+                    {{ if content.rows.gauche eq "1" then }}
+						{{ if content.rows{'g_override_link_' .+ lg} ne "" then }}<a style="border-left:0;border-right:0;border-top:0;border-bottom:0;" href="{{content.rows{'g_override_link_' .+ lg};}}">{{endif}}<img style="width:270px; height:auto;" border="0" width="270" src="{{ site_config.rows.url_prod; content.rows{'g_override_image_' .+ lg} }}" />{{if content.rows{'g_override_link_' .+ lg} ne "" then }}</a>{{ endif }}
+					{{ else }}
+					 <p style="margin-top:0;margin-left:0;margin-bottom:12px;margin-right:0;padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;font-size:21px;font-weight:bold;color:#000000;font-family:verdana;">{{ if content.rows{'g_override_title_' .+ lg} ne "" then }} {{ content.rows{'g_override_title_' .+ lg};}} {{ else }} {{g_type.rows{'name_'.+lg};}} {{ endif }}</p>
+					 <p style='margin-top:0;margin-left:0;margin-bottom:10px;margin-right:0;padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;font-size:17px;color:#000000;font-family:"Times New Roman",Times,serif";'>{{ if content.rows{'g_override_subtitle_' .+ lg} ne "" then }} {{ content.rows{'g_override_subtitle_' .+ lg}; }} {{ elseif g_grab.rows{'title_'.+lg} ne "" then }} {{ g_grab.rows{'title_'.+lg}; }} {{ else }} {{g_grab.rows{'name_'.+lg};}} {{ endif }}</p>
+					 <p style="font-size:11px;color:#000000;font-family:verdana;">{{ if content.rows{'g_override_text_' .+ lg} ne "" then }}{{ content.rows{'g_override_text_' .+ lg}; }}{{else}} {{ g_grab.rows{'breve_'.+lg}; }}{{endif}}</p>
+					 <table cellspacing="0" align="left" border="0" cellpadding="0">
+						<tbody>
+							<tr>
+								{{ if content.rows{'g_override_link_text_' .+ lg} ne "" then }}
+								<td width="113" style="padding-top:20px;font-size:13px;color:#000000;text-decoration:underline;font-family:verdana;">
+									{{ if content.rows{'g_override_link_' .+ lg} ne "" then }}
+                                  		{{ // Lien de gauche }}
+										<a href="{{ content.rows{'g_override_link_' .+ lg}; }}" style="font-size:13px;color:#000000;text-decoration:underline;font-family:verdana;">
+									{{ endif }}
+									{{ content.rows{'g_override_link_text_' .+ lg}; }}
+									{{ if content.rows{'g_override_link_' .+ lg} ne "" then }}
+                                        {{ // Fermeture du lien de gauche }}
+										</a>
+									{{ endif }}
+								</td>
+								{{ endif }}
+								{{ if content.rows{'g_override_image_' .+ lg} ne "" then }}
+								<td>
+									{{ if content.rows{'g_override_link_' .+ lg} ne "" then }}
+									<a href="{{ content.rows{'g_override_link_' .+ lg}; }}">
+									{{ endif }}
+									{{ if content.rows{'g_override_link_text_' .+ lg} ne "" then }}
+									<img src="{{ site_config.rows.url_prod;content.rows{'g_override_image_' .+ lg};}}" style="width:174px; height:auto;" width="174" />
+									{{ else }}
+									<img src="{{ site_config.rows.url_prod;content.rows{'g_override_image_' .+ lg};}}" style="width:270px; height:auto;" width="270" />
+									{{ endif }}
+									{{ if content.rows{'g_override_link_' .+ lg} ne "" then }}
+									</a>
+									{{ endif }}
+								</td>
+								{{ endif }}
+							</tr>
+						</tbody>
+					</table>
+					{{ endif }}
+				</td>
+				<!-- end left -->
+				<!-- right -->
+				<td align="right" width="300" style="text-align:right;font-size:11px;color:#000000;font-family:verdana;">
+						{{ if content.rows.droite eq "1" then }}
+							{{ if content.rows{'d_override_link_' .+ lg} ne "" then }}<a style="border-left:0;border-right:0;border-top:0;border-bottom:0;" href="{{content.rows{'d_override_link_' .+ lg};}}">{{endif}}<img border="0" width="270" style="width:270px;margin-bottom:20px;" src="{{ site_config.rows.url_prod; content.rows{'d_override_image_' .+ lg} }}" />{{if content.rows{'d_override_link_' .+ lg} ne "" then }}</a>{{ endif }}
+                        {{ else }}
+							<p style="margin-top:0;margin-left:0;margin-bottom:12px;margin-right:0;padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;font-size:21px;font-weight:bold;color:#000000;font-family:verdana;">{{ content.rows{'d_override_title_' .+ lg}; }}</p>
+							<p style='margin-top:0;margin-left:0;margin-bottom:10px;margin-right:0;padding-left:0;padding-right:0;padding-top:0;padding-bottom:0;font-size:17px;color:#000000;font-family:"Times New Roman",Times,serif";'>{{ content.rows{'d_override_subtitle_' .+ lg}; }}</p>
+							<p style="font-size:11px;color:#000000;font-family:verdana;">{{ content.rows{'d_override_text_' .+ lg}; }}</p>
+                            <table width="227" cellspacing="0" align="right" border="0" cellpadding="0">
+								<tbody>
+									<tr>
+										<td align="right" style="padding-top:20px;margin-right:0;padding-right:0;font-size:13px;color:#000000;text-decoration:underline;font-family:verdana;">
+										 {{ if content.rows{'d_override_link_' .+ lg} ne "" then }}<a href="{{ content.rows{'d_override_link_' .+ lg}; }}" style="font-size:13px;color:#000000;text-decoration:underline;font-family:verdana;">{{ if content.rows{'d_override_link_text_' .+ lg} ne "" then }} {{ content.rows{'d_override_link_text_' .+ lg}; }} {{else}}{sn_ct(code:"en savoir plus")}{{endif}}</a>{{ endif }}
+										
+										</td> 
+										{{ if content.rows{'d_override_image_' .+ lg} ne "" then }}
+										<td width="114" align="right">											
+												<img src="{{ site_config.rows.url_prod;content.rows{'d_override_image_' .+ lg};}}" style="width:174px;" width="174" />											
+										</td>
+                                       {{ endif }}
+									</tr>
+								</tbody>
+							</table>
+                        {{ endif }}
+                    </td>
+                    <!-- end right -->
+                  </tr>
+              	  <tr>
+					<td colspan="2" height="12" width="600" style="border-bottom:1px dashed #a7a7a7;"></td>
+				  </tr>
+                {{ endif }}
+            {{ endfor }}
+            <!-- footer start -->
+			<tr>
+				<td colspan="2" height="52" width="600" style="padding-left:30px;padding-top:10px;padding-bottom:10px;">
+					<table width="400" align="left" border="0" cellpadding="0" cellspacing="0" style="width:343px;border-collapse:collapse">
+						<tbody>
+							<tr valign="middle">
+								<td width="123" height="52" align="center" style="background-color:#dff3fe;">
+									<span style="color:#000000;font-size:14px;">{{sn_ct("Suivez nous sur")}}</span>
+								</td>
+								{{ if config.rows.link_social ne "" then }}
+								<td width="110" height="52" align="center" style="background-color:#dff3fe;">
+									<a href="{{config.rows.link_social}}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img border="0" src="{{site_config.rows.url_prod; config.rows.image_social }}" /></a>
+								</td>
+								{{ endif }}
+								{{ if config.rows.link_social_2 ne "" then }}
+								<td width="110" height="52" align="center" style="background-color:#dff3fe;">
+									<a href="{{config.rows.link_social_2}}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img border="0" src="{{site_config.rows.url_prod; config.rows.image_social_2 }}" /></a>
+								</td>
+								{{ endif }}
+								{{ if config.rows.link_social_3 ne "" then }}
+								<td width="110" height="52" align="center" style="background-color:#dff3fe;">
+									<a href="{{config.rows.link_social_3}}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img border="0" src="{{site_config.rows.url_prod; config.rows.image_social_3 }}" /></a>
+								</td>
+								{{ endif }}
+								{{ if config.rows.link_social_4 ne "" then }}
+								<td width="110" height="52" align="center" style="background-color:#dff3fe;">
+									<a href="{{config.rows.link_social_4}}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img border="0" src="{{site_config.rows.url_prod; config.rows.image_social_4 }}" /></a>
+								</td>
+								{{ endif }}		
+								{{ if config.rows.link_social_5 ne "" then }}
+								<td width="110" height="52" align="center" style="background-color:#dff3fe;">
+									<a href="{{config.rows.link_social_5}}" style="border-left:0;border-right:0;border-top:0;border-bottom:0;"><img border="0" src="{{site_config.rows.url_prod; config.rows.image_social_5 }}" /></a>
+								</td>
+								{{ endif }}			
+								
+							</tr>
+						</tbody>
+					</table>
+				</td>
+			</tr>
+			{{ if cgidata.uid_status ne "" then}}
+				<tr valign="top">
+					<td colspan="2" width="600" style="padding-top:10px;padding-bottom:10px;">
+                      {{ if 0 then }}
+						{{ for autrelangue sql("SELECT * FROM sn_languages WHERE lg != '?' ORDER BY sn_custom",lg) do }}
+							<span style="color:#797979;font-family:arial,helvetica,sans-serif;font-size:11px;">{{sn_ct("Changer de langue")}}</span><a href="{{site_config.rows.url_prod; }}/extenso/directmail/|lg.autrelangue/change_lang.sn?u=|cr&lg=|lg.autrelangue" style="font-weight:bold;color:#797979;font-size:11px;text-decoration:underline;">{{sn_ct("cliquez ici")}}</a>
+						{{ endfor }}
+                      {{ endif }}
+					</td>
+				</tr>
+				<tr valign="middle">
+					<td colspan="2" width="600" height="10">
+					<img src="{{site_config.rows.url_prod; "/extenso/"; lg; "/tracking.snc?code="; code}}" alt="" border="0" />
+					</td>
+				</tr>
+			{{ endif }}
+            </tbody>
+		</table>
+  </body>
+</html>

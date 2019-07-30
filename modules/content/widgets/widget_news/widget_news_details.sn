@@ -1,0 +1,168 @@
+<script type="text/javascript" src="/assets/fancybox/source/jquery.fancybox.js?v=2.1.5"></script>
+<link rel="stylesheet" type="text/css" href="/assets/fancybox/source/jquery.fancybox.css?v=2.1.5" media="screen" />
+<script type="text/javascript" src="/assets/jwplayer/jwplayer.js"></script>
+<script type="text/javascript">jwplayer.key="EV/ddUdjvZTHwBpK6ZXo8dDTIHnUG0xBprCS2MRUF8c=";</script>	
+{{
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc"; 	
+	use uid;
+	use table;
+	use lg;
+	use widget;
+	dir_nouvelles="/fr/nouvelles/";
+	if lg.rows.lg eq "en"  then
+		dir_nouvelles="/en/news/";
+	endif		
+}}
+\{{	
+	config=config();
+	cgi=cgidata();
+	lg_rows="{{lg.rows.lg}}";
+	production_select= "";	
+	if extranet_user.role then
+		production_select = " and find_in_set('all',roles)";
+	else
+		production_select = " and (find_in_set('all',roles) or find_in_set('" .+ extranet_user.role .+ "',roles))";
+	endif
+	if config.site ne "staging" then production_select .+= " and production='oui'"; endif 		
+	sqlreq = "select * from actualites where actif = 'oui' and seo_{{lg.rows.lg}} = '?'";
+	data = cgi.news_seo;	
+	newscontent = sql(single:true,sqlreq .+ production_select, data);
+	{{ dateformat = sn_ct(allpages:true, code:"__dateformatdetails__", edit:false)}}
+	adate = datetime(lg:"{{lg.rows.lg}}", date:newscontent.rows.adate,format:"{{dateformat}}");	
+}}
+<style>
+.fancybox-nav{height:50%;}
+.fancybox-nav span{top:100%;}
+</style>
+<section class="slice bg-3">
+	<div class="w-section inverse shop">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12 categories">
+					{{codect="Nouvelles recentes" .+widget.rows.uid_widget_list;}}
+					<h3 class="section-title">{{sn_ct(allpages:true, code:codect, edit:true)}}</h3>
+				</div>
+				<div class="col-md-3">
+					<div class="widget">
+						<ul class="categories">
+						\{{ 
+							/* --------- affichage des 3 dernieres nouvelles recentes ------*/
+							for content sql("select * from actualites where actif='oui' " .+ production_select .+ " ORDER BY adate DESC LIMIT 3;") do
+						}}
+							<li><a href="{{dir_nouvelles}}\{{content.rows.seo_{{lg.rows.lg}};}}">\{{content.rows.titre_{{lg.rows.lg}}}}</a></li>
+						\{{endfor}}
+						</ul>
+					</div>                    
+				</div>
+				<div class="col-md-9">
+					<div class="row">
+						<div class="col-md-7">
+							<h3 class="colorange">\{{newscontent.rows.titre_{{lg.rows.lg}}}}</h3>
+							{{codect="Publie le" .+widget.rows.uid_widget_list;}}
+							<span class="font12">{{sn_ct(allpages:true, code:codect, edit:true)}} \{{adate}}</span>
+							<p class="mt-30">\{{newscontent.rows.texte_{{lg.rows.lg}}}}</p>
+						</div>
+						<div class="col-md-5">
+							
+							\{{	/* ----- affichage du media principal ---*/ 
+								medias = sql(single:true, "select * from medias where media_principal='oui' and uid_actualite = '?'", newscontent.rows.uid);
+								if medias.rows.media_type eq "image" then
+							}}
+							<img alt="\{{medias.rows.media_titre_{{lg.rows.lg}}}}" src="\{{medias.rows.media_file}}" class="img-responsive">
+							\{{else}}
+							 <a class="ext-source" href="\{{medias.rows.media_video_code}}"><img alt="\{{medias.rows.media_titre_{{lg.rows.lg}}}}" src="\{{medias.rows.media_file}}" class="img-responsive"></a>
+							 \{{endif}}
+						</div>
+					</div>
+					
+					\{{ /* ----- affichage de la galerie medias ---*/ 
+						for i sql("select * from medias where uid_actualite = '?' and media_principal!='oui' ORDER BY sn_custom", newscontent.rows.uid) do 
+						type="image";
+						if i.rows.media_type eq "image" then
+							classimg="fancybox";
+							hrefimg=i.rows.media_file;
+						elseif i.rows.media_type eq "video" then
+							classimg="ext-source";
+							hrefimg=i.rows.media_video_code_{{lg.rows.lg}};
+							type="iframe";
+						endif
+						restrow = sn_nb1 % 4;
+	
+					}}
+						\{{if sn_nb1 ==1 then}}
+							{{codect="Medias attaches a la nouvelle" .+widget.rows.uid_widget_list;}}
+							<h3 class="colorange margin-y-20">{{sn_ct(allpages:true, code:codect, edit:true)}}</h3>
+						\{{endif}}
+						\{{if sn_nb1 ==1 || restrow ==0 then}}<div class="row">\{{endif}}
+							<div class="col-md-4 mb-30">
+								\{{if i.rows.media_file ne "" && -f i.rows.media_file then}}
+									<div class="w-box">
+										<div class="figure">
+										\{{if i.rows.media_type eq "mp3" then}}
+										<style>
+										.comsoc #audio_file\{{i.rows.uid}} div{margin:0;}
+										.comsoc #content div #audio_file\{{i.rows.uid}}_display_button{margin-top:-30px;}
+										</style>
+										<div id="audio_file\{{i.rows.uid}}"></div>
+										<script>
+											$(document).ready(function(){//
+											jwplayer('audio_file\{{i.rows.uid}}').setup({//
+														  'file': '\{{i.rows.media_file}}',
+														  'width': '100%',height:'30'
+													  });
+												});
+										</script>
+											
+										\{{else}}
+											<a 
+												class="\{{classimg}}" 
+												id="slider-item\{{i.rows.uid}}" 
+												href="\{{hrefimg}}"
+												data-fancybox-group="news_gallery{{widget.rows.uid_widget_list}}"
+												data-fancybox-type="\{{type;}}"
+												title="\{{esc(filter:'html',i.rows{'description_short_'.+lg.rows.lg});}}"
+											>
+												<img class="img-responsive" src="\{{i.rows.media_file}}" data-gallery="{{widget.rows.uid_widget_list}}" data-galleryid="\{{i.rows.uid}}" 
+												/>
+											</a>
+										\{{endif}}	
+										</div>
+									</div>
+								\{{endif}}
+								<p>\{{i.rows.media_description_{{lg.rows.lg}}}}</p>
+							</div>
+						\{{if restrow == 3 || sn_nb1==i.nbrows then}}</div>\{{endif}}
+					\{{endfor}}
+
+					{{codect="Retour nouvelles" .+widget.rows.uid_widget_list;}}
+					<div class="row">
+						<div class="col-md-12 clearfix">
+							<a class="btn_losange_back pull-right mb-20" href="{{dir_nouvelles}}">{{sn_ct(allpages:true, code:codect, edit:true)}}<img width="30" src="/sn_uploads/btn_losange_haut.png" alt="Roger Tremblay"/></a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+\{{
+use fancy_box_initialized;
+
+if !fancy_box_initialized then
+	fancy_box_initialized=true;
+}}
+
+<script>
+$(document).ready(function(){//
+	$('.fancybox,.ext-source').fancybox({
+			helpers		: {
+				title	: { type : 'inside' },
+				buttons	: {}
+			}
+	});	
+
+});
+</script>
+\{{endif}}

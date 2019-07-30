@@ -1,0 +1,281 @@
+{{
+   /*
+    	@title	sed_directory
+    	Description:Use to display the directory
+        @author jg@sednove.com
+    	@version 1.0 2015-05-02 10:00:00 Version initial
+    	@version 1.1 2015-05-02 10:00:00 linked the contact with the widget
+    	@version 1.1 2015-05-02 10:00:00 Display  the widget with default value
+    */
+
+    // includes
+	%include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+	use widget;
+	use lg;
+	use cgidata;
+
+	theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'");
+	
+}}
+
+\{{
+
+    // fn: souligne un terme de recherche dans la source
+    function directory_mark(source, str)
+        if str ne '' then
+            return str_ireplace (str, '<mark>' .+ str .+ '</mark>', source);
+        endif
+        return source;
+    endf
+
+    // fn: determine si une categorie a au moins 1 contact
+    function directory_category_has_contacts(category, contacts)
+        has_contacts = false;
+        for contact in contacts.rows do
+            if contact.uid_category == category.uid then
+                has_contacts = true;
+                continue;
+            endif
+        endfor
+        return has_contacts;
+    endf
+
+    // contexte
+    min_length = 3;
+    user_params = cgidata();
+    has_query = user_params.q != undefined;
+    has_cat_filter = user_params.c != undefined && user_params.c != '';
+    user_query = (has_query) ? user_params.q : '';
+    query_length = length(user_query);
+    has_valid_query = has_query && query_length >= min_length;
+
+    // construction de la requete SQL pour les contacts
+    contacts_sql = "SELECT *, employee_title_{{ lg.rows.lg }} as employee_title FROM sed_directory_contact WHERE is_active = 'yes' AND uid_widget = {{widget.rows.uid_widget_list}} ";
+    if has_valid_query then
+        contacts_sql = contacts_sql .+ " AND contact_name LIKE '%" .+ esc(filter:'sql', user_query) .+ "%'";
+    endif
+    if has_cat_filter then
+        contacts_sql = contacts_sql .+ " AND uid_category = " .+ esc(filter:'sql', user_params.c);
+    endif;
+    contacts_sql = contacts_sql .+ ' ORDER BY sn_custom';
+
+    // lecture des donnees
+  
+    contacts = sql(contacts_sql);
+    uids_categ = "";
+    separ_uids_categ = "";
+    for c sql(contacts_sql) do
+        uids_categ =  uids_categ .+ separ_uids_categ .+ c.rows.uid_category;
+        separ_uids_categ = ",";
+    endfor
+    categories = sql("SELECT uid, name_{{ lg.rows.lg }} as name FROM sed_directory_category WHERE is_active = 'yes' AND  FIND_IN_SET(uid,'?') ORDER BY sn_custom",uids_categ);
+    //  categories = sql("SELECT uid, name_{{ lg.rows.lg }} as name FROM sed_directory_category WHERE is_active = 'yes'  ORDER BY sn_custom");
+}}
+
+<style type="text/css">
+.wdg_directory .contact-wrapper{margin-bottom:10px;}
+.wdg_directory .contact-info h3{padding: 10px 0 5px 0 !important;border-bottom: 0;margin: 0;font-size: 16px;color: #333;margin-bottom:10px;}
+.wdg_directory .contact-info h3 small{font-size: 13px;color: #656565;letter-spacing: 0px;display:block;margin-top:4px;}
+.wdg_directory .contact-info p{font-size: 14px;color: #333;margin-top: 10px;}
+.wdg_directory .contact-info p span.contact-icon{display:block;}
+.wdg_directory .contact-info p.note {font-size: 13px;line-height: 16px; color: #6c6c6c;}
+.wdg_directory .contact-info div.contact-info-segment{color: #333; font-size: 14px;}
+.wdg_directory .contact-icon {display: block;width: 30px;float: left;color: #656565;}
+.wdg_directory .contact-separator{width:auto;display:block;clear:both;}
+.wdg_directory .navbar{color: #282828; border:none;}
+.wdg_directory .navbar label{font-size: 18px; color: #{{theme_color.rows.content_font_color}}; font-weight: normal !important;}
+.wdg_directory .navbar .navbar-collapse{padding-left:0;padding-right:0;}
+.wdg_directory .navbar-form{padding-left:0;padding-right:0;}
+.wdg_directory .navbar-right{margin-right:0;}
+
+
+@media (max-width: 767px) {
+  .cs .wdg_directory .navbar-right {
+    margin-right: 10px;
+  }
+
+  .cs .navbar-form {
+      margin-right: 10px;
+      margin-left: 10px;
+      width: auto;
+  }
+  
+  .cs .wdg_directory .contact-photo img{
+  	max-width:100%;
+  }
+  .cs .wdg_directory .contact-photo{
+      float: left;
+      width: 21%;
+      margin-right: 5%;
+  }
+  .cs .wdg_directory .contact-info{
+      float: left;
+      width: 70%;
+  }
+}
+
+
+</style>
+<script type="text/javascript" src="/js/bootstrap.menu.min.js"></script>
+<script type="text/javascript">
+    $(function(){
+        $('.dd-filter').change(function() {
+            $(this).parents('form').submit();
+        });
+    });
+</script>
+<div class='wdg_directory'>
+    <form role="search" action="?" method="GET">
+    <nav class="navbar navbar-default">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <div class="navbar-form navbar-left">
+                    \{{categories.nb;}}
+                    \{{ if categories.nbrows > 0 then }}
+                    <div class="form-group">
+                        <label>{{ sn_ct(edit:false, 'filter-by-category', prefix:'directory', publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_directory') }}</label>
+                        <select name="c" class="form-control dd-filter">
+                            <option value="">{{ sn_ct(edit:false, 'all-categories', prefix:'directory', publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_directory') }}</option>
+                            \{{ for category in categories.rows do }}
+                            <option \{{ if user_params.c == category.uid then "selected='selected'"; endif; }} value="\{{ category.uid }}">\{{esc(filter:"sql",category.name) }}</option>
+                            \{{ endfor }}
+                        </select>
+                    </div>
+                    \{{ endif }}
+                </div>
+                <div class="navbar-form navbar-right">
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="q" value="\{{ if has_query then user_params.q; endif }}" placeholder="{{ sn_ct(edit:false, 'search-by-name', prefix:'directory', publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_directory') }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary">{{ sn_ct(edit:false, 'btn-search', prefix:'directory', publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_directory') }}</button>
+                    \{{ if has_query || has_valid_query then }}
+                    <a href="?" class="btn btn-default">{{ sn_ct(edit:false, 'btn-reset', prefix:'directory', publish:'/publish/sn_widgets.sn', uids:widget.rows.uid, module:'sed_directory') }}</a>
+                    \{{ endif }}
+                </div>
+            </div>
+        </div>
+    </nav>
+    </form>
+
+\{{ if has_query && !has_valid_query && query_length > 0 then }}
+    <div class="alert alert-warning">{{ sn_ct('error_min_length', prefix:"directory", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid, module:"sed_directory") }}</div>
+\{{ endif }}
+
+\{{    
+    fields = {
+            "is_active":"yes",
+            "uid_category":"1",
+            "contact_name":"Pierre Laplante",
+            "email":"laplante@sednove.com",
+            "phone_number":"450-671-9307 x221",
+            "mobile_number":"514-945-1779",
+            "uid_widget":{{widget.rows.uid_widget_list}}
+    };
+        
+        
+    for l sql("select * from sn_languages where active = 'yes'") do
+                fields{"employee_title_" .+ l.rows.lg} = "Employee title " .+ l.rows.lg;
+               
+    endfor
+	  
+    if contacts.nbrows < 1 then
+        verif_ctx = sql(single:true,"SELECT uid FROM sed_directory_contact WHERE uid_widget='?'",{{widget.rows.uid_widget_list}});
+	    if verif_ctx.nbrows == 0 then
+	         void insert(table:"sed_directory_contact",fields:fields);
+	         contacts=sql("SELECT *, employee_title_{{ lg.rows.lg }} as employee_title FROM sed_directory_contact WHERE is_active = 'yes' AND uid_widget = {{widget.rows.uid_widget_list}} ORDER BY sn_custom");
+	          
+	    endif
+    endif
+        uids_categ = "";
+        separ_uids_categ = "";
+    for c sql(contacts_sql) do
+            uids_categ =  uids_categ .+ separ_uids_categ .+ c.rows.uid_category;
+            separ_uids_categ = ",";
+    endfor
+        categories = sql("SELECT uid, name_{{ lg.rows.lg }} as name FROM sed_directory_category WHERE is_active = 'yes' AND  FIND_IN_SET(uid,'?') ORDER BY sn_custom",uids_categ);
+   
+    }}
+
+\{{
+    for category in categories.rows do
+        if category.nbrows eq '0' then
+         
+        endif
+        if directory_category_has_contacts(category, contacts) then
+}}
+    <h2>\{{ esc(filter:"sql",category.name); }}</h2>
+    <div class="row">
+\{{
+        cid = 0;
+        for contact in contacts.rows do
+            if contact.uid_category == category.uid then
+}}
+
+        \{{ if (cid > 0) && (cid % 4) eq 0 then }}
+        </div><div class="row">
+        \{{ endif }}
+
+        <div class="col-md-3 col-sm-6 col-xs-12 contact-wrapper">
+            \{{if contact.photo ne "" then}}
+            <div class="contact-photo">
+                <img class="img-responsive" src="\{{ contact.photo }}" alt="">
+            </div>
+            \{{ else }}
+            <div class="contact-separator">
+                <img src="/theme/images/separator-staff.gif">
+            </div>
+            \{{ endif }}
+            <div class="contact-info">
+                <h3>
+                    \{{ if has_valid_query then directory_mark(esc(filter:"sql",contact.contact_name), user_query); else esc(filter:"sql",contact.contact_name); endif }}
+                    \{{ if contact.employee_title ne '' then }}
+                    <small>\{{esc(filter:"sql",contact.employee_title); }}</small>
+                    \{{ endif }}
+                </h3>
+                \{{ if contact.email ne '' then }}
+                <div class="contact-info-segment">
+                    <span class="contact-icon"><i class="fa fa-envelope-o"></i></span>
+                    <a href="mailto:\{{ contact.email }}">\{{ contact.email }}</a>
+                </div>
+                \{{ endif }}
+                \{{ if contact.phone_number ne '' then }}
+                <div class="contact-info-segment"">
+                    <span class="contact-icon"><i class="fa fa-phone"></i></span>
+                    <span>\{{esc(filter:"sql",contact.phone_number); }}</span>
+                </div>
+                \{{ endif }}
+                \{{ if contact.mobile_number ne '' then }}
+                <div class="contact-info-segment"">
+                    <span class="contact-icon"><i class="fa fa-mobile"></i></span>
+                    <span>\{{esc(filter:"sql",contact.mobile_number); }}</span>
+                </div>
+                \{{ endif }}
+                \{{ if contact.profile_linkedin ne "" then }}
+                <div>
+                    <span class="contact-icon"><i class="fa fa-linkedin"></i></span>
+                    <a href="\{{ esc(filter:"sql",contact.profile_linkedin); }}">{{sn_ct("Linkedin", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid, module:"sed_directory")}}</a>
+                </div>
+                \{{ endif }}
+            </div>
+        </div>
+    \{{
+                cid++;
+            endif
+        endfor
+    }}
+
+    </div>
+\{{
+        endif
+    endfor
+}}

@@ -1,0 +1,155 @@
+{{
+     /*
+    	@title	sed_booxi
+    	Description:Use to book  appointement
+        @author olivier@sednove.com
+    	@version 1.0 2016-06-23 12:00:00 Version initial
+    
+    */
+    use lg;
+    use widget;
+    sn_theme_color = sql(single:true,"select * from sn_theme_color");
+    radius = sn_theme_color.rows.border_radius;
+    primary_text_color = sn_theme_color.rows.btn_primary_text_color;
+    reg_text_color = sn_theme_color.rows.btn_default_text_color;
+    btn_primary_bck_color = sn_theme_color.rows.btn_primary_bck_color;
+    btn_primary_border_color = sn_theme_color.rows.btn_primary_border_color;
+    content = sql(single:true, "select * from sed_booxi where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+    fields = {
+               "alignment":"btn_centered",
+               "booxi_key":"178271z23G8u7889d938FW1e80C3007p",
+               "uid" : widget.rows.uid_widget_list,
+               "uid_widget":widget.rows.uid_widget_list,
+               "type":"btn-primary",
+               "format":"btn-rg-booxi"
+    };
+        
+        for l sql("select * from sn_languages where active = 'yes'") do
+                fields{"btn_text_" .+ l.rows.lg} = "Reservation " .+ l.rows.lg;
+        endfor
+        
+	    if content.rows.uid eq '' then
+	        verif_ctx = sql(single:true,"SELECT uid FROM sed_booxi WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_booxi",fields:fields);
+	        endif
+	        content = sql(single:true, "select * from sed_booxi where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+        endif
+    
+    type = "";
+    type = content.rows.type;
+
+    format = "";
+    format = content.rows.format;
+      
+    alignment = "";
+    alignment = content.rows.alignment;
+}}
+
+<style type="text/css">
+ 
+    .btn_centered{
+        margin: 0 auto;
+        display: block;
+        width:172px;
+        height:50px;
+        padding: 0;
+    }
+
+    .btn_right {
+        position: absolute;
+        right: 0px;
+    }
+
+    .btn_left {
+       left: 0px; 
+    }
+    
+    .btn_block_booxi, .btn_block_booxi div {
+        width: 100%;
+    }
+    
+     .btn-sm-booxi .button_inner{
+     
+    font-size: 12px!important; 
+    line-height: 1.5!important; 
+    padding: 5px 10px!important; 
+    }
+    
+    
+    .btn-primary .bxe_book_button {
+        border: 1px solid #{{btn_primary_border_color}} !important; 
+        background-color: #{{btn_primary_bck_color}} !important; 
+        width:172px;
+        height:50px;
+        color: #{{primary_text_color}};
+    }
+    
+    .btn-primary:hover .bxe_book_button {
+        background-color: #{{btn_primary_bck_color}} !important; 
+        border: 1px solid #{{btn_primary_border_color}} !important; 
+        width:172px;
+        height:50px;
+        color: #{{primary_text_color}};
+    }
+    
+    .btn-default .bxe_book_button {
+        color: #5e5e5e!important;
+        background-color: #ededed!important;
+        border: 1px solid #ededed!important;
+        padding:0;
+        color: #{{btn_default_text_color}};
+    }
+    .btn {
+        white-space: normal!important;
+    }
+    .btn-lg-boox{
+    padding: 0 0!important;
+    }
+    
+    .btn-default:hover .bxe_book_button:hover {
+        color: ##5e5e5e!important;
+        background: #d4d4d4!important;
+        border: 1px solid #d4d4d4!important;
+        padding:0;
+        color: #{{btn_default_text_color}};
+    }
+    .custom .bxe_book_button  .button_inner {
+    background-color: #{{content.rows.color_text }}!important;
+    
+    }
+   .custom .bxe_book_button  .ico .ico_inner {
+    background-color: #{{content.rows.color_text }}!important;
+    }
+    .bxe_book_button {
+    border: 1px solid #{{content.rows.color_text }}!important;
+    }
+</style>
+
+<link href="https://www.booxi.com/api/style.css" type="text/css" rel="stylesheet">
+<script src="https://www.booxi.com/api/bxe_core.js"></script>
+
+<div id="bx-viewport" class="bx_viewport"></div>
+<div class="btn {{alignment}} {{format}} {{type}} btn_booxi">
+    <div class="btn_booxi bx_book_btn bxe_book_button" onclick="bxe_core.clickBMW(this)" data-key="{{content.rows.booxi_key}}"></div>
+</div>
+
+<script>
+    window.bxApiInit = function(){
+        bxe_core.init({
+            bxLang: '{{(lg.rows.lg eq 'en') ? 'eng':'fre'}}',
+            btn_text_eng: "{{esc(filter: "html",content.rows.btn_text_en);}}",
+            btn_text_fre: "{{esc(filter: "html",content.rows.btn_text_fr);}}",
+            bxZIndex_ovr: '9999',
+            bxExtWin: 'false' {{if content.rows.icon ne "" then }},
+            customize_button: {
+                icon_path:"{{content.rows.icon}}?size=60x38&crop",
+                button_color:"#ffffff",
+                use_important: true
+            }{{endif}}
+        });
+    };
+    
+</script> 
+        
+        

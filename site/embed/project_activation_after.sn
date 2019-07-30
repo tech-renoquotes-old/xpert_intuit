@@ -1,0 +1,38 @@
+use SEND_EMAIL_PROJECT_ACTIVATION; // This is set in another trigger before the save
+if (cgidata.uid ne '' && cgidata.status eq 'active' && SEND_EMAIL_PROJECT_ACTIVATION) then
+    FORCE_EMAIL_PROD = true;
+   	project::activateProject(cgidata.uid);
+
+	owner_id = sql(single:true,"SELECT sn_muid FROM sr_project WHERE uid = ?", cgidata.uid);
+	owner_id = owner_id.rows.sn_muid;
+	owner_name = sql(single:true,"SELECT username FROM sn_users WHERE uid = ?",owner_id);
+	owner_name = owner_name.rows.username;
+
+	void sql("UPDATE sr_project SET activated_by = '?' WHERE uid = '?'", owner_name, cgidata.uid);
+	void insert(table:'sr_debug', fields:{'description':'Activated Project '.+cgidata.uid,'text':'cgidata.sn_muid=' .+ owner_id});
+	
+//Give stats to the person who activated the project
+	today_myself = sql(single:true, "SELECT count(uid) as number FROM sr_project WHERE activated_by = '?' AND active_date > curdate()", owner_name);
+	today_team = sql(single:true, "SELECT count(uid) as number FROM sr_project WHERE active_date > curdate()");
+	this_week_team = sql(single:true, "SELECT count(uid) as number FROM sr_project WHERE yearweek(active_date) = yearweek(curdate())");
+	last_week_team = sql(single:true, "SELECT count(uid) as number FROM sr_project WHERE yearweek(active_date) = (yearweek(curdate())-1) AND active_date < (DATE_SUB(curdate(), INTERVAL 6 DAY))");
+	last_year_team = sql(single:true, "SELECT count(uid) as number FROM sr_project WHERE year(active_date) = (year(curdate())-1) AND week(active_date) = (week(curdate())+1)");
+	'<div class="alert alert-success">Nombre de projet activé aujourd\'hui par: 
+	Vous: '.+today_myself.rows.number.+' 
+	L\'équipe: '.+today_team.rows.number.+' 
+	Cette semaine: '.+this_week_team.rows.number.+' 
+	La semaine passée au même jour: '.+last_week_team.rows.number.+' 
+	La même semaine de l\'année passée: '.+last_year_team.rows.number.+' </div>';
+endif
+
+
+use REWRITE_PROJECT; // This is set in another trigger before the save
+if (cgidata.rewritten eq 'yes' && cgidata.uid ne '' && REWRITE_PROJECT) then
+	void sql("DELETE from sr_project_contractor WHERE uid_project = ? AND isnull(hidden) AND isnull(accepted) AND isnull(accepted_rebate)", cgidata.uid);
+	'<div class="alert alert-danger">Le projet sera renvoyé aux entrepreneurs</div>';
+endif
+
+//If project has a lead_price but is still "new", show alert to make sure it's not a mistake
+if (cgidata.lead_price ne '' && cgidata.lead_price ne '0' && cgidata.status eq 'new') then
+	'<div class="alert alert-danger">Ce projet a un prix mais n\'a pas été activé.  Si c\'est une erreur, veuillez activer ce projet.</div>';
+endif

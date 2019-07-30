@@ -1,0 +1,243 @@
+{{
+    /*
+        @title contractor_add_credit_card
+        Description: This widget allows to add a credit card to the contractor account.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-26
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg ;
+}}
+<style>
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+
+    .wtooltip {
+        display: none;
+        min-width: 200px;
+
+    }
+
+.ui-widget.info-dialog {
+    font-family: Verdana,Arial,sans-serif;
+    font-size: .8em;
+}
+
+.ui-widget-content.info-dialog {
+    background: #F9F9F9;
+    border: 1px solid #2b84c1;
+    color: #222222;
+}
+
+.ui-dialog.info-dialog {
+    outline: 0 none;
+    padding: 0 !important;
+    position: absolute;
+}
+
+.ui-dialog.info-dialog .ui-dialog-content {
+    background: none repeat scroll 0 0 transparent;
+    border: 0 none;
+    overflow: auto;
+    position: relative;
+    padding: .8em;
+    margin: 0;
+}
+
+.ui-dialog.info-dialog .ui-widget-header {
+    background: #2b84c1;
+    border: 0;
+    color: #fff;
+    font-weight: normal;
+
+}
+
+.ui-dialog.info-dialog .ui-dialog-titlebar {
+    padding: 0.1em .5em;
+    position: relative;
+    font-size: 2em;
+    margin-bottom:10px;
+}
+
+</style>
+
+\{{
+    cc_types = sql(single:true,"
+        SELECT  addoptions_{{lg.rows.lg}} AS addoptions,
+                addvalues 
+        FROM sn_fields
+        WHERE field_name='type'
+            AND uid_sn_tables=(SELECT uid FROM sn_tables WHERE table_name='sr_cc' LIMIT 1)"
+    );    
+    cc_type_values = explode(",",cc_types.rows.addvalues);
+    cc_type_options = explode(",",cc_types.rows.addoptions);
+}}
+<div id="ajax_save_cc_error" class="alert alert-danger" style="display:none"> 
+    {{sn_ct("contractor_payment_ref Erreur lors de la sauvegarde de votre carte de crédit, vérifiez les informations", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<h2 class="mb-md">
+    {{sn_ct("contractor_add_credit_card Liste des cartes enregistrées dans votre dossier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+</h2>
+<a href="{{pages(table:'pages','sr_contractor_credit_cards',lg.rows.lg)}}" class="btn btn-primary mb-sm">
+    {{sn_ct(edit:false,"contractor_add_credit_card Annuler", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+</a>
+
+<form action="{{ sn_pages('ajax_add_cc', lg.rows.lg, table:'ressources')}}" id="add_cc" name="add_cc" method="POST">
+    
+    <fieldset class="form-group">
+        <label for="type">
+                {{sn_ct("contractor_add_credit_card Type de carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+        </label>   
+    
+        <select name="type" class="form-control">
+            <option value=""> {{sn_ct(edit:false,"contractor_add_credit_card Choisir une carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+            \{{for cc_type in cc_type_values do}}
+                <option value="\{{cc_type}}">\{{cc_type_options[sn_nb]}}</option>  
+            \{{endfor}}
+        </select>
+        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="type"></span>
+    </fieldset>
+    <fieldset class="form-group">
+        <label for="name">
+            {{sn_ct("contractor_add_credit_card Nom du détenteur", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+        </label>
+
+        <input class="form-control" type="text" name="name" id="name" value="">
+        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="name"></span>
+    </fieldset>
+    
+    <fieldset class="form-group">
+        <label for="card_number">
+            {{sn_ct("contractor_add_credit_card Numéro de carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+        </label>
+        <input class="form-control" type="text" name="card_number" id="card_number" value="">
+        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="card_number"></span>
+    </fieldset>
+    
+    <fieldset class="form-group">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="exp">
+                    {{sn_ct("contractor_add_credit_card Expiration", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                </label>
+
+                
+                <select name="exp_year" class="form-control">
+                    <option value="">{{sn_ct(edit:false,"contractor_add_credit_card Année", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    \{{current_year = datetime(format:"%Y")}}
+                    \{{for (i=0;i<10;i++) do}}
+                        <option value="\{{resub(current_year + i, "^(\d{2})(\d{2})$", "$2")}}">\{{current_year + i}}</option>  
+                    \{{endfor}}
+                </select>
+                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="exp_year"></span>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="exp">
+                      <br>
+                </label>
+                
+                <select name="exp_month" class="form-control">
+                    <option value="">{{sn_ct(edit:false,"contractor_add_credit_card Mois", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="01">01 - {{sn_ct(edit:false,"Janvier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="02">02 - {{sn_ct(edit:false,"Février", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="03">03 - {{sn_ct(edit:false,"Mars", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="04">04 - {{sn_ct(edit:false,"Avril", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="05">05 - {{sn_ct(edit:false,"Mai", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="06">06 - {{sn_ct(edit:false,"Juin", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="07">07 - {{sn_ct(edit:false,"Juillet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="08">08 - {{sn_ct(edit:false,"Août", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="09">09 - {{sn_ct(edit:false,"Septembre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="10">10 - {{sn_ct(edit:false,"Octobre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="11">11 - {{sn_ct(edit:false,"Novembre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                    <option value="12">12 - {{sn_ct(edit:false,"Décembre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                </select>
+                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="exp_month"></span>
+            </div>
+            <div class="col-md-4">
+                    <label for="cvv">
+                        {{sn_ct("contractor_add_credit_card CVV", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}*
+                    </label>
+        		        <a href="javascript:void(0);" onclick="show_tooltip(this);" class="badge" id="badge" ><i class="fa fa-question" ></i></a>
+                        <div class="wtooltip" title="CVV">
+        		            <p>{{sn_ct("contractor_add_credit_card CVV help", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                        </div>
+            
+                    <input class="form-control" type="text" name="cvv" id="cvv" value="">
+                    <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="cvv"></span>
+                </div>
+            </div>
+    </fieldset>
+    
+
+    <input class="btn btn-primary" type="submit" value="{{sn_ct(edit:false,"contractor_add_credit_card Enregistrer la carte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"> 
+</form>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_cc_validator.sn";
+    // validate client side
+    validator.validateJS(form:'add_cc');
+}}
+
+<script>
+
+function show_tooltip(bo){
+    
+   var t=$(bo).next('.wtooltip');
+    
+    if(t.length){//
+       // console.log("Creating dialog");
+        console.log(t);
+        $(bo).data('wtooltip',t);
+        t.dialog({//
+            dialogClass:'info-dialog',
+            width:'auto',
+            height:'auto',
+            resizable:false,
+            position:{//
+                my: 'left top',
+                at: 'right top',
+                of: bo
+            },
+            close:function(){//
+                $(this).dialog('destroy');
+            }
+        });
+    }else{//
+        $(bo).data('wtooltip').dialog('close');
+    }
+}
+    
+</script>
+
+
+<script>
+    // Bind add_client form to ajaxform plugin to send the form via ajax
+    $('form[name=add_cc]').ajaxForm({
+        success:function(data, statusText, xhr){
+            alert(xhr.getResponseHeader("X-debug"));
+            if (xhr.getResponseHeader("X-save_cc_success")){
+                location.reload(true);
+            }
+            else if (xhr.getResponseHeader("X-save_cc_error")){
+                $("#ajax_save_cc_error").show();
+            }
+        }    
+    });    
+    
+    $(".close").on("click", function(){
+        $(this).parents(".alert").hide(); 
+    });
+</script>

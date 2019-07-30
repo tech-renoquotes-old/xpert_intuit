@@ -1,0 +1,23 @@
+{{
+    table_dest = 'sr_transaction';
+    table_from = 'tbl_invoicing';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idtbl_invoicing',
+        'uid_contractor' : 'id_entrepreneur',
+        'amount'        : 'montant',
+        'sn_cdate'      : 'timestamp',
+        'uniqueref'     : 'uniqueref',
+        'completed'     : "'yes'"
+    };
+    
+    %include 'migration.sn';
+    
+    

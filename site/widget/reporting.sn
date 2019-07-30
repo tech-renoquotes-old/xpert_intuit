@@ -1,0 +1,2911 @@
+<meta name="robots" content="noindex">
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+    use extranet_user;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+}}
+
+<style>
+#contractors {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#contractors td, #customers th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#contractors tr:nth-child(even){background-color: #f2f2f2;}
+
+#contractors tr:hover {background-color: #ddd;}
+
+/*#contractors tr:last-child {*/
+/*    padding-top: 12px;*/
+/*    padding-bottom: 12px;*/
+/*    text-align: left;*/
+/*    background-color: #4CAF50;*/
+/*    color: white;*/
+/*}*/
+
+#contractors th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: center;
+    background-color: #4CAF50;
+    color: white;
+}
+
+</style>
+
+\{{       
+cgidata = cgidata();
+
+fullname=user.firstname .+ " " .+ user.lastname;
+
+if length(fullname) > 2 then
+}}
+
+\{{
+    if cgidata.add_service then
+        void sql("UPDATE sr_contractor_service SET approved = 'yes' WHERE uid = ?", cgidata.uid_service);
+    endif
+    
+    if cgidata.remove_service then
+        
+        automail::notifyContractorRefuseService(cgidata.uid_service);
+        void sql("DELETE FROM sr_contractor_service WHERE uid = ?", cgidata.uid_service);
+    endif
+}}
+
+\{{
+    if cgidata.code eq 'connect_contractor' then
+        if cgidata.connector then
+            project::connectProjectContractor(cgidata.id_project, cgidata.id_contractor);
+        endif
+        }}
+        <form action="" method="GET">
+            <input type="hidden" name="code" value="connect_contractor">
+            <input type="text" name="id_contractor" placeholder="id entrepreneur">
+            <input type="text" name="id_project" placeholder="id projet">
+            <input type="submit" name="connector">
+        </form>
+    \{{
+    endif
+}}
+
+{{if lg.rows.lg eq 'fr' then}}
+<a href="/widgets/en/reporting.snc?code=\{{cgidata.code}}">Go to the English version</a><br>
+<a href="/widgets/fr/dashboard_widget.snc">Revenir au menu</a><br>
+{{else}}
+<a href="/widgets/fr/reporting.snc?code=\{{cgidata.code}}">Aller à la version en français</a><br>
+<a href="/widgets/en/dashboard_widget.snc">Go back to main menu</a><br>
+{{endif}}
+
+\{{
+    if cgidata.code eq 'contractors_owing_balance' then
+        if cgidata.service then
+            service = "INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid AND cs.uid_service = " .+ cgidata.service;
+        endif
+        
+        }}
+        
+        <form action="" method="post">
+            <select name="service">
+                <option value="">Choisir un service</option>
+                \{{services = sql("SELECT uid, name_long_fr FROM sr_service WHERE active = 'yes' ORDER BY name_long_fr");
+                for s in services.rows do}}
+                    <option value="\{{s.uid}}">\{{s.name_long_fr}}</option>
+                \{{endfor}}
+            </select>
+            <input type="submit">
+        </form>
+        
+        \{{
+    
+    
+        project::create_table_sql("
+            
+            SELECT c.uid, c.company_name, sum(i.amount) as 'Projets impayés', 
+            (SELECT sum(pc.lead_price) FROM sr_project_contractor pc INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid WHERE cr.accepted = 'yes' AND (cr.completed is null OR cr.completed <> 'yes') AND pc.uid_contractor = c.uid) as 'Crédits',
+            (SELECT format(sum(t.amount),2) FROM sr_transaction t WHERE t.uid_contractor = c.uid) as 'Total payé',
+            c.credit_threshold
+            FROM sr_invoice i
+            INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+            INNER JOIN sr_contractor c ON c.uid = pc.uid_contractor
+            " .+ service .+ "
+            WHERE i.completed is null
+            AND c.active = 'yes'
+            AND c.verified = 'yes'
+            AND c.credit_threshold = 50
+            GROUP BY c.uid
+            ORDER BY sum(i.amount) DESC
+            
+            
+        ");
+    
+    
+    endif
+    
+    if cgidata.code eq 'show_projects' then
+        if cgidata.show_projects_result then
+            project::create_table_sql("
+                SELECT p.active_date, c.gender, c.firstname, c.lastname, c.email, a.phone1, a.phone2, p.description, p.lead_price, sum(pc.lead_price) as vente, p.adwords_campaign
+                FROM sr_project p
+                INNER JOIN sr_client c ON c.uid = p.uid_client
+                INNER JOIN sr_address a ON a.uid = p.uid_address
+                LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                WHERE p.uid_service = '" .+ cgidata.service .+ "'
+                AND p.active_date >= '" .+ cgidata.start_date .+ "'
+                AND p.active_date <= '" .+ cgidata.end_date .+ "'
+                GROUP BY p.uid
+            ");
+        endif
+        
+        services = sql("SELECT uid, name_fr FROM sr_service WHERE active = 'yes' ORDER BY name_fr ASC");
+        
+        }}
+        <form action="" method="POST">
+            Début <input type="date" name="start_date">
+            Fin <input type="date" name="end_date">
+            <select name="service">
+                \{{for s in services.rows do}}
+                    <option value="\{{s.uid}}">\{{s.name_fr}}</option>
+                \{{endfor}}
+            </select>
+            <input type="submit" name="show_projects_result">
+        </form>
+    \{{
+    endif
+    
+    if cgidata.code eq 'campaign_adwords' then
+        report = "SELECT p.lead_price, p.sn_cdate, sum(pc.lead_price) as sales, p.uid, p.adwords_kw, p.adwords_adgroup
+            FROM sr_project p
+            LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+            WHERE p.adwords_campaign = " .+ cgidata.campaign .+"
+            GROUP BY p.uid
+            UNION (
+                SELECT sum(pc.lead_price) as sales, 'total' as lead_price, '' as sn_cdate, '' as uid, '' as adwords_k2, '' as adwords_adgroup
+                FROM sr_project p
+                INNER JOIN sr_project_contractor pc on pc.uid_project = p.uid
+                WHERE p.adwords_campaign = " .+ cgidata.campaign .+"
+            )
+            ORDER BY sn_cdate DESC";
+        project::create_table_sql(report);
+    endif
+    
+    if cgidata.code eq 'add_monthly' then
+        }}
+        <form action="" method="post">
+            <input type="text" name="uid_contractor" placeholder="Uid de l'expert">
+            <input type="number" name="amount" placeholder="combien">
+            <input type="submit">
+        </form>
+        \{{
+        if cgidata.uid_contractor then
+            pcuid = insert(
+                table:"sr_project_contractor",
+                fields:{
+                    "uid_contractor":cgidata.uid_contractor,
+                    "uid_project": '177'
+                }
+            );
+            void insert(
+                table:"sr_invoice",
+                fields:{
+                    "uid_project_contractor": pcuid.uid,
+                    "amount":cgidata.amount
+                }
+            );
+            '<img src="http://www.reactiongifs.com/r/make-it-rain-dollars.gif">';
+        endif
+    endif
+    
+    if cgidata.code eq 'who_owes_what' then
+        total = 0;
+        for contractor sql(contractor::getAllContractorsCurrentBillingTotalsQuery().+" 
+            WHERE c.active = 'yes'
+            and verified = 'yes'
+            ")
+        do
+        subtotal = contractor.rows.invoices_total - contractor.rows.credits_total - contractor.rows.aff_total;
+        total = total + fmax(subtotal,0);
+        endfor
+        total;
+    endif
+    
+    if cgidata.code eq 'provider_list' then
+        report = sql("
+            SELECT c.contact_email, c.contact_lg, c.company_name, c.contact_firstname, c.contact_lastname, c.contact_gender, c.uid, c.contact_phone
+            FROM sr_contractor c
+            WHERE c.active = 'yes'
+            AND c.verified = 'yes'
+            ORDER BY c.uid ASC
+            ");
+        }}
+        <table id="contractors">
+            <th>Uid</th>
+            <th>Fournisseur</th>
+            <th>Courriel</th>
+            <th>Téléphone</th>
+            <th>Genre</th>
+            <th>Prénom</th>
+            <th>Nom</th>
+            <th>Langue</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td>\{{r.uid}}</td>
+                <td>\{{r.company_name}}</td>
+                <td>\{{r.contact_email}}</td>
+                <td>\{{r.contact_phone}}</td>
+                <td>\{{r.contact_gender}}</td>
+                <td>\{{r.contact_firstname}}</td>
+                <td>\{{r.contact_lastname}}</td>
+                <td>\{{r.contact_lg}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{endif
+    
+    if cgidata.code eq 'export_clients' then
+        report = sql("
+            SELECT year(c.sn_cdate) as year, c.gender, c.firstname, c.lastname, a.phone1, p.description
+            FROM sr_client c
+            INNER JOIN sr_project p ON p.uid_client = c.uid
+            INNER JOIN sr_address a ON a.uid = p.uid_address
+            INNER JOIN sr_city ci ON ci.uid = a.uid_city
+            INNER JOIN sr_territory t ON t.uid = ci.uid_territory
+            WHERE year(c.sn_cdate) >= 2016
+            AND c.sn_cdate < '2018/07/01'
+            AND t.region = 'Montreal'
+            AND p.uid_service = 121
+            GROUP BY c.uid
+            ORDER BY c.uid ASC
+            LIMIT 308
+            ");
+
+        }}
+        <table>
+            <th>Année</th>
+            <th>Genre</th>
+            <th>Prénom</th>
+            <th>Nom</th>
+            <th>Téléphone</th>
+            <th>Projet</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.year}}</td>
+                    <td>\{{r.gender}}</td>
+                    <td>\{{r.firstname}}</td>
+                    <td>\{{r.lastname}}</td>
+                    <td>\{{r.phone1}}</td>
+                    <td>\{{r.description}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'new_projects_non_activated' then
+        if cgidata.datedif then
+            datedif = cgidata.datedif;
+        else
+            datedif = 1;
+        endif
+        report = sql("
+            SELECT p.uid, p.uid_client, p.description, p.sn_cdate, p.file1, p.file2, p.file3, p.file4, p.file5, p.adwords_url, p.additional_comments, p.estimate_duration, p.property_type, p.shared_budget, a.street_no, a.street, a.city, a.zip
+            FROM sr_project p
+            INNER JOIN sr_address a ON a.uid = p.uid_address
+            WHERE p.status = 'new'
+            AND DATEDIFF(curdate(), p.sn_cdate) = ?
+            ORDER BY p.uid_client ASC
+            ", datedif);
+        }}
+        <form action="" method="post">
+            <input type="text" name="datedif" placeholder="Il y a combien de jour">
+            <input type="submit">
+        </form>
+        <table id="contractors">
+            <th>Uid client</th>
+            <th>Uid projet</th>
+            <th>Date reçu</th>
+            <th>Description</th>
+            <th>Adresse</th>
+            <th>Commentaires additionnel</th>
+            <th>Date voulu</th>
+            <th>Budget</th>
+            <th>Propriété</th>
+            <th>Fichier(s)</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td><a href="/intranet/fr/recherche-client?subject=\{{r.uid_client}}" target="_blank">\{{r.uid_client}}</a></td>
+                    <td>\{{r.uid}}</td>
+                    <td>\{{r.sn_cdate}}</td>
+                    <td>\{{r.description}}</td>
+                    <td>\{{r.street_no .+ ' ' .+ r.street .+ ', ' .+ r.city .+ ', ' .+ r.zip}}</td>
+                    <td>\{{r.additional_comments}}</td>
+                    <td>\{{r.estimate_duration}}</td>
+                    <td>\{{r.shared_budget}}</td>
+                    <td>\{{r.property_type}}</td>
+                    <td>
+                        <a href="\{{r.file1}}" target="_blank">\{{r.file1}}</a>
+                        <a href="\{{r.file2}}" target="_blank">\{{r.file2}}</a>
+                        <a href="\{{r.file3}}" target="_blank">\{{r.file3}}</a>
+                        <a href="\{{r.file4}}" target="_blank">\{{r.file4}}</a>
+                        <a href="\{{r.file5}}" target="_blank">\{{r.file5}}</a>
+                    </td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'cc_last_21days' then
+        report = sql("
+            SELECT u.Utilisateur, date(c.timestamp) as date_call, min(c.timestamp) as min, max(c.timestamp) as max, count(*) as count, sum(if(c.Entrepreneur_appel_resultat = 2,1,0)) as emails, 
+            sum(if(a.statut = 5,1,0)) as subs, sum(if(c.Entrepreneur_appel_resultat = 3,1,0)) as refused, 
+            sum(if(c.Entrepreneur_appel_resultat = 10,1,0)) as deleted, sum(if(c.Entrepreneur_appel_resultat = 16,1,0)) as wrong_number,
+            TIMESTAMPDIFF(MINUTE, min(c.timestamp), max(c.timestamp)) as hours
+            FROM tbl_appels_entrepreneurs a
+            INNER JOIN tbl_commentaires c ON c.ID_Entrepreneur_Potentiel = a.idtbl_appels_entrepreneurs
+            INNER JOIN tbl_utilisateurs u ON u.idTBL_Utilisateurs = c.ID_Utilisateur
+            WHERE DATEDIFF(curdate(), c.timestamp) <= 21
+            GROUP BY date(c.timestamp), u.Utilisateur
+            ORDER BY u.Utilisateur ASC, date_call DESC
+            ");
+        }}
+        <table id="contractors">
+            <th>Utilisateur</th>
+            <th>Date</th>
+            <th># Heure</th>
+            <th># Appels</th>
+            <th># Courriels</th>
+            <th># Inscrits</th>
+            <th># Refus</th>
+            <th># Supprimer</th>
+            <th># Mauvais numéro</th>
+            \{{for r in report.rows do
+            hours = fmax(round((r.hours/60)*100)/100,0.1)
+            }}
+                <tr>
+                    <td>\{{r.Utilisateur}}</td>
+                    <td>\{{r.date_call}}</td>
+                    <td>\{{r.min}} - \{{r.max}} (\{{hours}})</td>
+                    <td>\{{r.count}} (\{{round(r.count/hours*10)/10}})</td>
+                    <td>\{{r.emails}} (\{{round(r.emails/hours*10)/10}})</td>
+                    <td>\{{r.subs}} (\{{round(r.subs/hours*10)/10}})</td>
+                    <td>\{{r.refused}} (\{{round(r.refused/hours*10)/10}})</td>
+                    <td>\{{r.deleted}} (\{{round(r.deleted/hours*10)/10}})</td>
+                    <td>\{{r.wrong_number}} (\{{round(r.wrong_number/hours*10)/10}})</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'satisfaction_survey' then
+        if cgidata.hide then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'no' WHERE uid = ?", cgidata.pcuid);
+        endif
+        if cgidata.show then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'yes', client_comment = '?' WHERE uid = ?", cgidata.comments, cgidata.pcuid);
+        endif
+        if cgidata.show_email then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'yes', client_comment = '?' WHERE uid = ?", cgidata.comments, cgidata.pcuid);
+            automail::ask_client_for_review(cgidata.pcuid);
+        endif
+    
+        report = sql("
+            SELECT p.uid as puid, c.uid as cuid, pc.client_satisfaction, pc.client_comment, c.active, c.company_name, pc.contractor_reply, cr.uid, cr.reason, cr.explanation, cr.accepted, cr.completed, pc.uid as pcuid, cl.uid as cluid
+            FROM sr_project p
+            INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+            INNER JOIN sr_contractor c ON c.uid = pc.uid_contractor
+            INNER JOIN sr_client cl ON cl.uid = p.uid_client
+            LEFT JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+            WHERE pc.client_satisfaction IS NOT NULL
+            AND (pc.comment_verified IS NULL OR pc.comment_verified = '')
+            GROUP BY pc.uid
+            ORDER BY p.uid ASC
+            ");
+        //mettre ensemble les sondages pour les mêmes projets
+        }}
+        <table id="contractors">
+            <th>Projet</th>
+            <th>Entrepreneur</th>
+            <th>Note de satisfaction</th>
+            <th>Commentaire du client</th>
+            <th>Réponse de l'entrepreneur</th>
+            <th>Crédit</th>
+            <th>Action</th>
+            \{{for r in report.rows do
+                next = r.puid;
+                if next eq previous then
+                    style = "style='border-left:5px solid; border-right:5px solid;'";
+                else
+                    style = "style='border-top:5px solid; border-left:5px solid; border-right:5px solid;'";
+                endif
+                previous = next;
+            }}
+                <tr \{{style}}>
+                    <form action="" method="POST">
+                        <td><a href="/intranet/fr/recherche-client?subject=\{{r.cluid}}" target="_blank">\{{r.puid}}</a></td>
+                        <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.cuid}}" target="_blank">\{{r.cuid}} - \{{r.company_name}}</a></td>
+                        <td>\{{r.client_satisfaction}}</td>
+                        <td><textarea style="width:500px; height:150px;" name="comments">\{{ucfirst(r.client_comment)}}</textarea></td>
+                        <td>\{{r.contractor_reply}}</td>
+                        <td>\{{r.reason}} - \{{r.explanation}}<br>Accepté: \{{r.accepted}}<br>Facturé: \{{r.completed}}</td>
+                        <td>
+                            <input type="hidden" name="pcuid" value="\{{r.pcuid}}">
+                            <input type="submit" name="hide" value="Cacher">
+                            <br><br>
+                            <input type="submit" name="show" value="Afficher">
+                            <br><br>
+                            <input type="submit" name="show_email" value="Courriel + afficher">
+                        </form>
+                    </td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+        
+    endif
+    
+    if cgidata.code eq 'stats_complaints' then
+        report = sql("
+            SELECT sum(if(source = 'other',1,0)) as other, sum(if(source = 'quality_minor',1,0)) as quality_minor, 
+            sum(if(source = 'quality_major',1,0)) as quality_major, sum(if(source = 'quote',1,0)) as quote, 
+            sum(if(source = 'communication',1,0)) as communication, sum(if(source = 'schedule',1,0)) as schedule, 
+            sum(if(source = 'comments',1,0)) as comments, month(sn_cdate) as month, year(sn_cdate) as year, count(*) as total
+            FROM sr_complaints
+            GROUP BY month(sn_cdate), year(sn_cdate)
+            ORDER BY sn_cdate DESC
+            ");
+        }}
+        <table id="contractors">
+            <th>Mois / Année</th>
+            <th>Total</th>
+            <th>Qualité - Mineur</th>
+            <th>Qualité - Majeur</th>
+            <th>Communication</th>
+            <th>Échéancier</th>
+            <th>Commentaires</th>
+            <th>Autre</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.month}}/\{{r.year}}</td>
+                    <td>\{{r.total}}</td>
+                    <td>\{{r.quality_minor}}</td>
+                    <td>\{{r.quality_major}}</td>
+                    <td>\{{r.communication}}</td>
+                    <td>\{{r.schedule}}</td>
+                    <td>\{{r.comments}}</td>
+                    <td>\{{r.other}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'new_contractors_week' then
+        report = sql("
+            SELECT year(c.sn_cdate) as year, month(c.sn_cdate) as month, c.contact_lg, count(*) as total, a.activated, sum(if(c.contact_lg = 'fr',1,0)) as sub_fr, sum(if(c.contact_lg = 'en',1,0)) as sub_en, a.sub_fr as act_fr, a.sub_en as act_en
+            FROM sr_contractor c
+            INNER JOIN (
+                SELECT count(*) as activated, year(c.sn_cdate) as year, month(c.sn_cdate) as month, sum(if(c.contact_lg = 'fr',1,0)) as sub_fr, sum(if(c.contact_lg = 'en',1,0)) as sub_en
+                FROM sr_contractor c
+                WHERE c.active = 'yes'
+                AND c.verified = 'yes'
+                GROUP BY year(c.sn_cdate), month(c.sn_cdate)
+                ) as a ON a.year = year(c.sn_cdate) AND a.month = month(c.sn_cdate)
+            GROUP BY year(c.sn_cdate), month(c.sn_cdate)
+            ORDER BY year(c.sn_cdate) DESC, month(c.sn_cdate) DESC
+            ");
+        }}
+        <table id="contractors">
+            <th>Mois</th>
+            <th>Total</th>
+            <th>FR</th>
+            <th>EN</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.month}}/\{{r.year}}</td>
+                    <td>\{{r.activated}}/\{{r.total}} (\{{round(r.activated/fmax(r.total,1)*100)}}%)</td>
+                    <td>\{{r.act_fr}}/\{{r.sub_fr}} (\{{round(r.act_fr/fmax(r.sub_fr,1)*100)}}%)</td>
+                    <td>\{{r.act_en}}/\{{r.sub_en}} (\{{round(r.act_en/fmax(r.sub_en,1)*100)}}%)</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'results_per_region' then
+        if cgidata.lenght then
+            lenght = cgidata.lenght;
+        else
+            lenght = 28;
+        endif
+        report = sql("
+            SELECT t.region, q.sales, count(*) as nb_project, q.total_links
+            FROM sr_project p
+            INNER JOIN sr_address a ON a.uid = p.uid_address
+            INNER JOIN sr_city ci ON ci.uid = a.uid_city
+            INNER JOIN sr_territory t ON t.uid = ci.uid_territory
+            LEFT JOIN (
+                SELECT sum(pc.lead_price) as sales, t.region, count(*) as total_links
+                FROM sr_project p
+                INNER JOIN sr_address a ON a.uid = p.uid_address
+                INNER JOIN sr_city ci ON ci.uid = a.uid_city
+                INNER JOIN sr_territory t ON t.uid = ci.uid_territory
+                INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                WHERE DATEDIFF(curdate(), p.active_date) > 7
+                AND DATEDIFF(curdate(), p.active_date) < ?
+                AND pc.accepted_date > 0
+                GROUP BY t.region
+                ) as q ON q.region = t.region
+            WHERE DATEDIFF(curdate(), p.active_date) > 7
+            AND DATEDIFF(curdate(), p.active_date) < ?
+            GROUP BY t.region
+            ORDER BY t.region ASC
+            ", lenght, lenght);
+        }}
+        <table id="contractors">
+            <th>Région</th>
+            <th># Projet</th>
+            <th>$ Ventes</th>
+            <th>Avg Ent/Projet</th>
+            <th>Avg $/Projet</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.region}}</td>
+                    <td>\{{r.nb_project}}</td>
+                    <td>\{{money_format(r.sales)}}</td>
+                    <td>\{{round(r.total_links/r.nb_project*100)/100}}</td>
+                    <td>\{{money_format(r.sales/r.nb_project)}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'results_per_week' then
+        report = sql("
+            SELECT count(*) as nb_project, pc.sales, pc.nb_sales, min(p.active_date) as min_date
+            FROM sr_project p
+            INNER JOIN
+                (SELECT count(*) as nb_sales, sum(lead_price) as sales, yearweek(accepted_date) as yearweek
+                FROM sr_project_contractor
+                WHERE accepted_date > 0
+                GROUP BY yearweek(accepted_date)
+                ) as pc ON pc.yearweek = yearweek(p.active_date)
+            WHERE active_date > 0
+            GROUP BY yearweek(p.active_date)
+            ORDER BY yearweek(p.active_date) DESC
+            ");
+        }}
+        <table id="contractors">
+            <th>Semaine</th>
+            <th># Projet</th>
+            <th># Vente</th>
+            <th>$ Vente</th>
+            <th># Ent/Projet</th>
+            <th>$ par projet</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.min_date}}</td>
+                    <td>\{{r.nb_project}}</td>
+                    <td>\{{r.nb_sales}}</td>
+                    <td>\{{money_format(r.sales)}}</td>
+                    <td>\{{round(r.nb_sales/r.nb_project*100)/100}}</td>
+                    <td>\{{money_format(r.sales/r.nb_project)}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'revenues_province' then
+        report = sql("
+            SELECT p.name_fr, sum(t.amount)/(1+ta.tps+ta.tvp) as total, month(t.sn_cdate) as month, year(t.sn_cdate) as year
+            FROM sr_transaction t
+            INNER JOIN sr_contractor c ON c.uid = t.uid_contractor
+            INNER JOIN sr_territory te ON te.uid = c.uid_territory
+            INNER JOIN sr_province p ON p.uid = te.uid_province
+            INNER JOIN sr_taxes ta ON ta.code_prov = p.code_prov
+            WHERE t.status = 'succeeded' OR t.status is null OR t.status = ''
+            GROUP BY p.uid, month(t.sn_cdate), year(t.sn_cdate)
+            ORDER BY year DESC, month DESC, p.name_fr ASC
+            ");
+        }}
+        <table id="contractors">
+            <th>Mois/Année</th>
+            <th>Province</th>
+            <th>Total (av taxes)</th>
+            \{{
+            month_total = 0;
+            for r in report.rows do
+            now = r.month;
+            if now ne previous then
+                if month_total > 0 then
+                    }}
+                    <tr \{{style}}>
+                        <td>Total du mois</td>
+                        <td>-</td>
+                        <td>\{{money_format(month_total)}}</td>
+                    </tr>
+                    \{{
+                endif
+                style = "style='border-top:5px solid; border-left:5px solid; border-right:5px solid;'";
+                month_total = r.total;
+            else
+                style = "style='border-left:5px solid; border-right:5px solid;'";
+                month_total = r.total + month_total;
+            endif
+            previous = r.month;
+            }}
+                <tr \{{style}}>
+                    <td>\{{r.month}} / \{{r.year}}</td>
+                    <td>\{{r.name_fr}}</td>
+                    <td>\{{money_format(r.total)}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'real_revenus_7days' then
+        report = sql("
+            SELECT sum(t.amount) as sales, date(t.sn_cdate) as date_sold, dayname(t.sn_cdate) as day_name, q.sales as previous_sales, DATEDIFF(curdate(), t.sn_cdate) as datedif
+            FROM sr_transaction t
+            LEFT JOIN (
+                SELECT sum(t.amount) as sales, date(t.sn_cdate) as date_sold, dayname(t.sn_cdate) as day_name
+                FROM sr_transaction t
+                WHERE DATEDIFF(curdate(), t.sn_cdate) < 15 AND DATEDIFF(curdate(), t.sn_cdate) >= 7
+                AND (t.status = 'succeeded' OR t.status is null)
+                GROUP BY date(t.sn_cdate)
+            ) as q ON DATEDIFF(date(t.sn_cdate), q.date_sold) = 7
+            WHERE DATEDIFF(curdate(), t.sn_cdate) < 8
+            AND (t.status = 'succeeded' OR t.status is null)
+            GROUP BY date(t.sn_cdate)
+            ORDER BY date(t.sn_cdate) DESC
+            ");
+        }}
+        <table id="contractors">
+            <th>Jour</th>
+            <th>Transactions</th>
+            <th>Transactions semaine passée</th>
+            <th>Différence</th>
+            \{{
+            sales = 0;
+            previous_sales = 0;
+            for r in report.rows do
+                if r.datedif > 0 then
+                    sales = r.sales + sales;
+                    previous_sales = r.previous_sales + previous_sales;
+                endif
+            }}
+                <tr>
+                    <td>\{{r.date_sold}} \{{r.day_name}}</td>
+                    <td>\{{money_format(r.sales)}}</td>
+                    <td>\{{money_format(r.previous_sales)}}</td>
+                    <td>\{{money_format(r.sales - r.previous_sales)}}</td>
+                </tr>
+            \{{endfor}}
+                <tr>
+                    <td>Total</td>
+                    <td>\{{money_format(sales)}}</td>
+                    <td>\{{money_format(previous_sales)}}</td>
+                    <td>\{{money_format(sales - previous_sales)}}</td>
+                </tr>  
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'revenus_7days' then
+        report = sql("
+            SELECT sum(pc.lead_price) as sales, date(pc.accepted_date) as date_sold, dayname(pc.accepted_date) as day_name, q.sales as previous_sales, DATEDIFF(curdate(), pc.accepted_date) as datedif
+            FROM sr_project_contractor pc
+            LEFT JOIN (
+                SELECT sum(pc.lead_price) as sales, date(pc.accepted_date) as date_sold, dayname(pc.accepted_date) as day_name
+                FROM sr_project_contractor pc
+                WHERE DATEDIFF(curdate(), pc.accepted_date) < 15 AND DATEDIFF(curdate(), pc.accepted_date) >= 7
+                GROUP BY date(pc.accepted_date)
+            ) as q ON DATEDIFF(date(pc.accepted_date), q.date_sold) = 7
+            WHERE DATEDIFF(curdate(), pc.accepted_date) < 8
+            GROUP BY date(pc.accepted_date)
+            ORDER BY date(pc.accepted_date) DESC
+            ");
+        }}
+        <table id="contractors">
+            <th>Jour</th>
+            <th>Ventes</th>
+            <th>Ventes semaine passée</th>
+            <th>Différence</th>
+            \{{
+            sales = 0;
+            previous_sales = 0;
+            for r in report.rows do
+                if r.datedif > 0 then
+                    sales = r.sales + sales;
+                    previous_sales = r.previous_sales + previous_sales;
+                endif
+            }}
+                <tr>
+                    <td>\{{r.date_sold}} \{{r.day_name}}</td>
+                    <td>\{{money_format(r.sales)}}</td>
+                    <td>\{{money_format(r.previous_sales)}}</td>
+                    <td>\{{money_format(r.sales - r.previous_sales)}}</td>
+                </tr>
+            \{{endfor}}
+                <tr>
+                    <td>Total (avant aujourd'hui)</td>
+                    <td>\{{money_format(sales)}}</td>
+                    <td>\{{money_format(previous_sales)}}</td>
+                    <td>\{{money_format(sales - previous_sales)}}</td>
+                </tr>               
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'top_buyers' then
+        report = sql("
+            SELECT c.company_name, c.uid, te.region, sum(t.amount) as sales
+            FROM sr_contractor c
+            INNER JOIN sr_transaction t ON t.uid_contractor = c.uid
+            INNER JOIN sr_territory te ON te.uid = c.uid_territory
+            WHERE (t.status = 'succeeded' OR t.status is null OR t.status = '')
+            GROUP BY c.uid
+            ORDER BY sales DESC
+            LIMIT 50
+            ");
+        }}
+        <table id="contractors">
+            <th>Entrepreneur - Uid</th>
+            <th>Région</th>
+            <th>Achats 28 jours (après taxes)</th>
+            \{{
+            i = 1;
+            for r in report.rows do}}
+                <tr>
+                    <td>\{{i;}} - \{{r.company_name}} - <a href="https://sxpert.sednove.com/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                    <td>\{{r.region}}</td>
+                    <td>\{{money_format(r.sales)}}</td>
+                </tr>
+            \{{
+            i = i + 1;
+            endfor}}
+        </table>
+        
+        \{{
+        report = sql("
+            SELECT c.company_name, c.uid, te.region, sum(pc.lead_price) as sales
+            FROM sr_contractor c
+            INNER JOIN sr_project_contractor pc ON pc.uid_contractor = c.uid
+            INNER JOIN sr_territory te ON te.uid = c.uid_territory
+            GROUP BY c.uid
+            ORDER BY sales DESC
+            LIMIT 50
+            ");
+        }}
+        <table id="contractors">
+            <th>Entrepreneur - Uid</th>
+            <th>Région</th>
+            <th>Achats 28 jours (après taxes)</th>
+            \{{
+            i = 1;
+            for r in report.rows do}}
+                <tr>
+                    <td>\{{i;}} - \{{r.company_name}} - <a href="https://sxpert.sednove.com/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                    <td>\{{r.region}}</td>
+                    <td>\{{money_format(r.sales)}}</td>
+                </tr>
+            \{{
+            i = i + 1;
+            endfor}}
+        </table>
+        \{{
+    endif
+    
+    if cgidata.code eq 'contractors_region' then
+        report = sql("
+            SELECT t.region, count(*) as total
+            FROM sr_contractor c
+            INNER JOIN sr_address a ON a.uid_contractor = c.uid
+            INNER JOIN sr_city ci ON ci.uid = a.uid_city
+            INNER JOIN sr_territory t ON t.uid = ci.uid_territory
+            WHERE c.active = 'yes'
+            AND c.verified = 'yes'
+            GROUP BY t.region
+            ORDER BY t.region ASC
+            ");
+        }}
+        <table id="contractors">
+            <th>Région</th>
+            <th>Nombre</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.region}}</td>
+                    <td>\{{r.total}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'new_contractors_region' then
+        report = sql("
+            SELECT t.region, count(*) as total
+            FROM sr_contractor c
+            INNER JOIN sr_address a ON a.uid_contractor = c.uid
+            INNER JOIN sr_city ci ON ci.uid = a.uid_city
+            INNER JOIN sr_territory t ON t.uid = ci.uid_territory
+            WHERE c.active = 'yes'
+            AND DATEDIFF(curdate(), c.sn_cdate) <= 14
+            GROUP BY t.region
+            ORDER BY t.region ASC
+            ");
+        }}
+        <table id="contractors">
+            <th>Région</th>
+            <th>Nombre</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.region}}</td>
+                    <td>\{{r.total}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'projects_actived_by' then
+        report = sql("
+            SELECT p.activated_by, count(*) as total, date(p.active_date) as date_work, DAYNAME(p.active_date) as day_name
+            FROM sr_project p
+            WHERE DATEDIFF(curdate(), p.active_date) < 14
+            GROUP BY p.activated_by, date(p.active_date)
+            ORDER BY date(p.active_date) DESC, p.activated_by
+            ");
+        }}
+        <table id="contractors">
+            <th>Date</th>
+            <th>Agent</th>
+            <th># projet activé</th>
+            \{{
+            total = 0;
+            for r in report.rows do
+            now = r.date_work;
+            if now ne previous then
+                if total > 0 then
+                    }}
+                    <tr style='border-left:5px solid; border-right:5px solid;'>
+                        <td>Total</td>
+                        <td></td>
+                        <td>\{{total}}</td>
+                    </tr>
+                    \{{
+                endif
+                style = "style='border-top:5px solid; border-left:5px solid; border-right:5px solid;'";
+                total = r.total;
+            else
+                total = total + r.total;
+                style = "style='border-left:5px solid; border-right:5px solid;'";
+            endif
+            }}
+                <tr \{{style}}>
+                    <td>\{{r.date_work}} - \{{r.day_name}}</td>
+                    <td>\{{r.activated_by}}</td>
+                    <td>\{{r.total}}</td>
+                </tr>
+            \{{
+            previous = now;    
+            endfor}}
+        </table>
+    \{{
+    
+    endif
+    
+    if cgidata.code eq 'call_lists' then
+        if cgidata.order then
+            order = cgidata.order;
+            by = cgidata.by;
+        else
+            order = "Region";
+            by = "ASC";
+        endif
+        if by eq 'ASC' then
+            next_by = 'DESC';
+        else
+            next_by = 'ASC';
+        endif
+        if cgidata.city then
+            city = cgidata.city;
+        else
+            city = '';
+        endif
+        report = sql("
+            SELECT Region, count(*) as total, avg(Nb_Appel) as average, max(dernier_appel) as last_call
+            FROM tbl_appels_entrepreneurs
+            WHERE Statut = 1
+            AND Telephone is not null
+            AND Region LIKE '%?%'
+            AND (Date_Rappel is null OR Date_Rappel <= curdate())
+            GROUP BY Region
+            ORDER BY ? ?
+            ", city, order, by);
+        
+        cities = sql("SELECT distinct(left(Region, position('-' IN Region)-1)) as city FROM tbl_appels_entrepreneurs having city <>'' order by city asc");
+        }}
+        Pour choisir un ensemble de ville qui a plusieurs listes, il faut choisir dans ce menu déroulant:
+        <form action="" method="GET">
+            <select name="city">
+                \{{for c in cities.rows do}}
+                    <option value="\{{c.city}}">\{{c.city}}</option>
+                \{{endfor}}
+            </select>
+            <input type="hidden" name="code" value="call_lists">
+            <input type="hidden" name="order" value="\{{order}}">
+            <input type="hidden" name="by" value="\{{by}}">
+            <input type="submit">
+        </form>
+        
+        <table id="contractors">
+            <th><a href="/widgets/fr/reporting.snc?code=call_lists&order=Region&by=\{{next_by}}&city=\{{city}}">Region</a></th>
+            <th><a href="/widgets/fr/reporting.snc?code=call_lists&order=total&by=\{{next_by}}&city=\{{city}}">Nb Restant</a></th>
+            <th><a href="/widgets/fr/reporting.snc?code=call_lists&order=average&by=\{{next_by}}&city=\{{city}}">Moyenne d'appel</a></th>
+            <th><a href="/widgets/fr/reporting.snc?code=call_lists&order=last_call&by=\{{next_by}}&city=\{{city}}">Dernier appel</a></th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.Region}}</td>
+                    <td>\{{r.total}}</td>
+                    <td>\{{r.average}}</td>
+                    <td>\{{r.last_call}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+        \{{    
+    endif
+    
+    if cgidata.code eq 'call_list_today' then
+        report = sql("
+            SELECT u.Utilisateur, e.Region, count(*) as total
+            FROM tbl_utilisateurs u
+            INNER JOIN tbl_commentaires c ON c.ID_Utilisateur = u.idTBL_Utilisateurs
+            INNER JOIN tbl_appels_entrepreneurs e ON e.idtbl_appels_entrepreneurs = c.ID_Entrepreneur_Potentiel
+            WHERE c.timestamp > curdate()
+            GROUP BY u.Utilisateur, e.Region
+            ORDER BY u.Utilisateur ASC
+            ");
+        }}
+        <table id="contractors">
+            <th>Agent</th>
+            <th>Région</th>
+            <th>Nombre d'appel</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.Utilisateur}}</td>
+                    <td>\{{r.Region}}</td>
+                    <td>\{{r.total}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'call_weekly_results' then
+        if cgidata.lenght then
+            lenght = cgidata.lenght;
+        else
+            lenght = "month";
+        endif
+        report = sql("
+            SELECT sum(q.inscrits) as inscrits, q.Utilisateur, sum(q.refus) as refus, sum(q.courriel) as courriel, sum(q.hours) as hours_done, sum(q.nb_appel_fait) as nb_appel_fait, min(date_work) as date_work
+            FROM
+                (SELECT date(c.timestamp) as date_work, u.Utilisateur, sum(if(statut = 5,1,0)) as inscrits, 
+                sum(if(c.Entrepreneur_appel_resultat = 3,1,0)) as refus, sum(if(c.Entrepreneur_appel_resultat = 2,1,0)) as courriel, count(*) as nb_appel_fait, TIMESTAMPDIFF(HOUR, Min(c.timestamp), Max(c.timestamp)) as hours
+                FROM tbl_appels_entrepreneurs e
+                INNER JOIN tbl_commentaires c ON e.idtbl_appels_entrepreneurs = c.ID_Entrepreneur_Potentiel
+                INNER JOIN tbl_utilisateurs u ON u.idTBL_Utilisateurs = c.ID_Utilisateur
+                WHERE year(c.timestamp) >= year(curdate())
+                GROUP BY date(c.timestamp), u.Utilisateur) as q
+            GROUP BY q.Utilisateur, ?(q.date_work)
+            ORDER BY q.Utilisateur ASC, ?(q.date_work) DESC
+            ", lenght, lenght);
+        }}
+        <table id="contractors">
+            <th>Agent</th>
+            <th>Période de temps (\{{lenght}})</th>
+            <th>Heures travaillés (inclus pause)</th>
+            <th>Nb d'appels par heure</th>
+            <th>Nb de courriel par heure</th>
+            <th>Nb de refus par heure</th>
+            <th>Nb d'inscrits par heure (total)</th>
+            <th>Coûts par inscription</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.Utilisateur}}</td>
+                    <td>\{{r.date_work}}</td>
+                    <td>\{{r.hours_done}}</td>
+                    <td>\{{round(r.nb_appel_fait/r.hours_done*100)/100}}</td>
+                    <td>\{{round(r.courriel/r.hours_done*100)/100}}</td>
+                    <td>\{{round(r.refus/r.hours_done*100)/100}}</td>
+                    <td>\{{round(r.inscrits/r.hours_done*100)/100}} (\{{r.inscrits}})</td>
+                    <td>\{{round(13/fmax(round(r.inscrits/r.hours_done*100)/100,0.01))}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'omar_sales' then
+        report = sql("
+            SELECT p.uid as puid, p.lead_price, p.active_date, p.description, p.status, nb_sales.total, p.due_date, s.name_long_? as service, p.shared_budget, p.uid_project_type, ci.name_fr as city
+            FROM sr_project p
+            INNER JOIN sr_address a ON p.uid_address = a.uid
+            INNER JOIN sr_client c ON c.uid = p.uid_client
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            INNER JOIN sr_city ci ON ci.uid = a.uid_city
+            INNER JOIN sr_territory t ON t.uid = ci.uid_territory
+            LEFT JOIN (
+                SELECT pc.uid, count(*) as total
+                FROM sr_project_contractor pc
+                INNER JOIN sr_project p ON p.uid = pc.uid_project
+                WHERE p.lead_price >=30
+                AND DATEDIFF(now(), p.active_date) < 3
+                AND p.status = 'active'
+                GROUP BY pc.uid
+            ) as nb_sales ON nb_sales.uid = p.uid
+            WHERE p.status = 'active'
+            AND p.lead_price >= '50'
+            AND DATEDIFF(now(), p.active_date) < 3
+            AND t.uid_province <> '1'
+            GROUP BY p.uid
+            HAVING total is null OR total < 2
+            ORDER BY p.sn_cdate DESC
+            ", "{{lg.rows.lg}}");
+            
+        }}
+        <table id="contractors">
+            <th>Uid project</th>
+            <th>Description</th>
+            <th>City</th>
+            <th>Activation date</th>
+            <th>Lead price</th>
+            <th>Nb of contractors on it</th>
+            <th>Delay</th>
+            <th>Service</th>
+            <th>Budget</th>
+            <th>Project type (1=res, 2=commercial, 3=construction)</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="https://sxpert.sednove.com/widgets/en/reporting.snc?code=omar_sales_list&id_project=\{{r.puid}}" target="_blank">\{{r.puid}}</a></td>
+                <td>\{{r.description}}</td>
+                <td>\{{r.city}}</td>
+                <td>\{{r.active_date}}</td>
+                <td>\{{r.lead_price}}</td>
+                <td>\{{r.total}}</td>
+                <td>\{{r.due_date}}</td>
+                <td>\{{r.service}}</td>
+                <td>\{{r.shared_budget}}</td>
+                <td>\{{r.uid_project_type}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+    \{{endif
+    
+    if cgidata.code eq 'omar_sales_list' then
+        report = sql("
+            SELECT pc.uid_contractor, c.company_name, c.contact_gender, c.contact_firstname, c.contact_lastname, c.contact_phone, c.contact_email, c.comments
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid = pc.uid_contractor
+            WHERE pc.hidden is null
+            AND pc.accepted is null
+            AND pc.accepted_rebate is null
+            AND c.active = 'yes'
+            AND c.verified = 'yes'
+            AND pc.uid_project = '?'
+            AND DATEDIFF(now(), c.last_call_date) > 15
+            ORDER BY c.note_global DESC
+            ", cgidata.id_project);
+        }}
+        <table id="contractors">
+            <th>Contractor</th>
+            <th>Contact</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Comments</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a target="_blank" href="/widgets/en/stats_contractor.snc?id_contractor=\{{r.uid_contractor}}">\{{r.company_name}}</a></td>
+                <td>\{{r.contact_gender .+ ' ' .+ r.contact_firstname .+ ' ' .+ r.contact_lastname}}</td>
+                <td>\{{r.contact_phone}}</td>
+                <td>\{{r.contact_email}}</td>
+                <td>\{{r.comments}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+    \{{
+    endif
+    
+    if cgidata.code eq 'contractor_list' then
+        if cgidata.search then
+            if cgidata.territory >= 1 then
+                report = sql("
+                    SELECT c.uid, c.company_name, c.contact_phone, c.contact_firstname, c.contact_lastname, c.contact_gender
+                    FROM sr_contractor c
+                    INNER JOIN sr_contractor_service cs on c.uid = cs.uid_contractor
+                    INNER JOIN sr_contractor_territory ct on c.uid = ct.uid_contractor
+                    WHERE c.active = 'yes'
+                    AND c.verified = 'yes'
+                    AND cs.uid_service = '?'
+                    AND ct.uid_territory = '?'
+                    ORDER BY c.uid
+                    ", cgidata.service, cgidata.territory);
+            else
+                report = sql("
+                    SELECT c.uid, c.company_name, c.contact_phone, c.contact_firstname, c.contact_lastname, c.contact_gender, t.name_fr, c.contact_email
+                    FROM sr_contractor c
+                    INNER JOIN sr_contractor_service cs on c.uid = cs.uid_contractor
+                    INNER JOIN sr_territory t ON t.uid = c.uid_territory
+                    WHERE c.active = 'yes'
+                    AND c.verified = 'yes'
+                    AND cs.uid_service = '?'
+                    ORDER BY c.uid
+                    ", cgidata.service);
+            endif
+            }}
+            <table id="contractors">
+                <th>uid</th>
+                <th>Compagnie</th>
+                <th>Contact</th>
+                <th>Téléphone</th>
+                <th>Territoire</th>
+                <th>Courriel</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td>\{{r.uid}}</td>
+                        <td>\{{r.company_name}}</td>
+                        <td>\{{r.contact_gender .+ ' ' .+ r.contact_firstname .+ ' ' .+ r.contact_lastname}}</td>
+                        <td>\{{r.contact_phone}}</td>
+                        <td>\{{r.name_fr}}</td>
+                        <td>\{{r.contact_email}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        \{{endif}}
+        <form action="" method="POST">
+            Service: <select name="service">
+                \{{
+                    service = sql("SELECT uid, name_long_? as name FROM sr_service WHERE active = 'yes' ORDER BY name ASC", "{{lg.rows.lg}}");
+                    for s in service.rows do
+                }}
+                        <option value="\{{s.uid}}">\{{s.name}}</option>
+                    \{{endfor}}
+            </select>
+            Territoire: <select name="territory">
+                    <option>Choisir un territoire</option>
+                \{{
+                    territory = sql("SELECT uid, name_? as name FROM sr_territory WHERE active = 'yes' ORDER BY name ASC", "{{lg.rows.lg}}");
+                    for t in territory.rows do
+                }}
+                        <option value="\{{t.uid}}">\{{t.name}}</option>
+                    \{{endfor}}
+            </select>
+            <input type="submit" name="search" value="Rechercher">
+        </form>
+    \{{
+    endif
+        
+    if cgidata.code eq 'agent_schedule' then
+        if cgidata.schedule then
+            report = sql("
+                SELECT followup_agent, min(sn_cdate) as start, max(sn_cdate) as end, round(TIMESTAMPDIFF(MINUTE, min(sn_cdate), max(sn_cdate))/60,2) as hours
+                FROM sr_followup
+                WHERE sn_cdate >= '?' 
+                AND sn_cdate  <= DATE_ADD('?', INTERVAL 1 DAY)
+                group by day(sn_cdate), followup_agent
+                ORDER BY followup_agent, min(sn_cdate)
+                ", cgidata.start, cgidata.end);
+            }}
+            <table id="contractors">
+                <th>Personne</th>
+                <th>Date début</th>
+                <th>Date fin</th>
+                <th>Nombre d'heure</th>
+                \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.followup_agent}}</td>
+                    <td>\{{r.start}}</td>
+                    <td>\{{r.end}}</td>
+                    <td>\{{r.hours}}</td>
+                </tr>
+                \{{endfor}}
+            </table>
+        \{{
+        endif
+        }}
+        <form action="" method="post">
+            <input type="date" name="start">
+            <input type="date" name="end">
+            <input type="submit" name="schedule">
+        </form>
+    \{{
+    endif
+    
+    if cgidata.code eq 'search_contractor_potential' then
+        if cgidata.add then
+            void sql("INSERT INTO tbl_appels_entrepreneurs (Entreprise, Telephone, Statut, Region, languages, province, Date_Qualifie) 
+            VALUES ('?', '?', ?, '?', 'fr', 'QC', curdate())", cgidata.name, cgidata.phone, cgidata.status, cgidata.region);
+        endif
+        if cgidata.readd then
+            void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 1 WHERE idtbl_appels_entrepreneurs = ?", cgidata.uid);
+        endif
+        if cgidata.send_email then
+            void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 2, Courriel = '?', Date_Qualifie = curdate() WHERE idtbl_appels_entrepreneurs = ?", cgidata.courriel, cgidata.uid);
+        endif
+        if cgidata.remove_ent then
+            void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 3, Date_Qualifie = curdate() WHERE idtbl_appels_entrepreneurs = ?", cgidata.uid);
+        endif
+    }}
+    <br>
+        <form action="" method="post">
+            <input autocomplete="off" type="text" name="phone" placeholder="Telephone" value="\{{cgidata.phone}}">
+            <input autocomplete="off" type="submit" name="search">
+        </form>
+        <br>
+        \{{if cgidata.michel then}}
+            <form action="" method="post">
+                <input autocomplete="off" type="text" name="phone" placeholder="Telephone" value="\{{cgidata.phone}}">
+                <input autocomplete="off" type="text" name="region" placeholder="Region" value="MTL">
+                <input autocomplete="off" type="text" name="name" placeholder="Entreprise">
+                <input autocomplete="off" type="text" name="status" placeholder="Statut">
+                <input autocomplete="off" type="submit" name="add">
+            </form>
+        \{{endif}}
+        \{{
+        if cgidata.search then
+            if cgidata.phone then
+                result = sql("SELECT idtbl_appels_entrepreneurs, Entreprise, Telephone, Statut, Courriel, Commentaires, Personne_Contact, Nb_Appel, Region, dernier_appel, languages, dernier_marketing FROM tbl_appels_entrepreneurs 
+                WHERE replace(replace(replace(replace(replace(Telephone, '.', ''), '-', ''), ' ', ''), ')', ''), '(', '') LIKE '%?%' 
+                ORDER BY Telephone ASC
+                ", cgidata.phone);
+            endif
+            }}
+            <table id="contractors">
+                <th>uid</th>
+                <th>{{sn_ct("Nom de l'entreprise")}}</th>
+                <th>{{sn_ct("Personne contact")}}</th>
+                <th>Telephone</th>
+                <th>Statut</th>
+                <th>Courriel</th>
+                <th>Commentaires</th>
+                <th>Nb_Appel</th>
+                <th>Region</th>
+                <th>Dernier appel</th>
+                <th>Langue</th>
+                <th>Dernier Marketing</th>
+                <th>Action</th>
+            \{{for r in result.rows do}}
+                <tr>
+                    <td>\{{r.idtbl_appels_entrepreneurs}}</td>
+                    <td>\{{r.Entreprise}}</td>
+                    <td>\{{r.Personne_Contact}}</td>
+                    <td>\{{r.Telephone}}</td>
+                    <td>\{{r.Statut}}</td>
+                    <td>\{{r.Courriel}}</td>
+                    <td>\{{r.Commentaires}}</td>
+                    <td>\{{r.Nb_Appel}}</td>
+                    <td>\{{r.Region}}</td>
+                    <td>\{{r.dernier_appel}}</td>
+                    <td>\{{r.languages}}</td>
+                    <td>\{{r.dernier_marketing}}</td>
+                    <td>
+                        <form action="" method="POST">
+                            <input type="hidden" name="uid" value="\{{r.idtbl_appels_entrepreneurs}}">
+                            <input type="submit" name="readd" value="Remettre dans la liste"><br><br>
+                            <input type="text" name="courriel" placeholder="courriel"><input type="submit" name="send_email" value="Envoyer courriel"><br><br>
+                            <input type="submit" name="remove_ent" value="Enlever">
+                        </form>
+                    </td>
+                </tr>
+            \{{endfor}}
+            </table>
+        \{{endif}}
+
+        
+    \{{endif
+    
+    if cgidata.code eq 'search_contractor' then
+    }}
+    <br>
+        <form action="https://sxpert.sednove.com/widgets/{{lg.rows.lg}}/reporting.snc?code=search_contractor" method="post">
+            <input type="text" name="company" autocomplete="off" placeholder="{{sn_ct(edit:false,"Nom de l'entreprise")}}" value="\{{cgidata.company}}">
+            <input type="text" name="phone" autocomplete="off" placeholder="Telephone" value="\{{cgidata.phone}}">
+            <input type="text" name="email" autocomplete="off" placeholder="Courriel" value="\{{cgidata.email}}">
+            <input type="submit" name="search">
+        </form>
+        \{{
+        if cgidata.search then
+            if cgidata.company then
+                result = sql("SELECT uid, company_name, contact_firstname, contact_lastname, contact_phone, company_phone, active, verified, contact_email FROM sr_contractor WHERE replace(replace(company_name, '.', ''), '-', '') LIKE '%?%'", cgidata.company);
+            endif
+            if cgidata.phone then
+                result = sql("SELECT uid, company_name, contact_firstname, contact_lastname, contact_phone, company_phone, active, verified, contact_email FROM sr_contractor 
+                WHERE replace(replace(replace(replace(replace(contact_phone, '.', ''), '-', ''), ' ', ''), ')', ''), '(', '') LIKE '%?%' 
+                OR replace(replace(replace(replace(replace(company_phone, '.', ''), '-', ''), ' ', ''), ')', ''), '(', '') LIKE '%?%'", cgidata.phone, cgidata.phone);
+            endif
+            if cgidata.email then
+                result = sql("SELECT uid, company_name, contact_firstname, contact_lastname, contact_phone, company_phone, active, verified, contact_email FROM sr_contractor WHERE contact_email LIKE '%?%'", cgidata.email);
+            endif
+            }}
+            <table id="contractors">
+                <th>uid</th>
+                <th>{{sn_ct("Nom de l'entreprise")}}</th>
+                <th>{{sn_ct("Personne contact")}}</th>
+                <th>Telephone</th>
+                <th>Courriel</th>
+                <th>{{sn_ct("Actif")}}</th>
+                <th>{{sn_ct("Verifié")}}</th>
+            \{{for r in result.rows do}}
+                <tr>
+                    <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                    <td>\{{r.company_name}}</td>
+                    <td>\{{r.contact_firstname .+ ' ' .+ r.contact_lastname}}</td>
+                    <td>\{{r.contact_phone .+ ' | ' .+ r.company_phone}}</td>
+                    <td>\{{r.contact_email}}</td>
+                    <td>\{{r.active}}</td>
+                    <td>\{{r.verified}}</td>
+                </tr>
+            \{{endfor}}
+            </table>
+        \{{endif}}
+
+        
+    \{{endif
+    
+    if cgidata.code eq 'search_client' then
+    }}
+    <br>
+        <form action="https://sxpert.sednove.com/widgets/{{lg.rows.lg}}/reporting.snc?code=search_client" method="post">
+            <input type="text" name="name" placeholder="{{sn_ct(edit:false,"Nom ou prénom")}}" value="\{{cgidata.name}}">
+            <input type="text" name="phone" placeholder="Telephone" value="\{{cgidata.phone}}">
+            <input type="text" name="address" placeholder="Adresse" value="\{{cgidata.address}}">
+            <input type="text" name="email" placeholder="Courriel" value="\{{cgidata.email}}">
+            <input type="text" name="id_project" placeholder="id_project" value="\{{cgidata.id_project}}">
+            <input type="text" name="id_client" placeholder="id_client" value="\{{cgidata.id_client}}">
+            <input type="submit" name="search">
+        </form>
+        \{{
+        if cgidata.search then
+            if cgidata.name then
+                result = sql("SELECT c.uid, firstname, lastname, a.phone1, a.phone2, a.street_no, a.street, c.email
+                FROM sr_client c 
+                INNER JOIN sr_address a ON c.uid = a.uid_client
+                WHERE replace(replace(firstname, '.', ''), '-', '') LIKE '%?%' OR replace(replace(lastname, '.', ''), '-', '') LIKE '%?%' OR replace(replace(concat(replace(firstname, ' ', ''), ' ', replace(lastname, ' ', '')), '.', ''), '-', '') LIKE '%?%'
+                GROUP BY c.uid
+                ORDER BY c.uid DESC
+                ", cgidata.name, cgidata.name, cgidata.name);
+            endif
+            if cgidata.phone then
+                result = sql("SELECT c.uid, firstname, lastname, a.phone1, a.phone2, a.street_no, a.street, c.email
+                FROM sr_client c 
+                INNER JOIN sr_address a ON c.uid = a.uid_client
+                WHERE replace(replace(phone1, '.', ''), '-', '') LIKE '%?%' OR replace(replace(phone2, '.', ''), '-', '') LIKE '%?%'
+                GROUP BY c.uid
+                ORDER BY c.uid DESC
+                ", cgidata.phone, cgidata.phone);
+            endif
+            if cgidata.address then
+                result = sql("SELECT c.uid, firstname, lastname, a.phone1, a.phone2, a.street_no, a.street, c.email
+                FROM sr_client c 
+                INNER JOIN sr_address a ON c.uid = a.uid_client
+                WHERE replace(replace(concat(street_no, ' ', street), '.', ''), '-', '') LIKE '%?%'
+                GROUP BY c.uid
+                ORDER BY c.uid DESC
+                ", cgidata.address);
+            endif
+            if cgidata.email then
+                result = sql("SELECT c.uid, firstname, lastname, a.phone1, a.phone2, a.street_no, a.street, c.email
+                FROM sr_client c 
+                INNER JOIN sr_address a ON c.uid = a.uid_client
+                WHERE c.email LIKE '%?%'
+                GROUP BY c.uid
+                ORDER BY c.uid DESC
+                ", cgidata.email);
+            endif
+            if cgidata.id_project then
+                result = sql("SELECT c.uid, firstname, lastname, a.phone1, a.phone2, a.street_no, a.street, c.email
+                FROM sr_client c 
+                INNER JOIN sr_address a ON c.uid = a.uid_client
+                INNER JOIN sr_project p ON p.uid_client = c.uid
+                WHERE p.uid = '?'
+                GROUP BY c.uid
+                ORDER BY c.uid DESC
+                ", cgidata.id_project);
+            endif
+            if cgidata.id_client then
+                result = sql("SELECT c.uid, firstname, lastname, a.phone1, a.phone2, a.street_no, a.street, c.email
+                FROM sr_client c 
+                INNER JOIN sr_address a ON c.uid = a.uid_client
+                WHERE c.uid = '?'
+                GROUP BY c.uid
+                ORDER BY c.uid DESC
+                ", cgidata.id_client);
+            endif
+            }}
+            <table id="contractors">
+                <th>uid</th>
+                <th>{{sn_ct("Nom du client")}}</th>
+                <th>{{sn_ct("Téléphone")}}</th>
+                <th>Adresse</th>
+                <th>Courriel</th>
+            \{{for r in result.rows do}}
+                <tr>
+                    <td><a href="/intranet/fr/recherche-client?subject=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                    <td>\{{r.firstname .+ ' ' .+ r.lastname}}</td>
+                    <td>\{{r.phone1 .+ ' | ' .+ r.phone2}}</td>
+                    <td>\{{r.street_no .+ ' ' .+ r.street}}</td>
+                    <td>\{{r.email}}</td>
+                </tr>
+            \{{endfor}}
+            </table>
+        \{{endif}}
+
+        
+    \{{endif
+    
+    if cgidata.code eq 'new_contractors' then
+        report = sql("
+            SELECT c.uid, c.sn_cdate, c.contact_lg, a.province, t.name_? as name
+            FROM sr_contractor c
+            LEFT JOIN sr_address a ON a.uid_contractor = c.uid
+            LEFT JOIN sr_territory t ON t.uid = c.uid_territory
+            WHERE c.active = 'yes'
+            AND c.verified is null
+            ORDER BY uid ASC
+            ", "{{lg.rows.lg}}");
+        }}
+        <table id="contractors">
+            <th>Uid</th>
+            <th>{{sn_ct("Date de l'inscription")}}</th>
+            <th>{{sn_ct("Langue")}}</th>
+            <th>Province</th>
+            <th>{{sn_ct("Territoire")}}</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="https://sxpert.sednove.com/widgets/{{lg.rows.lg}}/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>\{{r.sn_cdate}}</td>
+                <td>\{{r.contact_lg}}</td>
+                <td>\{{r.province}}</td>
+                <td>\{{r.name}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+    \{{endif
+    
+    if cgidata.code eq 'add_service' then
+        report = sql("
+            SELECT c.uid, c.company_name, c.rbq, s.name_long_? as name, c.contact_lg, cs.sn_cdate, a.province, s.rbq as srbq, cs.uid as csuid
+            FROM sr_contractor c
+            INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+            INNER JOIN sr_service s ON s.uid = cs.uid_service
+            INNER JOIN sr_address a ON a.uid_contractor = c.uid
+            WHERE c.active = 'yes'
+            AND c.verified = 'yes'
+            AND (cs.approved = 'no' OR cs.approved is null)
+            ORDER BY a.province ASC, c.uid ASC, name ASC
+            ", "{{lg.rows.lg}}");
+        }}
+        <table id="contractors">
+            <th>{{sn_ct("Entrepreneur")}}</th>
+            <th>RBQ</th>
+            <th>Service</th>
+            <th>{{sn_ct("RBQ requise")}}</th>
+            <th>{{sn_ct("Langue")}}</th>
+            <th>{{sn_ct("Date de la demande")}}</th>
+            <th>{{sn_ct("Province de l'entrepreneur")}}</th>
+            <th>{{sn_ct("Ajouter")}}</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td>\{{r.company_name .+ ' (' .+ r.uid .+ ')'}}</td>
+                <td>\{{r.rbq}}</td>
+                <td>\{{r.name}}</td>
+                <td>\{{r.srbq}}</td>
+                <td>\{{r.contact_lg}}</td>
+                <td>\{{r.sn_cdate}}</td>
+                <td>\{{r.province}}</td>
+                <td>
+                    <form action="" method="post">
+                    <input type="hidden" name="uid_service" value="\{{r.csuid}}">
+                    <input type="submit" name="add_service" value="{{sn_ct(edit:false, "Ajouter")}}">
+                    <input type="submit" name="remove_service" value="{{sn_ct(edit:false, "Refuser")}}">
+                    </form>
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+    \{{endif
+    
+    if cgidata.code eq 'contractor_region_service' then
+        report = sql("
+            SELECT count(*) as count, t.region, s.name_long_? as service_name
+            FROM sr_contractor c
+            INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+            INNER JOIN sr_territory t ON t.uid = ct.uid_territory
+            INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+            INNER JOIN sr_service s ON s.uid = cs.uid_service
+            WHERE c.active = 'yes'
+            AND c.verified = 'yes'
+            GROUP BY t.region, s.name_long_?
+            ORDER BY service_name ASC, region ASC
+            ", "{{lg.rows.lg}}", "{{lg.rows.lg}}");
+        }}
+        <table id="contractors">
+            <th>Service</th>
+            <th>{{sn_ct("Territoire")}}</th>
+            <th>{{sn_ct("Nombre d'entrepreneur")}}</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td>\{{r.service_name}}</td>
+                <td>\{{r.region}}</td>
+                <td>\{{r.count}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+    \{{endif
+    
+    if cgidata.code eq 'contractor_followup' then
+        list = sql("
+            SELECT uid, last_call_date, sn_cdate
+            FROM sr_contractor
+            WHERE year(last_call_date) = 2018
+            AND sn_cdate < '2017-09-01'
+            AND active = 'yes'
+            AND verified = 'yes'
+            ORDER BY uid ASC
+            ");
+        for l in list.rows do
+            year_before = sql("
+                SELECT uid_contractor, year(accepted_date) as year, sum(lead_price) as sales
+                FROM sr_project_contractor
+                WHERE uid_contractor = ?
+                AND accepted_date < '2018-01-01'
+                GROUP BY year(accepted_date)
+                HAVING sales > 0
+                ORDER BY year(accepted_date) ASC
+                ", l.uid);
+            before = sql("
+                SELECT uid_contractor, month(accepted_date) as month, sum(lead_price) as sales
+                FROM sr_project_contractor
+                WHERE uid_contractor = ?
+                AND accepted_date > '2018-01-01'
+                AND accepted_date < '?'
+                GROUP BY month(accepted_date)
+                HAVING sales > 0
+                ORDER BY month(accepted_date) ASC
+                ", l.uid, l.last_call_date);
+            after = sql("
+                SELECT uid_contractor, month(accepted_date) as month, sum(lead_price) as sales
+                FROM sr_project_contractor
+                WHERE uid_contractor = ?
+                AND accepted_date > '?'
+                GROUP BY month(accepted_date)
+                HAVING sales > 0
+                ORDER BY month(accepted_date) ASC
+                ", l.uid, l.last_call_date);
+                
+            }}
+            <br>
+            <table id="contractors">
+                <th colspan="2">uid de l'entrepreneur \{{l.uid}} - Date d'inscription: \{{l.sn_cdate}}</th>
+                <tr>
+                    <th>Mois (année)</th>
+                    <th>Achats</th>
+                </tr>
+                \{{for y in year_before.rows do}}
+                <tr>
+                    <td>\{{y.year}}</td>
+                    <td>\{{y.sales}}</td>
+                </tr>
+                \{{endfor}}
+                \{{for b in before.rows do}}
+                <tr>
+                    <td>\{{b.month}}</td>
+                    <td>\{{b.sales}}</td>
+                </tr>
+                \{{endfor}}
+                <tr>
+                    <td colspan="2">SUIVI FAIT - \{{l.last_call_date}}</td>
+                </tr>
+                \{{for a in after.rows do}}
+                <tr>
+                    <td>\{{a.month}}</td>
+                    <td>\{{a.sales}}</td>
+                </tr>
+                \{{endfor}}
+            </table>
+            
+        \{{endfor
+        endif
+            
+            
+    
+    if cgidata.code eq 'good_contractors' then
+        if cgidata.id_service then
+            report = sql("
+                SELECT pc.client_satisfaction, pc.client_comment, p.sn_cdate, c.uid, c.company_name, c.contact_gender, c.contact_firstname, c.contact_lastname, c.contact_phone, c.contact_email
+                FROM sr_contractor c
+                INNER JOIN sr_project_contractor pc ON pc.uid_contractor = c.uid
+                INNER JOIN sr_project p ON p.uid = pc.uid_project
+                INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+                WHERE p.uid_service = ?
+                AND ct.uid_territory = ?
+                AND (pc.client_satisfaction = 4 OR pc.client_satisfaction = 5)
+                AND c.active = 'yes'
+                AND c.verified = 'yes'
+                ORDER BY c.uid, p.sn_cdate DESC
+                ", cgidata.id_service, cgidata.id_territory);
+            }}
+            <b>{{sn_ct("Voici la liste des entrepreneurs dans ce territoire avec des bons sondages")}}</b>
+            <table id="contractors">
+                <th>{{sn_ct("Entrepreneur")}}</th>
+                <th>{{sn_ct("Coordonnées de l'entrepreneur")}}</th>
+                <th>{{sn_ct("Date du projet")}}</th>
+                <th>{{sn_ct("Note de satisfaction")}}</th>
+                <th>{{sn_ct("Commentaire du client")}}</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid .+ ' - ' .+ r.company_name}}</a></td>
+                        <td>\{{r.contact_gender .+ ' ' .+ r.contact_firstname .+ ' ' .+ r.contact_lastname .+ '<br>Téléphone:' .+ r.contact_phone .+ '<br>Courriel:' .+ r.contact_email}}</td>
+                        <td>\{{r.sn_cdate}}</td>
+                        <td>\{{r.client_satisfaction}}</td>
+                        <td>\{{r.client_comment}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        \{{endif}}
+        
+        <form action="" method="post">
+            <select name="id_service">
+                <option selected>Choisir un service</option>
+                \{{service = sql("SELECT uid, name_long_fr FROM sr_service WHERE active = 'yes' ORDER BY name_long_fr");
+                for s in service.rows do}}
+                    <option value="\{{s.uid}}">\{{s.name_long_fr}}</option>
+                \{{endfor}}
+            </select>
+            <select name="id_territory">
+                <option selected>Choisir un territoire</option>
+                \{{territory = sql("SELECT uid, name_fr FROM sr_territory WHERE active = 'yes' ORDER BY name_fr");
+                for t in territory.rows do}}
+                    <option value="\{{t.uid}}">\{{t.name_fr}}</option>
+                \{{endfor}}
+            </select>
+            <input type="submit" value="Chercher">
+        </form>
+    \{{endif
+    
+    if cgidata.code eq 'elise' then
+        report = sql("
+            SELECT c.uid as cuid, c.email, c.firstname, c.lastname, c.address, c.locked_by, p.sn_cdate, p.uid as puid, p.description
+            FROM sr_client c
+            INNER JOIN sr_project p on p.uid_client = c.uid
+            WHERE c.locked = 'yes'
+            AND p.status = 'new'
+            ORDER BY c.locked_by ASC, c.uid ASC
+            ");
+        }}
+        <b>Qui a verrouillé quel client</b>
+        <table id="contractors">
+            <th>
+                Qui travaille sur ce client
+            </th>
+            <th>
+                uid client
+            </th>
+            <th>
+                uid project
+            </th>
+            <th>
+                date du projet soumis
+            </th>
+            <th>
+                courriel
+            </th>
+            <th>
+                nom
+            </th>
+            <th>
+                adresse à retranscrire
+            </th>
+            <th>
+                description
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td>
+                    \{{r.locked_by}}
+                </td>
+                <td>
+                    <a href="/intranet/fr/recherche-client?subject=\{{r.cuid}}" target="_blank">\{{r.cuid}}</a>
+                </td>
+                <td>
+                    \{{r.puid}}
+                </td>
+                <td>
+                    \{{r.sn_cdate}}
+                </td>
+                <td>
+                    \{{r.email}}
+                </td>
+                <td>
+                    \{{r.firstname .+ ' ' .+ r.lastname}}
+                </td>
+                <td>
+                    \{{r.address}}
+                </td>
+                <td>
+                    \{{r.description}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+
+        \{{
+        report = sql("
+            SELECT c.uid as cuid, p.uid as puid, p.sn_cdate as received, c.lang, calls.count as calls, calls.max
+            FROM sr_client c 
+            INNER JOIN sr_project p ON p.uid_client = c.uid
+            LEFT JOIN sr_address a ON a.uid_client = c.uid
+            LEFT JOIN (
+                 SELECT calls1.uid_project, count(calls1.uid_project) as count, calls1.max
+                 FROM (
+                    SELECT f.uid_project, max(f.sn_cdate) as max
+                    FROM sr_followup f
+                    INNER JOIN sr_project p on p.uid = f.uid_project
+                    WHERE (f.msg_uid = 1 OR f.msg_uid = 4 OR f.msg_uid = 2 OR f.msg_uid = 6)
+                    AND p.status = 'new'
+                    GROUP BY f.uid_project, day(f.sn_cdate)
+                    ) as calls1
+                 GROUP BY calls1.uid_project
+                 ) as calls ON calls.uid_project = p.uid
+            WHERE p.status = 'new'
+            AND EXISTS(SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND sn_cdate < NOW() - INTERVAL 30 HOUR AND uid_client = p.uid_client)
+            AND NOT EXISTS (SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND time_to_sec(timediff(NOW(), sn_cdate)) / 3600 < 30 AND uid_client = p.uid_client ORDER BY sn_cdate)
+            GROUP BY c.uid
+            ORDER BY calls ASC, p.sn_cdate DESC
+            ");
+        }}
+        <hr>
+        <b>Liste des prochains suivis (version du 28 mai 2018)</b>
+        <table id="contractors">
+            <th>client</th>
+            <th>projet</th>
+            <th>projet reçu le</th>
+            <th>Nombre d'appel</th>
+            <th>langue</th>
+            <th>Dernier suivi</th>
+            \{{
+            i = 0;
+            for r in report.rows do
+            i = 1 + i;
+            }}
+            <tr>
+                <td>\{{i}}. <a href="/intranet/fr/recherche-client?subject=\{{r.cuid}}" target="_blank">\{{r.cuid}}</a></td>
+                <td>\{{r.puid}}</td>
+                <td>\{{r.received}}</td>
+                <td>\{{r.calls}}</td>
+                <td>\{{r.lang}}</td>
+                <td>\{{r.max}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+        
+        \{{
+        report = sql("
+            SELECT p.sn_cdate, p.uid_client, p.uid, c.locked, c.locked_by, c.lang
+           FROM sr_client c
+           INNER JOIN sr_project p ON p.uid_client = c.uid
+           LEFT JOIN sr_address a ON a.uid_client = c.uid
+           WHERE p.status = 'new'
+           AND NOT EXISTS(SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND uid_project = p.uid)
+           AND (sr_email_sent is null OR sr_email_sent = '')
+           AND (sr_call is null OR sr_call = '')
+           AND p.sn_cdate < NOW() - INTERVAL 3 MINUTE
+            GROUP BY p.uid_client ORDER BY c.locked_by = '' OR isnull(c.locked_by) ASC, p.sn_cdate < (NOW() - INTERVAL 18 MINUTE) AND hour(now()) < 16,  p.sn_cdate ASC, p.sn_cdate < NOW() - INTERVAL 6 HOUR ASC, p.sn_cdate ASC
+            ");
+        }}
+        <hr>
+        <b>Liste des prochains nouveaux clients à traiter (version du 28 mai 2018)</b>
+        <table id="contractors">
+            <th>client</th>
+            <th>projet</th>
+            <th>projet reçu le</th>
+            <th>langue</th>
+            <th>verrouillé par</th>
+            \{{
+            i = 0;
+            for r in report.rows do
+            i = 1 + i;
+            }}
+            <tr>
+                <td>\{{i}}. <a href="/intranet/fr/recherche-client?subject=\{{r.uid_client}}" target="_blank">\{{r.uid_client}}</a></td>
+                <td>\{{r.uid}}</td>
+                <td>\{{r.sn_cdate}}</td>
+                <td>\{{r.lang}}</td>
+                <td>\{{r.locked_by}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+    
+    \{{endif}}
+
+\{{
+    if cgidata.code eq 'omar' then
+        if cgidata.id_contractor then
+            report = sql(single:true,"SELECT sn_cdate FROM sr_project_contractor WHERE uid_contractor = ? AND uid_project = ?", cgidata.id_contractor, cgidata.id_project);
+            report.rows.sn_cdate;
+        endif
+        }}
+        <form action="" method="post">
+            <input type="text" placeholder="id contractor" name="id_contractor" value="\{{cgidata.id_contractor}}">
+            <input type="text" placeholder="id project" name="id_project" value="\{{cgidata.id_project}}">
+            <input type="submit">
+        </form>
+        \{{
+        
+        if cgidata.id_service then
+            report = sql(single:true,"SELECT count(*) as count
+                FROM sr_project p
+                INNER JOIN sr_address a ON p.uid_address = a.uid
+                INNER JOIN sr_city c ON c.uid = a.uid_city
+                WHERE p.uid_service = ?
+                AND c.uid_territory = ?
+                AND p.active_date > now() - INTERVAL ? DAY
+                ", cgidata.id_service, cgidata.id_territory, cgidata.timeframe);
+            report.rows.count;
+        endif
+        }}
+        <form action="" method="post">
+            <select name="id_territory">
+                <option value="" selected>Territoire</option>
+                \{{options = sql("SELECT uid, name_? as name FROM sr_territory WHERE active = 'yes' ORDER BY name_? ASC", "{{lg.rows.lg}}", "{{lg.rows.lg}}");
+                for o in options.rows do}}
+                    <option value="\{{o.uid}}" \{{if cgidata.id_territory == o.uid then "selected"; endif}}>\{{o.name}}</option>
+                \{{endfor}}
+            </select>
+            <select name="id_service">
+                <option value="" selected>Service</option>
+                \{{options = sql("SELECT uid, name_long_? as name FROM sr_service WHERE active = 'yes' ORDER BY name_long_? ASC", "{{lg.rows.lg}}", "{{lg.rows.lg}}");
+                for o in options.rows do}}
+                    <option value="\{{o.uid}}" \{{if cgidata.id_service == o.uid then "selected"; endif}}>\{{o.name}}</option>
+                \{{endfor}}
+            </select>
+            <input type="text" placeholder="number of days" name="timeframe"value="\{{cgidata.timeframe}}">
+            <input type="submit">
+        </form>
+    \{{endif
+}}
+
+\{{
+    if cgidata.code eq "vente_par_service" then
+        }}
+        <form action="" method="post">
+            <input type="text" placeholder="id du service" name="service" value="\{{cgidata.service}}">
+            <input type="date" placeholder="date début" name="start" value="\{{cgidata.start}}">
+            <input type="date" placeholder="date fin" name="end" value="\{{cgidata.end}}">
+            <!--<input type="text" placeholder="territoire" name="territoire" value="\{{cgidata.territoire}}">-->
+            <input type="submit">
+        </form>
+        
+        \{{if cgidata.service then
+            report = sql("
+                SELECT q1.count as count, count(q1.count) as total, q3.real_total
+                FROM
+                    (SELECT count(*) as count
+                    FROM sr_project_contractor pc
+                    LEFT JOIN sr_project p ON p.uid = pc.uid_project
+                    WHERE accepted_date is not null
+                    AND active_date > '?'
+                    AND active_date < '?'
+                    AND p.uid_service = ?
+                    GROUP BY p.uid) as q1
+                CROSS JOIN (
+                    SELECT count(*) as real_total
+                    FROM sr_project p
+                    WHERE p.active_date > '?' 
+                    AND active_date < '?'
+                    AND p.uid_service = ?
+                ) as q3
+                WHERE q1.count <= 4
+                GROUP BY q1.count
+                UNION (
+                    SELECT '0' as count, count(q2.uid) as total, '0' as real_total
+                    FROM (
+                        SELECT p.uid, '0' as count 
+                        FROM sr_project p 
+                        LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid 
+                        WHERE p.active_date > '?' 
+                        AND active_date < '?'
+                        AND p.uid_service = ?
+                        GROUP BY p.uid 
+                        HAVING sum(pc.lead_price) is null) as q2)
+                ORDER BY count DESC
+                ", cgidata.start, cgidata.end, cgidata.service, cgidata.start, cgidata.end, cgidata.service, cgidata.start, cgidata.end, cgidata.service);
+        }}
+        
+        <table id="contractors" style="width:50%; float: left;">
+            <th colspan="4">
+                Cette année
+            </th>
+            <tr>
+                <th>
+                    Nombre d'entrepreneur
+                </th>
+                <th>
+                    Nombre de projet
+                </th>
+                <th>
+                    Ratio
+                </th>
+                <th>
+                    Cumulatif
+                </th>
+            </tr>
+            \{{total = 0;
+            for r in report.rows do
+            total = total + r.total;
+            endfor
+            for r in report.rows do
+            }}
+            <tr>
+                <td>
+                    \{{r.count}}
+                </td>
+                <td>
+                    \{{r.total}}
+                </td>
+                <td>
+                    \{{number_format(r.total/total*100).+'%';
+                    cumulative = number_format(r.total/total*100) + cumulative;}}
+                </td>
+                <td>
+                    \{{cumulative}}%
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+        report = sql("
+                SELECT q1.count as count, count(q1.count) as total, q3.real_total
+                FROM
+                    (SELECT count(*) as count
+                    FROM sr_project_contractor pc
+                    LEFT JOIN sr_project p ON p.uid = pc.uid_project
+                    WHERE accepted_date is not null
+                    AND active_date > ('?' - INTERVAL 1 YEAR)
+                    AND active_date < ('?' - INTERVAL 1 YEAR)
+                    AND p.uid_service = ?
+                    GROUP BY p.uid) as q1
+                CROSS JOIN (
+                    SELECT count(*) as real_total
+                    FROM sr_project p
+                    WHERE p.active_date > ('?' - INTERVAL 1 YEAR)
+                    AND active_date < ('?' - INTERVAL 1 YEAR)
+                    AND p.uid_service = ?
+                ) as q3
+                WHERE q1.count <= 4
+                GROUP BY q1.count
+                UNION (
+                    SELECT '0' as count, count(q2.uid) as total, '0' as real_total
+                    FROM (
+                        SELECT p.uid, '0' as count 
+                        FROM sr_project p 
+                        LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid 
+                        WHERE p.active_date > ('?' - INTERVAL 1 YEAR)
+                        AND active_date < ('?' - INTERVAL 1 YEAR)
+                        AND p.uid_service = ?
+                        GROUP BY p.uid 
+                        HAVING sum(pc.lead_price) is null) as q2)
+                ORDER BY count DESC
+                ", cgidata.start, cgidata.end, cgidata.service, cgidata.start, cgidata.end, cgidata.service, cgidata.start, cgidata.end, cgidata.service);
+        }}
+        
+        <table id="contractors" style="width:49%; float: right;">
+            <th colspan="4">
+                L'année passée
+            </th>
+            <tr>
+                <th>
+                    Nombre d'entrepreneur
+                </th>
+                <th>
+                    Nombre de projet
+                </th>
+                <th>
+                    Ratio
+                </th>
+                <th>
+                    Cumulatif
+                </th>
+            </tr>
+            \{{total = 0;
+            for r in report.rows do
+            total = total + r.total;
+            endfor
+            cumulative = 0;
+            for r in report.rows do
+            }}
+            <tr>
+                <td>
+                    \{{r.count}}
+                </td>
+                <td>
+                    \{{r.total}}
+                </td>
+                <td>
+                    \{{number_format(r.total/total*100).+'%';
+                    cumulative = number_format(r.total/total*100) + cumulative;}}
+                </td>
+                <td>
+                    \{{cumulative}}%
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        <div style="clear:both;"></div>
+        \{{endif
+        report = sql("SELECT name_long_fr, uid FROM sr_service WHERE active = 'yes' ORDER BY name_long_fr");
+        for r in report.rows do
+            r.name_long_fr.+" - ".+r.uid.+"<br>";
+        endfor
+    endif
+}}
+
+
+\{{
+    if cgidata.code eq "verification" then
+    }}
+    <div style="max-width:500px">
+        \{{
+        report = sql("
+            SELECT uid, contact_lg
+            FROM sr_contractor
+            WHERE verified = 'yes'
+            AND active = 'yes'
+            AND (email = '' OR email is null OR email like '% %')
+            AND (email_cc = '' OR email_cc is null OR email_cc like '% %')
+            ORDER BY contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs sans courriel de destination</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+            report = sql("
+            SELECT uid, contact_lg
+            FROM sr_contractor
+            WHERE verified = 'yes'
+            AND active = 'yes'
+            AND (languages = '' OR languages is null OR languages = 0)
+            ORDER BY contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs sans language</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+            report = sql("
+            SELECT c.uid, c.contact_lg
+            FROM sr_contractor c
+            LEFT JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+            WHERE c.verified = 'yes'
+            AND c.active = 'yes'
+            GROUP BY c.uid
+            HAVING count(cs.uid) = 0
+            ORDER BY c.contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs sans services</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+            report = sql("
+            SELECT c.uid, c.contact_lg
+            FROM sr_contractor c
+            LEFT JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+            WHERE c.verified = 'yes'
+            AND c.active = 'yes'
+            GROUP BY c.uid
+            HAVING count(ct.uid) = 0
+            ORDER BY c.contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs sans territoire</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+            report = sql("
+            SELECT c.uid, c.contact_lg, c.to_active_hour, c.from_active_hour, c.to_active_hour - c.from_active_hour
+            FROM sr_contractor c
+            WHERE c.verified = 'yes'
+            AND c.active = 'yes'
+            AND (c.to_active_hour is not null OR c.to_active_hour is not null)
+            AND (c.to_active_hour <> '' OR c.from_active_hour)
+            AND (
+                (c.to_active_hour - c.from_active_hour < 1)
+                OR
+                (c.to_active_hour <= '05:00' AND c.from_active_hour >= '20:00')
+                )
+            ORDER BY c.contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs avec les mauvaises heures de réception de courriel</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            <th>Heure de début</th>
+            <th>Heure de fin</th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+                <td>\{{r.from_active_hour}}</td>
+                <td>\{{r.to_active_hour}}</td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+            report = sql("
+            SELECT c.uid, c.contact_lg, t.name_fr
+            FROM sr_contractor c
+            INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+            INNER JOIN sr_territory t ON t.uid = ct.uid_territory
+            WHERE c.verified = 'yes'
+            AND c.active = 'yes'
+            AND ((ct.max_amount < 500 AND ct.max_amount <> 0) OR (ct.min_amount > 999999) OR (ct.min_amount > ct.max_amount AND ct.max_amount > 0))
+            ORDER BY c.contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs avec des montants minimums et maximums problématique</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            <th>
+                territoire
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+                <td>
+                    \{{r.name_fr}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        \{{
+            report = sql("
+            SELECT c.uid, c.contact_lg
+            FROM sr_contractor c
+            LEFT JOIN sr_address a ON a.uid_contractor = c.uid
+            WHERE c.verified = 'yes'
+            AND c.active = 'yes'
+            AND (a.province is null OR a.province = '' OR a.uid_city is null OR a.uid = 0)
+            ORDER BY c.contact_lg
+            ")
+            }}
+        <p>Liste d'entrepreneurs avec des adresses à corriger (eg: ville ou province)</p>
+        <table id="contractors">
+            <th>
+                uid
+            </th>
+            <th>
+                language
+            </th>
+            \{{for r in report.rows do}}
+            <tr>
+                <td><a href="/widgets/fr/stats_contractor.snc?id_contractor=\{{r.uid}}" target="_blank">\{{r.uid}}</a></td>
+                <td>
+                    \{{r.contact_lg}}
+                </td>
+            </tr>
+            \{{endfor}}
+        </table>
+        </div>
+    \{{endif
+}}
+
+\{{
+    if cgidata.code eq "quality_per_day" then
+        report = sql("
+            SELECT dayofweek(p.sn_cdate) as hour, count(p.uid) as projects_count, a.active_count, s.sales
+            FROM sr_project p
+            LEFT JOIN (
+                SELECT dayofweek(p.sn_cdate) as hour, count(p.uid) as active_count
+                FROM sr_project p
+                WHERE p.active_date > 0
+                AND p.sn_cdate >= '2017/01/01'
+                GROUP BY dayofweek(p.sn_cdate)
+                ) as a ON a.hour = dayofweek(p.sn_cdate)
+            LEFT JOIN (
+                SELECT dayofweek(p.sn_cdate) as hour, sum(pc.lead_price) as sales
+                FROM sr_project p
+                LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                WHERE p.active_date > 0
+                AND p.sn_cdate >= '2017/01/01'
+                GROUP BY dayofweek(p.sn_cdate)
+                ) as s ON s.hour = dayofweek(p.sn_cdate)
+            WHERE p.sn_cdate >= '2017/01/01'
+            GROUP BY dayofweek(p.sn_cdate)
+            UNION (
+                SELECT 'Total' as hour, count(p.uid) as projects_count, a.active_count, s.sales
+                FROM sr_project p
+                CROSS JOIN (
+                    SELECT count(p.uid) as active_count
+                    FROM sr_project p
+                    WHERE p.active_date > 0
+                    AND p.sn_cdate >= '2017/01/01'
+                    ) as a
+                CROSS JOIN (
+                    SELECT sum(pc.lead_price) as sales
+                    FROM sr_project p
+                    LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                    WHERE p.active_date > 0
+                    AND p.sn_cdate >= '2017/01/01'
+                    ) as s
+                WHERE p.sn_cdate >= '2017/01/01'
+                )
+            ORDER BY hour ASC
+        ");
+    }}
+    Ceci est le rapport pour vérifier la qualité des leads selon les heures qu'on a reçu le projet.<br>
+    <table id="contractors">
+        <th>
+            Heure
+        </th>
+        <th>
+            Nombre de projet
+        </th>
+        <th>
+            Nombre de projet activé
+        </th>
+        <th>
+            Ratio activation
+        </th>
+        <th>
+            Ventes
+        </th>
+        <th>
+            Revenu par projet reçu
+        </th>
+        <th>
+            Revenu par projet activé
+        </th>
+        \{{for r in report.rows do}}
+        <tr>
+            <td>
+                \{{r.hour}}
+            </td>
+            <td>
+                \{{r.projects_count}}
+            </td>
+            <td>
+                \{{r.active_count}}
+            </td>
+            <td>
+                \{{number_format(r.active_count/r.projects_count*100)}}%
+            </td>
+            <td>
+                \{{rint(r.sales)}}$
+            </td>
+            <td>
+                \{{number_format(r.sales/r.projects_count)}}$
+            </td>
+            <td>
+                \{{number_format(r.sales/r.active_count)}}$
+            </td>
+        </tr>
+        \{{endfor}}
+    </table>
+\{{endif}}
+
+\{{
+    if cgidata.code eq "quality_per_hour" then
+        report = sql("
+            SELECT lpad(hour(p.sn_cdate),2,0) as hour, count(p.uid) as projects_count, a.active_count, s.sales
+            FROM sr_project p
+            LEFT JOIN (
+                SELECT hour(p.sn_cdate) as hour, count(p.uid) as active_count
+                FROM sr_project p
+                WHERE p.active_date > 0
+                AND p.sn_cdate >= '2017/01/01'
+                GROUP BY hour(p.sn_cdate)
+                ) as a ON a.hour = hour(p.sn_cdate)
+            LEFT JOIN (
+                SELECT hour(p.sn_cdate) as hour, sum(pc.lead_price) as sales
+                FROM sr_project p
+                LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                WHERE p.active_date > 0
+                AND p.sn_cdate >= '2017/01/01'
+                GROUP BY hour(p.sn_cdate)
+                ) as s ON s.hour = hour(p.sn_cdate)
+            WHERE p.sn_cdate >= '2017/01/01'
+            GROUP BY hour(p.sn_cdate)
+            UNION (
+                SELECT 'Total' as hour, count(p.uid) as projects_count, a.active_count, s.sales
+                FROM sr_project p
+                CROSS JOIN (
+                    SELECT count(p.uid) as active_count
+                    FROM sr_project p
+                    WHERE p.active_date > 0
+                    AND p.sn_cdate >= '2017/01/01'
+                    ) as a
+                CROSS JOIN (
+                    SELECT sum(pc.lead_price) as sales
+                    FROM sr_project p
+                    LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                    WHERE p.active_date > 0
+                    AND p.sn_cdate >= '2017/01/01'
+                    ) as s
+                WHERE p.sn_cdate >= '2017/01/01'
+                )
+            ORDER BY hour ASC
+        ");
+    }}
+    Ceci est le rapport pour vérifier la qualité des leads selon les heures qu'on a reçu le projet.<br>
+    <table id="contractors">
+        <th>
+            Heure
+        </th>
+        <th>
+            Nombre de projet
+        </th>
+        <th>
+            Nombre de projet activé
+        </th>
+        <th>
+            Ratio activation
+        </th>
+        <th>
+            Ventes
+        </th>
+        <th>
+            Revenu par projet reçu
+        </th>
+        <th>
+            Revenu par projet activé
+        </th>
+        \{{for r in report.rows do}}
+        <tr>
+            <td>
+                \{{r.hour}}
+            </td>
+            <td>
+                \{{r.projects_count}}
+            </td>
+            <td>
+                \{{r.active_count}}
+            </td>
+            <td>
+                \{{number_format(r.active_count/r.projects_count*100)}}%
+            </td>
+            <td>
+                \{{rint(r.sales)}}$
+            </td>
+            <td>
+                \{{number_format(r.sales/r.projects_count)}}$
+            </td>
+            <td>
+                \{{number_format(r.sales/r.active_count)}}$
+            </td>
+        </tr>
+        \{{endfor}}
+    </table>
+\{{endif}}
+
+\{{
+    if cgidata.code eq "resultat_sous_region_1_an" then
+        report = sql("
+        SELECT count(p.uid) as project_count, t.name_fr, t.region, q2.sales_count, q2.sales
+        FROM sr_project p
+        INNER JOIN sr_address a ON a.uid = p.uid_address
+        INNER JOIN sr_city c ON c.uid = a.uid_city
+        INNER JOIN sr_territory t ON t.uid = c.uid_territory
+        LEFT JOIN (
+            SELECT count(pc.uid) as sales_count, sum(pc.lead_price) as sales, t.name_fr
+            FROM sr_project_contractor pc
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_address a ON a.uid = p.uid_address
+            INNER JOIN sr_city c ON c.uid = a.uid_city
+            INNER JOIN sr_territory t ON t.uid = c.uid_territory
+            WHERE p.status <> 'free'
+            AND DATEDIFF(now(), active_date) < ?
+            AND DATEDIFF(now(), active_date) > 7
+            AND pc.lead_price <> ''
+            GROUP BY t.name_fr
+            ) as q2 ON q2.name_fr = t.name_fr
+        WHERE DATEDIFF(now(), active_date) < ?
+        AND DATEDIFF(now(), active_date) > 7
+        AND p.status <> 'new'
+        AND p.status <> 'free'
+        AND p.status <> 'cancelled-before-qualification'
+        GROUP BY t.name_fr
+        ORDER BY t.region, t.name_fr",
+        cgidata.time,
+        cgidata.time);
+        }}
+        <table id="contractors">
+            <th>
+                Région
+            </th>
+            <th>
+                Sous-Région
+            </th>
+            <th>
+                Nb Projet
+            </th>
+            <th>
+                Revenus
+            </th>
+            <th>
+                Avg ent
+            </th>
+            <th>
+                Avg Rev
+            </th>
+        \{{for r in report.rows do}}
+        <tr>
+            <td>
+                \{{r.region}}
+            </td>
+            <td>
+                \{{r.name_fr}}
+            </td>
+            <td>
+                \{{r.project_count}}
+            </td>
+            <td>
+                \{{r.sales}}
+            </td>
+            <td>
+                \{{number_format(r.sales_count/r.project_count)}}
+            </td>
+            <td>
+                \{{number_format(r.sales/r.project_count)}}
+            </td>
+        </tr>
+        \{{endfor}}
+        </table>
+        \{{
+    
+    endif
+}}
+
+\{{
+if cgidata.code eq "enlever_entrepreneur" then
+    if (cgidata.id_contractor && cgidata.id_project) then
+        void sql("INSERT INTO sr_project_contractor (hidden, uid_project, uid_contractor) VALUES ('yes', ?, ?)", cgidata.id_project, cgidata.id_contractor);
+        "<p>C'est fait pour projet #" .+cgidata.id_project .+ " et entrepreneur #" .+cgidata.id_contractor .+"</p>";
+    endif
+    }}
+    <p>SVP entrer un numéro de projet et numéro de fournisseur pour l'enlever des fournisseurs potentiels</p>
+    <form action="" method="post">
+        <input type="text" name="id_contractor" placeholder="ID entrepreneur"></input>
+        <input type="text" name="id_project" placeholder="ID Projet"></input>
+        <input type="submit" name="submit"></input>
+    </form>
+    \{{
+endif
+}}
+
+\{{
+if cgidata.code eq "sondage" then
+    if (cgidata.id_project) then
+        automail::sendSatisfactionSurveyToClient(cgidata.id_project);
+        "<p>C'est fait pour projet #" .+cgidata.id_project .+ "</p>";
+    endif
+    if (cgidata.project_id_survey) then
+        void sql("UPDATE sr_project_contractor SET client_comment = '?', client_satisfaction = ?, evaluation_date = now() WHERE uid_project = ? AND uid_contractor = ?", cgidata.comment_survey, cgidata.rating_survey, cgidata.project_id_survey, cgidata.contractor_id_survey);
+        "<p>C'est fait pour projet #" .+cgidata.project_id_survey .+ " et l'entrepreneur #" .+cgidata.contractor_id_survey .+ "</p>";
+    endif
+    }}
+    <p>Ce formulaire est pour envoyer le sondage de satisfaction à un client</p>
+    <form action="" method="post">
+        <input type="text" name="id_project" placeholder="ID Projet"></input>
+        <input type="submit" name="submit"></input>
+    </form>
+    <br>
+    <p>Ce formulaire est pour mettre une note à un entrepreneur pour un projet</p>
+    <form action="" method="post">
+        <input type="text" name="project_id_survey" placeholder="ID Projet"></input>
+        <input type="text" name="contractor_id_survey" placeholder="ID Entrepreneur"></input>
+        <input type="text" name="rating_survey" placeholder="Note sur 5"></input>
+        <br><textarea name="comment_survey" placeholder="Commentaires"></textarea>
+        <input type="submit" name="submit"></input>
+    </form>
+    \{{
+endif
+}}
+
+\{{
+    if cgidata.code eq "verify_project" then
+        q_activated_by = sql("SELECT activated_by FROM sr_project WHERE active_date BETWEEN curdate() - INTERVAL 30 DAY and curdate() GROUP BY activated_by");
+        
+        "Voici les choix<br>";
+        for q in q_activated_by.rows do
+            q.activated_by .+ " <br>";
+        endfor
+        
+        if cgidata.activated_by then
+            report = sql("SELECT p.uid_client, p.active_date, p.description, p.lead_price, s.service as service1, s2.service as service2, p.budget, p.estimate_duration, p.due_date, a.street_no, a.street, a.zip, c.name_fr, p.sn_cdate,
+            concat('<a target=\"_blank\" href=\"', p.file1, '\">', p.file1, '</a> ','<a target=\"_blank\" href=\"', p.file2, '\">', p.file2, '</a> ', '<a target=\"_blank\" href=\"', p.file3, '\">', p.file3, '</a> ', '<a target=\"_blank\" href=\"', p.file4, '\">', p.file4, '</a> ', '<a target=\"_blank\" href=\"', p.file5, '\">', p.file5, '</a> ') as filecount
+            FROM sr_project p
+            INNER JOIN sr_service s ON p.uid_service = s.uid
+            LEFT JOIN sr_service s2 ON p.uid_secondary_service = s2.uid
+            INNER JOIN sr_address a ON a.uid = p.uid_address
+            INNER JOIN sr_city c ON c.uid = a.uid_city
+            WHERE activated_by = '?'
+            ORDER BY p.active_date DESC
+            LIMIT 20
+            ", cgidata.activated_by);
+            }}
+            <table id="contractors">
+                <th>
+                    Date activation
+                </th>
+                <th>
+                    Description
+                </th>
+                <th>
+                    Service 1
+                </th>
+                <th>
+                    Service 2
+                </th>
+                <th>
+                    Prix
+                </th>
+                <th>
+                    Budget (client)
+                </th>
+                <th>
+                    Délai (nous)
+                </th>
+                <th>
+                    Délai (client)
+                </th>
+                <th style="width:50px;">
+                    Fichiers
+                </th>
+                <th>
+                    Adresse
+                </th>
+                <th>
+                    Uid client
+                </th>
+                \{{
+                for r in report.rows do
+                }}
+                <tr>
+                    <td>
+                        \{{r.active_date;}}
+                    </td>
+                    <td>
+                        \{{r.description;}}
+                    </td>
+                    <td>
+                        \{{r.service1;}}
+                    </td>
+                    <td>
+                        \{{r.service2;}}
+                    </td>
+                    <td>
+                        \{{r.lead_price;}}
+                    </td>
+                    <td>
+                        \{{r.budget;}}
+                    </td>
+                    <td>
+                        \{{r.due_date;}}
+                    </td>
+                    <td>
+                        \{{r.estimate_duration;}}
+                    </td>
+                    <td>
+                        \{{r.filecount;}}
+                    </td>
+                    <td>
+                        \{{r.street_no .+ ' '.+ r.street.+ ', '.+r.name_fr.+ ' - '.+ r.zip}}
+                    </td>
+                    <td>
+                        <a href="/intranet/fr/recherche-client?subject=\{{r.uid_client}}" target="_blank">\{{r.uid_client;}}</a>
+                    </td>
+                </tr>
+            \{{endfor}}
+            </table>
+\{{ endif
+endif}}
+
+\{{
+        if cgidata.code eq 'verification_hebdo' then
+            report = sql("
+                SELECT p.uid, p.sn_cdate, p.sn_mdate
+                FROM sr_project p
+                WHERE p.status = 'active'
+                AND (p.active_date < '2018/01/01' OR p.active_date is null OR p.active_date = 0)
+                ");
+            }}
+            Projet sans date d'activation
+            <table id="contractors">
+                <th>Uid projet</th>
+                <th>sn_cdate</th>
+                <th>sn_mdate</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td>\{{r.uid}}</td>
+                        <td>\{{r.sn_cdate}}</td>
+                        <td>\{{r.sn_mdate}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+            \{{
+                
+                
+                
+                
+            report = sql("
+                SELECT cr.uid_project_contractor, cr.completed, max(cr.sn_mdate) as sn_mdate, count(*) as total, DATEDIFF(curdate(), max(cr.sn_mdate)) as delay, pc.uid_contractor
+                FROM sr_credit cr
+                INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+                WHERE cr.accepted = 'yes'
+                GROUP BY cr.uid_project_contractor
+                HAVING total > 1
+                AND delay < 100
+                ");
+            }}
+            <br><br>
+            Crédits double
+            <table id="contractors">
+                <th>Uid project_contractor</th>
+                <th>Dernier crédit traité</th>
+                <th>Complété</th>
+                <th>Entrepreneur</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td>\{{r.uid_project_contractor}}</td>
+                        <td>\{{r.sn_mdate}}</td>
+                        <td>\{{r.completed}}</td>
+                        <td>\{{r.uid_contractor}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+            \{{
+                
+                
+                
+                
+            report = sql("
+                SELECT p.active_date, p.uid, count(pc.uid) as total, p.uid_client, p.rewritten
+                FROM sr_project p
+                LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+                WHERE p.status = 'active'
+                AND DATEDIFF(curdate(), p.active_date) < 4
+                AND TIMESTAMPDIFF(HOUR, p.active_date, now()) > 1
+                GROUP BY p.uid
+                HAVING total = 0
+                ");
+            }}
+            <br><br>
+            Liste des projets mal activé
+            <table id="contractors">
+                <th>Uid projet</th>
+                <th>Uid client</th>
+                <th>A été réécrit</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td>\{{r.uid}}</td>
+                        <td>\{{r.uid_client}}</td>
+                        <td>\{{r.rewritten}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+            \{{
+                
+                
+                
+            report = sql("
+                SELECT c.company_name as reference, c.uid as cuid, c2.company_name as reference_owner, c2.uid as c2uid
+                FROM sr_contractor c
+                INNER JOIN sr_contractor c2 ON c2.uid = c.uid_contractor_referring
+                INNER JOIN sr_transaction t ON c.uid = t.uid_contractor
+                WHERE (c.referral_status IS NULL OR c.referral_status <> 'yes')
+                GROUP BY c.uid
+                HAVING sum(t.amount) >= 50
+                ");
+            }}
+            <br><br>
+            Liste des entrepreneurs qui ont référé un autre entrepreneur (et à qui on doit 25$ à eux + à leur référence)
+            <table id="contractors">
+                <th>Référence</th>
+                <th>Référence origine</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td>\{{r.reference}} (\{{r.cuid}}</td>
+                        <td>\{{r.reference_owner}} (\{{r.c2uid}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        \{{
+        endif
+        
+        if cgidata.code eq 'sales_service_region' then
+            //get the parameters
+            }}
+                Paramètres: max_time, min_time, group (region, name_fr), min_project, min_nb_ent<br>
+                eg: <a href="/widgets/fr/reporting.snc?code=sales_service_region&max_time=365&min_project=5&min_nb_ent=2.5">/widgets/fr/reporting.snc?code=sales_service_region&max_time=365&min_project=5&min_nb_ent=2.5</a><br>
+            \{{
+            if cgidata.max_time then
+                max_timeframe = cgidata.max_time;
+            else
+                max_timeframe = 28;
+            endif
+            if cgidata.min_time then
+                min_timeframe = cgidata.min_time;
+            else
+                min_timeframe = 8;
+            endif
+            if cgidata.group then
+                group = cgidata.group;
+            else
+                group = 'region';
+            endif
+            if cgidata.min_project then
+                min_project = cgidata.min_project;
+            else
+                min_project = 0;
+            endif
+            if cgidata.min_nb_ent then
+                min_nb_ent = cgidata.min_nb_ent;
+            else
+                min_nb_ent = 0;
+            endif
+            
+            //create the report
+            report = sql("
+                SELECT t.? as name_fr, s.name_long_? as service, p.count, pc.count as nb_ent, pc.sales
+                FROM sr_territory t
+                CROSS JOIN sr_service s
+                INNER JOIN (
+                    SELECT count(*) as count, t.? as tuid, s.uid as suid
+                    FROM sr_project p
+                    INNER JOIN sr_service s ON s.uid = p.uid_service
+                    INNER JOIN sr_address a ON a.uid = p.uid_address
+                    INNER JOIN sr_city c ON c.uid = a.uid_city
+                    INNER JOIN sr_territory t ON t.uid = c.uid_territory
+                    WHERE datediff(curdate(), p.active_date) >= ?
+                    AND datediff(curdate(), p.active_date) <= ?
+                    GROUP BY t.?, s.uid
+                ) as p ON p.tuid = t.? AND p.suid = s.uid
+                LEFT JOIN (
+                    SELECT count(*) as count, sum(pc.lead_price) as sales, t.? as tuid, s.uid as suid
+                    FROM sr_project_contractor pc
+                    INNER JOIN sr_project p ON p.uid = pc.uid_project
+                    INNER JOIN sr_service s ON s.uid = p.uid_service
+                    INNER JOIN sr_address a ON a.uid = p.uid_address
+                    INNER JOIN sr_city c ON c.uid = a.uid_city
+                    INNER JOIN sr_territory t ON t.uid = c.uid_territory
+                    WHERE datediff(curdate(), p.active_date) >= ?
+                    AND datediff(curdate(), p.active_date) <= ?
+                    AND pc.lead_price >= 0
+                    GROUP BY t.?, s.uid
+                ) as pc ON pc.tuid = t.? AND pc.suid = s.uid
+                WHERE t.active = 'yes'
+                GROUP BY t.?, s.uid
+                HAVING p.count >= ?
+                AND (nb_ent/p.count) >= ?
+                ORDER BY t.? ASC, service ASC
+                ", group, "{{lg.rows.lg}}", group, min_timeframe, max_timeframe, group, group, group, min_timeframe, max_timeframe, group, group, group, min_project, min_nb_ent, group);
+            }}
+            <table id="contractors">
+                <th>Territoire</th>
+                <th>Service</th>
+                <th># Projet</th>
+                <th># Ent moyen</th>
+                <th>Vente total</th>
+                <th>Vente par projet</th>
+                <th>Target CPA</th>
+                \{{for r in report.rows do}}
+                    <tr>
+                        <td>\{{r.name_fr}}</td>
+                        <td>\{{r.service}}</td>
+                        <td>\{{r.count}}</td>
+                        <td>\{{round(r.nb_ent/r.count*10)/10}}</td>
+                        <td>\{{r.sales}}</td>
+                        <td>\{{money_format(r.sales/r.count)}}</td>
+                        <td>\{{money_format(r.sales/r.count*.5)}}</td>
+                    </tr>
+                \{{endfor}}
+            </table>
+        
+        \{{
+        endif
+
+}}
+
+\{{endif}}

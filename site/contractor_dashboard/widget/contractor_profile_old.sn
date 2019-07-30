@@ -1,0 +1,414 @@
+{{
+    /*
+        @title contractor_profile
+        Description: This widget displays the parameters about the account of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-19
+        @mod  bbduc@yahoo.com
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+    
+    col_label = ' col-md-4';
+    col_input1 = 'col-md-4';
+    col_input = 'col-md-8';
+    col_input0 = 'col-md-2';
+    
+    template_phone = "555-555-5555";
+    template_email = "email@site.com";
+    
+}}
+    <script type="text/javascript" src="/js/datepicker/jquery-ui-i18n.min.js"></script>
+    <link rel="stylesheet" href="css/datepicker/themes/theme1.css" /> <!-- for datepicker   -->
+    
+
+
+<style>
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    
+/*.sn .sn_tooltip {*/
+ .sn_tooltip {
+    display: none;
+    min-width: 200px;
+}
+.checkbox1{
+    width:  34px;
+    height: 20px;
+}
+
+
+</style>
+
+\{{
+    use extranet_user;
+    contractor = sql(single:true,"SELECT * FROM sr_contractor WHERE uid='?'", extranet_user.uid);
+    address = sql(single:true, "SELECT * FROM sr_address WHERE uid_contractor='?' ORDER BY uid ASC", extranet_user.uid);
+}}
+
+
+<div id="ajax_success" class="alert alert-success" style="display:none">
+    {{sn_ct("contractor_profile Super! Nous avons enregistré les modifications", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+</div>
+<div id="ajax_error" class="alert alert-danger" style="display:none">
+    {{sn_ct("contractor_profile Une erreur est survenu!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+</div>
+<script>
+    $(".close").on("click", function(){
+        $(this).parents(".alert").hide(); 
+    });
+</script>
+<div class="row">
+    <div class="col-md-4">
+        <h2>
+            {{sn_ct("contractor_profile information sur votre Entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </h2>
+    </div>   
+    
+    <div class="col-md-8">
+        <div class="well custom-well">
+            <form class="form-horizontal" action="{{ sn_pages('ajax_edit_contractor_profile', lg.rows.lg, table:'ressources')}}" id="edit_contractor_profile" name="edit_contractor_profile" method="POST">
+                
+                <h3>
+                    {{sn_ct("contractor_profile Personne contact dans l'enrtreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h3>
+                <fieldset class="form-group">
+                    <label for="contact_firstname" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Prénom", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_firstname" id="contact_firstname" value="\{{contractor.rows.contact_firstname}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_firstname"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_lastname" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Nom", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_lastname" id="contact_lastname" value="\{{contractor.rows.contact_lastname}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_lastname"></span>
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_phone" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input1}}">
+                        <input class="form-control" type="text" name="contact_phone" id="contact_phone" value="\{{contractor.rows.contact_phone}}"  placeholder="{{template_phone}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_phone"></span>    
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_email" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_email" id="contact_email" value="\{{contractor.rows.contact_email}}" placeholder="{{template_email}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_email"></span>    
+                    </div>
+                
+                </fieldset>
+                \{{//"privilege=".+contractor.rows.credit_cards}}
+                <fieldset class="form-group">
+                    <label for="contact_title" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Position dans l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_title" id="contact_title" value="\{{contractor.rows.contact_title}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="contact_title"></span>    
+                    </div>
+                
+                </fieldset>
+                
+                <h3>
+                    {{sn_ct("contractor_profile Information sur l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h3>
+               
+                <fieldset class="form-group">
+                    <label for="street_no" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Numéro de rue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input0}}">
+                        <input class="form-control" type="text" name="street_no" id="street_no" value="\{{address.rows.street_no}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="street_no"></span>                    
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="street" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Rue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="street" id="street" value="\{{address.rows.street}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="street"></span>    
+                    </div>
+
+                </fieldset>
+                
+                
+                <fieldset class="form-group">
+                    <label for="city" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <select name="city">
+                            <option value="">{{sn_ct("contractor_profile Choisir une ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            \{{for i sql("SELECT uid,name_{{lg.rows.lg}} as name FROM sr_city WHERE active='yes' ORDER BY name_{{lg.rows.lg}}  ASC") do}}
+                                <option \{{if address.rows.uid_city eq i.rows.uid then}}selected\{{endif}} value="\{{i.rows.uid}}">\{{i.rows.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="city"></span>    
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="province" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Province", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                    <!--    <input class="form-control" type="text" name="province" id="province" value="\{{address.rows.province}}">-->
+                        <select name="province">
+                            <option value="">{{sn_ct("contractor_profile Choisir une province", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            \{{for i sql("SELECT uid,name_{{lg.rows.lg}} as name, code_prov FROM sr_province ORDER BY name_{{lg.rows.lg}}  ASC") do}}
+                                <option \{{if address.rows.province eq i.rows.code_prov then}}selected\{{endif}} value="\{{i.rows.code_prov}}">\{{i.rows.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="province"></span>                    
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="zip" class="control-label {{col_label;}}">
+                        {{sn_ct("contractor_profile Code postale", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="col-md-3">
+                        <input class="form-control" type="text" name="zip" id="zip" value="\{{address.rows.zip}}" placeholder="A1A 1A1">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="zip"></span>                    
+                    </div>
+
+                </fieldset>
+    
+                <fieldset class="form-group">
+                    <label for="company_phone" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input1}}">
+                        <input class="form-control" type="text" name="company_phone" id="company_phone" value="\{{contractor.rows.company_phone}}" placeholder="{{template_phone}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="company_phone"></span>                    
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="website" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Site internet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="website" id="website" value="\{{contractor.rows.website}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="website"></span>                    
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="fbsite" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Facebook", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="fbsite" id="fbsite" value="\{{contractor.rows.fbsite}}">
+                        <!--<span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="website"></span>                    -->
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="insurance_company" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Assureur", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="insurance_company" id="insurance_company" value="\{{contractor.rows.insurance_company}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Compagnie assurance obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="insurance_company"></span>                    
+                    </div>
+
+                </fieldset>
+                
+                
+                <fieldset class="form-group">
+                    <label for="insurance_number" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Numéro de police d'assurance", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="insurance_number" id="insurance_number" value="\{{contractor.rows.insurance_number}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile No assurance obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"  data-validator-error="insurance_number"></span>                  
+                    </div>
+                </fieldset>
+                
+                <h3>
+                    {{sn_ct("contractor_profile Vacation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h3>
+ 
+        <fieldset class="">
+            <label for="activate_by_client" class="control-label{{col_label;}}">
+                {{sn_ct("contractor__activate_by_client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+            </label>
+	        <span class="tooltip_wrapper top"></span>
+		        <a href="javascript:void(0);" onclick="sn_tooltip_show(this);" class="badge"  ><i class="fa fa-question" ></i></a>
+	      	    <div class="sn sn_tooltip" title="{{sn_ct(edit:false,"contractor__activer les vacances")}}">
+		            <div class="sn_tooltip2"> 
+		                <p>{{sn_ct("contractor__Activer la période de vacance", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                    </div>
+                </div>
+                <input class="checkbox1" type="checkbox" name="enable_vacation" id="enable_vacation" value="yes" \{{(contractor.rows.enable_vacation eq 'yes')?' checked ':' '}}  >
+           <script> console.log($("#enable_vacation").val());    </script>
+            </span>  
+          </fieldset>
+                   <label for="from" class="control-label{{col_label;}}">
+                      {{sn_ct("contractor__vacance_dates", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                <div     class="form-group  vacation-group "   >
+                    <fieldset class="">  
+                        <div class="col-md-4    "   >
+                            <label for="desactivate_date"  class="control-label {{col_label;}}">
+                                    {{sn_ct("contractor_desactivate_date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <input class="form-control datepicker_date vacation-group" type="text" disabled  name="desactivate_date" id="desactivate_date" value="\{{contractor.rows.deactivate_date}}">      
+                            <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="desactivate_date"></span>                  
+                        </div>
+                    
+                        <div class="col-md-4"   >
+                                <label for="reactivate_date"  class="control-label{{col_label;}} vacation-group">
+                                    {{sn_ct("contractor_reactivate_date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </label>
+                                <input class="form-control datepicker_date vacation-group" disabled type="text" name="reactivate_date" id="reactivate_date" value="\{{contractor.rows.reactivate_date}}">   
+                                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="reactivate_date"></span>                  
+                        </div>
+                    </fieldset>
+                </div>
+                 
+                
+                
+                <fieldset class="form-group">
+                    <label for="desactivate_reason" class="control-label {{col_label;}}  vacation-group">
+                        {{sn_ct("contractor__desactivate_reason", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class=" {{col_input}}"  >
+                        <input class="form-control vacation-group" type="text" disabled name="desactivate_reason" id="desactivate_reason" value="\{{contractor.rows.deactivate_reason}}">
+                    </div>
+                </fieldset>
+                 <script>
+                 </script>
+                
+                <h3>
+                    {{sn_ct("contractor_profile Courriel relié au compte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h3>
+                            
+                <fieldset class="form-group">
+                    <label for="email_accounting" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel pour la facturation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="email_accounting" id="email_accounting" value="\{{contractor.rows.email_accounting}}"  placeholder="{{template_email}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="email_accounting"></span>                    
+                    </div>
+
+                </fieldset>
+                            
+                <fieldset class="form-group">
+                    <label for="email" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel pour recevoir les informations de clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                         <input class="form-control" type="text" name="email" id="email" value="\{{contractor.rows.email}}"   placeholder="{{template_email}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="email"></span>
+                    </div>
+                </fieldset>
+                            
+                <fieldset class="form-group">
+                    <label for="email_cc" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel additionnel pour recevoir les informations de clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="email_cc" id="email_cc" value="\{{contractor.rows.email_cc}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="email_cc"></span>
+                    </div>
+                </fieldset>
+
+
+                <div class="form-group">
+                    <div class="{{col_label;}}">
+                        
+                    </div>
+                    <div class="{{col_input;}}">
+                        <button type="submit" class="btn btn-primary">
+                            {{sn_ct(edit:false,"contractor_profile Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </button>
+                    </div>
+                </div>
+            
+            </form>
+        </div>
+    </div>
+</div>
+ 
+
+\{{ 
+    // include the validator for contractor_form
+      %include "/site/contractor_dashboard/include/profile_validator.sn";
+    // validate client side
+     validator.validateJS(form:'edit_contractor_profile');
+}}
+
+<script>
+ $( function() {	
+    $(".datepicker_date").datepicker( $.datepicker.regional[ "fr" ] );
+    $(".datepicker_date").datepicker("option", "dateFormat", "yy-mm-dd");
+    $("#desactivate_date").val("\{{(contractor.rows.deactivate_date eq '0000-00-00')?'':contractor.rows.deactivate_date }}");
+    $("#reactivate_date").val( "\{{(contractor.rows.reactivate_date eq '0000-00-00')?'':contractor.rows.reactivate_date }}");
+ 
+    $('#enable_vacation').on('change', function(){ 
+        if($(this).is(":checked") )
+        {
+            $(".vacation-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $(".vacation-group").attr('disabled', '');
+        }
+    }).trigger('change');
+    
+ });  
+</script>
+
+<script>
+    // Bind edit_contractor_profile form to ajaxform plugin to send the form via ajax
+    var form = $('form[name=edit_contractor_profile]').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                $("#ajax_success").show();
+            }
+            else{
+                $("#ajax_error").show();
+            }
+            window.scrollTo(0,0);
+        }
+    });
+
+</script>
+
+ 

@@ -1,0 +1,32 @@
+{{
+    table_dest = 'sr_client';
+    table_from = 'tbl_client';
+
+    select_query_from_src = "
+        SELECT c.*, 
+        (SELECT 1 FROM `tbl_projet` p WHERE p.`ID_Client` = c.`idTBL_Client` AND p.`Statut` = 2 LIMIT 1) AS 'to_qualify' 
+        FROM `".+table_from.+"` c
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'          : 'idTBL_Client',
+        'firstname'    : 'Prenom',
+        'lastname'     : 'Nom',
+        'gender'       : 'Sexe',
+        'address'      : 'Adresse',
+        'lang'         : 'Langue',
+        'email'        : 'Courriel',
+        'when_to_call' : 'Quand_Rejoindre',
+        'sn_cdate'     : 'Date_Inscription',
+        'comments'     : 'Commentaire',
+        'to_qualify'   : "to_qualify::IF('?', 'yes', 'no')",
+        'languages': "'3'"
+    };
+    
+    %include 'migration.sn';
+    

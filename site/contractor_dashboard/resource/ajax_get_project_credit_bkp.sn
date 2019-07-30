@@ -1,0 +1,78 @@
+{{
+    /*
+        @title ajax_get_project_credit
+        Description: Request a credit for a client project.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.2 2018-02-06 by louis.jhonny@gmail.com 
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+\{{
+
+    destination = "/sn_uploads/credit_files";
+    
+    
+    cgidata = cgidata(disable_upload:false, directory:destination);
+    
+    use extranet_user;
+
+    // verify that the project the contractor entered belongs to him
+    project_contractor = sql(single:true, "SELECT uid, uid_project FROM sr_project_contractor WHERE uid_contractor='?' AND uid_project='?'", extranet_user.uid, cgidata.uid_project);
+    contractor = sql(single:true, "select contact_lg from sr_contractor where uid = '?'", extranet_user.uid);
+    sent_time = datetime(format:'%Y-%m-%d %H:%M:%S');
+    
+    if project_contractor.nbrows > 0 then
+        cc = insert(
+            table:"sr_credit",
+            fields:{
+                "uid_project_contractor":project_contractor.rows.uid,
+                "reason":cgidata.reason,
+                "no_quote":cgidata.no_quote,
+                "called":cgidata.called,
+                "voicemail":cgidata.voicemail,
+                "email":cgidata.email,
+                "call1_date":cgidata.call1_date,
+                "call2_date":cgidata.call2_date,
+                "call3_date":cgidata.call3_date,
+                "explanation":cgidata.explanation,
+                "contractor_lg": contractor.rows.contact_lg,
+                "attached_file": cgidata.fname.sn_fullname,
+                "uid_contractor":extranet_user.uid,
+                "uid_project":cgidata.uid_project,
+                "completed":"no"
+            }
+        );
+        
+        if cc.sqlcode == 0 then
+            headers_out("X-credit_success", "1");
+        
+            project = sql(single:true,"SELECT status FROM sr_project where uid = '?'", project_contractor.rows.uid_project);
+        
+           // send email
+            if(project.rows.status eq 'active' || project.rows.status eq 'inactive-incomplete' || project.rows.status eq 'completed') then
+                if(cgidata.reason ne '1' && cgidata.reason ne '5') then            // send email
+                    automail::sendCreditSurveyToClient(cc.uid); 
+                    void sql("UPDATE sr_credit set survey_sent_time = '?' WHERE uid = '?'", sent_time, cc.uid);
+                elseif(cgidata.reason eq '1') then
+                    automail::sendUnreachableNoticeToClient(project_contractor.rows.uid);
+                endif
+            else
+                automail::notifyAdminContractorCreditProject(extranet_user.uid, cgidata.uid_project); 
+            endif
+        else
+            headers_out("X-credit_error", "1");
+        endif
+    else
+        headers_out("X-credit_error", "1");
+    endif
+
+}}

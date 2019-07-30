@@ -1,0 +1,165 @@
+{{
+      /*
+	    @title		 next_event_view3
+
+	    use to dispaly the template of next event
+	
+    	@author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47 laplante@sednove.com
+    	
+	*/
+
+	use widget;
+	use lg;
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc"; 
+	parameters = sql(single:true, "select * from sed_event_parameters where uid_widget = '?'", widget.rows.uid_widget_list);
+	theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'");
+}}
+
+<style type="text/css">
+.event_container{
+    margin-bottom:32px;
+    position:relative;
+}
+.event_container:after{
+    display:table;
+    content:' ';
+    clear:both;
+}
+.event_container .event_img{
+    float:left;
+}
+.event_img{
+    width:65%;
+}
+.event_text_bloc{
+    position:absolute;
+    width:35%;
+    color:#FFF;
+    background:#{{theme_color.rows.btn_primary_bck_color}};
+    padding:15px;
+    right:0;
+    height:100%;
+}
+.event_text_bloc .event_text_bloc_bottom a{
+    color:#FFF;
+    text-decoration:underline;
+}
+.event_text_bloc .event_text_bloc_top h3{
+    margin:0;
+}
+.event_text_bloc .event_text_bloc_top h3 a{
+    font-size:24px;
+    color:#FFF;
+}
+.event_text_bloc .event_text_bloc_bottom{
+    position:absolute;
+    bottom:15px;
+    font-size:14px;
+}
+.event_container:nth-child(odd) .event_img{
+    float:right;
+}
+.event_container:nth-child(odd) .event_text_bloc{
+    right:inherit;
+    right:initial;
+    left:0;
+}
+@media (max-width:991px){
+    .event_text_bloc .event_text_bloc_top h3 a{
+        font-size:20px;
+        line-height:28px;
+    }
+}
+@media (max-width:700px){
+    .event_container>div{
+        float:none!important;
+        position:relative!important;
+        width:100%;
+    }
+    .event_container>.event_text_bloc>div{
+        position:relative;
+        top:0;
+        bottom:initial;
+        bottom:inherit;
+    }
+    .event_container>.event_text_bloc>.event_text_bloc_top  h3 a{
+        line-height:24px;
+        margin-bottom:15px;
+    }
+}
+</style>
+
+
+<div class="wdg_next_event">
+    
+    
+   \{{
+	 for events sql("SELECT contact_{{lg.rows.lg;}},poster_{{lg.rows.lg;}},date, seo_{{lg.rows.lg}}, title_{{lg.rows.lg}}, category , end_date FROM sed_event WHERE active='yes' and date >= NOW() ORDER BY date ASC LIMIT ?", "{{ parameters.rows.latest_events;}}") do
+          
+			date_number = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%d");
+				if events.rows.end_date ne "" then 
+					end_date_number = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%d");
+				else
+					end_date_number = date_number;
+				endif
+				date_year_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%Y");
+				date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%B");
+				date_day_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%A");
+				date_time = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.date, format:"%Hh%M");
+				
+				if date_number != end_date_number then
+					end_date_year_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%Y");
+					end_date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%B");
+					end_date_day_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%A");
+					end_date_time = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%Hh%M");
+				endif
+			    end_date_month_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%B"); ;
+				end_date_year_name = datetime(lg:"{{lg.rows.lg;}}",date: events.rows.end_date, format:"%Y");
+
+    }}
+    
+    <div class="event_container">
+        <div class="event_img">
+            <a href="/{{lg.rows.lg}}/calendar-details/\{{ events.rows.seo_{{lg.rows.lg}};}}">
+                \{{ if events.rows.poster_{{lg.rows.lg;}} ne "" then }}
+                    <img src="\{{ events.rows.poster_{{lg.rows.lg;}};}}?size=704x348&crop" class="img-responsive">
+                \{{ else }}
+                    <img src="/sn_uploads/event_default.jpg?size=704x348&crop" class="img-responsive">
+                \{{ endif }}
+            </a>
+        </div>
+        <div class="event_text_bloc">
+            <div class="event_text_bloc_top">
+                <h3><a href="/{{lg.rows.lg}}/calendar-details/\{{ events.rows.seo_{{lg.rows.lg}};}}">\{{ events.rows.title_{{lg.rows.lg;}}; }}</a></h3>
+            </div>
+            <div class="event_text_bloc_bottom">
+                \{{	if ((date_number eq end_date_number)  && (date_month_name eq end_date_month_name) && (date_year_name eq end_date_year_name)) || ( events.rows.end_date  eq   '0000-00-00 00:00:00' )   then
+				        date_number .+ "   " .+ date_month_name  .+ "   " .+date_year_name ;" ";
+				        
+				elseif  date_month_name eq end_date_month_name && date_year_name eq end_date_year_name then
+						date_number .+ " - " .+ end_date_number .+ "   " .+ date_month_name.+ "   " .+ end_date_year_name ;" ";
+						
+				elseif  date_year_name eq end_date_year_name  && (date_number ne end_date_number ||  date_month_name ne end_date_month_name ) then 
+				       date_number .+ "  " .+ date_month_name .+ "  - " .+ end_date_number .+ "  " .+ end_date_month_name.+ " " .+ end_date_year_name ;" ";
+				else   
+				  
+					date_number .+ "  " .+ date_month_name .+ "  " .+ date_year_name ;"- ";
+					end_date_number .+ "  " .+ end_date_month_name.+ " " .+ end_date_year_name ;" ";
+				endif}}
+				<br>
+                \{{ events.rows.contact_{{lg.rows.lg;}};}}<br>
+                <br>
+                <a href="/{{lg.rows.lg}}/calendar-details/\{{ events.rows.seo_{{lg.rows.lg}};}}">Plus de détail</a>
+            </div>
+        </div>
+    </div>
+    			
+	\{{ endfor }}
+    <div class="evt_action text-center">
+        <a href="{{ pages('calendar', lg.rows.lg); }}" class="btn btn-primary">{{ sn_ct("Afficher la liste complete")}} </a>
+    </div>
+</div>
+
+<!-- END -->

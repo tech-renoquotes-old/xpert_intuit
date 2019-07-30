@@ -1,0 +1,76 @@
+{{
+    debug_mode = true;
+    
+    %include 'db.sn';
+    %include 'custom_logic.sn';
+    startdate = datetime(format:'%H:%M');
+    time = time();
+    starttime = time.secs;
+    "<pre>";
+    if (debug_mode) then
+        "\n\n *DEBUG MODE* STARTED at ".+startdate.+" \n\n";
+    else
+        "\n\n MIGRATION STARTED at ".+startdate.+" \n\n";
+    endif
+    
+    
+    ////////////////////////
+    // Start migration
+    
+    
+    // %include 'sr_client.sn';
+    // %include 'sr_contractor.sn';
+    // %include 'sr_project_contractor.sn';
+    // %include 'sr_transaction.sn';
+    // %include 'sr_billing_pdf.sn';
+    // %include 'sr_address.sn';
+    // %include 'sr_project.sn'; // wget -r ftp://sednove2%40soumissionrenovation.ca:%24ZNyai%3B8f%2Cih@soumissionrenovation.ca/wp-content/uploads/projet
+    // %include 'sr_territory.sn';
+    // %include 'sr_city.sn';
+    // %include 'sr_service.sn';
+    // %include 'sr_subservice.sn';
+    // %include 'sr_contractor_territory.sn';
+    // %include 'sr_contractor_service.sn';
+    // %include 'sr_credit.sn';
+    // %include 'sr_gallery.sn';
+    // %include 'sr_cc.sn';
+    // %include 'sr_comments.sn';
+    // %include 'sr_landing_page.sn';
+    
+   
+    
+    // %include 'others.sn';
+    
+    
+    /*
+    // // // // // Migrating BLOG
+    // // // // %include 'db_blog.sn'; // https://codex.wordpress.org/Database_Description
+    // // // // %include 'sed_blog_article.sn';
+    // // // // %include 'sed_blog_comment.sn';
+    // // // // %include 'sed_blog_category.sn';
+    // // // // %include 'sed_blog_media.sn';
+    // // // // %include 'sed_blog_related.sn';
+    
+    // // Migrating Users
+    // // // // %include 'sn_users.sn';
+    
+    // // // // if (!debug_mode) then
+    // // // //     void sql(db:db_dest, "UPDATE sed_blog_article SET featured_image = '/sn_uploads/placeholder.jpg'");
+    // // // // endif
+    */
+    
+    
+    ////////////////////////
+    time = time();
+    endtime = time.secs;
+    elapsedsecs = endtime - starttime;
+    elapsedmins = floor(elapsedsecs / 60);
+    elapsedsecs %= 60;
+    
+    if (debug_mode) then
+        "\n\n\n *DEBUG MODE* COMPLETED IN ".+elapsedmins.+" minutes ".+elapsedsecs.+" seconds \n\n\n\n\n\n";
+    else
+        "\n\n\n MIGRATION COMPLETE IN ".+elapsedmins.+" minutes ".+elapsedsecs.+" seconds \n\n\n\n\n\n";
+    endif
+    "</pre>";
+    

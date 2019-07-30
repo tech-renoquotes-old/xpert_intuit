@@ -1,0 +1,10 @@
+\{{
+	cgidata = cgidata();
+	
+	if cgidata.key eq "restful_api" then
+		crypt_key = genpsw(mode:"numeric",mode:"capital",minl:16,maxl:16,init:true);
+}}
+{
+	"key" : "\{{ crypt_key; }}"
+}
+\{{ endif }}

@@ -1,0 +1,300 @@
+{{
+    /*
+    	@title	sed_image_text_ck
+    	Description:Use to display image,text with link
+        @author gamila@sednove.com
+    	@version 1.0 2016-06-20 10:00:00 Version initial
+    	@version 1.1 2016-06-20 gamila@sednove.com add buttton for link and option for image (circle or square)
+    	
+    */
+	%include "/extenso/functions/sn_ct.snc";
+	use uid;
+	use table;
+	use widget;
+	use lg;
+	use page;
+	
+	wdg_config = sql(single:true,"select * from sed_spotlight_config where uid_widget ='?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+}}
+
+\{{
+    typed = sql("select animated_text_? as title from sr_spotlight_text where active = 'yes'", "{{lg.rows.lg}}");
+}}
+
+<style> 
+#inner {
+    margin: 0 auto; 
+}
+  .widget-image-text-ck {margin:0 0 30px 0;}
+  .widget-image-text-ck > .box {text-align:center;padding-top:20px;}
+  .widget-image-text-ck > .box img {display:block; margin:0 auto;}
+  .widget-image-text-ck > .box h4 {margin:16px 0 4px 0;}
+  
+  @media screen and (max-width :640px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:left;}
+  }
+   @media screen and (max-width :991px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:none;}
+      .widget-image-text-ck > .box:nth-child(3n+1) {clear:left;}
+      .widget-image-text-ck > .box:last-child{
+          float:none;
+          margin:auto;
+          clear:both;
+      }
+  }
+  
+      .img-circle {
+        border-radius: 50%;
+    }
+    .btn_centered {
+        text-align: center;
+    }
+
+    .btn_right {
+        text-align: right;
+    }
+
+    .btn_left {
+        text-align: left;
+    }
+    
+    .widget-image-text-ck h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .widget-image-text-ck p{
+        margin:15px 0 5px 0;
+    }
+    .widget-image-text-ck .wdg_image{
+        min-height:150px;
+        display:table;
+        width:100%;
+    }
+    .widget-image-text-ck .wdg_image_container{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .wdg_spotlight_container{
+        position:relative;
+    }
+    /*.row .wdg_spotlight_container .container{
+        padding:0;
+        max-width:initial;
+        width:auto;
+    }*/
+    .wdg_spotlight_container .mask{
+        background-size:cover;background-repeat:no-repeat;background-position:center;background-attachment:fixed;
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+    }
+    .wdg_spotlight_container .single_box{
+        max-width:600px;
+        margin:auto;
+        float:none;
+    }
+    .wdg_spotlight_container .wdg_title{
+        text-align:center;
+        position:relative;
+        top:0;
+    }
+    .wdg_spotlight_container .wdg_title h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .wdg_spotlight_container .wdg_title>*{
+        margin:10px 0;
+    }
+    @media (max-width:768px){
+        .wdg_spotlight_container{
+            /*this remove the user padding in mobile*/
+            padding:0!important;
+         }
+        .wdg_spotlight_container .wdg_title{
+            top:0px;
+        }
+    }
+</style>
+<script src="/js/typed/typed.js"></script>
+
+
+    \{{for txt in typed.rows do}}
+        <span class="animtxt_{{wdg_config.rows.uid_widget}}" style="display:none">\{{txt.title}}</span>
+    \{{endfor}}
+
+<div class="clearfix"></div>
+{{
+    wdg_spotlight_container_styles = '';
+    wdg_spotlight_container_styles = (wdg_config.rows.bg_color ne '') ? wdg_spotlight_container_styles.+'background-color:#'.+wdg_config.rows.bg_color.+';' : wdg_spotlight_container_styles;
+    wdg_spotlight_container_styles = (wdg_config.rows.padding_h ne '' && wdg_config.rows.padding_h > 0) ? wdg_spotlight_container_styles.+'padding:'.+wdg_config.rows.padding_h.+'px 0;' : wdg_spotlight_container_styles;
+}}
+<div class="wdg_spotlight_container"{{(wdg_spotlight_container_styles ne '') ? ' style="'.+wdg_spotlight_container_styles.+'"' : '';}}>
+    {{
+        (wdg_config.rows.bg_image ne '') ? '<div class="mask" style="background-image:url('.+wdg_config.rows.bg_image.+'?maxw=1200&maxh=900);"></div>' : '';
+        mask_opacity = (wdg_config.rows.mask_opacity ne '' & isfloat(wdg_config.rows.mask_opacity)) ? (wdg_config.rows.mask_opacity/100) : 1;
+        (wdg_config.rows.bg_mask ne '') ? '<div class="mask" style="background-color:#'.+wdg_config.rows.bg_mask.+';opacity:'.+mask_opacity.+';"></div>' : '';
+    }}
+    
+    <div class="container"{{(wdg_config.rows.bg_color ne '') ? ' style="background-color:#'.+wdg_config.rows.bg_color.+';"' : '';}}>
+        {{if wdg_config.rows{'title_'.+lg.rows.lg} ne '' then 
+            title_tag = '';
+            title_tag = (wdg_config.rows.title_tag ne '') ? wdg_config.rows.title_tag : 'h5';
+            title_style = '';
+            title_style = (wdg_config.rows.title_color ne '') ? title_style.+'color:#'.+wdg_config.rows.title_color.+';' : title_style;
+            title_style = (title_style ne '') ? ' style="'.+title_style.+'"' : title_style;
+            }}
+            <div class="wdg_title">
+                <{{title_tag.+title_style}}>
+                    {{wdg_config.rows{'title_'.+lg.rows.lg};}}
+                </{{title_tag}}>
+            </div>
+        {{endif
+        
+        content = sql(single:true,"select * from sed_spotlight where actif='oui' and uid_f ='?' ORDER BY uid DESC", wdg_config.rows.uid_widget);
+        if content.nbrows > 0 then
+        }}
+        
+        <div class="row widget-image-text-ck">
+            {{
+                
+        	    if content.rows.uid eq '' then
+        	        // Set default content
+                    fields = {
+                        "actif" : "oui",
+                        "type":"btn-default",
+                        "format":"btn-rg",
+                        "alignment":"btn_centered",
+                        "format_image ":"square",
+                        "sn_dir_image":"/module/sed/spotlight/img_default/image_default.jpg",
+                        "image":"/module/sed/spotlight/img_default/image_default.jpg",
+                        "uid_widget":widget.rows.uid_widget_list
+                    };
+                    
+                    
+                    for l sql("select * from sn_languages where active = 'yes'") do
+                            fields{"titre_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                            fields{"texte_" .+ l.rows.lg} = "Texte " .+ l.rows.lg;
+                            fields{"button_text_" .+ l.rows.lg} = "Button text " .+ l.rows.lg;
+                            fields{"url_externe_" .+ l.rows.lg} = "http://sednove.com/".+ l.rows.lg ;
+                    endfor
+                    
+        	        verif_ctx = sql(single:true,"SELECT uid FROM sed_spotlight WHERE uid_widget='?'",widget.rows.uid_widget_list);
+        	       	if verif_ctx.nbrows == 0 then
+        	            void insert(table:"sed_spotlight",fields:fields);
+        	        endif
+                endif
+                
+                
+                for r sql(single:true,"select * from sed_spotlight where actif='oui' and uid_f ='?' ORDER BY sn_custom", wdg_config.rows.uid_widget) do 
+               
+            }}
+                    <div class="col-xs-12 {{(content.nbrows > 1) ? 'col-sm-6 col-md-4 ' : 'single_box ';}}box">
+                    {{ 
+                        bouton_text = esc(filter: "html",r.rows{'button_text_'.+ lg.rows.lg});
+                        type = "";
+                        if r.rows.type ne "" then
+                            type = r.rows.type;
+                        else
+                            type = "btn-default";
+                        endif
+                        
+                        format = "";
+                        format = r.rows.format;
+                          
+                        alignment = "";
+                        alignment = r.rows.alignment;
+                        src = r.rows.sn_dir_image;
+                        url="";
+                        if r.rows.type_url eq "interne" then
+                                p = sql(single:true,"select * from pages where uid = '?'", r.rows.url_interne);
+                                if p.nbrows == 1 then
+                                    url = p.rows{'folder_' .+ lg.rows.lg} .+ p.rows{'page_' .+ lg.rows.lg} .+ ".snc";
+                                endif
+                        else
+                        
+                            url = esc(filter:"html",r.rows{'url_externe_' .+lg.rows.lg});
+                        endif
+                        
+                        
+                        target = r.rows.cible;
+                        if src ne '' then
+                            '<div class="wdg_image"><div class="wdg_image_container">';
+                            circle_class = (r.rows.format_image eq 'circle') ? ' img-circle' : '';
+                            image_style = (r.rows.image_h ne '' && r.rows.image_h > 0) ? ' style="height:'.+r.rows.image_h.+'px;"' : '';
+                            image_alt = (r.rows{'alt_image_'.+lg.rows.lg} ne '') ? ' alt="'.+r.rows{'alt_image_'.+lg.rows.lg}.+'"' : '';
+                            content_image = '<img class="img-responsive'.+circle_class.+'" src="'.+src.+'"'.+image_style.+image_alt.+'>';
+                            // content_image = '<img class="img-responsive'.+circle_class.+'" src="'.+src.+'?maxw=500&maxh=500"'.+image_style.+image_alt.+'>';
+                            content_image = (r.rows.type_url ne '') ? '<a target="'.+target.+'" href="'.+url.+'">'.+content_image.+'</a>' : content_image;
+                            content_image;
+                            '</div></div>';
+                        endif
+                        
+                    }}
+                        {{if r.rows{'titre_'.+ lg.rows.lg} ne '' then
+                            title_tag = (r.rows.title_tag ne '') ? r.rows.title_tag : 'h5';
+                        }}
+                        <div id="inner">
+                            <style> .typed-cursor{display:none;}</style>
+                            <{{title_tag}} class="widget-image-text-ck-title">
+                                {{
+                                    t_content = esc(filter:"html",r.rows{'titre_'.+ lg.rows.lg});
+                                    t_content = (r.rows.title_color ne '') ? '<span style="color:#'.+r.rows.title_color.+';">'.+t_content.+'</span>' : t_content;
+                                    t_content = (r.rows.type_url ne '') ? '<a style="text-decoration: none;" target="'.+target.+'" href="'.+url.+'">'.+t_content.+'</a>' : t_content;
+                                    t_content = t_content .+ '<br>&nbsp;<span id="typing_arr" style="color:#'.+r.rows.title_color.+';"></span>';
+                                    t_content;
+                                }}
+                                
+                            </{{title_tag}}>
+                        </div>
+                        {{endif
+                        
+                        if (r.rows.text_color ne '') then
+                        }}
+                        <style>
+                            #color-{{r.rows.text_color}}, #color-{{r.rows.text_color}} p{
+                                color:#{{r.rows.text_color}};
+                            }
+                        </style>
+                        {{
+                            '<div id="color-'.+r.rows.text_color.+'">'.+r.rows{'texte_'.+ lg.rows.lg}.+'</div>';
+                        else
+                            r.rows{'texte_'.+ lg.rows.lg};
+                        endif
+            
+                        }}
+                        <span style="opacity: 0;">t</span><span id="typing_arr" style="color:white; font-size: 24px; height:33px; font-weight:bold"></span>
+                        {{if url ne ''  && bouton_text ne '' then}}
+                        <div class="featured_btn {{alignment}}">
+        						<a href="{{url}}" class="btn {{type}} {{format}}{{' '.+r.rows.button_class}}" target="{{target}}">{{bouton_text}}</a>
+        				</div>
+        				{{endif}}
+                    </div><!-- /.box -->
+            {{
+                endfor
+            }}
+        </div><!-- /.widget-image-text-ck -->
+        {{endif}}
+    </div>
+</div>
+<div class="clearfix"></div>
+
+<script>
+var text_arr = [];
+
+$('.animtxt_2222').each(function () {
+    text_arr.push($(this).text());
+});
+
+$('.animtxt_2152').each(function () {
+    text_arr.push($(this).text());
+});
+
+    $('#typing_arr').typed({
+        strings: text_arr, loop: true
+    });
+    
+</script>

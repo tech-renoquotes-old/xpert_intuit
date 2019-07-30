@@ -1,0 +1,20 @@
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	textcontent = sql(single:true, "select * from widget_text_two_columns where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+
+<div class="row">
+	<div class="col-md-6">
+		<h3 class="section-title">{{textcontent.rows{'titre1_'.+ lg.rows.lg};}}</h3>
+        {{textcontent.rows{'description1_'.+ lg.rows.lg};}}				
+	</div>
+	<div class="col-md-6">
+		<h3 class="section-title">{{textcontent.rows{'titre2_'.+ lg.rows.lg};}}</h3>
+		{{textcontent.rows{'description2_'.+ lg.rows.lg};}}
+	</div>
+</div>

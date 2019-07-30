@@ -1,0 +1,206 @@
+{{
+    /*
+    	@title	sed_contact_list
+    	Description:Use to display image,text with link
+        @author pascale@sednove.com
+    	@version 1.0 2016-08-30 10:00:00 Version initial
+    */
+	%include "/extenso/functions/sn_ct.snc";
+	use uid;
+	use table;
+	use widget;
+	use lg;
+	use page;
+	content = sql(single:true,"select * from sed_contact_list_parameter where  uid_widget ='?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+    
+    if content.nbrows  eq  0 then
+        // Set default content
+                fields = {  "border":"no",
+                            "alignment_text":"center",
+                            "format_image":"square",
+                            "name_color":"32c73e",
+                            "uid":widget.rows.uid_widget_list,
+                            "uid_widget":widget.rows.uid_widget_list
+                };
+                    
+	        verif_ctx = sql(single:true,"SELECT uid FROM sed_staff_directory_contact WHERE uid_contact='?' ",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_contact_list_parameter",fields:fields);
+	            
+	            res = lastuid();
+	            fields_slide = {
+        	        "actif":"oui",
+        	        "name":"Pascale",
+        	        "email":"pascale@sednove.com",
+        	        "phone_number":"123 456 7890",
+        	        "mobile_number":"123 456 7890",
+        	        "uid_contact":res
+                 };
+                 
+                for l sql("select * from sn_languages where active = 'yes'") do
+                        fields_slide{"employee_title_" .+ l.rows.lg} = "Titre employé " .+ l.rows.lg;
+                        fields_slide{"note_" .+ l.rows.lg} = "Note " .+ l.rows.lg;
+                        fields_slide{"email_text_" .+ l.rows.lg} = "Contactez-moi " .+ l.rows.lg;
+                        fields_slide{"image_" .+ l.rows.lg} = "/module/sed/contact_list/img_default/image_default.jpg";
+                        fields_slide{"sn_dir_image_" .+ l.rows.lg} = "/module/sed/contact_list/img_default/image_default.jpg";
+                        fields_slide{"alt_" .+ l.rows.lg} = "image employe";
+                 endfor
+               
+                void insert(table:"sed_staff_directory_contact",fields:fields_slide);
+	        endif
+    endif
+	
+	
+	
+	sparam = sql(single:true,"select * from  sed_contact_list_parameter where uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list) ; 
+	
+}}
+
+<style> 
+    #inner {
+        margin: 0 auto; 
+    }
+    
+    .cs .item_box{{widget.rows.uid_widget_list}} {
+        {{if sparam.rows.border eq 'yes' then}} 
+            border: {{if sparam.rows.border_style ne '' then sparam.rows.border_style; else "solid"; endif }}  
+            {{if sparam.rows.width_border ne'0'  then sparam.rows.width_border;else "1"; endif }}px #{{if sparam.rows.color_border ne '' then sparam.rows.color_border; else "000000"; endif}};
+            border-radius:{{sparam.rows.border_radius }}px!important;
+        {{endif}}
+        background-color :#{{sparam.rows.background_color}};
+        margin: {{if sparam.rows.margin ne '' then sparam.rows.margin; else "30"; endif}} px;
+        margin-bottom:30px;
+        {{ if sparam.rows.min_height != '0' && sparam.rows.min_height != '' then}} min-height: {{sparam.rows.min_height}}px;{{endif}}
+        padding:{{sparam.rows.padding_border}}px;
+    }
+    
+    
+
+    .cs .alignment_text{{widget.rows.uid_widget_list}} { {{ if sparam.rows.alignment_text ne "" then}} text-align:{{sparam.rows.alignment_text;}} !important; {{endif}}}
+    .cs .desc{{widget.rows.uid_widget_list}} p {color:#{{sparam.rows.text_color}} !important;}
+    .cs .widget-image-text-ck{{widget.rows.uid_widget_list}} {margin:0 0 30px 0;}
+    .cs .widget-image-text-ck{{widget.rows.uid_widget_list}}{{widget.rows.uid_widget_list}} > .box {text-align:{{sparam.rows.alignment_text;}};}
+    .cs .widget-image-text-ck{{widget.rows.uid_widget_list}} > .box img {display:block; margin:0 auto;}
+    .cs .widget-image-text-ck{{widget.rows.uid_widget_list}} > .box h4 {margin:16px 0 4px 0;}  .cs .name_color { {{ if sparam.rows.name_color ne "" then }} color:#{{sparam.rows.name_color;}} !important; {{ endif}}}
+    .img-circle {
+        border-radius: 50%;
+    }    
+/* Medium Devices, Desktops */
+@media only screen and (min-width : 993px) {
+    .widget-image-text-ck{{widget.rows.uid_widget_list}} > .box:nth-child({{sparam.rows.nb_item}}n+1){clear:left}
+    
+}
+/* Medium Devices, Desktops */
+@media only screen and (max-width : 992px) {
+    {{  if  sparam.rows.nb_item  eq '4' then }}
+        .widget-image-text-ck{{widget.rows.uid_widget_list}} > .box:nth-child(3n+1){clear:left}
+    {{  elseif  sparam.rows.nb_item  eq '3' then }}
+        .widget-image-text-ck{{widget.rows.uid_widget_list}} > .box:nth-child(2n+1){clear:left}
+    {{  elseif  sparam.rows.nb_item  eq '1' then }}
+        .contact-img img.img-responsive {width:100%;max-width:250px!important;margin:0 auto;}
+    {{endif}}
+}
+
+@media only screen and (max-width:767px){
+   .item_box{{widget.rows.uid_widget_list}} { width:100%;max-width:250px!important;margin:0 auto; }
+   .widget-image-text-ck{{widget.rows.uid_widget_list}} > .box:nth-child(3n+1){clear:left}
+   .contact-img{text-align:center;}
+   
+   .contact-img img.img-responsive {width:100%;max-width:250px!important;margin:0 auto;}
+   
+}
+
+/* Extra Small Devices, Phones */ 
+@media only screen and (max-width : 480px) {
+    
+}
+</style>
+
+
+<div class="row widget-image-text-ck{{widget.rows.uid_widget_list}}" style="padding:3px 0;" itemscope itemtype="http://schema.org/Person">
+
+{{  
+    
+        
+    item_content =  sql("select * from sed_staff_directory_contact where actif = 'oui' and uid_contact = '?'  ORDER BY sn_custom", widget.rows.uid_widget_list);
+    
+    for r in item_content.rows  do 
+          
+        if sparam.rows.nb_item  eq '1' then 
+        }}
+                <div class="col-xs-12 col-sm-12 col-md-12 box "  >
+        {{  elseif sparam.rows.nb_item  eq '2' then  }}
+               <div class="col-xs-12 col-sm-6 col-md-6 box "  >
+        {{  elseif  sparam.rows.nb_item  eq '3' || sparam.rows.nb_item  eq '' || sparam.rows.nb_item  eq '0' then }}
+               <div class="col-xs-12 col-sm-6 col-md-4 box "  > 
+        {{  elseif  sparam.rows.nb_item  eq '4' then }}
+               <div class="col-xs-12 col-sm-4 col-md-3 box "  > 
+        {{endif}}
+                    
+                    {{ 
+                        level = sparam.rows.title_level;
+                        level = "";
+                        
+                        src = r{'image_'.+ lg.rows.lg};
+                        
+                        level = "h3";
+                        if sparam.rows.title_level ne "" then
+                            level = sparam.rows.title_level;
+                        endif
+                        
+                        if src ne "" then
+                            alt = "img";
+                            if r{'alt_'.+ lg.rows.lg} ne "" then
+                                alt = r{'alt_'.+ lg.rows.lg};
+                            endif
+                    }}
+                            <div  class="contact-img" style="padding:{{sparam.rows.padding_image}}px {{sparam.rows.padding_image}}px 0px {{sparam.rows.padding_image}}px;!important"> 
+                                <img  itemprop="image" class="{{if sparam.rows.format_image eq 'circle' then}}img-circle{{endif}} img-responsive" src="{{src}}?maxw=600" alt="{{alt;}}">
+                            </div>    
+                    {{  endif}}
+                    <div class="item_box{{widget.rows.uid_widget_list}} alignment_text{{widget.rows.uid_widget_list}}">    
+                        {{if r.name ne "" then}}
+                            <div id="inner" itemprop="name" style="padding:{{sparam.rows.padding_border}}px;">
+                                <{{level}} class="widget-image-text-ck-title name_color">
+                                    {{r.name;}}
+                                </{{level}}>
+                            </div>
+                        {{endif}}
+                       
+                        {{if r{'employee_title_'.+ lg.rows.lg} ne "" then}}
+                            <div class="desc{{widget.rows.uid_widget_list}}" itemprop="jobTitle" ><p>{{r{'employee_title_'.+ lg.rows.lg};}}</p></div>
+                        {{endif}}
+                        
+                        {{if r{'note_'.+ lg.rows.lg} ne "" then}}
+                            <div class="desc{{widget.rows.uid_widget_list}}" ><p>{{r{'note_'.+ lg.rows.lg};}}</p></div>
+                        {{endif}}
+                        
+                        {{if r.email ne "" then}}
+                            <div class="desc{{widget.rows.uid_widget_list}}" itemprop="email" ><span class="contact-icon"><i class="fa fa-envelope-o"></i></span> <a href="mailto:{{r.email}}">{{r{'email_text_'.+ lg.rows.lg};}}</a></div>
+                        {{endif}}
+                        
+                        {{if r.phone_number ne "" then}}
+                            <div class="desc{{widget.rows.uid_widget_list}}" itemprop="telephone"><p>{{r.phone_number;}}</p></div>
+                        {{endif}}
+                        
+                        {{if r.mobile_number ne "" then}}
+                            <div class="desc{{widget.rows.uid_widget_list}}" itemprop="telephone"><p>{{r.mobile_number;}}</p></div>
+                        {{endif}}
+                        
+                        {{if r.linkedin ne "" then}}
+                            <div class="desc{{widget.rows.uid_widget_list}}" ><p>{{r.linkedin;}}</p></div>
+                        {{endif}}
+
+        			</div>
+                </div><!-- /.box -->
+{{
+        if  sparam.rows.nb_item ne '' &&  sparam.rows.nb_item ne '0' then 
+            if sn_nb1 %  sparam.rows.nb_item eq '0' then}}   
+                    <!--<div class="clearfix"></div>-->
+            {{endif 
+        endif    
+    endfor
+}}
+</div><!-- /.widget-image-text-ck -->
+
+

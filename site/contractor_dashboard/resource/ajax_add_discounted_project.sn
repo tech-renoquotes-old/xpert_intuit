@@ -1,0 +1,81 @@
+{{
+    /*
+        @title ajax_add_discounted_project
+        @author madupuis@sednove.com
+        Description1: Links a project to a contractor.
+        
+        updated by louis.jhonny@gmail.com (line 29 to 57)
+        Description2: if contractor never accepted that project before, assign him/her the project.
+
+        @version 1.02 2017-03-20
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+}}
+{{%include '/site/package/all.sn';}}
+\{{
+    cgidata = cgidata();  
+    connection = connection();
+    
+    use extranet_user;
+
+    if cgidata.uid_project ne "" then
+        
+        project = sql(single:true,"SELECT lead_price FROM sr_project WHERE uid='?'", cgidata.uid_project);
+        
+        // get the actual project from sr_project_contractor for that user
+        project_exists = sql("SELECT uid FROM sr_project_contractor WHERE uid_contractor = '?' AND uid_project = '?'", extranet_user.uid, cgidata.uid_project);
+        
+        // Test - if project is not yet assigned to that contractor? insert 1 row otherwise just update.
+        if(project_exists.nbrows == 0) then
+            new_project_contractor = insert(table:'sr_project_contractor', fields:{
+                'uid_contractor': extranet_user.uid,
+                'uid_project': cgidata.uid_project,
+                'ip': connection.client_ip,
+                'accepted_rebate':'yes'
+            });
+        else
+            project_contractor = sql( "update sr_project_contractor
+                set accepted_rebate='yes',ip = '?'
+                where uid_contractor = '?'
+                and uid_project = '?' 
+                ",connection.client_ip, extranet_user.uid, 
+                 cgidata.uid_project
+            );
+        endif
+        
+        
+
+        //Send log to sr_debug in case Insert or update project failed and process transaction to send result code in ajax response.
+        if(new_project_contractor.affrow == 0 || project_contractor.affrow == 0 ) then
+            void insert(table:'sr_debug', fields:{'description':'test_project_half_price','text':'Update or Insert for project uid '.+ cgidata.uid_project .+ ' did not succeed in ajax_add_discounted_project.sn '});
+            status = 0;
+            // status;
+        else
+            res = project::accept_half_price(cgidata.uid_project, extranet_user.uid);
+            headers_out('X-status', res);
+            
+            client = sql(single:true, "
+                SELECT  c.firstname, c.lastname, c.gender, 
+                        a.street_no, a.street, a.city, city.name_fr as city_fr, city.name_en as city_en, a.zip, a.phone1, a.phone2, a.phone3, 
+                        c.email, c.when_to_call, p.description, p.additional_info, p.uid
+                FROM sr_project p
+                INNER JOIN sr_client c ON c.uid=p.uid_client
+                LEFT JOIN sr_address a ON a.uid=p.uid_address
+                LEFT JOIN sr_city city ON city.uid=a.uid_city
+                WHERE p.uid = '?'"
+            , cgidata.uid_project);
+            
+            headers_out('X-infos', client.rows);
+
+
+        endif
+
+    endif
+
+}}

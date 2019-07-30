@@ -1,0 +1,444 @@
+{{  
+    // --------------------------------------------------------------------------
+    // Name:        top_three
+    //
+    // Description: Displays 3 contractors that match the city and service.  It's made for SEO purposes
+    //
+    // Version:      1.0 2018-10-18 mjodoin@soumissionrenovation.ca initial
+    // --------------------------------------------------------------------------
+    
+    //what's left to be done now
+        //ajouter plus de mentions de la ville
+        
+    //what's left to be done later
+        //show a picture (maybe their banner? if so, add more pictures to the rotator)
+        //show rating on 5
+        //mettre une description si on en a une, read more si trop longue... et tester quand il y a du formattage dans la description
+        //Ne pas montrer tous les services offerts mais un "see more" après 5 services affichés
+        //mettre un bouton qui dit "obtenir une soumission de cet entrepreneur" et ça ouvre notre form + boîte à cocher s'ils veulent d'autres entrepreneurs
+        
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    
+    use lg;
+    use widget;
+}}
+
+<style>
+    .contractor_profile {
+        border-bottom: solid;
+        border-width: 1px;
+    }
+    .contractor_profile .container {
+        padding:20px;
+    }
+    .contractor_profile .logo{
+        
+    }
+    
+    .contractor_name {
+        font-weight: bold;
+        
+    }
+    .contractors {
+        background-color:white;
+        position:relative;
+        max-width: 1200px;
+        margin:0 auto;
+        padding-bottom:20px;
+    }
+    .contractors .contractor_profile{
+        background-color:white;
+        
+    }
+    .contractors .contractor_profile:hover{
+        background-color:#ddd;
+        
+    }
+    .contractors .contractor_profile .logo img{
+        border: 2px solid #fff;
+        border-radius: 5px;
+        box-sizing: border-box;
+        color: #fff;
+        height: 170px;
+        width: auto;
+        max-width: 240px;
+    }
+    .contractors .contractor_profile .logo span{
+        background-color: #fff;
+        border-radius: 6px;
+        /*display: inline-block !important;*/
+        float: left;
+        margin: -30px 5px 0 8px;
+        padding: 1px;
+        vertical-align: bottom;
+        z-index: 2;
+        /*position: absolute;*/
+        border: 1px solid #eee;
+    }
+    .contractors h2{
+        text-align:center;
+        font-size:xx-large;
+        font-weight:bold;
+    }
+    .contractors h4{
+        font-size:x-large;
+        font-weight:bold;
+    }
+    .contractors .bold{
+        font-weight:bold;
+    }
+    .service_content h5{
+        font-weight:bold !important;
+    }
+    .contractors .contractor_profile .picture_galery span{
+        background-color: #fff;
+        border-radius: 6px;
+        /*display: inline-block !important;*/
+        float: left;
+        /*margin: -30px 5px 0 8px;*/
+        /*padding: 1px;*/
+        vertical-align: bottom;
+        z-index: 2;
+        /*position: absolute;*/
+        border: 1px solid #eee;
+    }
+    .contractors .contractor_profile .picture_galery img{
+        border: 2px solid #fff;
+        border-radius: 5px;
+        box-sizing: border-box;
+        color: #fff;
+        height: 170px;
+        width: 100%;
+        max-width: 240px;
+    }
+    .client_quote {
+        font-style:italic;
+    }
+    .client_quote:before{
+        /*position:absolute;*/
+        background:#FFF;
+        width:120px;
+        height:30px;
+        font-size:30px;
+        top:-15px;
+        left:50%;
+        transform: translateX(-50%);
+        /*display:block;*/
+        content: "\f100";
+        font-family: FontAwesome;
+        font-style: normal;
+        font-weight: normal;
+        line-height: 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-align:center;
+        margin-right:10px;
+    }
+    .client_quote:after{
+        /*position:absolute;*/
+        background:#FFF;
+        width:120px;
+        height:30px;
+        font-size:30px;
+        bottom:-15px;
+        left:50%;
+        transform: translateX(-50%);
+        /*display:block;*/
+        content: "\f101";
+        font-family: FontAwesome;
+        font-style: normal;
+        font-weight: normal;
+        line-height: 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-align:center;
+        margin-left:10px;
+    }
+    .service_content {
+        padding-top:20px;
+    }
+    .divider {
+        border: 2px #00517e solid;
+    }
+    .border_top {
+        border-top: solid;
+    }
+    .border_left {
+        border-left: solid;
+        border-width: 1px;
+    }
+    .border_right {
+        border-right: solid;
+    }
+</style>
+
+\{{
+    cgidata = cgidata();
+    
+    city = sql(single:true, "
+        SELECT c.name_? as name, c.uid_territory, p.code_prov
+        FROM sr_city c
+        INNER JOIN sr_territory t ON t.uid = c.uid_territory
+        INNER JOIN sr_province p ON p.uid = t.uid_province
+        WHERE c.uid = '?'
+        ", "{{lg.rows.lg}}", cgidata.city);
+    service = sql(single:true, "SELECT name_? as name, seo_text_? as seo_text, background_image, seo_name_? as seo_name, seo_name2_? as name2, seo_name3_? as name3 FROM sr_service WHERE uid = '?'", "{{lg.rows.lg}}", "{{lg.rows.lg}}", "{{lg.rows.lg}}", "{{lg.rows.lg}}", "{{lg.rows.lg}}", cgidata.service);
+    if service.rows.background_image then
+        background_image = service.rows.background_image;
+    else
+        background_image = '/sn_uploads/agrandissement_1.jpg';
+    endif
+    
+    cities_near = sql("
+        SELECT c.name_? as name, c.seo_name_? as seo_name
+        FROM sr_city c INNER JOIN
+            (SELECT uid_territory FROM sr_city WHERE uid = '?') AS a ON a.uid_territory = c.uid_territory
+        INNER JOIN sr_address a ON a.uid_city = c.uid
+        WHERE seo_active = 'yes'
+        GROUP BY c.uid
+        ORDER BY count(*) DESC
+        limit 6
+        ", "{{lg.rows.lg}}", "{{lg.rows.lg}}", cgidata.city);
+    
+    contractors = sql("
+        SELECT c.uid, c.seo, c.company_name, year(c.sn_cdate) as sub_year
+        FROM sr_contractor c
+        INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+        INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+        INNER JOIN sr_city ci ON ci.uid_territory = ct.uid_territory
+        WHERE cs.uid_service = '?'
+        AND ci.uid = '?'
+        AND c.active = 'yes'
+        AND c.verified = 'yes'
+        AND cs.approved = 'yes'
+        AND c.show_profile = 'yes'
+        GROUP BY c.uid
+        ORDER BY RAND()
+        LIMIT 5
+        ", cgidata.service, cgidata.city);
+        
+}}
+    <style>
+    .cs .wdg_page_seo{
+        background-repeat;no-repeat;
+        background-size:cover;
+        background-position:center;
+        position:relative;
+        padding:15px;
+    }
+    .cs .wdg_page_seo .title{
+        margin:00px 0px ;
+        color:#FFF;
+        padding-top:0px;
+        margin-bottom:40px;
+        text-align:center;
+    }
+    .cs .wdg_page_seo .title_info{
+        font-size:20px;
+        padding-bottom:30px;
+        color:#FFF;
+    }
+    .cs .wdg_page_seo .mask{
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+        background:rgba(0,0,0,0.6);
+    }
+    .cs .wdg_page_seo_container{
+        position:relative;
+        max-width: 1200px;
+        margin:0 auto;
+    }
+    .cs .wdg_page_seo h5{
+        color:inherit;
+        margin:0;
+        position:relative;
+        padding-left:45px;
+        font-weight:bold;
+    }
+    .cs .wdg_page_seo h5:before{
+        display: inline-block;
+        font-family: FontAwesome;
+        font-style: normal;
+        font-weight: normal;
+        line-height: 1;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        content: "\f058";
+        position:absolute;
+        left:0;
+        top:3px;
+        font-size:32px;
+    }
+    .cs .wdg_page_seo .text-color{
+        color:#FFF;
+    }
+    .cs .wdg_page_seo .text-color p{
+        color:inherit;
+        font-size:18px;
+        padding-left:45px;
+        margin-bottom:30px;
+    }
+    .anchor{         
+        display: block;         
+        position: relative;         
+        top: -103px;         
+        visibility: hidden;     
+    }
+</style>
+<div style="background-color:white;">
+<div class="wdg_page_seo" style="background-image:url('\{{background_image}}')">-->
+    <div class="mask"></div>
+    <div class="wdg_page_seo_container">
+        <div class="row">
+            <h1 class="title">
+                \{{service.rows.name3}} {{sn_ct("à", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}} \{{city.rows.name}}, \{{city.rows.code_prov}}
+            </h1>
+            <span class="anchor" id="sr_client_form"></span>
+            <div id='clientform' class="col-md-6">
+                {{%include '/site/client_form/widget/client_form.sn'}}
+            </div>
+            <div class="col-md-6">
+                <div class="title_info text-color">
+                    {{sn_ct("page_service Description du service ck", format:'ck', publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}  
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <div class="contractors">
+        
+        <span class="bold"><h2>{{sn_ct("Voici une liste de 3 entrepreneurs en", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}} \{{lc(service.rows.name2)}} {{sn_ct("à 2", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}} \{{city.rows.name}}, \{{city.rows.code_prov}}</h2></span>
+    
+        \{{
+        for c in contractors.rows do
+            reviews = sql(single:true, "
+                SELECT client_satisfaction, client_comment
+                FROM sr_project_contractor
+                WHERE uid_contractor = '?'
+                AND client_comment is not null
+                AND client_comment <> ''
+                AND client_satisfaction >= 4
+                AND comment_verified = 'yes'
+                ORDER BY client_satisfaction DESC
+                LIMIT 1
+                ", c.uid);
+                
+            reviews_summary = sql(single:true, "
+                SELECT avg(client_satisfaction) as satisfaction
+                FROM sr_project_contractor
+                WHERE uid_contractor = '?'
+                AND comment_verified = 'yes'
+                ", c.uid);
+                
+            services_offered = sql("SELECT distinct(name_?) as name FROM sr_service s INNER JOIN sr_contractor_service cs ON cs.uid_service = s.uid WHERE cs.uid_contractor = '?' ORDER BY name ASC", "{{lg.rows.lg}}", c.uid);
+            
+            logo = sql(single:true, "SELECT company_logo, banner_1 FROM sr_contractor_profil WHERE uid_contractor = '?'", c.uid);
+            
+            images = sql("SELECT photo FROM sr_gallery WHERE active = 'yes' AND uid_contractor = '?' ORDER BY priority ASC LIMIT 5", c.uid);
+            
+            }}
+
+            <div class="contractor_profile">
+                <div class="container">
+                    <div class="contractor_name">
+                        <h4>\{{c.company_name}}</h4>
+                    </div>
+                    <div class="clearfix"></div>
+                    <div class="row">
+
+                        <div class="col-md-3 logo">
+                            \{{if logo.rows.company_logo then }}<img src="\{{logo.rows.company_logo}}" alt="\{{c.company_name}}">\{{endif}}
+                        </div>
+
+                        
+                        <div class="col-md-7">
+                            \{{if c.company_desc then
+                                description = html2text(c.company_desc)}}
+                                <div class="row">
+                                    <div class="col-xs-12">
+                                        <span class="bold">{{sn_ct("Description de l'entreprise", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span>
+                                        <p>\{{description}}</p>
+                                    </div>
+                                </div>
+                            \{{endif}}
+                            <p><span class="bold">{{sn_ct("Offre les services suivants", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}:</span> 
+                                \{{
+                                    if services_offered.nbrows > 8 then
+                                        columns = 4;
+                                    else
+                                        columns = 1;
+                                    endif
+                                }}
+                                <ul style="columns: \{{columns}}">
+                                \{{for s in services_offered.rows do 
+                                    "<li>";
+                                        s.name .+ ' ';
+                                    "</li>";
+                                endfor}}
+                                </ul>
+                            </p>
+                        </div>
+                        <div class="col-md-2 border_left">
+                            <p>{{sn_ct("Membre de SoumissionRenovation.ca depuis", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}} \{{c.sub_year}}</p>
+                            <br>
+                            <p>{{sn_ct("Visiter sa page profile", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}: <a href="https://xpertsource.com/expert/\{{c.seo}}" target="_blank">\{{c.company_name}}</a></p>
+                            <br>
+                            <a href="#sr_client_form" class="btn btn-primary">{{sn_ct(edit:false, "Je veux une soumission", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</a>
+                        </div>
+                    </div>
+                    
+                
+                    
+                    \{{if reviews.nbrows == 1 then}}
+                        <p>{{sn_ct("Moyenne des notes", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}: \{{round(reviews_summary.rows.satisfaction*100)/100}}/5</p>
+                        \{{c=1}}
+        				\{{while (c <= round(reviews_summary.rows.satisfaction)) do}}
+            				<div class="btn btn-warning btn-sm" aria-label="Left Align">
+            					<span class="glyphicon glyphicon-star" ></span>
+            				</div>
+        				\{{c++}}
+        				\{{endw}}
+        					
+        				\{{for (f = 0; f < 5 - round(reviews_summary.rows.satisfaction); f++) do}}
+                			<div class="btn btn-default btn-grey btn-sm" aria-label="Left Align">
+                				<span class="glyphicon glyphicon-star" ></span>
+                			</div>
+        				\{{endfor}}
+                        <p><span class="client_quote">\{{reviews.rows.client_comment}}</span></p>
+                    \{{endif}}
+                    
+                    <div class="clearfix"></div>
+                    
+                </div>
+            </div>
+
+        \{{endfor}}
+        
+        <div class="row">
+            <div class="service_content">
+                <h5>{{sn_ct("Pour en apprendre plus sur ce domaine", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</h5>
+                \{{service.rows.seo_text}}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="service_content">
+                <h5>{{sn_ct("Vous cherchez des entrepreneurs dans une autre ville proche?", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</h5>
+                <ul>
+                \{{for c in cities_near.rows do}}
+                    <li><a href="/{{lg.rows.lg}}/{{sn_ct(edit:false,"repertoire")}}/\{{city.rows.code_prov}}/\{{c.seo_name}}/\{{service.rows.seo_name}}">\{{service.rows.name3}} {{sn_ct("à", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}} \{{c.name}}</a></li>
+                \{{endfor}}
+                </ul>
+            </div>
+        </div>
+        
+    </div>
+    
+    
+</div>

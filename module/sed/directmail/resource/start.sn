@@ -1,0 +1,286 @@
+<h1>Direct Mail</h1>
+{{	%include "/extenso/functions/sn_ct.snc";
+	use lg; }}
+\{{ 
+	cgidata = cgidata();
+
+	if cgidata.action eq "start" then
+		config = config();
+
+		status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid_status);
+		if status.nbrows != 1 then
+			error("Can't find status : %d", cgidata.uid_status);
+		endif
+
+		campaign = sql(single:true,"select * from sed_directmail_campaign where uid = '?'", status.rows.uid_campaign);
+		if campaign.nbrows != 1 then
+			error("Can't find campaign %d", status.rows.uid_campaign);
+		endif
+		exec(atdate:"NOW","/module/sed/directmail/script/start.bash",config.filename,config.root,cgidata.uid_status);
+		sleep(2);
+
+	elseif cgidata.action eq "stop" then
+		status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid_status);
+		if status.nbrows != 1 then
+			error("Can't find status : %d", cgidata.uid_status);
+		endif
+
+		campaign = sql(single:true,"select * from sed_directmail_campaign where uid = '?'", status.rows.uid_campaign);
+		if campaign.nbrows != 1 then
+			error("Can't find campaign %d", status.rows.uid_campaign);
+		endif
+		if status.rows.status eq "running" then
+			"The process has been stop";
+			res = sql("update sed_directmail_status set status = 'stop' where uid = '?'", cgidata.uid_status);
+		else
+			"The process was not running anymore";
+		endif
+		sleep(2);
+
+	elseif cgidata.action eq "refresh" then
+		status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid_status);
+		if status.nbrows != 1 then
+			error("Can't find status : %d", cgidata.uid_status);
+		endif
+
+		campaign = sql(single:true,"select * from sed_directmail_campaign where uid = '?'", status.rows.uid_campaign);
+		if campaign.nbrows != 1 then
+			error("Can't find campaign %d", status.rows.uid_campaign);
+		endif
+		cgidata.uid = status.rows.uid_campaign;
+
+	elseif cgidata.action eq "cancel" then
+		status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid_status);
+		if status.nbrows != 1 then
+			error("Can't find status : %d", cgidata.uid_status);
+		endif
+
+		campaign = sql(single:true,"select * from sed_directmail_campaign where uid = '?'", status.rows.uid_campaign);
+		if campaign.nbrows != 1 then
+			error("Can't find campaign %d", status.rows.uid_campaign);
+		endif
+		if status.rows.status eq "running" then
+			"The process has been cancel";
+			res = sql("update sed_directmail_status set status = 'cancel' where uid = '?'", cgidata.uid_status);
+			void sql("delete from sed_directmail_transmit where uid_status = '?'", cgidata.uid_status);
+		else
+			"The process was not running anymore";
+		endif
+
+	elseif cgidata.action eq "canceljob" then
+		status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid_status);
+		if status.nbrows != 1 then
+			error("Can't find status : %d", cgidata.uid_status);
+		endif
+
+		campaign = sql(single:true,"select * from sed_directmail_campaign where uid = '?'", status.rows.uid_campaign);
+		if campaign.nbrows != 1 then
+			error("Can't find campaign %d", status.rows.uid_campaign);
+		endif
+		if status.rows.status ne "schedule" then
+			"The process is not schedule";
+		else
+			res = sql("update sed_directmail_status set status = 'cancel' where uid = '?'", cgidata.uid_status);
+			void sql("delete from sed_directmail_transmit where uid_status = '?'", cgidata.uid_status);
+			a=exec("/module/sed/directmail/script/atrm.bash",status.rows.job);
+			"Job has been cancel";
+		endif
+	else
+		campaign = sql(single:true,"select * from sed_directmail_campaign where uid = '?'", cgidata.uid);
+		if campaign.nbrows != 1 then
+			error("Can't find campaign %d", cgidata.uid);
+		endif
+	endif
+
+
+	// -------------------------------------------------- Step 1 : Verify if this campaign is running
+
+	running = false;
+	for status sql("select pid,uid,status,nb_email_transmit,nb_email from sed_directmail_status where uid_campaign = '?' and 
+		( status = 'schedule' or status = 'running ' or status = 'stop' or status = 'start')", campaign.rows.uid) do
+		running = true;
+		"Campaign "; campaign.rows.name; " is not finish";
+		
+		if status.rows.status eq "schedule" then
+			}}
+			Job is schedule
+<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=refresh&uid_status=\{{status.rows.uid}}');">Refresh</a>
+			<a  class="btn btn-default btn-sm" href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=canceljob&uid_status=\{{status.rows.uid}}');">Cancel</a>
+			\{{
+		elseif status.rows.pid eq "" then
+			}}
+			Campaign has not started
+			<a  class="btn btn-default btn-sm" href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=start&uid_status=\{{status.rows.uid}}');">Start it</a>
+			<a  class="btn btn-default btn-sm" href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=cancel&uid_status=\{{status.rows.uid}}');">Cancel</a>
+			\{{
+		elseif status.rows.status eq "stop" then
+			}}
+			DirectMail process has been stop
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=start&uid_status=\{{status.rows.uid}}');">Start it</a>
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=cancel&uid_status=\{{status.rows.uid}}');">Cancel</a>
+			\{{
+		elseif status.rows.status eq "finish" then
+			}}
+			Direct-Mail process has finish
+			\{{
+		elseif ! -e ( "/module/sed/directmail/proc/" .+ status.rows.pid ) then
+			}}
+			"Direct-Mail process has crash
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=start&uid_status=\{{status.rows.uid}}');">Start it</a>
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=cancel&uid_status=\{{status.rows.uid}}');">Cancel</a>
+			\{{
+		else
+			}}
+			Process is running \{{ status.rows.nb_email_transmit; "/"; status.rows.nb_email }}
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=stop&uid_status=\{{status.rows.uid}}');">Stop it</a>
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=cancel&uid_status=\{{status.rows.uid}}');">Cancel</a>
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=refresh&uid_status=\{{status.rows.uid}}');">Refresh</a>
+			\{{
+		endif
+	endfor
+
+	if (! running) then
+		if cgidata.action ne "run" then
+			}}
+			<a class="btn btn-default btn-sm"  href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=run&uid=\{{cgidata.uid}}');">Run it</a>
+			\{{
+		else
+
+			// -------------------------------------------------- Make sure data is correct
+
+			ok = true;
+			if campaign.rows.asap ne "yes" then
+				if campaign.rows.time =~ "^(\d\d:\d\d):\d\d$" then
+					time = getre(1);
+				else
+					ok = false;
+					"Wrong time format: "; campaign.rows.time;
+				endif
+				if campaign.rows.date !~ "^\d\d\d\d-\d\d-\d\d$" then
+					ok = false;
+					"Wrong date format: "; campaign.rows.date;
+				endif
+			endif
+	
+			if !ok then
+				stop();
+			endif
+	
+			// -------------------------------------------------- Step 2 : Create a new status
+
+			fields = campaign.rows;
+			deletectx(fields, "sn_custom", "uid","sn_cdate","sn_mdate","sn_cuid","sn_muid");
+			fields.uid_campaign = cgidata.uid;
+			fields.username = user.username;
+			fields.status = "start";
+
+			void insert(table:"sed_directmail_status",snc:true,user:user,fields:fields);
+			uid_status = lastuid();
+	
+			// -------------------------------------------------- Step 3 : Identify the email to be sent (copy from the list to sed_directmail_transmit)
+	
+			double = sql(single:true, "select count(*) - count(distinct email) as nb from ?", campaign.rows.list);
+
+			limit = "";
+			if campaign.rows.mailtest eq "yes" then
+				if isdigit(campaign.rows.nbmailtest) then
+					nbmailtest = campaign.rows.nbmailtest;
+				else
+					nbmailtest = 1;
+				endif
+				limit = " LIMIT " .+ nbmailtest;
+			endif
+
+			/*
+			{if "|selectby.campagne" ne ""}
+			  {|selectby=" WHERE |selectby.campagne"}
+			  {else}
+			    {|selectby=""}
+				{/if}
+
+				{if "|segmentation_langue.campagne" ne "no"}
+				  {|selectby="|selectby AND FIND_IN_SET(lg,'|segmentation_langue.campagne')"}
+				  {/if}
+				  */
+
+			if campaign.rows.selectby ne "" then
+				selectby_def = campaign.rows.selectby;
+			else
+				selectby_def = "";
+			endif
+			selectby = selectby_def;
+
+			if campaign.rows.segmentation_by_language ne "" then
+				select_lg = "";
+				if isset(values:"fr",list:campaign.rows.segmentation_by_language) then
+					select_lg = "(lg = 'fr'";
+				endif
+				if isset(values:"en",list:campaign.rows.segmentation_by_language) then
+					if select_lg eq "" then
+						select_lg = "(lg = 'en'";
+					else
+						select_lg .+= " OR lg = 'en'";
+					endif
+				endif
+				if select_lg ne "" then
+					if select eq "" then
+						selectby = " WHERE " .+ select_lg .+ ")";
+					else
+						selectby = " AND " .+ select_lg .+ ")";
+					endif
+					if selectby_def ne "" then
+						selectby = selectby .+ " AND " .+ selectby_def;
+					endif
+				endif
+			endif
+
+			if selectby ne '' then
+				selectby .+= " AND email NOT IN (select email from  sed_directmail_unsub)";
+			endif
+	
+			res = sql("INSERT INTO sed_directmail_transmit (uid_status,uid_list)
+					SELECT '?',uid
+					FROM ? " .+ selectby .+ " group by email" .+ limit,	
+					uid_status, campaign.rows.list);
+	
+			res = sql("update sed_directmail_transmit set unsub = 'yes' WHERE uid_status = '?' and uid_list IN (select l.uid from ?  as l,sed_directmail_unsub as u where l.email = u.email and 
+				(u.all_list='yes' or u.list = '?'))", uid_status, campaign.rows.list,campaign.rows.list);
+	
+			unsub = sql(single:true, "select count(*) as nb from sed_directmail_transmit where unsub = 'yes' and uid_status = '?'", uid_status);
+			
+			res = sql("delete from sed_directmail_transmit where uid_status = '?' and unsub = 'yes'", uid_status);
+	
+			nbemail = sql(single:true,"select count(uid) as nb from sed_directmail_transmit where uid_status = '?'", uid_status);
+	
+			void insert(table:"sed_directmail_stat",snc:true,user:user,fields:{
+				"uid_campaign":cgidata.uid,
+				"uid_status":uid_status,
+				"username":user.username,
+				"nb_email":nbemail.rows.nb,
+				"nb_email_double":double.rows.nb,
+				"nb_email_unsub":unsub.rows.nb
+			});
+			res = sql("update sed_directmail_status set nb_email='?',nb_email_transmit='?',nb_email_double='?',nb_email_unsub='?' where uid = '?'", 
+				nbemail.rows.nb,nbemail.rows.nb,double.rows.nb,unsub.rows.nb,uid_status);
+	
+			// -------------------------------------------------- Step 4 : Start the program to send the email
+				
+			config = config();
+			if campaign.rows.asap eq "yes" then
+				res = exec(atdate:"NOW","/module/sed/directmail/script/start.bash",config.filename,config.root,uid_status);
+				}} {{sn_ct("Sending email:", publish:"/extenso/publish/ressources.sn", uids:"27", module:'directmail')}} \{{ nbemail.rows.nb;
+				}} <a class="btn btn-default btn-sm"  
+                      href="javascript:sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/start.snc?action=refresh&uid_status=\{{uid_status}}');">Refresh</a> \{{
+			else
+				res = exec(atdate:time .+ " " .+ campaign.rows.date,"/module/sed/directmail/script/start.bash",config.filename,config.root,uid_status);
+				if res.error =~ "job\s*(\d+)" then
+					job=getre(1);
+					res = sql("update sed_directmail_status set job='?',status='schedule' where uid = '?'", job,uid_status);
+					"Job has been scheduled for "; time .+ " " .+ campaign.rows.date;
+				else
+					"There was an error with the scheduling...";
+				endif
+			endif
+		endif
+	endif
+}}

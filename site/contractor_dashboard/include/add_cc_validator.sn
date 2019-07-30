@@ -1,0 +1,30 @@
+{{
+    /*
+        @title validator for contractor_add_credit_card
+        Description: Validate inputs from the user client and server side.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-26
+
+    */
+    
+    // include the validator
+    %include "/class/validator.sn";
+
+    // configure a new validator
+    validator = new Validator(
+        type: 'required',
+        name: 'required',
+        exp_year: 'required,number',
+        exp_month: 'required,number,func:checkExpDateGreaterThanToday',
+        card_number: 'required,number,minlen:16,maxlen:16',
+        cvv: 'required,number,minlen:3,maxlen:5',
+        custom_amount: 'number'
+    );  
+}}
+<script>
+    function checkExpDateGreaterThanToday(exp_month) {
+        return ($('[name=exp_year]').val() > {{datetime(format:'%g')}} || exp_month >= {{datetime(format:'%m')}});
+    }
+</script>

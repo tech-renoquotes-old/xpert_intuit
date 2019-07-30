@@ -1,0 +1,177 @@
+
+<style>
+	/*Custom select-----------------*/
+    .custom_select{
+        position:relative;
+    }
+    .cs .s_col-sm-in-two{
+        width:50%;
+        float:left;
+    }
+
+    .custom_select-title_container{
+        height:46px;
+        line-height:46px;
+        position:relative;
+        padding-right:35px;
+        padding-left:14px;
+        color:rgb(112, 112, 112);
+        
+    }
+    .cs .btn.custom_select-title_container{
+        border-bottom-width:3px;
+        display:block;
+        padding:0 35px 0 14px;
+    }
+    .custom_select-title_container:hover{
+        background:#f4f4f4;
+        cursor:pointer;
+    }
+    .custom_select-title{
+        font-size:12px;
+    }
+    .custom_select-current_select{
+        font-size:14px;
+        font-weight:bold;
+        position:relative;
+        text-transform:uppercase;
+    }
+    .custom_select-title_icon{
+        position:relative;
+        float:right;
+        font-size:18px;
+    }
+    .custom_select-option_container{
+        background:#FFF;
+        border:1px #c8c8c8 solid;
+        color:#707070;
+        position:absolute;
+        z-index:1;
+        width:100%;
+        border-top:none;
+        padding:7px 0 16px 0;
+    }
+    .custom_select-option_padding{
+        margin:0 19px;
+        padding:11px 5px;
+        border-bottom:1px #bababa solid;
+    }
+
+    .custom_select-option{
+        font-size:14px;
+    }
+    .custom_select-option:hover{
+        background:#f4f4f4;
+        cursor:pointer;
+    }
+    .last {
+        border-bottom:none;
+    }
+    .custom_select-selected{
+        color:#FFF;
+        background:#5FCAF8;
+    }
+    .custom_select-selected:hover{
+        color:#FFF;
+        background:#FFF;
+    }
+	/*-----------------*/
+</style>
+
+<div class="row">
+    <div class="col-sm-6">
+        <div class="custom_select">
+            <div class="custom_select-title_container btn btn-default">
+                <div class="custom_select-title_icon">
+                    <i class="fa fa-chevron-down"></i>
+                </div>
+                <div class="custom_select-current_select text-center">
+                    \{{category_name}}
+                </div>
+            </div>
+            <div class="custom_select-option_container" style="display:none;">
+
+                {{ for category sql("SELECT uid,name ,url FROM sed_blog_category WHERE language='?' ORDER BY uid IN ('4','107') DESC, name ASC", lg.rows.lg) do }}
+                    <a href="{{category.rows.url}}">
+                        <div class="custom_select-option custom_select-option_padding custom_select-option_visible">
+                            {{category.rows.name}}
+                        </div>      
+                    </a>
+                {{endfor}}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-sm-6">
+        <div class="custom_select ">
+            <div class="custom_select-title_container btn btn-default">
+                <div class="custom_select-title_icon">
+                    <i class="fa fa-chevron-down"></i>
+                </div>
+                <div class="custom_select-current_select text-center">
+                   \{{if order_by eq 'ASC' then}} 
+                         {{sn_ct("blog Oldest",edit:true)}}
+                    \{{else}}
+                        {{sn_ct("blog Most recent",edit:true)}}
+                    \{{endif}}
+                </div>
+            </div>
+            <div class="custom_select-option_container" style="display:none;">
+                <div  onclick="$('#orderby').val('ASC'); $('#sed_blog_form').submit();" class="custom_select-option custom_select-option_padding custom_select-option_visible">
+                    <div class="">{{sn_ct("blog Oldest",edit:true)}}</div>
+                </div>
+                <div  onclick="$('#orderby').val('DESC'); $('#sed_blog_form').submit();" class="custom_select-option custom_select-option_padding custom_select-option_visible">
+                    <div class="">{{sn_ct("blog Most recent",edit:true)}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    $( document ).ready(function() {
+        
+       //SCRIPT CUSTOM SELECT
+        $( ".custom_select .custom_select-title_container" ).click(
+		  function() {
+		    $(this).parent().find('.custom_select-option_visible').removeClass('last');
+		    $(this).parent().find('.custom_select-option_visible').last().addClass('last');
+
+
+            // Hide other custom-selects when one is clicked
+            $(".custom_select-selected").not(this).parent().find(".custom_select-option_container").stop().slideUp(250);
+            $(".custom_select-selected").not(this).removeClass('custom_select-selected');
+            
+		    if($(this).hasClass('custom_select-selected')==false){
+		       
+		        $(this).addClass('custom_select-selected');
+		        $(this).parent().find(".custom_select-option_container").stop().slideDown(250,'easeOutCubic');
+		    }
+            else{
+                $(this).removeClass('custom_select-selected');
+                $(this).parent().find(".custom_select-option_container").stop().slideUp(250);
+            }
+		  }
+		);
+		$( ".custom_select .custom_select-option" ).click(
+		  function() {
+		    var old_value = $(this).parent().parent().find('.custom_select-current_select').html();
+		    var new_value = $(this).children().html();
+		    
+		    $(this).parent().parent().find('.custom_select-current_select').html(new_value);
+		    var element = this;
+		    $(this).parent().stop().slideUp(250,function(){
+		        $(element).parent().find('.custom_select-option').removeClass('hide');
+		        $(element).parent().find('.custom_select-option').addClass('custom_select-option_visible');
+		        $(element).addClass('hide');
+		        $(element).removeClass('custom_select-option_visible');
+		    });
+		    
+		    $(this).parent().parent().find('.custom_select-title_container').removeClass('custom_select-selected');
+		  }
+		);
+		//--------------->
+		
+    });
+</script>

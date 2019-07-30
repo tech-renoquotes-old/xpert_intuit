@@ -1,0 +1,158 @@
+{{
+    /*
+        @title contractor_discounted_projects
+        Description: This widget display the list of projects with discounts to the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-02
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    use widget;
+
+}}
+\{{
+    use extranet_user;
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+
+    query= "
+        SELECT p.uid, p.description, p.lead_price, p.due_date, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, p.active_date
+        FROM sr_project p
+        INNER JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city c ON a.uid_city = c.uid
+        WHERE ABS(DATEDIFF(now(), active_date)) BETWEEN '?' AND '?'
+        AND p.status = 'active'
+        AND EXISTS (SELECT null FROM sr_contractor_service cs WHERE cs.uid_contractor='?' AND p.uid_service=cs.uid_service)
+        AND EXISTS (SELECT null FROM sr_contractor_territory ct WHERE ct.uid_contractor='?' AND uid_territory=(SELECT uid_territory 
+            FROM sr_city WHERE sr_city.uid=a.uid_city LIMIT 1))
+        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project=p.uid AND pc.uid_contractor='?' 
+            AND (pc.accepted = 'yes' OR pc.hidden='yes' )
+        )
+        ORDER BY p.active_date ASC
+        LIMIT 50";
+        
+    projects = sql(query, configs.rows.project_halfprice_days, configs.rows.project_max_days, extranet_user.uid, extranet_user.uid, extranet_user.uid);
+    if projects.nbrows > 0 then
+}}
+    <div class="row no-print mb-sm">
+    <div class="col-sm-offset-9 col-sm-3">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="window.print();">
+                {{sn_ct("contractor_discounted_projects Imprimer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+        </div>
+    </div>
+    <div class="mb-md">
+        {{sn_ct("contractor_discounted_projects texte du haut", format:'ck', lg:lg.rows.lg,  publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </div>
+
+\{{ for p in projects.rows do}}
+        <div id="project-panel" class="panel panel-default">
+            <div class="panel-heading"><h2 class="heading-sm"><b>{{sn_ct("contractor_discounted_projects ID", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b> \{{p.uid}}</h2></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div>
+                            <b>{{sn_ct("contractor_discounted_projects Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                        </div>
+                        <p>
+                            \{{ if p.description then p.description; else "-"; endif}}
+                        </p>
+                    </div>
+                    <div class="col-sm-6 font-md">
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Date activation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.active_date then p.active_date; else "-"; endif}} 
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Date voulue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.due_date then p.due_date; else "-"; endif}} 
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.city then p.city; else "-"; endif}}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{money_format(p.lead_price / 2,"{{lg.rows.lg}}")}} {{sn_ct("contractor_discounted_projects + taxes", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </div>
+                        </div>
+                        <div class="form-group no-print">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Action", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <div class="btn btn-primary btn-block" onclick="accept_project(this,'\{{p.uid}}')">
+                                    {{sn_ct("contractor_discounted_projects Achat", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} <i class="fa fa-chevron-right"></i>
+                                </div>
+                                <div class="btn btn-primary btn-block" onclick='if (confirm("{{sn_ct(edit:false,"contractor_discounted_projects Êtes-vous certain de vouloir cacher ce projet ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")) { hide_project(this,"\{{p.uid}}")}'>
+                                    {{sn_ct("contractor_discounted_projects Retirer de la liste", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} <i class="fa fa-chevron-right"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    \{{ endfor}}
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_discounted_projects Aucun projet correspondant à votre profil n'est à rabais", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}
+<script>
+    // removes a project from the list only for this contractor
+    function hide_project(e,uid_project){
+	    $.ajax({
+    		type: "post",
+    		data:{
+    			"uid_project": uid_project
+    		},
+    		url: "{{ sn_pages('ajax_hide_project', lg.rows.lg, table:'ressources')}}",
+    		success:function(data){
+                $(e).parents("#project-panel").hide("swing", function(){ $(this).remove();});
+    		}
+	    });
+    }
+    
+    // links the project to the contractor
+    function accept_project(e,uid_project){
+	    $.ajax({
+    		type: "post",
+    		data:{
+    			"uid_project": uid_project
+    		},
+    		url: "{{ sn_pages('ajax_add_discounted_project', lg.rows.lg, table:'ressources')}}",
+    		success:function(data){
+                        $(e).parents("#project-panel").hide("swing", function(){ 
+                            $(this)
+                                .addClass('alert alert-success')
+                                .html("{{sn_ct("contractor_discounted_projects Nous avons bien reçu votre demande, vous recevrez les informations du client d'ici les 20 prochaines minutes si vous êtes sélectionnés et que votre compte est sous sa limite.", edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")
+                                .show('swing');
+                        });
+                    
+    		}
+	    });
+    }
+</script>

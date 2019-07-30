@@ -1,0 +1,184 @@
+<h2>Test Facebook OK!</h2>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  
+ 
+  <link rel="stylesheet" href="/css/bootstrap-social.css">
+  
+<!--<div class="container">-->
+  <h1>Facebook  bande</h1>
+  <a class="btn btn-block btn-social btn-facebook">
+    <span class="fa fa-facebook"></span> Sign in with Facebook
+  </a>
+
+ 
+
+
+<div id="fb-root"></div>
+<script type="text/javascript">
+//<![CDATA[
+window.fbAsyncInit = function() {
+   FB.init({
+     appId      : '1804360176488616', // App ID
+     channelURL : '', // Channel File, not required so leave empty
+     status     : true, // check login status
+     cookie     : true, // enable cookies to allow the server to access the session
+     oauth      : true, // enable OAuth 2.0
+     xfbml      : false  // parse XFBML
+   });
+};
+// logs the user in the application and facebook
+function login(){
+FB.getLoginStatus(function(r){
+     if(r.status === 'connected'){
+         alert('Connecté');
+            window.location.href = 'fbconnect.php';
+     }else{
+        FB.login(function(response) {
+                if(response.authResponse) {
+              //if (response.perms)
+                      alert('vient de seconnecté');
+                    window.location.href = 'fbconnect.php';
+            } else {
+                 alert('Not connected');
+              // user is not logged in
+            }
+     },{scope:'email'}); // which data to access from user profile
+ }
+});
+}
+// Load the SDK Asynchronously
+(function() {
+   var e = document.createElement('script'); e.async = true;
+   e.src = document.location.protocol + '//connect.facebook.net/en_US/all.js';                
+   document.getElementById('fb-root').appendChild(e);
+}());
+//]]>
+</script>
+
+
+
+
+<a href='#' onclick='login();'>Facebook Login</a>
+
+
+    
+   <!--pour les boutons-->
+      <link rel="stylesheet" type="text/css" href="https://static.acer.com/up/Resource/templateLibraries/Acer/401/css/sso/sso.css" />
+          <!--<link rel='stylesheet' type='text/css' href='https://fonts.googleapis.com/css?family=Roboto&subset=latin,cyrillic-ext,latin-ext,cyrillic' />-->
+      <!--pour les input  -->
+      <script type="text/javascript" src="https://static.acer.com/up/Resource/templateLibraries/Acer/401/scripts/jquery-1.7.2.min.js"></script>
+      <script type="text/javascript" src="https://static.acer.com/up/Resource/templateLibraries/Acer/401/scripts/jquery-ui-1.10.4.custom.min.js"></script>
+      <script type="text/javascript" src="https://static.acer.com/up/Resource/templateLibraries/Acer/401/scripts/sso/sso.js"></script>
+
+      <script type="text/javascript">jQuery(document).ready(function(){AcerSSO.init();});</script>
+
+{{ //test
+
+//https://account.acer.com/sso/signin?link=impl.redirect&rstu1v.ctx5c=CA&rstu1v.LanguageISOCtxParam=fr&rstu1v.ctx4c=http%3A%2F%2Fwww.acer.com&rstu1v.ctx6c=fr&nav=mpage1v.4&rstu1v.CountryISOCtxParam=CA
+
+
+}}
+<style>
+
+div.div2   {
+    height: 1px;
+    background-color: #cccccc;
+    border-bottom: 1px solid #ffffff;
+    margin: 29px 0 29px;
+    text-align: center;
+    clear: both;
+} 
+div.div2 span {
+    font-weight: bold;
+    font-size: 18px;
+    background: #efefef;
+    position: relative;
+    top: -15px;
+    padding: 0 12px;
+    display: inline;    
+}
+    
+    
+</style>
+
+
+<form name="page3FormBean" id="page3FormBean" method="post" action="/sso/form_page3.do" enctype="multipart/form-data">
+    <input type="hidden" name="lastURL" value="signin.do?rstu1v.ctx5c=CA&amp;rstu1v.LanguageISOCtxParam=fr&amp;rstu1v.ctx4c=http%3A%2F%2Fwww.acer.com&amp;rstu1v.ctx6c=fr&amp;rstu1v.CountryISOCtxParam=CA" id="lastURL_page3">
+	<input type="hidden" name="ln8" value="pcu2v?LanguageISOCtxParam=fr&amp;sp=page3&amp;link=ln8&amp;CountryISOCtxParam=CA">
+    <div class="row light-gray">
+		<div class="content hubReg">
+			<div class="contForm">
+                <h1>Facebook  bande2</h1>😝 🚉
+                <a class="btn btn-block btn-social btn-facebook">
+                    <span class="fa fa-facebook"></span> Sign in with Facebook
+                </a>
+    			<div class="div2"   style>
+    				<span>ou</span>
+    			</div>
+    		    <div class="social">
+    				<a class="facebook" title="Se connecter avec Facebook" href="https://idphub.account.acer.com/pf/adapter2adapter.ping?IdpAdapterId=FBSSO&SpSessionAuthnAdapterId=SSOAL&TargetResource=https://account.acer.com/sso/social?pcp21c=bb9803b233fa46abb4be9e14b5fb921f"><span>Se connecter avec Facebook</span></a>
+    			</div>
+    			<div class="divider">
+    				<span>ou</span>
+    			</div>
+    		    <div class="social">
+    				<a class="facebook" title="Se connecter avec Facebook" href="https://idphub.account.acer.com/pf/adapter2adapter.ping?IdpAdapterId=FBSSO&SpSessionAuthnAdapterId=SSOAL&TargetResource=https://account.acer.com/sso/social?pcp21c=bb9803b233fa46abb4be9e14b5fb921f"><span>Se connecter avec Facebook</span></a>
+    				<a class="gplus" title="Se connecter avec Google" href="https://idphub.account.acer.com/pf/adapter2adapter.ping?IdpAdapterId=GOSSO&SpSessionAuthnAdapterId=SSOAL&TargetResource=https://account.acer.com/sso/social?pcp21c=bb9803b233fa46abb4be9e14b5fb921f"><span>Se connecter avec Google</span></a>
+    			</div>
+    			<div class="divider">
+    				<span>ou</span>
+    			</div>
+                <div class="field">
+                    <input type="text" name="fld3"  value="" id="fld3" class=" " placeholder="Courriel"  >
+            	    <span class="placeholderText">Courriel</span>
+                	<span class="fieldMand" style="display: none;">Ce champ est obligatoire.</span>
+            	</div>
+            	<div class="field">
+            	    <input type="password" name="fld4" value="" id="fld4" class=" " placeholder="Mot de passe" >
+            	    <span class="placeholderText">Mot de passe</span>
+                	<span class="fieldMand" style="display: none;">Ce champ est obligatoire.</span>
+            	</div>
+            	<div class="checkbox">
+                    <input type="checkbox" name="fld1_locale" value="true" id="fld1_locale">
+                	<label class="mexCheck" for="fld1_locale"><span class="check"></span>Rester connecté</label>    
+                </div>
+            	<input type="hidden" name="fld1v" value="bb9803b233fa46abb4be9e14b5fb921f" id="fld1v">
+                <input class="btn" id="button:ln8" name="button:ln8" type="submit" value="Connexion" />
+            	<a href="/sso/reset" class="lost-password">Mot de passe oublié?</a>
+            	<a href="/sso/create/bb9803b233fa46abb4be9e14b5fb921f" class="lost-password">Créer un compte</a>
+            	<a href="http://www.acer.com/ac/fr/CA/content/acerid-account">Pourquoi s'inscrire?</a>
+        		</div>
+        	</div>
+        </div>
+        <div class="row">
+        	<div class="footer">
+        	  <div class="optionField">
+                  <select class="select slcOption" name="inu1v" onChange="window.location.href=this.value">            
+                  	      <option value="rstu1v?LanguageISOCtxParam=fr&amp;sp=page3&amp;rstu1v.ctx6c=en&amp;link=ln16v&amp;CountryISOCtxParam=CA&amp;rstu1v.ctx5c=AU&amp;rstu1v.LanguageISOCtxParam=en&amp;rstu1v.ctx4c=http%3A%2F%2Fwww.acer.com&amp;rstu1v.CountryISOCtxParam=AU">
+                          Australia - English
+                  	  </option>  
+                  	      <option value="rstu1v?LanguageISOCtxParam=fr&amp;sp=page3&amp;rstu1v.ctx6c=de&amp;link=ln16v&amp;CountryISOCtxParam=CA&amp;rstu1v.ctx5c=AT&amp;rstu1v.LanguageISOCtxParam=de&amp;rstu1v.ctx4c=http%3A%2F%2Fwww.acer.com&amp;rstu1v.CountryISOCtxParam=AT">
+                          Austria - Deutsch
+                  	  </option>  
+                  	      <option value="rstu1v?LanguageISOCtxParam=fr&amp;sp=page3&amp;rstu1v.ctx6c=fr&amp;link=ln16v&amp;CountryISOCtxParam=CA&amp;rstu1v.ctx5c=BE&amp;rstu1v.LanguageISOCtxParam=fr&amp;rstu1v.ctx4c=http%3A%2F%2Fwww.acer.com&amp;rstu1v.CountryISOCtxParam=BE">
+                          Belgium - Français
+                  	  </option>  
+                  	      <option value="rstu1v?LanguageISOCtxParam=fr&amp;sp=page3&amp;rstu1v.ctx6c=vi&amp;link=ln16v&amp;CountryISOCtxParam=CA&amp;rstu1v.ctx5c=VN&amp;rstu1v.LanguageISOCtxParam=vi&amp;rstu1v.ctx4c=http%3A%2F%2Fwww.acer.com">
+                          Viet Nam - English
+                  	  </option>  
+                  </select>
+        	  </div>
+        	  <p>© soumissionrenovation.ca</p>
+        	  <div class="legacy-nav">
+        		<a href="http://www.acer-group.com/public/index/legal.htm" title="Acer Group">Mentions légales</a>
+        		<span>-</span>
+        		<a href="http://www.acer-group.com/public/index/privacy.htm" title="Privacy">Confidentialité</a>
+        	 </div>
+    	</div>
+    </div>
+</form>
+	

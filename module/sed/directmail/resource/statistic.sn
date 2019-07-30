@@ -1,0 +1,495 @@
+{{	
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc";
+	use lg; 
+	
+	perm_menu=sql(single:true,"select roles from sn_left_menu where code_reference = 'sed_directmail'");
+	
+}}
+\{{ 
+	use user;
+	cgidata = cgidata();
+	
+	path_login = "{{sn_pages("login","{{lg.rows.lg}}");}}";
+	if user.roles eq "" then
+		redirect(path_login);
+	endif;
+	
+	if ! isset(list:"{{perm_menu.rows.roles}}",values:"all",delimiter:",") then
+		found = false;
+		for i split("{{perm_menu.rows.roles}}") do 
+			if isset(list:user.roles,values:i,delimiter:",") then
+				found = true;
+				break;
+			endif;
+		endfor;
+		if ! found then
+			error("Accès interdit");
+		endif;
+	endif;
+	
+}}
+
+<title>{{sn_ct(code:"Direct Mail - Statistiques", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</title>
+
+<div class="_index_right_layout _no_iframe">
+	<div class="before_fixed_content_layout">
+		<div class="list_header">
+			<h1>{{sn_ct(code:"Direct Mail - Statistiques", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</h1>
+		</div>
+
+		<div class="list_menu_top">
+			<div class="m1_block">
+				<a class="m1_a btn_sm" onclick="sn_load('/extenso/extranet/module/sed/directmail/{{lg.rows.lg}}/statistic.snc?uid=\{{cgidata.uid;}}&lg={{lg.rows.lg}}');" href="javascript:void(0);" title="{{sn_ct(code:"Rafraîchir", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}">
+					<i class="fa fa-refresh"></i>
+				</a>
+			</div>
+			<div class="m1_block">
+				<a class="m1_a btn_sm sn_edit_return" onclick="sn_load('/extenso/extranet/sed_directmail_status/{{lg.rows.lg}}/index.snc');" href="javascript:void(0);">{{sn_ct(code:"Retour", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</a>
+			</div>
+			<div class="sn_clear"></div>
+		</div>
+	</div>
+
+	<div class="fixed_content_layout" style="top: 129px;">
+		<div class="edit_content fixed_children inline-edit-wrap">
+			<div class="tabs_wrapper fixed_children">
+				<div class="tabs">
+					<a id="tabedit0" class="on" onclick="sn_toggle_tabs(this); $('#sn_tabid').val('0');" href="javascript:void(0);">{{sn_ct(code:"Statistiques Générales", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</a>
+					<a id="tabedit1" onclick="sn_toggle_tabs(this); $('#sn_tabid').val('1');" href="javascript:void(0);">{{sn_ct(code:"Clicks", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</a>
+					<a id="tabedit2" onclick="sn_toggle_tabs(this); $('#sn_tabid').val('3');" href="javascript:void(0);">{{sn_ct(code:"Localisation", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</a>
+				</div>
+				
+				\{{error=0;}}
+				\{{if cgidata.uid eq "" then}}
+					<p class="error">{{sn_ct(code:"Il faut selectionner une campagne", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29");}}</p>
+					\{{error=1;}}
+				\{{else}}
+					\{{status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid);}}
+					\{{if status.nbrows != 1 then}}
+						<b>{{sn_ct(code:"Le numero de la campagne est invalide", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29");}} : \{{cgidata.uid}}</b>
+						\{{error=1;}}
+					\{{endif}}
+				\{{endif}}
+
+				\{{template = sql(single:true,"select * from sed_directmail_template where uid = '?'", status.rows.template);}}		
+				\{{bounce=sql(single:true,"select count(*) as nb from sed_directmail_track where uid_status='?' and operation='bounce' and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{reply=sql(single:true,"select count(*) as nb from sed_directmail_track where uid_status='?' and operation='reply' and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{unsub=sql(single:true, "select count(uid) as nb from sed_directmail_track where uid_status='?' and operation='unsub' and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{open=sql(single:true, "select count(uid) as nb from sed_directmail_track where uid_status='?' and operation='open' and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{click=sql(single:true, "select count(uid) as nb from sed_directmail_track where uid_status='?' and operation='click' and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{nbip=sql(single:true, "select count(ip) as nb from sed_directmail_track where uid_status='?'and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{nbcookie=sql(single:true, "select count(cookie) as nb from sed_directmail_track where uid_status='?'and country_code != '' and region != '' and city != ''", status.rows.uid);}}
+				\{{list_name=sql(single:true,"select description from sed_directmail_list where list='?'", status.rows.list);}}
+				\{{sentminusbounce = status.rows.nb_email_transmit - bounce.rows.nb;}}
+				\{{pourhtmlvstext=sentminusbounce*100;}}
+				\{{texte=100-pourhtmlvstext;}}
+								
+				\{{if status.rows.nb_email_transmit > 0 then pouropen=open.rows.nb/status.rows.nb_email_transmit*100.0; endif}}
+				\{{if status.rows.total > 0 then nbpersec=status.rows.nb_email_transmit/status.rows.total; endif}}
+				
+				<form id="stat_form" class="content" accept-charset="UTF-8" enctype="multipart/form-data" method="post" name="stat_form" style="top: 83px;">
+					<div id="tab_pane0" class="tab-pane on ">
+						<table class="table edit_table">
+							<tbody>
+								<tr>
+									<td colspan="4">
+										<h3>{{sn_ct(code:"Statistiques Générales", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29");}}</h3>
+									</td>
+								</tr>
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nom de la campagne", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.name}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Uid de la campagne", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.uid_campaign}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Gabarit", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{template.rows.template_name_fr;}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Nom de la liste", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{list_name.rows.description;}} (\{{status.rows.list}})</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Sujet du message", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.subject}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Format du message", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.format}}</td></tr>
+
+								\{{if status.rows.mailtest eq "yes" then}}
+									<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+									<td class="td_width_c">{{sn_ct(code:"Courriel test envoyé à", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+									<td>\{{status.rows.mailtestto}}</td>
+									<td class="td_width_c">{{sn_ct(code:"Nombre de courriel test", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+									<td>\{{status.rows.nbmailtest}}</td></tr>
+								\{{endif}}
+
+								\{{if status.rows.asap ne "yes" then}}
+									<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+									<td class="td_width_c">{{sn_ct(code:"Campagne débute le", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+									<td>\{{status.rows.date}} \{{status.rows.time}}</td>
+									<td class="td_width_c"></td>
+									<td></td></tr>
+								\{{endif}}
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Début de l'envoie", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.sn_cdate}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Dernière mise à jour", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.sn_mdate}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Statut", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.status}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Durée en secondes", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.total}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nombre de courriels à transmettre", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.nb_email}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Nombre de courriels transmis", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.nb_email_transmit}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nombre de courriels transmis sans les bounces", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{sentminusbounce}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Nombre d'adresse de courriels double", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{status.rows.nb_email_double}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nombre de retour", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{bounce.rows.nb}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Nombre de réplique", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{reply.rows.nb}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nombre de desinscription", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{unsub.rows.nb}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Nombre de courriel ouvert", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{open.rows.nb}} (\{{printf("%3.2f", pouropen)}} %)</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nombre de courriels transmis par seconde", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{printf("%7.2f", nbpersec)}}</td>
+								<td class="td_width_c">{{sn_ct(code:"Nombre d'adresse ip unique", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{nbip.rows.nb}}</td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Nombre total d'opération", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{nbcookie.rows.nb}}</td>
+								<td class="td_width_c"></td>
+								<td></td></tr>
+							</tbody>
+						</table>
+						<div id="chartlineopen" style="width: 70%; height: 500px; margin: 0 auto"></div>
+					</div>	
+					<div id="tab_pane1" class="tab-pane ">
+						<table class="table edit_table">
+							<tbody>
+								<tr>
+									<td colspan="4">
+										<h3>{{sn_ct(code:"% HTML vs texte", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</h3>
+									</td>
+								</tr>
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">HTML</td>
+								<td>\{{printf("%3.2f", pourhtmlvstext)}}%</td>
+								<td class="td_width_c"></td>
+								<td></td></tr>
+
+								<tr class=" table_name" data-field="" data-value="" data-lg={{lg.rows.lg}} >
+								<td class="td_width_c">{{sn_ct(code:"Texte", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}</td>
+								<td>\{{printf("%3.2f", texte)}}%</td>
+								<td class="td_width_c"></td>
+								<td></td></tr>
+							</tbody>
+						</table>
+						<div id="chartlineclick" style="width: 70%; height: 500px; margin: 0 auto"></div>
+					</div>	
+					<div id="tab_pane2" class="tab-pane ">
+						<table class="table edit_table">
+							<tbody>
+								<div id="chartbarpays" style="width: 70%; height: 600px; margin: 0 auto"></div>
+								\{{for cy sql("select uid_status,country_code, count(*) from sed_directmail_track where uid_status='?' and country_code != '' and region != '' and city != '' group by country_code order by count(*) desc limit 10;", status.rows.uid) do
+									nb_pccode=sql(single:true,"select count(*) as nb from sed_directmail_track where uid_status = '?' and country_code = '?' and region != '' and city != ''", status.rows.uid, cy.rows.country_code);
+									}}<tr>
+										<td colspan="4" ><h3>{{sn_ct(code:"Pays", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}: \{{cy.rows.country_code}} ( \{{nb_pccode.rows.nb}} )</h3></td>
+									</tr>
+									<tr>
+										<td valign="top" style="border-bottom:0;">
+											<table>
+											<tr>
+											<td valign="top" style="border-bottom:0;">
+											<ul>
+												\{{
+												first = true;
+												seriesText = '[';
+												for r sql("select uid_status,country_code,region,region_name, count(*) from sed_directmail_track where uid_status='?' and country_code='?' and region != '' and city != '' group by region order by count(*) desc limit 30;",status.rows.uid, cy.rows.country_code ) do
+													nb_pregion=sql(single:true,"select count(*) as nb from sed_directmail_track where uid_status = '?' and country_code = '?' and region = '?' and city != ''", status.rows.uid, r.rows.country_code, r.rows.region);
+													if nb_pregion != 0 then 
+														if first ne true then seriesText.+=','; endif; 
+														seriesText.+='{name: "'.+r.rows.region_name.+'", y: '.+nb_pregion.rows.nb.+'}';
+														}} <li> \{{r.rows.region_name}} ( \{{nb_pregion.rows.nb}} )</li> \{{endif}}
+													\{{first = false;}}
+												\{{endfor}}		
+												\{{seriesText.+= ']';}}
+											</ul>
+											</td>
+											</tr>
+											</table>
+											<div id="chartpieprov\{{cy.rows.country_code}}" style="width: 70%; height: 500px; margin: 0 auto"></div>
+											<script type="text/javascript">
+												$(function () {//
+													$('#chartpieprov\{{cy.rows.country_code}}').highcharts({//
+														chart: {
+															plotBackgroundColor: null,
+															plotBorderWidth: null,
+															plotShadow: false,
+															type: 'pie'
+														},
+														title: {
+															text: '{{sn_ct(code:"Province", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+															x: -20 //center
+															},
+														series: [{
+															name: '{{sn_ct(code:"Nombre", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+															colorByPoint: true,
+															data: \{{seriesText;}}
+															}],
+														plotOptions: {
+															pie: {
+																allowPointSelect: true,
+																cursor: 'pointer',
+																dataLabels: {
+																	enabled: true,
+																	format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+																	style: {
+																		color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+																	}
+																}
+															}
+														},	
+													});
+												});
+											</script>
+										</td>
+									</tr>
+									\{{for p sql("select uid_status,country_code,region,region_name, count(*) from sed_directmail_track where uid_status='?' and country_code='?' and region != '' and city != '' group by region order by count(*) desc limit 30;", status.rows.uid, cy.rows.country_code) do
+										nb_pprov=sql(single:true,"select count(*) as nb from sed_directmail_track where uid_status='?' and country_code = '?' and region='?' and city != ''", status.rows.uid, cy.rows.country_code, p.rows.region);
+										}}<tr>
+											<td colspan="4"><h3>{{sn_ct(code:"Provinces/États", edit:true, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}: \{{p.rows.region_name}} ( \{{nb_pprov.rows.nb}} )</h3></td>
+										</tr>
+										<td style="border-bottom: 0;">
+											<table>
+												<tr>
+													<td valign="top" style="border-bottom:0;">
+														<ul>
+															\{{
+															first = true;
+															seriesText = '[';
+															for c sql("select uid_status,country_code,region,city, count(*) from sed_directmail_track where uid_status='?' and country_code='?' and region='?' and city != '' group by city order by count(*) desc;", status.rows.uid, cy.rows.country_code, p.rows.region) do
+																nb_pcity=sql(single:true,"select count(*) as nb from sed_directmail_track where uid_status='?' and country_code='?' and region='?' and city='?'", status.rows.uid, cy.rows.country_code, p.rows.region, c.rows.city);
+																if nb_pcity.rows.nb != 0 then
+																	if first ne true then seriesText.+=','; endif; 
+																	seriesText.+='{name: "'.+c.rows.city.+'", y: '.+nb_pcity.rows.nb.+'}';
+																	}}<li> \{{c.rows.city}} ( \{{nb_pcity.rows.nb}} )</li>\{{endif}}
+																\{{first = false;}}
+															\{{endfor}}		
+															\{{seriesText.+= ']';}}
+														</ul>	
+													</td>
+												</tr>
+											</table>
+											<div id="chartpiecity\{{p.rows.region_name}}" style="width: 70%; height: 500px; margin: 0 auto"></div>
+											<script type="text/javascript">
+												$(function () {//
+													$('#chartpiecity\{{p.rows.region_name}}').highcharts({//
+														chart: {
+															plotBackgroundColor: null,
+															plotBorderWidth: null,
+															plotShadow: false,
+															type: 'pie'
+														},
+														title: {
+															text: '{{sn_ct(code:"Ville", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+															x: -20 //center
+															},
+														series: [{
+															name: '{{sn_ct(code:"Nombre", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+															colorByPoint: true,
+															data: \{{seriesText;}}
+															}],
+														plotOptions: {
+															pie: {
+																allowPointSelect: true,
+																cursor: 'pointer',
+																dataLabels: {
+																	enabled: true,
+																	format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+																	style: {
+																		color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+																	}
+																}
+															}
+														},	
+													});
+												});
+											</script>
+										</td>
+									\{{endfor}}
+								\{{endfor}}
+							</tbody>
+						</table>
+					</div>	
+				</form>	
+			</div>
+		</div>
+	</div>
+</div>	
+\{{if open.rows.nb > 0 then}}
+<script type="text/javascript">
+$(function () {//
+    $('#chartlineopen').highcharts({//
+        title: {
+            text: '{{sn_ct(code:"Nombre de courriel ouvert", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+            x: -20 //center
+        },
+        xAxis: {//
+			categories: \{{
+				opens=sql(single:false, "select distinct DATE_FORMAT(sn_mdate, '%d-%m-%Y') as date from sed_directmail_track where uid_status='?' and operation='open' and country_code != '' and region != '' and city != '' order by date", status.rows.uid);
+				if opens.nbrows > 0 then
+					texte="[";
+					for (i=0;i<=opens.nbrows;i+=1) 
+						do if i> 0 then texte.+=","; endif; texte.+="'".+opens.rows[i].date.+"'";
+					endfor
+					texte.+="]";
+				endif
+				texte;
+				}}	
+			
+        },
+        yAxis: {//
+            title: {//
+                text: '{{sn_ct(code:"Nombre", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}'
+            },
+            plotLines: [{//
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+		series: \{{
+				opens=sql(single:false, "select count(uid) as nb, DATE_FORMAT(sn_mdate, '%d/%m/%Y') as date from sed_directmail_track where uid_status='?' and operation='open' and country_code != '' and region != '' and city != '' group by date order by date", status.rows.uid);
+				if opens.nbrows > 0 then
+					texte="[{ name: '{{sn_ct(code:"Ouvert", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail")}}', data: [";
+					for (i=0;i<=opens.nbrows;i+=1) 
+						do if i> 0 then texte.+=","; endif; texte.+=opens.rows[i].nb;
+					endfor
+					texte.+="] }]";
+				endif
+				texte;
+				}}	
+    });
+});
+
+\{{if click.rows.nb > 0 then}}
+$(function () {//
+    $('#chartlineclick').highcharts({//
+        title: {
+            text: '{{sn_ct(code:"Nombre de click", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+            x: -20 //center
+        },
+        xAxis: {//
+			categories: \{{
+				clicks=sql(single:false, "select distinct DATE_FORMAT(sn_mdate, '%d-%m-%Y') as date from sed_directmail_track where uid_status='?' and operation='click' and country_code != '' and region != '' and city != '' order by date", status.rows.uid);
+				if clicks.nbrows > 0 then
+					texte="[";
+					for (i=0;i<=clicks.nbrows;i+=1) 
+						do if i> 0 then texte.+=","; endif; texte.+="'".+clicks.rows[i].date.+"'";
+					endfor
+					texte.+="]";
+				endif
+				texte;
+				}}	
+			
+        },
+        yAxis: {//
+            title: {//
+                text: '{{sn_ct(code:"Nombre", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}'
+            },
+				plotLines: [{//
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+		series: \{{
+				clicks=sql(single:false, "select count(uid) as nb, DATE_FORMAT(sn_mdate, '%d/%m/%Y') as date from sed_directmail_track where uid_status='?' and operation='click' and country_code != '' and region != '' and city != '' group by date order by date", status.rows.uid);
+				if clicks.nbrows > 0 then
+					texte="[{ name: '{{sn_ct(code:"Clique", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail")}}', data: [";
+					for (i=0;i<=clicks.nbrows;i+=1) 
+						do if i> 0 then texte.+=","; endif; texte.+=clicks.rows[i].nb;
+					endfor
+					texte.+="] }]";
+				endif
+				texte;
+				}}	
+    });
+});
+\{{ endif }}
+
+$(function () {//
+    $('#chartbarpays').highcharts({//
+        chart: {
+            type: 'bar'
+        },
+        title: {
+            text: '{{sn_ct(code:"Pays", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail");}}',
+            align: 'left'
+        },
+        xAxis: {//
+			categories: \{{
+				pays=sql(single:false, "select distinct country_code from sed_directmail_track where uid_status='?' and country_code != '' and region != '' and city != '' group by country_code order by count(*) desc ", status.rows.uid);
+				if pays.nbrows > 0 then
+					texte="[";
+					for (i=0;i<=pays.nbrows;i+=1) 
+						do if i> 0 then texte.+=","; endif; texte.+="'".+pays.rows[i].country_code.+"'";
+					endfor
+					texte.+="]";
+				endif
+				texte;
+				}}	
+			
+        },
+        yAxis: {//
+            title: {//
+                text: ' '
+            },
+			plotLines: [{//
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+		series: \{{
+				pays=sql(single:false, "select count(uid) as nb from sed_directmail_track where uid_status='?' and country_code != '' and region != '' and city != '' group by country_code order by count(*) desc ", status.rows.uid);
+				if pays.nbrows > 0 then
+					texte="[{ name: '{{sn_ct(code:"Nombre par pays", edit:false, publish:"/extenso/publish/ressources.sn", uids:"29", module:"directmail")}}', data: [";
+					for (i=0;i<=pays.nbrows;i+=1) 
+						do if i> 0 then texte.+=","; endif; texte.+=pays.rows[i].nb;
+					endfor
+					texte.+="] }]";
+				endif
+				texte;
+				}},	
+        plotOptions: {
+            bar: {
+                dataLabels: {
+                    enabled: true
+                }
+            }
+        },
+    });
+});
+
+</script>
+\{{ endif }}

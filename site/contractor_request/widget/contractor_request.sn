@@ -1,0 +1,558 @@
+{{
+    /*
+        @title contractor_request
+        Description: This widget is the form used to register a new contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-11
+        @mod  bbduc@yahoo.com     2016-11-11   ajout possiblité d'annuler les prochains courriels.
+        @version 1.02 bbduc@yahoo.com     2016-11-11   rendre plus visible le checkbox terms lorsque non coché
+        http://ssr.sednove.ca/fr/formulaire-entrepreneur      
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    //http://ssr.sednove.ca/extenso/extranet/ide/#
+    use page;  
+    use lg;
+}}
+{{
+    %include '/site/package/all.sn';
+}}
+
+\{{
+    // include the validator for contractor_request
+    %include "/site/contractor_request/include/validator.sn";
+    
+    cgidata = cgidata();
+    connection = connection();
+
+ 
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+        contractor = {
+            "contact_firstname":cgidata.name,
+            "contact_phone":cgidata.phone,
+            "contact_email":cgidata.email,
+            "company_name":cgidata.company_name,
+            "ip": connection.client_ip,
+            "url":cgidata.url
+        };
+        
+        void insert(table:'sr_debug', fields:{'description': cgidata.email,'text':cgidata.company_name});
+        automail::notifyAdminContractorRequestInformation(contractor);
+        void sql("INSERT INTO sr_contractor_interested (contact_name, phone_number, email, business_name, url, sn_cdate) VALUES ('?', '?', '?', '?', '?', now())", cgidata.name, cgidata.phone, cgidata.email, cgidata.company_name, cgidata.url);
+    endif
+
+}}
+
+
+\{{ 
+
+    if cgidata.wrong then
+        void sql("UPDATE tbl_appels_entrepreneurs set statut = 1, commentaires = Concat(DATE(NOW()), ' Wrong email: ', IFNULL(tbl_appels_entrepreneurs.Courriel, ' '), ' ', IFNULL(tbl_appels_entrepreneurs.commentaires, ' ')), courriel = null where idtbl_appels_entrepreneurs = '?'", cgidata.id);
+    endif
+}}
+
+<style>
+    .clonable{
+        display:none!important;
+    }
+    .region_label{
+        display:inline-block;
+        margin:0px 5px 15px;
+    }
+    .label.label-default{
+        display:inline-block;
+        font-size:90%;
+        padding: .6em;
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    #confirmation{
+        text-align:center;
+        margin: 30px 0;
+    }
+    .terms_conditions{
+        position:absolute;
+        width:100%;
+        top:0;
+        background-color:#fff;
+        border:2px solid #eee;
+        border-radius:10px;
+        overflow:hidden;
+    }
+    
+    .textck{
+        width:100%;
+        padding:5px;
+        overflow-y:scroll;
+        max-height:235px;
+    }
+    
+    #inscription{
+        border:2px solid #eee;
+        border-radius:10px;
+        padding:10px;
+    }
+</style>
+\{{
+    if (cgidata.id ne '') then
+        appel_entrepreneur = sql(single:true, "SELECT * FROM tbl_appels_entrepreneurs WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id);
+        remove_me = false;
+        // remove me from the list
+    if(cgidata.enlever eq 'oui')then
+            remove_me = true;
+            //void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 15 WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id);
+        endif
+    endif
+}}
+\{{ if remove_me then}}
+<div id="annulation" class="alert alert-info" style="display:none1"> 
+    <h2> {{sn_ct(edit:true,"contractor_request Vous êtes maintenant désabonné", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2> <br>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close"   onclick="this.parentElement.style.display='none'"      >&times;</a>
+</div>
+
+<div id="ajax_add_service_success" class="alert alert-info" style="display:none"> 
+    {{sn_ct("contractor_services Un administrateur devrait confirmer vos nouveaux services sous peu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_services Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+
+
+<button id="annuler_message"  onclick="Alert('Merci!)">Cliquer pour annuler les prochains messages</button>
+
+
+<script>
+function annulerMessages(){
+     //confirm("{{sn_ct(edit:false,"contractor_services Êtes-vous certain de vouloir mettre à jour ces services ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"))
+   
+     $("#annulation").show();
+
+}   </script>
+
+\{{else}}
+<div id="ajax_error" class="alert alert-danger" style="display:none">
+    <a href="{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}">{{sn_ct("contractor_request Vous avez deja un compte avec nous.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+</div>
+
+<script>
+    $(".close").on("click", function(){
+        $(this).parents(".alert").hide(); 
+    });
+</script>
+
+<!--Form confirmation-->
+<!--<div id="confirmation"  style="display:none">-->
+<!--    <h2>-->
+<!--         {{sn_ct(edit:true,"contractor_request Votre demande a bien été reçue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+<!--    </h2>-->
+<!--    <p>-->
+<!--         {{sn_ct(edit:true,"contractor_request Vous recevrez un courriel pour confirmer votre inscription", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+<!--    </p>-->
+<!--</div>-->
+
+<!--Video that explains our service-->
+<style>
+@media (min-width: 992px) {
+    /*.video-explainer {*/
+    /*    float:left;*/
+    /*    width:48%; */
+    /*}*/
+    .text-explainer {
+        /*float:right;*/
+        width:100%; 
+    }
+}
+@media (max-width: 991px) {
+    .video-explainer {
+        width:100%; 
+    }
+    .text-explainer {
+        width:100%; 
+    }
+}
+    .video-youtube {
+        width:100%;
+        height:315px;
+    }
+</style>
+{{if (lg.rows.lg eq 'en') then }}
+    <div>
+
+        <div class="text-explainer">
+            <p>.</p>
+            <p></p>
+            <ul>
+                
+                
+                
+                
+            </ul>        
+        </div>
+    </div>
+{{else}}
+    <div>
+        <div class="text-explainer">
+            <p></p>
+            <p></p>
+            <ul>
+                
+                
+                
+                
+                
+                
+                
+                
+            </ul>        
+        </div>
+    </div>
+{{endif}}
+<div class="clearfix"></div>
+<h3 id="contractor_request" style="color:#00517e;text-align:center">{{sn_ct("contractor_request Je veux l'essayer")}}</h3>
+<br>
+<div id="inscription">
+    <form action="{{sn_pages('ajax_add_contractor', lg.rows.lg, table:'ressources')}}" id="add_contractor" name="add_contractor" method="POST">
+        <input type="hidden" name="id_tbl_appels_entrepreneurs" value="\{{cgidata.id}}">
+        <div class="row">
+            <div class="col-md-6">
+                
+                <fieldset class="form-group">
+                    <label for="contact_name" class="control-label">
+                        {{sn_ct("contractor_request Personne contact dans l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="contact_name" id="contact_name" value="\{{(contractor.length() > 0)? contractor.contact_firstname : appel_entrepreneur.rows.Personne_Contact}}">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_request Votre nom est requis")}}" data-validator-error="contact_name"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_phone" class="control-label">
+                        {{sn_ct("contractor_request Téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="contact_phone" id="contact_phone" value="\{{ (contractor.length() > 0)? contractor.contact_phone : appel_entrepreneur.rows.Telephone}}"> 
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_request votre téléphone est requis")}}" data-validator-error="contact_phone"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_email" class="control-label">
+                        {{sn_ct("contractor_request Courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="contact_email" id="contact_email" value="\{{ (contractor.length() > 0)? contractor.contact_email : appel_entrepreneur.rows.Courriel}}">
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_request Votre email est érroné ou vide")}}" data-validator-error="contact_email"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="service" class="control-label">
+                        {{sn_ct("contractor_form Services offerts par votre entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <select class="form-control" name="service" id="service" data-validator-name="service">
+                        <option value="">{{sn_ct(edit:false,"contractor_request Choisir un service")}}</option>
+                    \{{for p sql("SELECT  uid, name_long_{{lg.rows.lg}} as name FROM sr_service GROUP BY name ORDER BY name ASC") do }}
+					    <option value="\{{p.rows.uid}}">\{{p.rows.name }}</option>
+				    \{{endfor}}
+				        <option value="other">{{sn_ct(edit:false,"contractor_request Autre")}}</option>
+                    </select>
+                    <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"Votre expertise est requise")}}" data-validator-error="service"></span>
+                    <span style="font-size:12px;color:#00517e">{{sn_ct("NB: Vous pouvez toujours ajouter d'autres expertises dans votre profil")}}</span>
+                    <br>
+                </fieldset>
+            </div>
+            
+            <div class="col-md-6"> 
+                
+                <fieldset class="form-group">
+                    <label for="region_selector" class="control-label">
+                        {{sn_ct("contractor_request Votre sécteur", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label> 
+
+                    <div class="PP">
+                        <select  class="form-control" id="region_selector" data-validator-name="territory">
+                        <option value>{{sn_ct(edit:false,"contractor_request Choisir Région", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>"    
+                            {{  last_province = ""; start = true;
+                                for territory sql("SELECT t.uid, t.name_".+lg.rows.lg.+" as name, t.uid_province,  p.name_".+lg.rows.lg.+" as province  
+                                                       FROM sr_territory t inner join sr_province p
+                                                        ON t.uid_province = p.uid
+                                                        WHERE active='yes'   
+                                                        ORDER BY p.name_".+lg.rows.lg.+"  , t.name_".+lg.rows.lg.+ " ASC
+                                    " )do
+                                                    
+                                                    
+                                    if last_province ne territory.rows.province && !start then
+                                        '</optgroup>';
+                                         start = true;
+                                    endif
+                                    if last_province ne territory.rows.uid_province &&  start then
+                                        '<optgroup label = "'.+ territory.rows.province .+'">';
+                                        start = false;
+                                        last_province = territory.rows.province;
+                                    endif    
+                            }}
+                                        <option value="{{territory.rows.uid}}">{{territory.rows.name}}</option>
+                            {{
+                                    
+                                endfor
+                                '</optgroup>';
+    
+                            }}
+            
+                        </select>
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_request Un territoire est requis")}}" data-validator-error="territory"></span>
+                    </div>
+                    <script>
+                        // display clicked regions in a label, remove the region from the select
+                        $("#region_selector").on("change", function(){
+                            // get the region value
+                            var region_id = $(this).val();
+                            var region_text = $("#region_selector option:selected" ).text();
+                            // if a region is selected
+                            if (region_id){
+                                $(this).children("option").filter(":selected").appendTo("#region_temp");
+                                // check if region is already added
+                                if ($("#selected_regions").find("div."+region_id).length == 0){
+                                    
+                                    // clone the region skeleton
+                                    var new_region = $("div.clonable").clone();
+                                    new_region.removeClass("clonable");
+                                    
+                                    // add class to prevent adding same region multiple times
+                                    new_region.addClass(region_id);
+                                    
+                                    // put the region text in the labe;
+                                    new_region.find("span").prepend(region_text);
+                                    
+                                    // put the region value in the input
+                                    new_region.find("input").val(region_id);
+                                    
+                                    //append the region label to the region division
+                                    $("#selected_regions").append(new_region);
+                                }
+                            }
+                        });
+                    </script>
+                    <span style="font-size:12px;color:#00517e">{{sn_ct("NB: Vous pouvez toujours ajouter d'autres secteurs dans votre profil")}}</span>
+                </fieldset>
+                
+                <div id="selected_regions"></div>
+                
+                <!-- temporary select where regions are moved when labeled -->
+                <select id="region_temp" style="display:none"></select>   
+
+                <br>
+                {{sn_ct("contractor_request commentaire")}}:
+                <textarea class="form-control" id="comments" name="comments" rows="5"></textarea>
+                <br>
+                
+                <div class="terms_conditions" style="display:none">
+                    <div style="float:right;margin:5px" class='close'>&times;</div>
+                    <div class="textck">
+                        {{ck = sql(single:true,"SELECT text_".+lg.rows.lg.+" as terms FROM sed_textck WHERE uid = 1394")}}
+                        {{ck.rows.terms}}
+                    </div>
+                </div>
+
+                <div class="checkbox">
+                    <label for="terms" class="control-label">
+                        <input type="checkbox" id="terms" name="terms" value="3">
+                        {{sn_ct("contractor_request J'ai lu et j'accepte les termes et conditions", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} | <a href="javascript:void(0)" id="xpert_terms">{{sn_ct(edit:false,"contractor_request Lisez ici")}}</a>
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_request_term  Vous devez accepter nos conditions avant de continuer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="terms"></span>
+                    </label>
+                </div>
+                
+                <br>
+                <div>
+                    <button id="submit_add_contractor" type="submit" class="btn btn-primary btn-block" disabled_>
+                        {{sn_ct(edit:false,"contractor_request Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </button>
+                </div>
+                <div id="confirmation" class='alert alert-success' style="display:none">
+                    {{sn_ct(edit:true,"contractor_request Votre demande a bien été reçue! ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>
+                     {{sn_ct(edit:true,"contractor_request Vous recevrez un courriel pour confirmer votre inscription", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                </div>
+            </div>
+        </div>
+    </form>
+    
+        <!-- region skeleton -->
+    <div class="clonable region_label">
+        <span class="label label-default">&nbsp;<i class="fa fa-times" aria-hidden="true" onclick="delete_label(this);"></i></span>    
+        <input type="hidden" name="territory">
+    </div>
+    
+</div> <!-- inscription -->
+
+\{{
+    // include the validator for contractor_request
+    %include "/site/contractor_request/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_contractor');
+}}
+    
+ 
+<script>
+    // only make submit clickable when terms are accepted
+    //v1.
+/*bd    var terms = $("#terms");
+    terms.on("change", function(){
+        $("#submit_add_contractor").attr("disabled", !$(this).prop("checked")); 
+    });
+    
+    
+*/    
+
+    $('#xpert_terms').click(function(){
+        if($('.terms_conditions').is(":visible")){
+            $('.terms_conditions').hide();
+        }else{
+            $('.terms_conditions').show();
+        }
+        
+    });
+    
+    $(window).click(function() {
+        if($('.terms_conditions').is(":visible")){
+            //$('.terms_conditions').hide();
+        }
+    });
+    
+    $('.terms_conditions').focusout(function(){
+        $(this).hide();
+    });
+    
+    $('.close').click(function(){
+        $('.terms_conditions').hide();
+    });
+
+    // Bind add_client form to ajaxform plugin to send the form via ajax
+    $('form[name=add_contractor]').ajaxForm({
+        // window.alert(5 + 6);
+        resetForm:true, // to reset the form once it is sent
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-redirect")){
+                $('#ajax_error').show();
+            }
+            
+            if(xhr.getResponseHeader("X-success")){
+                $("#confirmation").show();
+                //send info to Google Analytics
+                ga('send','event','button','click','contractor_registered',50);
+            }
+            
+        }
+    });  
+      
+    // function to delete a region label and reput the region in the select
+    function delete_label(elem){
+        $("#region_temp option[value="+$(elem).parents(".region_label").find("input").val()+"]").appendTo("#region_selector");
+        $("#region_selector").val("");
+        $(elem).parents(".region_label").remove();
+        validator_revalidate("add_contractor", "territory");
+    }
+    
+    remove_me = false;   //  \{{remove_me}};
+    if (remove_me){
+        //$("#inscription").hide();
+        $("#annulation").show(); 
+    }
+            //http://ssr.sednove.ca/fr/formulaire-entrepreneur?id=4507&enlever=oui   pour tests
+</script>
+
+<!-- Google map api for addresses -->
+<script>
+// This example displays an address form, using the autocomplete feature
+// of the Google Places API to help users fill in the information.
+
+var placeSearch, autocomplete;
+var componentForm = {
+  street_number: 'short_name',
+  route: 'long_name',
+  locality: 'long_name',
+  administrative_area_level_1: 'short_name',
+  country: 'long_name',
+  postal_code: 'short_name'
+};
+
+function initAutocomplete() {
+  // Create the autocomplete object, restricting the search to geographical
+  // location types.
+  autocomplete = new google.maps.places.Autocomplete(
+      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      {types: ['geocode']});
+
+  // When the user selects an address from the dropdown, populate the address
+  // fields in the form.
+  autocomplete.addListener('place_changed', fillInAddress);
+}
+
+// [START region_fillform]
+function fillInAddress() {
+  // Get the place details from the autocomplete object.
+  var place = autocomplete.getPlace();
+
+  for (var component in componentForm) {
+    document.getElementById(component).value = '';
+    document.getElementById(component).disabled = false;
+  }
+
+  // Get each component of the address from the place details
+  // and fill the corresponding field on the form.
+  for (var i = 0; i < place.address_components.length; i++) {
+    var addressType = place.address_components[i].types[0];
+    if (componentForm[addressType]) {
+      var val = place.address_components[i][componentForm[addressType]];
+      document.getElementById(addressType).value = val;
+    }
+  }
+}
+// [END region_fillform]
+
+// [START region_geolocation]
+// Bias the autocomplete object to the user's geographical location,
+// as supplied by the browser's 'navigator.geolocation' object.
+function geolocate() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      var geolocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      var circle = new google.maps.Circle({
+        center: geolocation,
+        radius: position.coords.accuracy
+      });
+      autocomplete.setBounds(circle.getBounds());
+    });
+  }
+}
+// [END region_geolocation]
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8" async defer></script>
+
+<script>
+$(document).ready(function(){
+
+    $('#contact_email').on('input',function(e) {
+        $(this).val($.trim($(this).val()));
+    });
+    
+    $('#contact_email').on('input',function(e) {
+        $(this).val($.trim($(this).val()));
+    });
+    
+    $('#contact_email').keypress(function(e) {
+        if(e.which === 32) 
+            return false;
+    });
+    
+})
+</script>
+
+\{{endif}}

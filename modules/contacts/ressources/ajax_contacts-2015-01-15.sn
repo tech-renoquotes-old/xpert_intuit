@@ -1,0 +1,87 @@
+{{
+    %include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc"; 
+    %include "/extenso/functions/sn_ct.snc";    
+    
+    config = config(); 
+    use ressource;
+    use lg;  
+}}
+\{{ 
+    cgidata=cgidata();
+    errors = {};
+    err_count = 0;
+
+    if cgidata.submit_contact eq "sent" then
+    
+        captcha = sn_session_get("captcha");    
+        if md5(cgidata.guess) eq captcha then
+            req_fields = ["firstname","lastname","phone","message"];
+            for field in req_fields do
+                if cgidata[field] eq "" then
+                    errors{field} = true;
+                    err_count = err_count + 1;
+                endif
+            endfor
+            
+            if cgidata.email ne "" && cgidata.email !~ "^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$" then
+                errors{"email"} = true;
+                err_count = err_count + 1;
+            endif   
+              
+            if err_count == 0 then        
+                // Insert into contacts
+                res = insert(table:"contacts",fields:{
+                    "firstname": cgidata.firstname,
+                    "lastname": cgidata.lastname,
+                    "phone": cgidata.phone,
+                    "message": cgidata.message,
+                    "email": cgidata.email,
+                    "company": cgidata.company,
+                    "date_rep": datetime(format:'%Y-%m-%d') // format: 2014-11-29
+                });
+                
+                contact = sql(single:true,"SELECT * FROM contacts WHERE uid='?'", lastuid());
+                
+                // Send contact email
+                from_email = "extenso@sednove.com";
+                to_email = "{{sn_ct(edit:false,"contact email_to", publish:"/publish/ressources.sn",uids:ressource.rows.uid,module:"contacts")}}";
+                if to_email !~ "^(?:.)+@(?:.)+([A-Za-z]{2,4}|museum)$" then
+                    to_email = from_email;
+                endif                  
+                email(from:from_email,to:to_email,
+                      subject:"{{sn_ct(edit:false,"contact new contact message!", publish:"/publish/ressources.sn",uids:ressource.rows.uid,module:"contacts")}}",
+                      ct:"text/html",
+                      file:"/modules/contacts/emails/{{lg.rows.lg}}/widget_contact_email.snc");
+                
+                // JSON 
+                }}
+                    {
+                        "message" : "1"
+                    }
+                \{{  
+            else
+                }}
+                    {
+                        "error" : 2, 
+                        "message" : "Invalid data"
+                    }
+                \{{                      
+            endif
+        else
+            }}
+                {
+                    "error" : 3, 
+                    "message" : "Invalid captcha"
+                }
+            \{{                      
+        endif            
+    else
+        }}
+            {
+                "error" : 1, 
+                "message" : "Invalid operation"
+            }
+        \{{
+    endif
+}}

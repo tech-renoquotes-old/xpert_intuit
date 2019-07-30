@@ -1,0 +1,24 @@
+{{ 
+    use lg;         // Function publish use context lg
+    %include "/extenso/functions/sn_ct.snc"; 
+}}
+<div class="btn-wrap">
+    <div class="dropdown social-media-share">
+        <button class="btn btn-default dropdown-toggle wide" type="button" id="dropdownMenu1" data-toggle="dropdown">
+            {{sn_ct(edit:false,publish:"/publish/sn_widgets.sn",uids:5,code:"Share this page")}}
+            <i class="fa fa-angle-down red pull-right"></i>
+        </button>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+            <li role="presentation">
+            <div class="btn-toolbar" role="toolbar">
+                <div class="btn-group">
+                    <!-- Go to www.addthis.com/dashboard to customize your tools -->
+                    <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-539aeabc13686fd4" async></script>
+                    <!-- Go to www.addthis.com/dashboard to customize your tools -->
+                    <div class="addthis_sharing_toolbox"></div>
+                </div>
+            </div>
+            </li>
+        </ul>
+    </div>
+</div>

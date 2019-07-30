@@ -1,0 +1,48 @@
+{{
+
+/**
+*@author louis.jhonny@gmail.com
+*@created 2017-06-15
+* 
+*Description: run every month to delete unwanted upload from contractor profile.
+* 
+**/
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use page;
+    use lg;
+
+
+}}
+
+\{{
+nbnr = 0;
+nlogo = 0;
+    for bnr dir(order:"desc",sortby:"mtime","/sn_uploads/banners/") do
+        fname = "/sn_uploads/banners/" .+ bnr.file;
+        profile = sql(single:true,"SELECT banner_1, uid_contractor FROM sr_contractor_profil WHERE banner_1 = '?'" , fname);
+        r = profile.rows;
+        
+        if (r.banner_1 ne fname) then
+            remove(fname);
+            nbnr++;
+        endif
+    endfor
+    
+    for logo dir(order:"desc",sortby:"mtime","/sn_uploads/logo/") do
+        fname = "/sn_uploads/logo/" .+ logo.file;
+        profile = sql(single:true,"SELECT company_logo, uid_contractor FROM sr_contractor_profil WHERE company_logo = '?'" , fname);
+        r = profile.rows;
+        
+        if (r.company_logo ne fname) then
+            remove(fname);
+            nlogo++;
+        endif
+    endfor
+
+        void insert(table:'sr_debug', fields:{'description':'Profil Maintenance' ,'text':'banner deleted:'.+ nbnr .+ ' - ' .+ 'Logo deleted:' .+ nlogo});
+
+}}
+

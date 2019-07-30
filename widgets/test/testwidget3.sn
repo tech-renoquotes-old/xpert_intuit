@@ -1,0 +1,348 @@
+{{
+    /*
+        @title contractor_clients
+        Description: This widget display the list of clients of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-02
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    
+}}
+
+\{{
+    data = cgidata();
+    
+    /* DEBUT recuperation du nombre de pages */
+    if (data.n.length() > 0) then
+    nombreDeElementsParPage = data.n;
+        if (nombreDeElementsParPage < 5) then
+                nombreDeElementsParPage = 5; // par défaut
+        endif
+    else 
+       nombreDeElementsParPage = 20; // par défaut
+    endif
+    
+
+    /* DEBUT recuperation du numéro de page courante */
+    if (data.p.length() > 0) then
+        page = data.p;
+    else // La variable n'existe pas, c'est la première fois qu'on charge la page
+        page = 1;  // On se met sur la page 1 (par défaut)
+    endif
+    
+    /* On calcule le numéro du premier élément qu'on prend pour la LIMIT de MySQL */
+    premierElementAAfficher = (page - 1) * nombreDeElementsParPage;
+    
+    use extranet_user;
+    
+    query = "
+        SELECT  p.uid, pc.sn_cdate, c.firstname, c.gender, c.lastname, 
+                CONCAT(a.street_no,' ',a.street,', ',ci.name_fr,', ', a.zip) as address, 
+                p.description, pc.comments, pc.amount_contract_report, pc.expected_date,
+                c.email, a.phone1, pc.quote, pc.contract_signed, pc.file, pc.accepted_date
+        FROM sr_project_contractor pc
+        INNER JOIN sr_project p ON pc.uid_project=p.uid
+        INNER JOIN sr_client c ON p.uid_client = c.uid
+        LEFT JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city ci ON a.uid_city = ci.uid
+        WHERE pc.uid_contractor='?'
+        AND pc.accepted='yes'
+        AND (pc.hidden != 'yes' OR pc.hidden IS NULL)
+        ORDER BY pc.accepted_date DESC
+    ";
+    
+    limit = "LIMIT " .+ premierElementAAfficher .+ ", " .+ nombreDeElementsParPage;
+
+    totalProjects = sql(query, 3); // get all projects
+    nombreLignes = totalProjects.nbrows; // total number of lines returned by previous query.
+    
+    projects = sql(query .+ limit, 3); // get a list of projects to display as per value of limit.
+    nombreDeElementsSurCettePage = projects.nbrows;
+
+    nombreDePages  = ceil(nombreLignes/nombreDeElementsParPage); 
+    
+    
+    nombreDePages;"<br>";
+    nombreLignes;"<br>";
+    nombreDeElementsParPage;
+    
+    if(nombreDePages != 1) then
+    
+        //afficher un lien vers les pages précedentes
+        if (page != 1) then
+            pagination .+= '<a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page - 1) 
+            .+ '" title="page ' .+ (page - 1) .+ '"><abbr title="page pr&eacute;c&eacute;dente"> << </abbr></a>&nbsp;';
+        endif
+        
+        if((page % 15) == 0) then
+            for (i = page ; i <= nombreDePages - page ; i++) do
+                if (i == page) then // si on est sur la page actuelle
+                    pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                else
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                    .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                endif
+            endfor
+
+        
+            /*if (nombreDePages == page) then // si on est sur la page actuelle
+                pagination .+= '<strong title="page actuelle">&nbsp;' .+ nombreDePages .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+            else
+                pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ nombreDePages .+ '" title="page '.+ nombreDePages .+ ' sur ' .+ nombreDePages
+                .+ '">&nbsp;'.+ nombreDePages .+ '&nbsp;</a>';
+            endif
+            */
+        else
+        
+            for (i = 1 ; i <= nombreDePages ; i++) do
+                if (i == page) then // si on est sur la page actuelle
+                    pagination .+= '<strong title="page actuelle">&nbsp;' .+ i .+ '/' .+ nombreDePages .+ '&nbsp;</strong>';
+                else
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ i .+ '" title="page '.+ i .+ ' sur ' .+ nombreDePages
+                    .+ '">&nbsp;'.+ i .+ '&nbsp;</a>';
+                endif
+                
+                if((i % 15) == 0 && i != nombreDePages) then
+                    pagination .+="....";
+                    pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ nombreDePages .+ '" title="page '.+ nombreDePages .+ ' sur ' .+ nombreDePages
+                    .+ '">&nbsp;'.+ nombreDePages .+ '&nbsp;</a>';
+                endif
+            endfor
+        
+        endif
+            
+
+        //afficher un lien vers les pages suivantes
+        if (page != nombreDePages) then
+            // si on n'est pas sur la dernière (= pas de suivante)
+            pagination .+= ' <a href="?n=' .+ nombreDeElementsParPage .+ '&amp;p=' .+ (page + 1) 
+            .+ '" title="page ' .+ (page + 1) .+ '"><abbr title="page suivante"> >> </abbr></a> ';
+        endif
+    else
+        pagination .+= 1;
+    endif
+    
+
+    /*difference = (nombreLignes % nombreDePages) + 1;
+    pagination .+= "(affichage des résultats "; 
+    pagination .+=  premierElementAAfficher + 1; 
+    pagination .+=  " &agrave; "; 
+    
+    if( (premierElementAAfficher + nombreDeElementsSurCettePage) != (page * nombreDeElementsParPage) ) then
+        pagination .+= premierElementAAfficher + nombreDeElementsSurCettePage; 
+    else
+        pagination .+= premierElementAAfficher + nombreDeElementsParPage;
+    endif
+    */
+
+
+    if projects.nbrows > 0 then
+    
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/update_project_validator.sn";
+}}
+
+<style>
+    input.input_file{
+        width:100%;
+        height:100%;
+        display:inline-block;
+        position:absolute;
+        left:0;
+        top:0;
+        opacity:0;
+        cursor:pointer;
+    }
+    a.input_file{
+        position:relative;
+    }
+    a.file{
+        text-decoration: none;
+        color:inherit;        
+    }
+    [data-validator-error]{
+        min-height:1em;
+        display:inline-block;
+    }
+
+</style>
+
+    <div class="row mb-sm">
+        <div class="panel">
+            <h5>
+              Pages: \{{ pagination; }}
+            </h5>
+        </div>
+        <div class="col-sm-3 no-print">
+            <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="window.print();">
+                {{sn_ct("contractor_clients Imprimer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            </a>
+        </div>
+    </div>
+    \{{for p in projects.rows do}}
+    <div class="panel panel-default project-panel">
+        <form action="{{ sn_pages('ajax_update_project', lg.rows.lg, table:'ressources')}}" class="update_project" name="update_project_\{{p.uid}}" method="POST">
+            <div class="panel-heading"><h3 class="heading-sm"><b>{{sn_ct("contractor_clients ID", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b> \{{p.uid}}</h3></div>
+            <input type="hidden" name="uid_project" value="\{{p.uid}}">
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group font-md">
+                            <label>
+                                {{sn_ct("contractor_clients Référé le", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{(p.sn_cdate !='0000-00-00')?p.sn_cdate:''}}
+                            </div>
+                        </div>
+                        <div class="form-group font-md">
+                            <label>
+                                {{sn_ct("contractor_clients Adresse", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                            </label>
+                            <div>
+                                \{{p.firstname .+ " " .+ p.lastname}}<br>
+                                \{{p.address}}<br>
+                                \{{p.email}}<br>
+                                \{{p.phone1}}
+                            </div>
+                        </div>
+                        <div>
+                            <b>{{sn_ct("contractor_clients Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                        </div>
+                        <p>
+                            \{{p.description}}
+                        </p>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Comementaires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                            </label>
+                            <div>
+                                <textarea name="comments" rows="5" class="form-control">\{{p.comments}}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 font-md">
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Montant du contrat", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <input name="amount_contract_report" class="form-control" type="text" value="\{{p.amount_contract_report}}"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_clients Date approximative des travaux", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <input name="expected_date" class="form-control" type="text" value="\{{(p.expected_date !='0000-00-00')?p.expected_date:''}}" placeholder="{{sn_ct("contractor_clients AAAA-MM-JJ",edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"/>
+                                <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="expected_date"></span>
+                            </div>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input name="quote" type="checkbox" value="yes" \{{if p.quote eq 'yes' then}}checked\{{endif}}/> {{sn_ct("contractor_clients Soumission déposée", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                        </div>
+                        <div class="checkbox">
+                            <label>
+                                <input name="contract_signed" type="checkbox" value="yes" \{{if p.contract_signed eq 'yes' then}}checked\{{endif}}/> {{sn_ct("contractor_clients Contrat signé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                        </div>
+                        <div class="form-group no-print input-file-group">
+                        \{{if p.file ne "" then}}
+                            <a class="file" href="\{{p.file}}" target="_blank"><b>\{{basename(p.file)}}</b></a>
+                            <a href="javascript:void(0)" onclick="if (confirm('{{sn_ct("contractor_clients Êtes-vous certain de vouloir supprimer ce fichier ?", edit:false,publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} ')){delete_file(this)};" class="mb-md btn btn-default btn-block">
+                                {{sn_ct("contractor_clients Supprimer un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                            </a>
+                            <input id="action" name="action" type="hidden" value=""/> 
+                        \{{else}}
+                            <a href="javascript:void(0)" class="mb-md btn btn-primary btn-block input_file">
+                                {{sn_ct("contractor_clients Ajouter un fichier", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                                <input class="input_file" name="file" type="file"/>    
+                            </a>
+                        \{{endif}}
+                        </div>
+                        <div class="form-group no-print">
+                            <div>
+                                <button class="btn btn-primary btn-block" type="submit">
+                                    {{sn_ct("contractor_clients Enregistrer les modifications", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                                <button class="btn btn-default btn-block" onclick="return hide_project(this,'\{{p.uid}}')">
+                                    {{sn_ct("contractor_clients Retirer le client de la liste", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </form>
+    </div>
+    
+    \{{ validator.validateJS(form:'update_project_'.+p.uid);}}
+    
+    \{{endfor}}
+    
+    <div class="panel">
+        <h5>
+            Pages: \{{ pagination; }}
+        </h5>
+    </div>
+    
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_clients Vous n'avez présentement aucun client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}
+
+<script>
+    $(".update_project").on('submit', function(){
+        return (confirm('{{sn_ct(edit:false,"contractor_clients Enregistrer les modifications ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}'));
+    });
+
+    // removes a project from the list only for this contractor
+    function hide_project(e,uid_project){
+        if (confirm('{{sn_ct(edit:false,"contractor_clients Êtes-vous certain de vouloir cacher ce projet ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}')){
+            $.ajax({
+                type: "post",
+                data:{
+                    "uid_project": uid_project
+                },
+                url: "{{ sn_pages('ajax_hide_project', lg.rows.lg, table:'ressources')}}",
+                success:function(data){
+                    $(e).parents(".project-panel").hide('swing', function(){$(this).remove()});
+                }
+            });
+        }
+        else{
+            return false;
+        }
+    }
+    
+    // Bind update_project form to ajaxform plugin to send the form via ajax
+    $('form.update_project').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                location.reload(true);
+                console.log(data);
+            }
+        }    
+    }); 
+    
+    $("a.input_file").on("change", function(){
+        $(this).parents("form").submit(); 
+    });
+    
+    function delete_file(e){
+        $("input#action").val("delete_file");
+        $(e).parents("form").submit(); 
+    }
+</script>

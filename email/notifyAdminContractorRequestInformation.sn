@@ -1,0 +1,29 @@
+{{
+    /*
+        @title 			notifyAdminContractorRequestInformation
+        Description		Email for the admin when a contractor requests more information.
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-09
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	use contractor;
+    nom = contractor.contact_firstname;
+    telephone = contractor.contact_phone;
+    courriel = contractor.contact_email;
+    entreprise = contractor.company_name;
+    ip = contractor.ip;  
+    url = contractor.url;
+}}
+<div style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+</div>

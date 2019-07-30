@@ -1,0 +1,6 @@
+{
+	"admin" : ["salt", "token"],
+	"gen" : [],
+	"no_role" : ["salt", "token"]
+
+}

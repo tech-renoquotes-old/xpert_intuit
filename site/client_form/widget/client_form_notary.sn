@@ -1,0 +1,696 @@
+{{
+        /**
+         * Title: widget_client_project
+         * Desc: Interface de manipulation des projets
+         * 
+        **/
+        %include "/extenso/functions/sn_ct.snc"; 
+    	%include "/extenso/functions/sn_pages.snc"; 
+    	%include '/site/package/all.sn';
+		use page;
+		use lg;
+
+}}  
+
+\{{
+    cgidata = cgidata();
+    lg = "{{lg.rows.lg}}";
+    
+
+    parents = sql("SELECT * FROM sr_form_category_level cl INNER JOIN sr_form_tree ft ON ft.uid = cl.tree  WHERE ft.uid =  '?' GROUP BY level LIMIT 7 ", treeID);
+    root = sql(single:true,"SELECT MIN(cl.parent_id) as first_parent, ft.branches  FROM sr_form_category_level cl INNER JOIN sr_form_tree ft ON ft.uid = cl.tree  WHERE ft.uid = '?'", treeID);
+    
+    category = cgidata.level;
+    
+    if(category eq "") then
+        category = 0;
+    endif
+    
+    categories = sql("
+            SELECT cl.uid, cl.parent_id, cl.category_name_? as name, cl.category_title_? as title FROM sr_form_category_level cl INNER JOIN sr_form_tree ft ON ft.uid = cl.tree   WHERE ft.uid = '?' AND cl.uid = '?'
+    ", lg, lg, tree_name, category);
+    
+    if (cgidata.level ne "") then
+        subcat = sql("SELECT uid, parent_id, category_name_? as name, category_title_? as title, control_type, control_name FROM sr_form_category_level WHERE parent_id = '?'", lg, lg, cgidata.level);
+        title = sql (single:true, "SELECT category_title_? as title FROM sr_form_category_level WHERE uid = '?'", lg, cgidata.level);
+        
+        headers_out("X-response", subcat.rows);
+        headers_out("X-title", title.rows);
+    endif
+    
+}}
+     
+<script src="/js/encode.js"></script>
+
+<style>
+ #menu-outer {
+	height: 84px;
+	background: url(images/bar-bg.jpg) repeat-x;
+}
+
+.table {
+	display: table;   /* Allow the centering to work */
+	margin: 0 auto;
+}
+
+    ul#horizontal-list {
+	/*min-width: 696px;*/
+	list-style: none;
+	/*padding-top: 20px;*/
+	
+	}
+	
+	ul#horizontal-list li {
+		display: inline;
+    }
+    
+	ul#horizontal-text li {
+		display: inline;
+    }
+    
+    ul#horizontal-text {
+	/*min-width: 696px;*/
+	list-style: none;
+	/*padding-top: 20px;*/
+	
+	}
+	
+    ul#horizontal-btn {
+	/*min-width: 696px;*/
+	list-style: none;
+	/*padding-top: 20px;*/
+	
+	}
+	
+	ul#horizontal-btn li {
+		display: inline;
+	}
+	
+	
+	
+    ul#hlist-default {
+        
+    }
+    	
+    ul#hlist-default li {
+    		display: inline;
+    }	
+
+
+.custom-well{
+    display:none;
+    margin-top:50px;
+    background-color:blue;
+    margin-left:auto;
+    margin-right:auto;
+    width:70%;
+}
+
+.steplink{
+    display:inline-block;
+    border:2px solid #ddd;
+    border-radius:5px;
+    background-color:#ddd;
+    width:40px;
+    height:auto;
+    cursor:pointer;
+    overflow:hidden;
+    margin-bottom:-8px;
+    font-size:1.5em;
+}
+
+.connector{
+    font-size:2em;
+    color:#999;
+}
+
+.default{
+    width:100%;
+}
+
+.default ul{
+    margin:0;
+    padding:0;
+}
+
+.default button {
+    width:200px;
+    margin:10px;
+    height:60px;
+    border-radius:50%;
+}
+
+.mysub{
+    width:100%;
+}
+
+.mysub ul{
+    margin:0;
+    padding:0;
+}
+
+.mysub button {
+    width:200px;
+    height:60px;
+    margin:10px;
+}
+
+.mylist{
+    margin-top:50px;
+    width:100%;
+}
+
+.mylist select{
+    width:100%;
+}
+
+.mylist button {
+    width:200px;
+    height:60px;
+    margin:10px;
+}
+
+.mytext{
+    margin-top:50px;
+    width:100%;
+}
+
+.mytext select{
+    width:100%;
+}
+
+.mytext button {
+    width:200px;
+    height:60px;
+    margin:10px;
+}
+
+
+.goback{
+    width:50px;
+    background-color:#eee;
+    cursor:pointer;
+    text-align:center;
+    border-radius:50%;
+    padding-top:5px;
+    position:relative;
+}
+
+.goback:hover{
+    background-color:#ddd;
+    color:#333;
+}
+
+.steps{
+    margin-left:auto;
+    margin-right:auto;
+    width:50%;
+}
+
+.sub_title{
+    width:100%;
+    margin-left:10px;
+    margin-top:40px;
+}
+
+.hlist_title{
+    width:100%;
+    margin-left:10px;
+    margin-top:40px;
+}
+
+.htext_title{
+    width:100%;
+    margin-left:10px;
+    margin-top:40px;
+}
+
+
+.default_title{
+    width:100%;
+    margin-left:10px;
+    margin-top:40px;
+}
+
+
+@function hsb($h-hsb, $s-hsb, $b-hsb, $a: 1) {
+  @if $b-hsb == 0 {
+    @return hsla(0, 0, 0, $a);
+  } @else {
+    $l-hsl: ($b-hsb/2) * (2 - ($s-hsb/100));
+    $s-hsl: ($b-hsb * $s-hsb) / if($l-hsl < 50, $l-hsl * 2, 200 - $l-hsl * 2);
+    @return hsla($h-hsb, $s-hsl, $l-hsl, $a);
+  }
+}
+
+@function hsb-saturate($s, $a) {
+  @if $s == 0 {
+    @return 0;
+  } @else {
+    @return $s + $a;
+  }
+}
+
+@mixin buttonize($h, $s, $b, $light: 0) {
+
+  $color: hsb($h, $s, $b);
+  $color-dark: hsb($h, hsb-saturate($s, 10), $b);
+  $inset-top: inset 0 1px 0 hsb($h, $s - 20, $b + 10);
+  $inset-bottom: inset 0 -1px 0 hsb($h, hsb-saturate($s, 10), $b - 10);
+  $inset: inset 0 0 0 1px hsb($h, hsb-saturate($s, - 10), $b);
+
+  background-color: $color;
+  background-image: linear-gradient(to bottom, $color, $color-dark);
+  border: 1px solid hsb($h, hsb-saturate($s, 20), $b - 20);
+  box-shadow: $inset-top,
+              $inset-bottom,
+              $inset,
+              0 2px 4px rgba(black, 0.2);
+
+  @if $light == 1 {
+    color: hsb($h, hsb-saturate($s, 40), $b - 40);
+    text-shadow: 0 1px 0 rgba(white, 0.5);
+  } @else {
+    color: white;
+    text-shadow: 0 1px 2px rgba(black, 0.3);
+  }
+
+  &:hover,
+  &:focus {
+    background: $color-dark;
+    border-color: hsb($h, hsb-saturate($s, 40), $b - 40);
+    box-shadow: $inset-top,
+                $inset-bottom,
+                $inset;
+  }
+
+  &:active {
+    background: $color-dark;
+    box-shadow: inset 0 2px 3px rgba(black, 0.2);
+  }
+
+  .fa {
+    color: hsb($h, hsb-saturate($s, 20), $b - 20);
+    text-shadow: 0 1px 0 rgba(white, 0.3);
+  }
+
+}
+
+strong{ font-weight: bold;}
+
+.button{ @include buttonize(0, 0, 95, 1); border-radius: 3px; cursor: pointer; display: inline-block; font-family: Verdana, sans-serif; font-size: 12px; font-weight: 400; line-height: 20px; padding: 9px 16px 9px; margin: 16px 0 0 16px; transition: all 20ms ease-out; vertical-align: top;}
+.button-blue{ @include buttonize(199, 71, 89);}
+.button-green{ @include buttonize(97, 42, 80);}
+.button-purple{ @include buttonize(249, 34, 73);}
+.button-orange{ @include buttonize(26, 77, 96);}
+.button-red{ @include buttonize(4, 58, 93);}
+.button-yellow{ @include buttonize(49, 54, 99, 1);}
+.button .fa{ float: left; font-size: 14px; line-height: 20px; margin: -1px 8px 0 -4px; vertical-align: top;}
+
+@media (max-width:768px){
+    .hide_mobile {
+        display:none;
+    }
+}
+</style>
+
+\{{if(parents.nbrows > 0) then}}
+<div class="col-md-12 text-center">
+       <div class="steps hide_mobile">
+           <div class="goback"><input type='image' name="previous" name="previous" width="40px" src="/sn_uploads/icon/arrow_prev.png"/></div>
+           <input type='hidden' name='currentStep' value='1'/>
+            \{{for (i=1; i <= (parents.nbrows + 1); i++) do}}
+            <div class="steplink" id="steplink_\{{i}}" \{{(i == 1)? "onclick='showStep(" .+ i .+ ")'":""}}>
+                \{{i}}
+                <input name="parent_ref" type="hidden" value=""/>
+                <input name="cat_ref" type="hidden" value=""/>
+                <input name="cat_name" type="hidden" value=""/>
+            </div>
+            <span class="connector" id="connector_\{{i}}">\{{(i < (parents.nbrows + 1))?"---":""}}</span>
+            \{{endfor}}  
+        </div>
+    
+    \{{if (cgidata.level == root.rows.first_parent || cgidata.level eq "") then}}
+    
+        \{{j = 1}}
+        \{{deflt = sql("SELECT uid, parent_id, category_name_? as name, category_title_?, control_name FROM sr_form_category_level WHERE parent_id = '?' AND tree = '?'", lg, lg, root.rows.first_parent, treeID)}}
+        <div class="default text-center" id="default">
+            <div class="default_title">
+                <h3 style="color:#fff; font-weight:bold;"><span>{{sn_ct("Que voulez-vous faire?")}}</span></h3>
+            </div>
+            <ul id="hlist-default" style="max-width:500px; margin: 0 auto;">
+            \{{for d in deflt.rows do }}
+              <li>
+                  <button class='btn btn-primary' id="btn_\{{d.uid}}" onclick='showSub({"catID":"\{{d.uid}}", "parentID":"\{{d.parent_id}}", "auto":"true"});addValue(this, "\{{d.control_name}}")'>\{{d.name}}</button>
+              </li>
+            \{{endfor}}
+            </ul>
+        </div>
+    \{{endif}}
+
+    <div class="mysub">
+        <div class="sub_title">
+        </div>
+        <ul id="horizontal-btn" style="max-width:500px; margin: 0 auto;">
+        </ul>
+    </div>
+    
+    <div class="mylist">
+        <div class="hlist_title">
+        </div>
+        <ul id="horizontal-list" style="max-width:500px; margin: 0 auto;">
+        </ul>
+    </div>
+    
+    <div class="mytext">
+        <div class="htext_title">
+        </div>
+        <ul id="horizontal-text" style="max-width:500px; margin: 0 auto;">
+        </ul>
+        <span class="alert alert-danger" style="display:none">{{sn_ct("landing Champ obligatoire", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span>
+    </div>
+    
+     <div class="well custom-well">
+        <form class="form-horizontal" id="add_client_simple" action="{{pages('confirmation_soumission', lg.rows.lg, table:'pages')}}" name="add_client_simple" method="POST">
+            <input type="hidden" name="description" id="description" value="\{{selected.rows.name}}"/>
+            <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'description invalide')}}" data-validator-error="description"></span>
+            <fieldset class="form-group">
+                <label for="name" class="control-label col-md-3">
+                    {{sn_ct("landing Votre nom", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+                </label>
+                <div class="col-md-8">
+                    <input class="form-control" type="text" name="name" id="name" value="" autocomplete='name'>
+                    <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Invalid name')}}" data-validator-error="name"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <label for="phone" class="control-label col-md-3">
+                    {{sn_ct("landing Votre téléphone", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+                </label>
+                <div class="col-md-8" id='block_phone1' style="padding-bottom:0;margin-bottom:0">
+                    <div style="padding:0"> <input placeholder="{{sn_ct(edit:false,'Téléphone', publish:'/extenso/publish/sn_widgets.sn', uids:widget.rows.uid)}}" class="form-control" type="text" name="phone" id="phone" value="" autocomplete='phone'> </div>
+                    <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,"Composé de chiffres seulement, au moins 10 caractères", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}" data-validator-error="phone"></span>
+                </div>
+            </fieldset>
+            
+            <fieldset class="form-group">
+                <label class="control-label col-md-3" for="email">
+                    {{sn_ct("landing Votre courriel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*
+                </label>
+                <div class="col-md-8">
+                    <input class="form-control" type="text" name="email" id="email" value="" autocomplete='email'>
+                    <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>
+                    <span style="display:none" class="validemail" name="validemail" >{{sn_ct(edit:false,"Attention: la validation du courriel a échouée. Si c'est le bon courriel, je vous prie d'ignorer ce message.")}}</span>
+                </div>
+            </fieldset>
+            <input name="url" type="hidden" value="\{{page.url}}">
+            <input name="first_visited" type="hidden" value="\{{cookies.first_visited}}">
+            <input type="text" name="address" id="address" class="form-control" style="display:none"/>
+            <div class="form-group">
+                <div class="col-md-offset-3 col-md-8">
+                    <button style="width:100%" id="submit_add_client" type="submit" name="simple_form" class="btn btn-primary">
+                        {{sn_ct(edit:false,"landing Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                    </button>
+                    <input type='hidden' name='emailChk' id='emailChk'/>
+                    <input type='hidden' name='step1_val' id='step1_val' value=""/>
+                    <input type='hidden' name='step2_val' id='step2_val' value=""/>
+                    <input type='hidden' name='step3_val' id='step3_val' value=""/>
+                    <input type='hidden' name='step4_val' id='step4_val' value=""/>
+                    <input type='hidden' name='step5_val' id='step5_val' value=""/>
+                    <input type='hidden' name='step6_val' id='step6_val' value=""/>
+
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="col-lg-12 alert alert-success" id="confirm" style="display:none;margin-top:50px"> {{sn_ct("Nous avons bien recu votre demande. Merci!")}} </div>
+\{{endif}}
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator_simple.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_client_simple');
+}}
+
+
+<script>
+    $(document).ready(function(){
+        $('#step1').show();
+         $('#steplink_1').css({'background-color':'#f0ad4e','color':'#fff'});
+    });
+    
+    $('.goback').click(function(){
+        if(currentStep > 1){
+            var previous = parseInt(currentStep - 1);
+            $('#steplink_' + previous).click();
+            currentStep = previous;
+        }
+    })
+</script>
+
+<script>
+    $('form[name=add_client_simple]').submit(function(e){
+        e.preventDefault();
+        var formdata = $(this).serializeArray();
+        
+        $.ajax({
+            url:"{{ sn_pages('ajax_simple_form', lg.rows.lg, table:'ressources')}}",
+            method:'POST',
+            data: formdata,
+            success:function(data, statusText, xhr){
+                console.log(xhr.getResponseHeader('X-response'));
+                if(xhr.getResponseHeader('X-response')){
+                    currentStep = 1;
+                    currentParent = 0;
+                     
+                    $('input[name=name]').val("");
+                    $('input[name=email]').val("");
+                    $('input[name=phone]').val("");
+                    $('input[name=description]').val("");
+                    
+                    $('.custom-well').hide();
+                    $('.steplink').css({'background-color':'','color':'#000'});
+                    $('#steplink_1').css({'background-color':'#f0ad4e','color':'#fff'});
+                    
+                    $('#default').show();
+                    $('.mysub').html("<ul id='horizontal-btn'></ul");
+                    $('.mylist').html("<ul id='horizontal-list'></ul");
+                    $('.mytext').html("<ul id='horizontal-text'></ul");
+                    window.location = "{{pages('confirmation_soumission', lg.rows.lg, table:'pages')}}";
+                }
+            }
+        });
+    });      
+</script>
+
+
+<script>
+    var currentStep = 1;
+    var currentParent = 0;
+    var nbrSteps = \{{parents.nbrows + 1}};
+    
+    function showStep(step){
+        for(var i = (step + 1); i <= nbrSteps; i++){
+            $('#steplink_'+ i).removeAttr('onclick');
+            $('#steplink_'+ i).css({'background-color':'#ddd', 'color':'#000'});
+            $('#connector_' + (i  - 1)).css({'color':'#999'});
+        }
+
+        $('.mysub').hide();
+        $('.mylist').hide();
+        $('.mytext').hide();
+        
+        $('.mysub ul').html("");
+        $('.mylist ul').html("");
+        $('.mytext ul').html("");
+        
+        $('.custom-well').hide();
+        currentStep = step;
+        
+        if(currentStep == 1){
+            $(".default").show();
+            return false;
+        }
+        
+        
+        
+        if($('#steplink_' + currentStep).find('input[name=cat_ref]').val() == "" || currentStep == nbrSteps){
+            return false;
+        }
+        
+
+        if(currentStep > 1){
+            currentStep = step;
+            catID = $('#steplink_' + currentStep).find('input[name=cat_ref]').val();
+            parentID = $('#steplink_' + currentStep).find('input[name=parent_ref]').val();
+            
+            console.log({"catID":catID, "parentID": parentID, "auto":"false"});
+            showSub({"catID":catID, "parentID": parentID, "auto":"false"});  
+        }
+    }
+    
+    
+    function addValue(from, to){
+        if($(from).text() == ""){
+                var v = $(from).val();
+        }else{
+                var v = $(from).text();
+        }        
+        
+        $('input[name=' + to +']').val(v);
+        
+    }
+    
+    
+    function showSub(json){
+        if(json.required == 'true'){
+            if($('#text_' + json.catID).val() == ""){
+                $('#text_' + json.catID).parents("ul").prepend('<span class="alert-danger">{{sn_ct("Champ Obligatoire")}}</span>');
+                return false;
+            }
+        }
+        
+        if(json.auto == "true"){
+            $('#connector_' + parseInt(currentStep)).css({'color':'#f0ad4e'});
+            $('#steplink_' + parseInt(currentStep + 1)).css({'background-color':'#f0ad4e','color':'#fff'});
+            $('#steplink_' + parseInt(currentStep + 1)).attr("onclick", "showStep(" + parseInt(currentStep + 1) + ")");
+            currentStep = parseInt(currentStep + 1);
+            nbrSteps = \{{parents.nbrows + 1}};
+        }else{
+            currentStep = parseInt(currentStep);
+            nbrSteps = \{{parents.nbrows + 1}};
+        }
+        
+        currentParent = json.parentID;
+        name = $("#btn_" + json.catID).text();
+        
+        $('#confirm').hide();
+        if($('#steplink_' + currentStep).find('input[name=parent_ref]').val() == ""){
+            $('#steplink_' + currentStep).find('input[name=parent_ref]').val(json.parentID);
+        }
+        
+        if($('#steplink_' + currentStep).find('input[name=cat_ref]').val() == ""){
+            $('#steplink_' + currentStep).find('input[name=cat_ref]').val(json.catID);
+        }
+        
+        if($('#steplink_' + currentStep).find('input[name=name_ref]').val() == ""){
+            $('#steplink_' + currentStep).find('input[name=name_ref]').val(name);
+        }
+        
+
+        if(currentStep < nbrSteps){
+            $.ajax({
+                data:{"level":json.catID},
+                method:'POST',
+                success: function(data, statusText, xhr){
+                    var res = xhr.getResponseHeader('X-response');
+                    res = res.decode();
+                    
+                    var title = xhr.getResponseHeader('X-title');
+                    title = title.decode();
+                    
+                    var txt = JSON.parse(title);
+                    
+                    
+                    var type = '';
+                    if(res != ""){
+                        $('.default').hide();
+                        $('#horizontal-btn').html("");
+                        $('#horizontal-list').html("");
+                        $('#horizontal-text').html("");
+    
+                        var arrdata = JSON.parse(res);
+                        var type = '';
+                        
+                        for(key in arrdata){
+                            var nargs ={"catID":arrdata[key].uid, "parentID":arrdata[key].parent_id, "auto":"true"};
+                            var level = arrdata[key].level + 1;
+                            nargs = JSON.stringify(nargs);
+                            
+                            if(arrdata[key].control_name == ""){
+                                arrdata[key].control_name = "step" + level + "_val";
+                            }
+                            
+                            if(arrdata[key].control_type == 'button'){
+                                type='button';
+                                $('#horizontal-btn').append("<li><button class='btn btn-primary' id='btn_" + arrdata[key].uid + "' onclick=showSub(" + nargs + ");addValue(this,'"+arrdata[key].control_name+"')>" + arrdata[key].name + '</button></li>');
+                                
+                            }else if(arrdata[key].control_type == 'list'){
+                                //set the type of control to list
+                                type='list';
+                          
+                                //create button control
+                                $('#horizontal-list').append("\
+                                    <li id='" + arrdata[key].uid + "'>\
+                                        <button class='btn btn-primary' id='btn_" + arrdata[key].uid + "' onclick=showSub(" + nargs + ")>" + arrdata[key].name + "</button>\
+                                    </li>\
+                                ");
+                                
+                                //copy region element from the form to horizontal-list area.
+                                $('#' + arrdata[key].control_name).clone().attr({"id":"list_"+arrdata[key].uid, "onchange":"addValue(this,'"+ arrdata[key].control_name + "')"}).prependTo($('#' + arrdata[key].uid));
+                                $("#list_"+arrdata[key].uid).show();
+                            }else if(arrdata[key].control_type == 'text'){
+                                
+                                //set the type of control to text
+                                type='text';
+                                var new_args = JSON.parse(nargs);
+                                new_args.required = 'true';
+                                new_args = JSON.stringify(new_args);
+                                
+                                //create button control
+                                $('#horizontal-text').append("\
+                                    <li id='" + arrdata[key].uid + "'>\
+                                        <button class='btn btn-primary' id='btn_" + arrdata[key].uid + "' onclick=showSub(" + new_args + ")>" + arrdata[key].name + "</button>\
+                                    </li>\
+                                ");
+                                
+                                //copy region element from the form to horizontal-text.
+                                $('#' + arrdata[key].control_name).clone().attr({"id":"text_"+arrdata[key].uid, "onchange":"addValue(this,'"+ arrdata[key].control_name + "')"}).prependTo($('#' + arrdata[key].uid));
+                                $("#text_"+arrdata[key].uid).show();
+                            }
+                        }
+                        
+                        
+                        if(type == 'list'){
+                            
+                            $('.mysub').hide();
+                            $('.mytext').hide();
+                            $('.hlist_title').html(txt.title);
+                            $('.mylist').show();
+
+                        }else if(type == 'button'){
+                            
+                            $('.mylist').hide();
+                            $('.mytext').hide();
+                            $('.sub_title').html(txt.title);
+                            $('.mysub').show();
+                            
+                        }else if(type == 'text'){
+                            
+                            $('.mysub').hide();
+                            $('.mylist').hide()
+                            $('.htext_title').html(txt.title);
+                            $('.mytext').show();
+                            
+                        }
+                    }
+                }
+            });
+            
+        }else{
+            
+            $('.default').hide();
+            $('.mysub').hide();
+            $('.mylist').hide();
+             $('.mytext').hide();
+            $('.custom-well').show();
+        }
+        
+        console.log(currentStep + ' - ' + nbrSteps);
+    }
+</script>

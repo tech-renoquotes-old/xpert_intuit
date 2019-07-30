@@ -1,0 +1,337 @@
+{{
+    /*
+        @title contractor_services
+        Description: This widget displays the services of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-29
+        @mod    bbduc@yahoo.com  add project type and by Amount
+        @version 1.1 bbduc@yahoo.com   new list for add and remove
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    use extranet_user;
+    contractor_services = sql("
+        SELECT  uid,
+                service,
+                name_long_{{lg.rows.lg}} as service_name,
+                category_{{lg.rows.lg}} as service_title,
+                example_{{lg.rows.lg}} as example
+        FROM    sr_service 
+        WHERE EXISTS (SELECT null FROM sr_contractor_service cs WHERE cs.uid_contractor='?' AND sr_service.uid = cs.uid_service)
+        AND active='yes'
+        ORDER BY service_title,service_name
+    ", extranet_user.uid);
+  
+    services = sql("
+        SELECT  uid,
+                service,
+                name_long_{{lg.rows.lg}} as service_name,
+                category_{{lg.rows.lg}} as service_title,
+                example_{{lg.rows.lg}} as example
+        FROM    sr_service 
+        WHERE NOT EXISTS (SELECT null FROM sr_contractor_service cs WHERE cs.uid_contractor='?' AND sr_service.uid = cs.uid_service)
+        AND  name_long_{{lg.rows.lg}} !=''
+        AND active='yes'
+        ORDER BY service_title,service_name
+    ", extranet_user.uid);
+  
+    services_all = sql("
+        SELECT  uid,
+                service,
+                name_long_{{lg.rows.lg}} as service_name,
+                example_{{lg.rows.lg}} as example
+        FROM    sr_service 
+        WHERE name_long_{{lg.rows.lg}} !=''
+        AND active='yes'
+        ORDER BY service_name
+    ");
+  
+   services_main = sql("
+        SELECT distinct service
+        FROM    sr_service 
+        WHERE active='yes'
+        ORDER BY service
+    ");
+
+}}
+<style>
+    .service{
+        margin:15px 0px;
+        padding:15px;
+        background-color: #EBEBEB;
+    }
+    .example{
+        background-color: #FFFFFF;
+        border-radius: 10px;
+        border-bottom-right-radius:0;
+        border-bottom-left-radius:0;
+        padding:15px;
+    }
+    .cs .h-inline-block{
+        display:inline-block;
+    }
+    .cs .text-md{
+        font-size:18px;
+    }
+</style>
+<div id="ajax_add_service_success" class="alert alert-info" style="display:none"> 
+    {{sn_ct("contractor_services Un administrateur devrait confirmer vos nouveaux services sous peu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_services Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+</div>
+
+<div id="ajax_add_proj_type_amt" class="alert alert-info" style="display:none"> 
+    {{sn_ct("contractor_services Type de projets et estimations mis-a-jour ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br>
+    <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_services Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    <!--<a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close">&times;</a>-->
+    <a href="javascript:void(0)" class="close" data-dismiss="alert" aria-label="close"></a>
+    <!--onclick="this.parentElement.style.display='none'"-->
+</div>
+
+\{{
+    contractor_project_type = sql("
+        SELECT  uid,
+                name_{{lg.rows.lg}} as project_type_name
+        FROM    sr_project_type
+        WHERE EXISTS (SELECT null FROM sr_project_type_contractor cp WHERE cp.uid_contractor='?' AND sr_project_type.uid = cp.uid_project_type)
+        AND active='yes'
+        ORDER BY project_type_name
+    ", extranet_user.uid);
+ 
+ 
+      project_type = sql("
+        SELECT  uid,
+                name_{{lg.rows.lg}} as project_type_name
+        FROM    sr_project_type
+        WHERE  active='yes'
+        ORDER BY order_type, project_type_name
+    ");
+   
+      project_amt = sql(single:true,"
+        SELECT  uid,
+                amount_min,
+                amount_max
+        FROM    sr_contractor
+        WHERE uid='?'
+    ", extranet_user.uid);
+    
+}}
+
+
+
+    <H2>Estimation du projet</H2>
+    <form action="{{ sn_pages('ajax_add_proj_type_amt', lg.rows.lg, table:'ressources')}}" id="add_proj_type_amt" name="add_proj_type_amt" method="POST">
+           <!--Min max amount  -->
+        
+           <div class="service  well">
+                <div class=" ">
+                        <label >
+                          <h3 class="text-md h-inline-block nomargin">  Montant Minimum </h3>
+                        </label >
+                        <input class="" type="text" id="amount_min" name="amount_min"  value="\{{project_amt.rows.amount_min }}">
+                   
+                        <label >  
+                            <h3 class="text-md h-inline-block nomargin">Montant Maximum</h3>
+                        </label>
+                        <input class="" type="text" id="amount_max" name="amount_max"  value="\{{project_amt.rows.amount_max }}" >
+                </div>
+            </div>
+        
+           <H2>Type de projets</H2>
+        <!--Project type  -->
+            <div class="service  well">
+                <div class="checkbox nomargin">
+                    \{{for s in project_type.rows do
+                        found = false;
+                        for cp in contractor_project_type.rows do
+                           if (s.uid == cp.uid)then found=true; endif;
+                        endfor
+                    }}
+                        <label >
+                            <input class="" type="checkbox" name="project_type_uid" \{{(found)?' checked ':' ';}} value="\{{s.uid}}"><h3 class="text-md h-inline-block nomargin">\{{s.project_type_name}}</h3>
+                        </label>
+                    \{{endfor}}
+                </div>
+            </div>
+    <input  class="btn btn-primary mb-sm " style= "width:330px  " type="submit"   value="{{sn_ct(edit:false,"contractor_project_type Enregistrer les types de projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+ </form>
+     <script>
+        // Bind add_proj_type_amt form to ajaxform plugin to send the form via ajax
+        $('form[name=add_proj_type_amt]').ajaxForm({
+            success:function(data, statusText, xhr){
+                if (xhr.getResponseHeader("X-success")){
+                    $('#ajax_add_proj_type_amt').show();
+                    location = '#ajax_add_proj_type_amt';
+                }
+                else if (xhr.getResponseHeader("X-error")){
+    
+                }
+            }    
+        }); 
+    </script>
+ 
+{{//     LISTS}}
+ <div  >
+    <h2>{{sn_ct("contractor_services Mes services", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
+    <a name="my_service"></a> 
+    <form action="{{ sn_pages('ajax_add_remove_services', lg.rows.lg, table:'ressources')}}" id="add_remove_services" name="add_remove_services" method="POST">
+        <!--<input onclick="addOption_all_list()" ;="" value="Add All" type="button"> -->
+        <div class="PP" class"container ">
+            <div>
+                <div class="col-md-5 ">
+                
+                    <select  class="form-control" name="services_add_uid" id="services_add_uid" multiple="multiple" size="15"  data-validator-name="service"  onDblClick="addOption_list2()">
+                        <optgroup  label="<-- Tous les Services disponibles -->"><option>-----------------------</option></optgroup>
+                        \{{  last_service = ""; start = true;}}
+                        \{{for  service in services.rows do
+                                                
+                                if last_service ne service.service_title && !start then
+                                    '</optgroup>';
+                                     start = true;
+                                endif
+                                if last_service ne service.service_title &&  start then
+                                    '<optgroup label = "'.+ service.service_title .+'">';
+                                    start = false;
+                                    last_service = service.service_title;
+                                endif    
+                        }}
+                                    <option value="\{{service.uid}}">\{{service.service_name}}</option>
+                        \{{
+                                
+                            endfor
+                            '</optgroup>';
+                       }}
+                    <optgroup label="<-- Liste des services enlevés -->">
+                    
+                    </optgroup>    
+                    </select>&nbsp;
+                </div>
+                
+                <div class="col-md-1">
+                    <input onclick="addOption_list2()" value="     &gt;     " type="button"> 
+                    <input onclick="addOption_list3()" value="     &lt;     " type="button"> 
+                    <!-- <input onclick='if (confirm("{{sn_ct(edit:false,"contractor_services Êtes-vous certain de vouloir supprimer ce service ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){ $("form[name=delete_services]").submit(); };'  value="     &lt     " type="button"> -->
+                    <!-- <input onclick="window.location.reload(false); " value="    &lt;&lt;    " type="button"> -->
+                </div>
+                
+                <div class="col-md-6">
+                    <select id="service_uid" name="service_uid" multiple="multiple" size="16" onDblClick="addOption_list3()">
+                        <optgroup label="<-- Services de l'entrepreneur -->"><option >-----------------------------------------</option></optgroup>
+                                    \{{for  service in contractor_services.rows do
+                                                
+                                if last_service ne service.service_title && !start then
+                                    '</optgroup>';
+                                     start = true;
+                                endif
+                                if last_service ne service.service_title &&  start then
+                                    '<optgroup label = "'.+ service.service_title .+'">';
+                                    start = false;
+                                    last_service = service.service_title;
+                                endif    
+                        }}
+                                    <option value="\{{service.uid}}">\{{service.service_name}}</option>
+                        \{{
+                                
+                            endfor
+                            '</optgroup>';
+                        }}
+                         <optgroup label="<-- Liste des services à ajouter -->">
+                            
+                         </optgroup>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="container" style="col-md-4">
+            {{sn_ct("contractor_services Tenir Ctrl pour une sélection multiple", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+            <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="territory"></span>
+        </div>
+        <!-- <input  class="btn btn-primary mb-sm add_submit" type="submit" value="{{sn_ct(edit:false,"contractor_services Mettre à jour les services", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"> -->
+        <input  class="btn btn-primary mb-sm add_submit" onclick="submit_services()"   value="{{sn_ct(edit:false,"contractor_services Mettre à jour les services", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+    </form>
+    
+<script>
+    optgrp="<-- Liste des services à ajouter -->";
+    optgrprem="<-- Liste des services enlevés -->";
+    
+    function addOption_list(){
+       for(i=document.delete_services.services_add_uid.options.length-1;i>=0;i--)	{
+            var services_add_uid=document.delete_services.services_add_uid;
+            if(document.delete_services.services_add_uid[i].selected){
+                addOption(document.delete_services.service_uid, document.delete_services.services_add_uid[i].text, document.delete_services.services_add_uid[i].value);
+                removeOption(services_add_uid,i);
+                // $(".add_submit").attr("disabled", false);
+            }
+        }
+    };
+  //ajoute et tri par option
+   // var options = [];
+	var option = document.createElement('option'); 
+   // $("#btn1").click(function(){
+   function addOption_list2(){
+        var options = [];
+        $("#services_add_uid option").each(function(){
+        	if ($(this).is(':checked')){
+                option.text = $(this).text();
+                option.value  = $(this).val();
+                options.push(option.outerHTML);
+                $(this).remove();
+                //alert($(this).text());
+            }
+        });
+      	options.sort();
+        console.log(options.join('\n'));
+   	    $("#service_uid optgroup[label='" + optgrp + "']").append(options.join('\n'));
+  	    $("#service_uid optgroup[label='" + optgrp + "'] > option").css("background-color", "yellow");
+  	    $("#service_uid optgroup[label='" + optgrp + "'] > option").prop('selected', true);
+    };
+
+   function addOption_list3(){
+        var options = [];
+        $("#service_uid option").each(function(){
+        	if ($(this).is(':checked')){
+                option.text = $(this).text();
+                option.value  = $(this).val();
+                options.push(option.outerHTML);
+                $(this).remove();
+            }
+        });
+      	options.sort();
+        console.log(options.join('\n'));
+   	    $("#services_add_uid optgroup[label='" + optgrprem + "']").append(options.join('\n'));
+  	    $("#services_add_uid optgroup[label='" + optgrprem + "'] > option").css("background-color", "yellow");
+  	    $("#services_add_uid optgroup[label='" + optgrprem + "'] > option").prop('selected', true);
+    };
+    
+    function submit_services(){
+        if (confirm("{{sn_ct(edit:false,"contractor_services Êtes-vous certain de vouloir mettre à jour ces services ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")){ 
+       	    $("#services_add_uid optgroup[label='" + optgrp + "'] > option").prop('selected', true);
+      	    $("#service_uid optgroup[label='" + optgrp + "'] > option").prop('selected', true);
+            $("form[name=add_remove_services]").submit(); 
+        };
+    }
+    
+        // Bind add_remove_services form to ajaxform plugin to send the form via ajax
+    $('form[name=add_remove_services]').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-add_remove_service_success")){
+                //alert("succes");
+                $('#ajax_add_service_success').show();
+                location = '#ajax_add_service_success';
+                //alert("{{sn_ct("contractor_services Un administrateur devrait confirmer vos nouveaux services sous peu.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}");
+                //location.reload(false);
+            }
+            else if (xhr.getResponseHeader("X-add_remove_service_error")){
+            }
+        }    
+    });  
+</script>
+

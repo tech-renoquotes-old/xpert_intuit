@@ -1,0 +1,52 @@
+{{
+    /*
+        @title 			adminRequestConfirmation
+        Description		Confirmation email for the admin when a client  asks for quotes. 
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    use lg;
+    use email;
+}}
+
+\{{
+    use client_info;
+    use url;
+    use first_visited;
+    
+    uid_client = client_info.uid;
+    uid_project = client_info.uid_project;
+    nom = client_info.name;
+    telephone = client_info.phone;
+    courriel = client_info.email;
+    adresse = client_info.address;
+    code_postal = client_info.postal_code;
+    message = client_info.description;
+	adwords_url = client_info.adwords_url;
+	premiere_page_visite = client_info.first_url;
+    
+    if(lang eq 'fr') then
+        cancel_project_link = 'https://soumissionrenovation.ca/fr/annuler-un-projet?cl=' .+ uid_client .+ '&prj=' .+ hash(uid_project);
+    else
+        cancel_project_link = 'https://renoquotes.com/en/cancel-a-project?cl=' .+ uid_client .+ '&prj=' .+ hash(uid_project);
+    endif
+    
+    use cancel_project_link;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+<br />
+
+<p>
+        \{{ if(lang eq 'fr') then }} 
+            Si vous souhaitez annuler ce projet, cliquez ici: &nbsp;<a href="\{{cancel_project_link}}">Annuler mon projet </a>
+        \{{else}} 
+            If you wish to cancel this project please, click here: &nbsp;<a href="\{{cancel_project_link}}">Cancel my project </a>
+        \{{endif}}
+</p>

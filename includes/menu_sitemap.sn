@@ -1,0 +1,66 @@
+{{ 
+    //
+    // Name:        menu_sitemap
+    //
+    // Description: Permet de publier le menu sitemap
+    //  
+    // Parameters:  none so far
+	//				use cgidata 
+	//				use lg
+    //
+    // Version:     1.0 2014-08-02 08:49:42 laplante@sednove.com initial version
+    //
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+
+    
+    use lg;             // Loop from the publish
+	use ressources;		// call from ressources.sn in /publish
+
+	site_config = sql(single:true,"select * from sn_configs");
+	menu_json = sql(single:true,wantarray:true,"select json from sn_menus where code = 'menu_sitemap'");
+	if menu_json.rows[0] eq '' then
+		menu = [];
+	else
+		menu = unstringnify(menu_json.rows[0]);
+	endif
+
+	menu_split = menu.length() / 2;
+
+}}
+<div class="sitemap">
+	<h2>{{sn_ct(code:"Plan du site",lg:lg.rows.lg,publish:"/publish/ressources.sn",uids:ressource.rows.uid)}}</h2>
+	<div class="row">
+		<div class="col-xs-6">
+			<ul>
+			{{ 
+			n=0;
+			for item in menu do 
+				menu_item = sql(single:true,"select * from sn_menus_items where uid = '?'", item.id);
+				if menu_item.rows.active eq "yes" then
+					if menu_item.rows.type eq "page" then
+						page = sql(single:true,"select * from ? where uid = '?'", menu_item.rows.table_name, menu_item.rows.uid_page);
+						if page.nbrows == 1 then
+						}} <li><a href="{{page.rows{"folder_" .+ lg.rows.lg};page.rows{"page_" .+ lg.rows.lg};}}">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a></li> {{
+						endif
+					elseif menu_item.rows.type eq "url" then
+						}} <li><a target="{{menu_item.rows{"target"};}}" href="{{menu_item.rows{"url_" .+ lg.rows.lg};}}">{{menu_item.rows{"name_" .+ lg.rows.lg};}}</a></li> {{
+					elseif menu_item.rows.type eq "group" then
+					endif
+				endif 
+				if ++n % menu_split == 0 then }}
+					</ul></div> <div class="col-xs-6"> <ul>
+				{{ endif
+			 endfor }}
+			</ul>
+		</div>
+	</div>
+</div>
+
+<style>
+	.cs .sitemap h2 {margin-top:0;font-size:16px;}
+	.cs .sitemap ul {margin:0;padding:0;list-style-type:none;}
+</style>
+
+

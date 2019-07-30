@@ -1,0 +1,144 @@
+{{
+    /*
+        @title 			sendSatisfactionSurveyToClient
+        Description		Sends a survey email to know the satisfaction of client. 
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+}}
+
+\{{
+    use review;
+    use comment;
+    use firstname;
+	use city_name;
+	use client_service;
+    use contact_email;
+    use language;
+    use uid_project;
+
+    nom = review.rows.firstname;
+	id_project = uid_project;
+    courriel = contact_email;
+    page_url = '/extranet/'.+ language .+ '/sondage-satisfaction';
+    client_comment = comment;
+    service = client_service;
+    client_city = city_name;
+    contractor_lg = language;
+    comment_date = review.rows.evaluation_date;
+    note = review.rows.client_satisfaction;
+    
+no_comment_txt = (language eq 'fr')? 'aucun commentaire': 'No comment';
+save_txt = (language eq 'fr')? 'sauvegarder': 'save';
+edit_txt = (language eq 'fr')? 'modifier': 'edit';
+reply_txt = (language eq 'fr')? 'répondre': 'reply';
+wrote_on_txt = (language eq 'fr')? 'à écris le': 'wrote on';
+contractor_answered_on_txt = (language eq 'fr')? "répondu le": "answered on";
+
+
+url = (language eq 'fr')? 'https://soumissionrenovation.ca/extranet/fr/sondage_satisfaction': 'https://renoquotes.com/extranet/en/survey-satisfaction';
+}}
+
+
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+         \{{if language eq 'fr' then}}
+         
+              {{
+                  email.rows{"content_fr"};
+              }}
+              
+          \{{else}}
+          
+              {{
+                  email.rows{"content_en"};
+              }}
+              
+          \{{endif}}
+          
+        </span>
+    </span>
+</div>
+<br>
+
+
+<div>
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+       <span style="font-size:16px;font-weight:bold;">
+         <h2> \{{review.rows.sname}} / \{{review.rows.city}} </h2>
+       </span> 
+    </span> 
+</div>
+<table class="vote" cellpadding="0" cellspacing="5" width="100%">
+    <tr>
+        \{{if review.rows.client_satisfaction == 1 then}}
+        <td width="20%">
+            <a href="\{{url}}" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *
+                </div>
+            </a>
+        </td>
+        \{{elseif review.rows.client_satisfaction == 2 then}}
+        <td width="20%">
+            <a href="\{{url}}" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    **
+                </div>
+            </a>
+        </td>
+        \{{elseif review.rows.client_satisfaction == 3 then}}
+        <td width="20%">
+            <a href="\{{url}}" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ***
+                </div>
+            </a>
+        </td>
+        \{{elseif review.rows.client_satisfaction == 4 then}}
+        <td width="20%">
+            <a href="\{{url}}" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ****
+                </div>
+            </a>
+        </td>
+        \{{elseif review.rows.client_satisfaction == 5 then}}
+        <td width="20%">
+            <a href="\{{url}}" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *****
+                </div>
+            </a>
+        </td>
+        \{{endif}}
+    </tr>
+</table>
+
+
+
+            		<div class="review-block-date"><h4>\{{review.rows.firstname}} \{{wrote_on_txt}} \{{review.rows.evaluation_date}}:</h4></div>
+        			\{{if(review.rows.client_comment ne "") then}}
+        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{review.rows.client_comment}}<font color='#00739f' size='4'>»</font></div>
+        			\{{else}}
+        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{no_comment_txt}}<font color='#00739f' size='4'>»</font></div>
+        			\{{endif}}
+        			<hr />
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

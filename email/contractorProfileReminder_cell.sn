@@ -1,0 +1,33 @@
+{{
+    /*
+        @title 			contractorProfileReminder_cell
+        Description		Email for the contractor for a follow up after a phone call  on cellulaire
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    %include "/extenso/functions/sn_pages.snc";
+    use email;
+    use lg;
+
+}}
+
+\{{ 
+	use name;
+    use contact_email;
+    use url_link;
+    use id_appels_entrepreneurs;
+    
+    nom = name;
+    courriel = contact_email;
+    page_inscription = url_link;
+     
+    
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

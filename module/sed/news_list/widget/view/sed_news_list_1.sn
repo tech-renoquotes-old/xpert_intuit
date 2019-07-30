@@ -1,0 +1,460 @@
+{{
+ /*
+    	@title	sed_news_list_1
+    	This will be the first view.
+        View 1 : list of news with the menu of categories on the left side.
+        View 2 : list of the news alone. No menu.
+    	Description:A widget that display the list of news from the table. 
+        The categries menu on left side give the user the possibility to show only the news from that category.
+        @author gamila@sednove.com
+    	@version 1.0 2015-05-31 10:00:00 Version initial
+    	@version 1.1 2016-06-13 14:30:00 Modification the path of widget
+        
+    */
+
+
+	use lg;
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+	use page;
+	use widget;
+	// CALL FOR THE THEME COLOR CHOSEN BY THE CLIENT
+	theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'");
+	if widget.rows.table_name ne "" then
+		cat_choice = sql(single:true,"SELECT * FROM " .+ widget.rows.table_name .+ " WHERE uid_widget='?'",widget.rows.uid_widget_list);
+		
+	endif
+	selby_cat = "sed_news_category.active = 'yes' AND uid IN (" .+ cat_choice.rows.cat_choice .+ ")";
+	w_cat_choice = cat_choice.rows.cat_choice;
+	if cat_choice.rows.cat_choice eq "" || isset(list:cat_choice.rows.cat_choice , values:"0") then
+		selby_cat = "sed_news_category.active = 'yes'";
+		w_cat_choice = "";
+	endif
+
+}}
+
+<style type="text/css">
+    /*================================================================
+SIDE-BAR-MENU*/
+.cs #cssmenu,
+.cs #cssmenu ul,
+.cs #cssmenu ul li,
+.cs #cssmenu ul li a {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+  line-height: 1;
+  display: block;
+  position: relative;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.cs #cssmenu {
+  max-width: 100%;
+  color: #ffffff;
+  margin-bottom: 20px;
+  border:1px solid #DBDBDB;
+  border-bottom:none;
+}
+.cs #cssmenu ul ul {
+  display: none;
+}
+.cs #cssmenu > ul > li.active > ul {
+  display: block;
+}
+.align-right {
+  float: right;
+}
+.cs #cssmenu > ul > li > a {
+  padding: 12px 35px 12px 20px;
+  cursor: pointer;
+  z-index: 2;
+  font-size: 16px;
+  text-decoration: none;
+  color: #666666;
+  background: #efefef;
+  -webkit-transition: color .2s ease;
+  -o-transition: color .2s ease;
+  transition: color .2s ease;
+  border-bottom:1px solid #DBDBDB;
+}
+.cs #cssmenu > ul > li > a.on, .cs #cssmenu > ul > li > a:hover.on {
+  color: #ffffff;
+  background-color: #{{theme_color.rows.content_link_color}};
+  text-decoration: none;
+}
+
+.cs #cssmenu > ul > li > a:hover {
+  color: #666666;
+  text-decoration: none;
+  background-color:#D9D9D9;
+}
+.cs #cssmenu ul > li.has-sub > a:after {
+  position: absolute;
+  right: 26px;
+  top: 19px;
+  z-index: 5;
+  display: block;
+  height: 10px;
+  width: 2px;
+  background: #{{theme_color.rows.content_link_color}};
+  content: "";
+  -webkit-transition: all 0.1s ease-out;
+  -moz-transition: all 0.1s ease-out;
+  -ms-transition: all 0.1s ease-out;
+  -o-transition: all 0.1s ease-out;
+  transition: all 0.1s ease-out;
+}
+.cs #cssmenu ul > li.has-sub > a:before {
+  position: absolute;
+  right: 22px;
+  top: 23px;
+  display: block;
+  width: 10px;
+  height: 2px;
+  background: #{{theme_color.rows.content_link_color}};
+  content: "";
+  -webkit-transition: all 0.1s ease-out;
+  -moz-transition: all 0.1s ease-out;
+  -ms-transition: all 0.1s ease-out;
+  -o-transition: all 0.1s ease-out;
+  transition: all 0.1s ease-out;
+}
+.cs #cssmenu ul > li.has-sub.open > a:after,
+.cs #cssmenu ul > li.has-sub.open > a:before {
+  -webkit-transform: rotate(45deg);
+  -moz-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  -o-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+.cs #cssmenu ul ul li a {
+  padding: 14px 36px 14px 20px;
+  cursor: pointer;
+  z-index: 2;
+  font-size: 13px;
+  text-decoration: none;
+  color: #5e5e5e;
+  background: #e3e3e3;
+  -webkit-transition: color .2s ease;
+  -o-transition: color .2s ease;
+  transition: color .2s ease;
+}
+.cs #cssmenu ul ul ul li a {
+  padding-left: 32px;
+}
+.cs #cssmenu ul ul li a:hover {
+  color: #{{theme_color.rows.content_link_hover_color}};
+}
+.cs #cssmenu ul ul > li.has-sub > a:after {
+  top: 16px;
+  right: 26px;
+  background: #{{theme_color.rows.content_link_color}};
+}
+.cs #cssmenu ul ul > li.has-sub > a:before {
+  top: 20px;
+  background: #{{theme_color.rows.content_link_color}};
+}
+.cs #cssmenu ul ul li a.on{text-decoration:underline;}
+
+.cs #cssmenu-mobile{
+    padding: 12px 34px 12px 22px;
+    cursor: pointer;
+    z-index: 2;
+    font-size: 16px;
+    text-decoration: none;
+    color: #666666;
+    background: #E7E7E7;
+    -webkit-transition: color .2s ease;
+    -o-transition: color .2s ease;
+    transition: color .2s ease;
+    margin-bottom: 5px;
+    display: none;
+}
+.cs #cssmenu-mobile:after {
+    position: absolute;
+    right: 30px;
+    top: 19px;
+    z-index: 5;
+    display: block;
+    height: 10px;
+    width: 2px;
+    background: #{{theme_color.rows.content_link_color}};
+    content: "";
+        -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+.cs #cssmenu-mobile:before {
+    position: absolute;
+    right: 26px;
+    top: 23px;
+    display: block;
+    width: 10px;
+    height: 2px;
+    background: #{{theme_color.rows.content_link_color}};
+    content: "";
+    -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+
+.cs #cssmenu-mobile.on:after,
+.cs #cssmenu-mobile.on:before {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+@media (max-width: 990px) {
+    .cs #cssmenu{
+        display: none;
+    }
+    .cs #cssmenu-mobile{
+        display: block;
+    }
+}
+@media (min-width: 991px) {
+    .cs #cssmenu{
+        display: block!important;
+    }
+    .cs #cssmenu-mobile{
+        display: none!important;
+    }
+}
+    </style>
+\{{
+	//Items per page
+	items_per_page = 6;
+	cgidata = cgidata();
+	
+	//selected category
+	selected_category = esc(filter:"sql", cgidata.category);
+	
+	//page
+	page = cgidata.page;
+	if !isdigit(page) then
+		page = 1;
+	endif
+}}
+
+<div class="row">
+    <div class="col-md-3">
+        <div id="cssmenu-mobile" onclick="showsubmenu();">{{ sn_ct("News mobile navigation", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</div>
+        <div id="cssmenu">
+            <ul>
+				<li><a href='?' \{{ if selected_category eq "" then "class='on'"; endif }}> {{ sn_ct("All", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</a><li>
+				
+				\{{ for category sql("SELECT * FROM sed_news_category WHERE {{selby_cat}} ORDER BY category_name_{{lg.rows.lg}}") do }}
+				          
+					<li><a href='?category=\{{category.rows.uid;}}' \{{ if selected_category eq category.rows.uid then "class='on'"; endif }}>\{{ category.rows.category_name_{{lg.rows.lg }} }}</a></li>
+				\{{ endfor }}
+            </ul>
+        </div>
+        <!--cssmenu-->
+    </div>
+
+
+    <style type="text/css">
+    .cs .wdg_list_news {
+        color: #282828;
+    }
+
+    .cs .wdg_list_news .news {
+        display: block;
+        margin-right: 15px;
+        margin-left: 15px;
+            border-bottom: 1px solid #EDEDED;
+
+    }
+
+    .cs .wdg_list_news a {
+        color: #282828;
+        text-decoration: none;
+    }
+
+    .cs .wdg_list_news a:hover .news_title {
+        text-decoration: underline;
+    }
+
+    .cs .wdg_list_news h2 {
+        font-size: 22px;
+        color: #{{theme_color.rows.content_link_color}};
+        margin-top: 0;
+        letter-spacing: 0;
+        padding-top: 0px;
+    }
+
+    .cs .wdg_list_news .news {
+        position: relative;
+        padding: 15px 0;
+    }
+
+    .cs .wdg_list_news .news:hover {
+        /*background-color: #f5f5f5;*/
+    }
+
+    .cs .wdg_list_news .news_infos {
+        padding: 15px 0;
+        font-size: 14px;
+      	color: #{{theme_color.rows.header_highlight_color}};
+    }
+
+    .cs .news_photo {
+        margin-bottom: 15px;
+    }
+     .cs .cs-main-content ul li::before {
+        position: absolute;
+        left: -16px;
+        top: 0px;
+        content: " ";
+        font-size: 8px;
+        color: #fff;
+    }
+    .cs .pagination > .active > a, .cs .pagination > .active > a:focus, .cs .pagination > .active > a:hover, .cs .pagination > .active > span, 
+      .cs .pagination > .active > span:focus, .cs .pagination > .active > span:hover {
+        z-index: 2;
+        color: #FFF;
+        cursor: default;
+        background-color: #{{theme_color.rows.content_link_color}};
+        border-color: #{{theme_color.rows.content_link_color}};
+    }
+    .cs .wdg_list_news .news_photo img{
+      	display: block;
+    	max-width: 100%;
+    	max-height: 200px;
+    	height: auto;
+    }
+    </style>
+    <div class="col-md-9">
+        <div class="wdg_list_news">
+
+                <!-- NEWS ITEMS ======= -->
+				\{{ 
+					offset = items_per_page * (page - 1);
+					
+					selectby = "";
+					if selected_category ne "" then 
+						selectby = " AND FIND_IN_SET('" .+ selected_category .+ "',category)";
+					endif
+				}}
+				
+				\{{ for news sql("SELECT * FROM sed_news , sed_news_category   where sed_news.active='yes' AND sed_news.date >= CURDATE()  AND sed_news_category.active='yes'and sed_news.category IN (sed_news_category.uid)   " .+ selectby .+ " ORDER BY date DESC LIMIT ? OFFSET ?", items_per_page, offset) do
+				     }}
+					<a href="/{{lg.rows.lg}}/news-item/\{{ news.rows.seo_{{lg.rows.lg}};}}" class="news">
+					    <div class="row">
+                            \{{ if news.rows.image ne "" then }}
+                            <div class="col-sm-6 col-md-4 news_photo">
+                                <img src="\{{ news.rows.image;}}" class="img-responsive">
+                            </div>
+						    <div class="col-sm-6 col-md-8">
+						    \{{ else }}
+							<div class="col-sm-12">
+						    \{{ endif }}
+                                <h2 class="news_title">
+                                   \{{ esc(filter: "sql",news.rows.title_{{lg.rows.lg}}) }}
+                                </h2>
+                                <div class="news_summary">
+                                    \{{esc(filter: "sql",news.rows.summary_{{lg.rows.lg}} )}}
+                                </div>
+                                <div class="news_infos">
+                                    \{{
+                                        date = datetime(date: esc(filter: "sql",news.rows.date), lg : "{{lg.rows.lg}}", format: "%Y-%m-%d");
+                                        time = datetime(date: esc(filter: "sql",news.rows.date), lg : "{{lg.rows.lg}}", format: "%Hh%M");
+                                    }}
+                                    <strong>{{ sn_ct("Publié le :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</strong> \{{  esc(filter: "sql",date) .+ " a " .+  esc(filter: "sql",time); }} |
+
+                                    <strong>{{ sn_ct("Catégorie :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}</strong>
+                                    \{{
+                                        for cat sql("SELECT * FROM sed_news_category WHERE active='yes'and  FIND_IN_SET(uid,'?')",news.rows.category) do
+                                             esc(filter: "sql",cat.rows.category_name_{{lg.rows.lg}});
+                                            if sn_nb1 ne cat.nbrows then
+                                                ", ";
+                                            endif
+                                        endfor
+                                    }}
+                                </div>
+						    </div>
+						    <div class="clearfix"></div>
+						</div>
+					</a>
+			
+				\{{endfor
+
+				   
+			  	    }} 
+				       
+				    
+              	<hr>	
+
+				\{{ 
+					count = sql(single:true, "SELECT count(*) as counter FROM sed_news WHERE sed_news.date >= CURDATE() AND active = 'yes'" .+ selectby .+ " ORDER BY date DESC");
+					max_pages = ceil(count.rows.counter / items_per_page);
+					if count.rows.counter != 0 then
+				}}
+				    \{{ if max_pages > 1 then }}
+				    <nav>
+						<ul class="pagination">
+							<li \{{ if page == 1 then }} class="disabled" \{{ endif }}><a href="?page=1&category=\{{selected_category}}" aria-label="Previous"><span aria-hidden="true">«</span></a></li>
+							\{{ for(i = 1; i <= max_pages; i++) do }}
+								<li \{{ if i == page then }} class="active" \{{ endif }}>
+									<a href="?page=\{{i}}&category=\{{selected_category}}">\{{ i; }} 
+										\{{ if i == page then }} <span class="sr-only">(current)</span> \{{ endif }}
+									</a>
+								</li>
+							\{{ endfor }}
+							<li \{{ if page == max_pages then }} class="disabled" \{{ endif }}><a href="?page=\{{max_pages}}&category=\{{selected_category}}" aria-label="Next"><span aria-hidden="true">»</span></a></li>
+					   </ul>
+                    </nav>
+                    \{{ endif }}
+			   \{{ else }}
+			    <div class="alert alert-info"> 
+					{{ sn_ct("No Results", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid, module:"sed_news")}}
+				</div>
+			   \{{ endif }}
+
+        </div>
+    </div>
+    <!-- END wdg_list_news -->
+</div>
+<!-- END row --> 
+
+
+<script type="text/javascript">
+    (function($) {
+        $(document).ready(function() {
+
+            $('#cssmenu li.active').addClass('open').children('ul').show();
+            $('#cssmenu li.has-sub>a').on('click', function() {
+                $(this).removeAttr('href');
+                var element = $(this).parent('li');
+                if (element.hasClass('open')) {
+                    element.removeClass('open');
+                    element.find('li').removeClass('open');
+                    element.find('ul').slideUp(200);
+                } else {
+                    element.addClass('open');
+                    element.children('ul').slideDown(200);
+                    element.siblings('li').children('ul').slideUp(200);
+                    element.siblings('li').removeClass('open');
+                    element.siblings('li').find('li').removeClass('open');
+                    element.siblings('li').find('ul').slideUp(200);
+                }
+            });
+
+        });
+    })(jQuery);
+
+    function showsubmenu() {
+        $('#cssmenu').toggle();
+        $('#cssmenu-mobile').toggleClass('on');
+    }
+</script>

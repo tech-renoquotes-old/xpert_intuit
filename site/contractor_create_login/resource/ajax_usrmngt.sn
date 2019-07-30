@@ -1,0 +1,198 @@
+<html>
+    <head>
+    <title>contractor mngt</title>
+    </head>
+<body>
+{{
+    /*
+        @title contractor_create_login
+        Description: Creates a username and password for the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";   
+    
+    use page;
+    use lg;
+    
+    // include the validator for contractor_create_login
+    //%include "/site/contractor_create_login/include/validator.sn";
+}}
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<link href="/css/en/styles.css" rel="stylesheet">
+
+<style>
+    input {
+        width: 200px;
+        height: 40px;
+        background-color: #E2BC74;
+        font-size: 20px;
+    }
+    
+    .help-block {
+        width: 100%;
+        color: #D00023;
+        display:block;
+    }
+
+    .login_box{
+    }
+</style>
+
+\{{
+    cgidata = cgidata();
+    lang = 'fr';
+    if(cgidata.uid.length() > 0) then
+            
+        contractor = sql(single:true,"SELECT uid, username, company_name, token FROM sr_contractor WHERE uid='?'", cgidata.uid);    
+        token = substr(hash(algo:"sha512", time.secs .+ time.usecs .+ random(min:1, max:9999999)),0,45);
+        
+        gen_token = update(tables:"sr_contractor",uid: contractor.rows.uid,
+                    fields:{
+                        "token": token
+                    }
+                );
+                
+        if(contractor.rows.username ne "") then
+            headers_out("X-username", contractor.rows.username);
+        endif
+        
+        if(gen_token.nbrows == 1) then
+           headers_out("X-generate", token);
+        endif
+    endif
+    
+
+    //validate server side
+    //if (validator.validate(data:cgidata)) then
+    if(cgidata.password.length() > 0 && cgidata.password2.length()) then
+        contractor = sql(single:true,"SELECT uid, company_name FROM sr_contractor WHERE token='?' AND (username='' OR username IS null)", token);
+        if contractor.nbrows > 0 then
+            res = update(
+                tables:"sr_contractor",
+                uid: contractor.rows.uid,
+                fields:{
+                    "username": cgidata.username,
+                    "password": hash(algo:'sha512', cgidata.password .+ md5(contractor.rows.company_name)),
+                    "sn_salt_password":md5(contractor.rows.company_name),
+                    "sn_hash_password":"sha512"
+                }
+            );
+            // if no error
+            if res.sqlcode == 0 then
+                headers_out("X-success", 1);
+            endif
+        endif
+    endif
+    //endif
+
+
+}}
+
+    <div class='container'>
+
+        <div class="row">
+            <div class="col-md-3"></div>
+            
+            <h2>
+                Réinitialiser Mot de passe
+            </h2>
+            
+                <form action="" id="generate_token" name="generate_token" method="POST">
+                    <table>
+                        <tr><td><input class="form-control" type="text" name="usrfind" id="usrfind" /></td><td><button class="btn btn-primary pull-right" type="submit">creer lien</button></td></tr>
+                        <tr colspan='2'><td><div class='display_link'></div></td></tr>
+                    </table>
+                </form>
+            </div>
+            <span id='glink'></span>
+        </div>
+    </div>
+            <br />
+            
+</body>
+</html>
+
+{{
+    // include the validator for contractor_create_login
+    //%include "/site/contractor_create_login/include/validator.sn";
+}}
+\{{
+    // validate client side
+     //validator.validateJS(form:'create_login');    
+}}
+<script>
+    // function confirm_password(password2){
+    //     password1 = $("input#password").val();
+    //     if (password1 === password2){
+    //         return true;
+    //     }
+    //     return false;
+    // }
+    
+    $("form[name=generate_token]").submit(function(e) {
+      e.preventDefault();
+      
+      $.ajax({
+        type: "POST",
+        data: {'uid':$('#usrfind').val()},
+        beforeSend: function(){
+            
+        },
+        
+        success: function(data, statusText, xhr) {
+            if(xhr.getResponseHeader('X-generate')){
+                $('.login_box').show();
+                
+                if(xhr.getResponseHeader('X-username')){
+                    var link ='/fr/creation-identifiant-interne' + '?token=' + xhr.getResponseHeader('X-generate') + '&u=true';
+                }else{
+                    var link ='/fr/entrepreneur-creer-identifiant' + '?token=' + xhr.getResponseHeader('X-generate');
+                }
+                
+                $('#glink').html('<a href="' + link + '">'+link+'</a>');
+            }else{
+                $('.login_box').hide();
+            };
+        },
+        error: function(data) {
+        },
+        complete: function(data) {
+        }
+      });
+    });
+
+    
+    $("form[name=create_login]").submit(function(e) {
+      e.preventDefault();
+      
+        formData = new FormData($(this)[0]);      
+      $.ajax({
+        type: "POST",
+        data: {'username':$('#username').val(),
+               'token':$('#token').val(),
+               'password':$('#password').val()
+              },
+              
+        beforeSend: function(){
+        },
+        
+        success: function(data, statusText, xhr) {
+            if (xhr.getResponseHeader("X-success")){
+                location.replace("{{pages(table:'pages','sr_contractor_dashboard','fr')}}");
+            }
+        },
+        error: function(data) {
+        },
+        complete: function(data) {
+        }
+      });
+    });
+</script>

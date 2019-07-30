@@ -1,0 +1,67 @@
+{{
+    /*
+        @title 			projectActivatedClient
+        Description		Email to the client when his account is activated. 
+         ON 
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-08
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use project;
+    
+    prenom = project.rows.firstname;
+    nom = (project.rows.lastname ne '') ? project.rows.lastname : project.rows.firstname;
+    service = project.rows.name;
+    uid_client = project.rows.uid;
+    address = project.rows.street_no .+ ' ' .+ project.rows.street .+ ', ' .+ project.rows.city_name .+ ', ' .+ project.rows.zip;
+    phone = project.rows.phone1 .+ ' ' .+ project.rows.phone2;
+    uid = project.rows.puid;
+    minute = project.rows.minute;
+    
+    uid_client = project.rows.uid;
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if project.rows.gender eq "f" then
+    	titre = mme;
+    elseif project.rows.gender eq "m" then
+    	titre = mr;
+    endif
+    
+    article_next = project.rows.article_next;
+
+    if("{{lg.rows.lg}}" eq 'fr') then
+        cancel_project_link = 'https://xpertsource.com/fr/annuler-un-projet?cl=' .+ uid_client .+ '&prj=' .+ hash(project.rows.puid);
+    else
+        cancel_project_link = 'https://xpertsource.com/en/cancel-a-project?cl=' .+ uid_client .+ '&prj=' .+ hash(project.rows.puid);
+    endif
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+<br />
+
+<span>
+    <h4>
+        \{{ if("{{lg.rows.lg}}" eq 'fr') then }} 
+            Si vous souhaitez annuler ce projet, cliquez ici: &nbsp;<a href="\{{cancel_project_link}}">Annuler mon projet </a>
+        \{{else}} 
+            If you wish to cancel this project please, click here: &nbsp;<a href="\{{cancel_project_link}}">Cancel my project </a>
+        \{{endif}}
+    </h4>
+</span>
+<p style="font-size: 8px;">\{{uid_lient}}</p>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

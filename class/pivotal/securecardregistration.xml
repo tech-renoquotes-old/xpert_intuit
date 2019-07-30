@@ -1,0 +1,23 @@
+{{
+use merchantref;
+use terminalID;
+use formattedDatetime;
+use cardnumber;
+use cardexpiry;
+use cardtype;
+use name;
+use hash;
+use cvv;
+
+}}<?xml version="1.0" encoding="UTF-8"?>
+<SECURECARDREGISTRATION>
+	<MERCHANTREF>{{merchantref}}</MERCHANTREF>
+	<TERMINALID>{{terminalID}}</TERMINALID>
+	<DATETIME>{{formattedDatetime}}</DATETIME>
+	<CARDNUMBER>{{cardnumber}}</CARDNUMBER>
+	<CARDEXPIRY>{{cardexpiry}}</CARDEXPIRY>
+	<CARDTYPE>{{cardtype}}</CARDTYPE>
+	<CARDHOLDERNAME>{{name}}</CARDHOLDERNAME>
+	<HASH>{{hash}}</HASH>
+	<CVV>{{cvv}}</CVV>
+</SECURECARDREGISTRATION>

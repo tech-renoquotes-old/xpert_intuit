@@ -1,0 +1,18 @@
+<!-- ipleent widget text -->
+
+<h1>Widget text v1</h1>
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	lg;
+	for content sql("select * from widget_text where uid_widget = '?'", widget.rows.uid_widget_list) do
+		dq((<strong class="big red"> title = )); content.rows{"title_" .+ lg.rows.lg}; dq((</strong>));
+		'<hr>';
+			content.rows.content;
+		'</hr>';
+	endfor
+}}

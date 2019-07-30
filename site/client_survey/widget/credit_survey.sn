@@ -1,0 +1,99 @@
+{{
+    /*
+        @title credit_survey
+        Description: This widget is used to get feedback from a client on contractors.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-11
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/site/package/all.sn";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    
+
+    
+    credit = sql(single:true,"
+        SELECT c.contact_firstname, c.contact_lastname, c.company_name, cr.uid_project_contractor, cr.uid, cr.refusal_reason, cr.reason, cr.feed_id as feed, time_to_sec(timediff(now(),cr.feed_date))/60 as elapsed
+        FROM sr_project_contractor pc
+        INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid
+        INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+        WHERE pc.accepted = 'yes'
+        AND (cr.accepted = 'no' OR (cr.accepted = '' OR isnull(cr.accepted)))
+        AND md5(cr.uid) = '?' 
+        HAVING (elapsed < 10 || (feed IS NULL OR feed = '' ))
+        ", cgidata.token
+    );  
+    
+    //credit.rows.elapsed;
+    
+    today = datetime(format:'%Y-%m-%d %H:%M:%S');
+    
+    if(cgidata.explanation ne "") then
+        void sql("UPDATE sr_credit SET feed_id = 5, feed_date = '?', feed_text = '?' where uid = '?'", today, cgidata.explanation, credit.rows.uid);
+        result = true;
+    endif    
+}}
+
+\{{if (credit.nbrows > 0) then}}
+
+    \{{if cgidata.option == 1 then}}
+        <div class="alert alert-success">
+            {{sn_ct("credit_survey Vous avez confirmer que l'entrepreneur a pu donner un prix mais le projet est annulé/donné. <br>Si vous avez commis une erreur vous pouvez le rectifier seulement dans les 10 prochaines minutes", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        </div>
+            \{{void sql("UPDATE sr_credit SET feed_id = 1, feed_date = '?', feed_text = '?' where uid = '?'", today, cgidata.explanation, credit.rows.uid);}}
+    \{{elseif cgidata.option == 2 then}}
+        <div class="alert alert-success">
+            {{sn_ct("credit_survey Vous avez confirmer que l'entrepreneur n'a pas donner de prix et le projet est annulé/donné. <br>Si vous avez commis une erreur vous pouvez le rectifier seulement dans les 10 prochaines minutes", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        </div>
+            \{{void sql("UPDATE sr_credit SET feed_id = 2, feed_date = '?', feed_text = '?' where uid = '?'", today, cgidata.explanation, credit.rows.uid)}}
+    \{{elseif cgidata.option == 3 then}}
+        <div class="alert alert-success">
+            {{sn_ct("credit_survey Vous avez confirmer que l'entrepreneur n'a pas donner de prix et le projet est tjrs disponible. <br>Si vous avez commis une erreur vous pouvez le rectifier seulement dans les 10 prochaines minutes", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        </div>
+            \{{void sql("UPDATE sr_credit SET feed_id = 3, feed_date = '?', feed_text = '?' where uid = '?'", today, cgidata.explanation, credit.rows.uid)}}
+    \{{elseif cgidata.option == 4 then}}
+        <div class="alert alert-success">
+            {{sn_ct("credit_survey Vous avez confirmer que l'entrepreneur a donner un prix et le projet est tjrs disponible. <br>Si vous avez commis une erreur vous pouvez le rectifier seulement dans les 10 prochaines minutes", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        </div>
+            \{{void sql("UPDATE sr_credit SET feed_id = 4, feed_date = '?', feed_text = '?' where uid = '?'", today, cgidata.explanation, credit.rows.uid)}}
+    \{{elseif cgidata.option == 5 then}}
+        \{{if(cgidata.explanation ne "") then}}
+            <div class="alert alert-success">
+                {{sn_ct("credit_survey Vous avez choisi de donner une explication a la tournure de votre projet. <br>Si vous avez commis une erreur vous pouvez le rectifier seulement dans les 10 prochaines minutes", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+            </div>
+            \{{automail::sendCreditReasonExplanationToAdmin(credit.rows.uid, cgidata.explanation)}}
+        \{{endif}}
+        <div class="row dashboard_comment">
+            <div class="row">
+                <div>
+                    <h2>{{sn_ct("credit_survey  Vous avez une explication à nous faire parvenir?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
+                </div>
+            </div>
+            <div class="row">
+                <form action="" id="add_suggestion" name="add_suggestion" method="POST">
+                    <fieldset class="form-group">
+                        <textarea class="form-control" id="explanation" name="explanation" rows="5"></textarea>    
+                        <br/><span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="suggestion"></span>
+                    </fieldset>  
+                </form>
+                
+                <button type="submit" form="add_suggestion" class="btn btn-default">{{sn_ct("credit_survey Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button>
+            </div>
+        </div>
+        
+    \{{endif}}
+    
+\{{else}}
+        <div class="alert alert-danger">
+            {{sn_ct("credit_survey Vous ne pouvez plus répondre a ce sondage. <br>Si vous effectué une modification d'une réponse, il se peut que le delai de modification soit écoulé", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        </div>
+\{{endif}}

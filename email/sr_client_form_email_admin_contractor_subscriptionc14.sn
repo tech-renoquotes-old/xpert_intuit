@@ -1,0 +1,48 @@
+{{
+    /*
+        @title 			sr_client_form_email_admin_contractor_subscriptionc14
+        Description		Admin - Contractor subscription
+        
+        @author 		pascale@sednove.com
+        
+        @version 		1.0 2016-08-03
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+    contact = "Etienne";
+    telephone = "(438) 456-7890";
+    courriel = "etienne@sednove.com";
+    position =	"Directeur artistique, UX/UI";
+    entreprise = "Sednove";
+    adresse = "791, avenue Saint-Charles";
+    rbq = "1654106654567";
+    neq = "1654104567";
+    assureur = "Desjardins";
+    police = "14545";
+    montreal = "1";
+    laval = "";
+    riveNord = "";
+    riveSud = "";
+    quebec = "1";
+    estrie = "";
+    mauricie = "";
+    outaouais = "";
+    centreQuebec = "";
+    laurentides = "";
+    beauce = "";
+    abitibi = "";
+    saguenay = "";
+    basStLaurent = "";
+    services = "";    
+    id = "11345";   
+}}
+<div style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+</div>

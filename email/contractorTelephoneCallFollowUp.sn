@@ -1,0 +1,32 @@
+{{
+    /*
+        @title 			contractorTelephoneCallFollowUp
+        Description		Email for the contractor for a follow up after a phone call.
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    %include "/extenso/functions/sn_pages.snc";
+    use email;
+    use lg;
+    url = sql(single:true, "SELECT url_prod FROM sn_configs");
+    url = url.rows.url_prod;
+}}
+
+\{{
+	use contractor;
+    
+    
+    nom = contractor.rows.contact_lastname;
+    prenom = contractor.rows.contact_firstname;
+    page_inscription = "{{url}}" .+ "{{ pages('sr_contractor_form', lg.rows.lg, table:pages); }}";
+
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

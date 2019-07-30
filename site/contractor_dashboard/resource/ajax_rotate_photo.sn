@@ -1,0 +1,63 @@
+{{
+    /*
+        @title ajax_delete_photo
+        Description: Delete a photo from the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-01
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    //cgidata = cgidata();
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/gallery/caching/");  // to see images
+    use extranet_user;
+    
+    photos =  sql(single:true, "SELECT photo FROM sr_gallery  WHERE uid='?' AND uid_contractor='?'", cgidata.photo_uid, extranet_user.uid);
+    snfilepath =  photos.rows.photo   ;  //"/staging/test/imagestest/270/20160719_095216.jpg";
+    
+    if (snfilepath eq '') then
+        stop();
+    endif
+    t = time();
+
+    // outputfilepath = resub(snfilepath, "(.+)(_rotated_\d+)?\.(jpe?g|png|gif)$", "$1_rotated_".+t.secs.+".$3"); // add _rotated_...
+    outputfilepath = resub(snfilepath, "([A-Za-z0-9]*)(_rotated_\d+)?\.(jpe?g|png|gif)$", "$1_rotated_".+t.secs.+".$3");   // replace _rotated_
+    void insert(table:'sr_debug', fields:{'description': extranet_user.uid .+ " ".+  cgidata.photo_uid .+ " ".+ snfilepath,'text':outputfilepath});
+
+    void sql("UPDATE sr_gallery SET photo = '?' WHERE uid = '?'", outputfilepath, cgidata.photo_uid); 
+    
+    //wp-content/uploads/projet/db33aaf6ed67904fdad353068aee0694.jpg
+    //http://ssr.sednove.ca/sn_uploads/projet/eb82dded411b59f1a8e2c8aadd26b221_rotated_1479408432.jpg?size=300x251&crop
+    image = gd_new('filename':snfilepath);
+    imageCanvasSize = gd_get_size(gd: image); 
+    originalImg = image;
+    angle = cgidata.rotation * 1;
+               
+    flipRatio = (angle eq 0 || angle eq 180) ?false : true;
+
+    image = gd_rotate( 
+        gdsrc: originalImg, 
+        angle: angle, 
+        srcx: 0, 
+        srcy: 0, 
+        dstx: ((flipRatio)? imageCanvasSize.height:imageCanvasSize.width) / 2, 
+        dsty: ((flipRatio)? imageCanvasSize.width:imageCanvasSize.height) / 2, 
+        srcw: imageCanvasSize.width, 
+        srch: imageCanvasSize.height,
+        dstw: (flipRatio)? imageCanvasSize.height:imageCanvasSize.width,
+        dsth: (flipRatio)? imageCanvasSize.width:imageCanvasSize.height
+    );
+    gd_free(originalImg);
+    gd_write('filename': outputfilepath, 'format': 'jpg', 'gd': image, 'quality': 80);
+    gd_free(image);
+   
+    outputfilepath;
+}}

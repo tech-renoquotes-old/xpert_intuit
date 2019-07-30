@@ -1,0 +1,55 @@
+{{
+    
+    // From Clients
+    
+    table_dest = 'sr_address';
+    table_from = 'tbl_client';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid_client': 'idTBL_Client',
+        'street_no' : 'NumCivique',
+        'street'    : 'Rue',
+        'uid_city'  : 'Ville',
+        'zip'       : 'Code_Postal',
+        'phone1'    : 'Telephone_Maison',
+        'phone2'    : 'Telephone_Cellulaire',
+        'phone3'    : 'Telephone_Bureau',
+        'province'  : "'QC'"
+    };
+    
+    %include 'migration.sn';
+    
+    ////////////////////////////////////////////////////////
+    
+    // From Contractors
+    
+    table_dest = 'sr_address';
+    table_from = 'tbl_entrepreneur';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"`";
+    
+    truncate_dest = false;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid_contractor': 'idTBL_Entrepreneur',
+        'street_no' : '_Adresse_NO',
+        'street'    : '_Adresse_STREET',
+        'city'      : 'Ville',
+        'uid_city'  : 'id_ville',
+        'zip'       : 'Code_Postal',
+        'phone1'    : 'Telephone',
+        'province'  : "'QC'"
+    };
+    
+    %include 'migration.sn';
+    

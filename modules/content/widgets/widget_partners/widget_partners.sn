@@ -1,0 +1,16 @@
+{{
+    // --------------------------------------------------------------------------
+    // Name:        Widget test
+    //
+    // Description:    use to test widget withing Extenso
+    //
+    // Version:        1.0 2015-05-31 13:15:47 laplante@sednove.com
+    // --------------------------------------------------------------------------
+
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/functions/debug_widget.sn";
+    
+	use lg;
+    use widget;        // widget variable is from function sn_widgets
+
+}}

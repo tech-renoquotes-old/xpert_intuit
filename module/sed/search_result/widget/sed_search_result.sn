@@ -1,0 +1,68 @@
+{{
+    /*
+    	@title	sed_search_result
+    	Description:return search result from sn_search_siteindex and sn_search_configuration
+        @author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47
+    */
+   
+    %include "/extenso/functions/sn_ct.snc";
+
+    use widget;     // widget variable is from function sn_widgets
+    use lg;
+
+    sc = sql(single:true,"select * from sn_search_configuration");
+}}
+\{{ 
+    cgidata = cgidata(); 
+}}
+<div class="search-result-wrap">
+	<div class="search-result-a">
+		<p>{{sn_ct("Résultats de recherche:")}} '\{{cgidata.kw}}' </p>
+		\{{ 
+		// Search for synonyme
+		syn = sql(single:true,"select * from sn_search_synonyme where word = '?'", cgidata.kw);
+		if syn.nbrows == 1 then
+			kw = syn.rows.syn;
+		else
+			kw = cgidata.kw;
+		endif
+		
+		for url sql("SELECT uid,image,url,weight,title,description,lg,
+		MATCH (alltext)  AGAINST ('*?*' IN BOOLEAN MODE) AS score1, 
+		MATCH (h1)  AGAINST ('*?*' IN BOOLEAN MODE) AS score2,
+		MATCH (h2)  AGAINST ('*?*' IN BOOLEAN MODE) AS score3,
+		MATCH (h3)  AGAINST ('*?*' IN BOOLEAN MODE) AS score4,
+		MATCH (description)  AGAINST ('*?*' IN BOOLEAN MODE) AS score5,
+		MATCH (title)  AGAINST ('*?*' IN BOOLEAN MODE) AS score6
+		FROM sn_search_siteindex WHERE lg = '{{lg.rows.lg}}' 
+			 AND use_in_search = 'yes'
+		ORDER BY 
+		IF(score1+score2+score3+score4+score5+score6=0,{{sc.rows.score_zero}},{{sc.rows.score_not_zero}})+
+		(score1*{{sc.rows.alltext}}+score2*{{sc.rows.h1}}+score3*{{sc.rows.h2}}+score4*{{sc.rows.h3}}+
+		score5*{{sc.rows.desc}}+score6*{{sc.rows.wtitle}})+weight DESC  
+		limit 20;", kw, kw,  kw, kw, kw, kw) do 
+		}}
+		<div class="search-item clearfix">
+			\{{ if url.rows.image ne "" && -e  url.rows.image then }}
+			<img alt="\{{url.rows.title}}" src="\{{url.rows.image}}">
+			\{{ endif }}
+			<h3>\{{url.rows.title}}</h3>
+			<p>\{{url.rows.description}}</p>
+			<a class="arrow-right-2 float-right" href="\{{url.rows.url}}">Plus</a>
+			<br />
+			{{ /* }}
+			url = \{{ url.rows.uid; ":"; url.rows.url; ", image= "; url.rows.image; }}
+			,weight = \{{ url.rows.weight; }}
+			,score1:alltext = \{{ url.rows.score1; }}
+			,score2:h1 = \{{ url.rows.score2; }}
+			,score3:h2 = \{{ url.rows.score3; }}
+			,score4:h3 = \{{ url.rows.score4; }}
+			,score5:description = \{{ url.rows.score5; }}
+			,score6:title = \{{ url.rows.score6; }}
+			,lg=\{{ url.rows.lg; }} vs {{lg.rows.lg}}
+			{{ */ }}
+		</div><!--/.search-item-->
+		\{{ endfor }}
+	</div>
+</div>

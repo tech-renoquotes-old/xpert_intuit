@@ -1,0 +1,1596 @@
+        {{
+    /*
+        @title contractor_profile
+        Description: This widget displays the parameters about the account of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 2.0 2017-04-07
+        @mod  bbduc@yahoo.com
+        
+        version 3.0 2017-08-03
+        @mod louis.jhonny@gmail.com
+        Desc: add additional licenses, banner and logo customization, profile regeneration feature.
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+
+    language = lg;
+    
+    col_label = ' col-md-4';
+    col_input1 = 'col-md-4';
+    col_input = 'col-md-8';
+    col_input0 = 'col-md-2';
+    
+    template_phone = "555-555-5555";
+    template_email = "email@site.com";
+    
+    
+    
+}}
+
+    <script src="https://cdn.ckeditor.com/4.6.2/full-all/ckeditor.js"></script>
+    <script type="text/javascript" src="/js/datepicker/jquery-ui-i18n.min.js"></script>
+    <script src="/js/ajax_resample/js/jquery.Jcrop.min.js"></script>
+    <!--<script type="text/javascript" src="/js/rotate.js"></script>-->
+    <script type="text/javascript" src="/js/dates/date.js"></script>
+
+    <link rel="stylesheet" href="/js/ajax_resample/css/jquery.Jcrop.css" type="text/css" />
+    
+<style>
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    
+/*.sn .sn_tooltip {*/
+ .sn_tooltip {
+    display: none;
+    min-width: 200px;
+}
+.checkbox1{
+    width:  34px;
+    height: 20px;
+}
+
+.logo_pane {
+    margin: auto;
+    width: 70%;
+    max-width: 200;
+    text-align: center;
+}
+
+.logo_pane img{
+    text-align: center;
+    
+}
+
+
+#canvas_logo{
+    text-align: center;
+    background: rgba(0,0,0,0);
+}
+
+.logo_tab td{
+    width:100%;
+}
+
+
+.btn-xl {
+    padding: 10px 20px;
+    font-size: 20px;
+    border-radius: 10px;
+    width:80%;    //Specify your width here
+}
+
+
+.actions {
+    position: absolute;
+    background-color: #FFFFFF;
+    opacity: 0.7;
+    padding-top: 5px;
+    /* This works in IE 8 & 9 too */
+	/* ... but also 5, 6, 7 */
+    filter: alpha(opacity=70);
+    /* Older than Firefox 0.9 */
+    -moz-opacity:0.7;
+    width: 550px;
+    top: 120px;
+    left: 50%;
+    z-index: 3;
+    text-align: center;
+      -webkit-transform: translate3d(-50%,-50%,0);
+         -moz-transform: translate3d(-50%,-50%,0);
+          -ms-transform: translate3d(-50%,-50%,0);
+           -o-transform: translate3d(-50%,-50%,0);
+              transform: translate3d(-50%,-50%,0);
+              
+    -webkit-box-shadow: 4px 4px 12px 0px rgba(0,0,0,0.75);
+    -moz-box-shadow: 4px 4px 12px 0px rgba(0,0,0,0.75);
+    box-shadow: 4px 4px 12px 0px rgba(0,0,0,0.75);                        
+}
+
+.actions h1 {
+    font-size: 2em;    
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0;
+    padding: 0;
+}
+
+
+.actions span {
+    font-size: 14px;
+    margin: 0;
+    padding: 0;
+}
+
+.cycle {
+    background-image: url('/sn_uploads/banners/banner_1.jpg');
+    background-size: 100% auto;
+    background-position: 20% 20%;
+    height: 210px;
+    width: 100%;
+}
+
+iframe:focus { 
+    outline: none;
+    width:100%;
+}
+
+texarea {
+    width: 200px;
+}
+
+.comp_title{
+    width:auto;
+    display:inline;
+}
+
+.comp_checkbox{
+    width:auto;
+    display:inline;
+}
+
+.comp_label{
+    width:auto;
+    display:inline;
+}
+
+.btn-warning {
+    color:#000000;
+}
+
+.panel-footer {
+    text-align: center;
+}
+
+.modal
+    {
+    position: fixed;
+    z-index: 999;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    background-color: Black;
+    filter: alpha(opacity=60);
+    opacity: 0.6;
+    -moz-opacity: 0.8;
+}
+
+.notifications {
+    position:relative;
+    width: 400px;
+    height: auto;
+    display:none;
+}
+
+.bulle {
+    position: absolute;
+    width: 200px;
+    height: 20px;
+    background-color: #5a5757;
+    color:#fff;
+    margin-left:7px;
+    font-size: 14px;
+    padding-left: 10px;
+    font-weight: bold;
+    text-align: center;
+    filter: alpha(opacity=80);
+    opacity: 0.8;
+    -moz-opacity: 0.8;
+    z-index: 2;
+}
+
+.bulle2 {
+    position: absolute;
+    width:100%;
+    max-width:95.5%;
+    height: 28px;
+    background-color: #5a5757;
+    color:#fff;
+    font-size: 18px;
+    padding-left: 10px;
+    font-weight: bold;
+    text-align: center;
+    margin:0;
+    filter: alpha(opacity=80);
+    opacity: 0.8;
+    -moz-opacity: 0.8;
+    z-index: 2;
+}
+
+
+.center
+{
+    z-index: 1000;
+    margin: 300px auto;
+    padding: 10px;
+    width: 130px;
+    border-radius: 10px;
+    filter: alpha(opacity=100);
+    opacity: 1;
+    -moz-opacity: 1;
+}
+
+#logo_input {
+	position: relative;
+	text-align: right;
+	-moz-opacity:0 ;
+	filter:alpha(opacity: 0);
+	opacity: 0;
+	z-index: 2;
+}
+
+.center img
+{
+    height: 128px;
+    width: 128px;
+}
+
+    #area div p { display: block; width: 300px; }
+    #area div p span { display: block; padding: 2px 0; width: 0; background: #193; text-align: center; }
+    #area b, #area img { display: block; }
+    #area img { margin: 10px 0; width: 300px; }
+    #area input { visibility: hidden; height: 0; }
+    #area u { display: block; padding: 15px; text-align: center; background: #ddd; border-radius: 6px; }
+
+
+#from_hour{
+    width:100px;
+}
+
+#to_hour{
+    width:100px;
+}
+
+.lic_table {
+    font-size:10px;
+}
+
+
+.title
+</style>
+
+
+\{{
+
+    use extranet_user;
+    cgidata = cgidata(disable_upload:false);
+    
+    // load profile generator class to re-generate profile on edit
+    %include '/class/profile_generator.sn';
+    
+    //instanciate profil generator class
+    profil = new Profilgen();
+    
+    //Hide or Show contractor profile according to contractor value
+    if(cgidata.data_sent) then
+    
+        if(cgidata.show_profil) then
+            profile = sql("UPDATE sr_contractor SET show_profile = 'yes' WHERE uid = ?", extranet_user.uid);            
+            headers_out("X-success", "1");
+            
+            //Empty seo field to be able to regenerate the profile
+            update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+            profil.generate(extranet_user.uid);
+        else
+            profile = sql("UPDATE sr_contractor SET show_profile = 'no' WHERE uid = ?", extranet_user.uid);            
+            headers_out("X-success", "1");
+            
+            //Empty seo field to be able to regenerate the profile
+            update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+            profil.generate(extranet_user.uid);
+        endif
+    endif;
+
+
+
+    //if remove license action, remove the contractor license
+    if(cgidata.licnum) then
+        //delete a license already added
+        del_licence = sql('DELETE FROM sr_additional_license WHERE lic_number = "?" AND uid_contractor = ?', cgidata.licnum, extranet_user.uid);
+        
+        //Empty seo field to be able to regenerate the profile
+        update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", extranet_user.uid);
+        profil.generate(extranet_user.uid);
+    endif
+    
+    
+    //select new licenses information here
+    customLicenses = sql("SELECT * FROM sr_additional_license WHERE uid_contractor='?'", extranet_user.uid);
+    licenses = customLicenses.rows;
+
+    contractor = sql(single:true,"SELECT * FROM sr_contractor WHERE uid='?'", extranet_user.uid);
+    address = sql(single:true, "SELECT * FROM sr_address WHERE uid_contractor='?' ORDER BY uid ASC", extranet_user.uid);
+    logo = sql(single:true, "SELECT * FROM sr_contractor_profil WHERE uid_contractor='?'", extranet_user.uid);
+    lic_iterator = 0;
+    current_logo = logo.rows;
+    
+
+    //generate a unique filename each time.
+    f = random(min:1000,max:9000000,init:false,seed:1);
+    fname = "logo_" .+ extranet_user.uid .+ "_" .+ f .+  ".jpg";
+    
+    //Generate link to profile
+    seo = lc(esc(nodouble:true,filter:"filenameinutf8", contractor.rows.company_name)) .+ extranet_user.uid;
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+    profil_link = configs.rows.url_prod .+ '/expert/' .+ seo;
+
+
+
+    //translate License action link manually depending on the language
+    if(language eq 'en') then
+        action_remove = 'Remove';
+        ins = 'Insurance';
+        none_tag = 'none';
+    else
+        ins = 'Assurance';
+        action_remove = 'Effacer';
+        none_tag = 'aucun';
+    endif
+    
+    
+    //Display default license
+    // lics_default .+= '<tr><th><h6><strong>';
+    // lics_default .+= ':</h6></strong></th><td colspan="2" align="left"><h6>&nbsp';
+    // lics_default .+=  (contractor.rows.rbq == 0) ? 'N/A': contractor.rows.rbq;
+    // lics_default .+= '</h6></td></tr>';
+            
+
+    
+    //Display license information
+    if(customLicenses.nbrows > 0) then
+            
+        for lic in licenses do 
+            licname[lic_iterator]  = lic.lic_name;
+            licnumber[lic_iterator] = lic.lic_number;
+                                    
+            lics .+= '<tr><th><h6><strong>';
+            lics .+= licname[lic_iterator];
+            lics .+= ':</h6></strong></th><td align="left"><h6>';
+            lics .+= licnumber[lic_iterator];
+            lics .+= '</h6></td><td align="right"><h6>';
+            lics .+= '<a href=?licnum=' .+ licnumber[lic_iterator] .+ '><image width="30px" src="/sn_uploads/icon/remove-icon.png" /></a>';
+            lics .+= '</h6></td></tr>';
+            lic_iterator = lic_iterator + 1;
+        endfor
+    endif
+    
+    
+}}
+
+
+<div id="ajax_success" class="alert alert-success" style="display:none">
+    {{sn_ct("contractor_profile Super! Nous avons enregistré les modifications", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+</div>
+<div id="ajax_error" class="alert alert-danger" style="display:none">
+    {{sn_ct("contractor_profile Une erreur est survenu!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+</div>
+<input type='hidden' id='message' value= ''/>
+
+
+<script>
+    $(".close").on("click", function(){
+        $(this).parents(".alert").hide(); 
+    });
+</script>
+<button name='stopLoader' id='stopLoader' style="display: none;"></button>
+
+<div class="actions" style="max-width:100%;">
+    <fieldset class="form-group">
+        <!--<button id='loadBanner'  type='button' name='loadBanner' class="btn btn-warning"> {{sn_ct("contractor_profile Charger image", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button>-->
+        <!--&nbsp;&nbsp;-->
+        <!--<button id='cropBanner'  type='button' name='cropBanner' class="btn btn-primary">{{sn_ct("contractor_profile Recadrer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button> -->
+        <!--<button id='applybanner'  type='button' name='applybanner' class="btn btn-primary">{{sn_ct("contractor_profile Appliquer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</button>-->
+        <table style="width:100%">
+            <tr>
+                <td><a title="{{sn_ct(edit:false,'Charger une image')}}" id='loadBanner' href="javascript:void(0)"><i class="fa fa-picture-o fa-3x" aria-hidden="true"></i></a></td>
+                <td><a title="{{sn_ct(edit:false,"Couper l'image")}}" id='cropBanner' href="javascript:void(0)"><i class="fa fa-crop fa-3x" aria-hidden="true"></i></a></td>
+                <td><a title="{{sn_ct(edit:false,"Appliquer les changements")}}" id='applybanner' href="javascript:void(0)"><i class="fa fa-floppy-o fa-3x" aria-hidden="true"></i></a></td>
+                <td><a title="{{sn_ct(edit:false,"Enlever la banderole")}}" id='rmBanner'  href="javascript:void(0)"><i class="fa fa-trash-o fa-3x" aria-hidden="true"></i></a></td>
+            </tr>
+        </table>
+    </fieldset>
+    <hgroup>
+        <span>{{sn_ct("<strong>Note:</strong> Charger et ajuster votre banderole suivant la largeur de son contenant, couper et appliquer les changements. La taille idéal est 1125 x 250 pixels. ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+    </hgroup>
+</div>
+<iframe class='banner_iframe' frameBorder="0" width = '98%' height ='255px' src="{{ sn_pages('widget_iframe_banner', lg.rows.lg, table:'ressources')}}" >
+    
+</iframe>
+
+<div class="container">
+    <div class="col-md-4">
+        <h2 align='center'>
+            {{sn_ct("contractor_profile information sur votre profil", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </h2>
+    </div>   
+    
+    <div class="col-md-8">
+        <h2 align='center'>
+            {{sn_ct("contractor_profile informations sur votre enrtreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </h2>
+    </div>   
+</div>
+<div class="row">
+    <!--Additional form held profile information -->
+    <div class="col-md-4">
+        <div class="well custom-well">
+            
+            <form class="form-horizontal" enctype=multipart/form-data action="{{ sn_pages('ajax_additional_profile_info', lg.rows.lg, table:'ressources')}}" id="allow_profile_form" name="allow_profile_form" method="POST">
+                <fieldset class="form-group">
+                    <div class="{{col_input;}}">
+                        <input type='checkbox' name='show_profil' id='show_profil'  value="yes" \{{(contractor.rows.show_profile eq 'yes')?' checked ':' '}} /> {{sn_ct(edit:true, "publier mon profil", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}     
+                    </div>
+                    <input type='hidden' name='data_sent' value='submit'/>
+                    <a target="_blank" href="\{{profil_link;}}" class="btn btn-primary">{{sn_ct(edit:true,"Apercu", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+                </fieldset>
+            </form>
+
+            <form class="form-horizontal" enctype=multipart/form-data  action="{{ sn_pages('ajax_additional_profile_info', lg.rows.lg, table:'ressources')}}" id="edit_profile_form" name="edit_profile_form" method="POST">
+                <hr/>
+                <h4 align="center">{{sn_ct(edit:true,"contractor_profile Logo de votre company", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h4>
+                <table  id="logo_tab" name="logo_tab" align='center' class='table' style="max-width:100%;">
+                    <tr>
+                        <td align='center'>
+                            <input name="fname" id='fname' type="hidden" value="\{{fname;}}" />
+                            <input name="logo_input" id='logo_input' type="file"/>
+                            <!--<fieldset class="form-group">-->
+                            <!--    <button id='loadLogo'  type='button' name='loadLogo' class="btn btn-warning"> -->
+                            <!--        <span>{{sn_ct("contractor_profile Charger image", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>-->
+                            <!--    </button> -->
+                            <!--</fieldset>-->
+
+                            <div id='logo_pane' class='logo_pane' name='logo_pane'>
+                             \{{if(current_logo.company_logo ne "") then}}
+                                <img width = '200' src="\{{current_logo.company_logo}}" id="blah" name="blah" alt="your image" />
+                             \{{else}}
+                                <img width = '200' src="/sn_uploads/icon/default_logo.png" id="blah" name="blah" alt="your image" />
+                             \{{endif}}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align='center'>
+                            <fieldset class="form-group">
+                                <table style="width:200px" class="text-center">
+                                    <tr>
+                                        <td><a title="{{sn_ct(edit:false,'Charger une image')}}" id="loadLogo" href="javascript:void(0)"><i class="fa fa-picture-o fa-2x" aria-hidden="true"></i></a></td>
+                                        <td><a title="{{sn_ct(edit:false,"Couper l'image")}}" id="croplogobutton" href="javascript:void(0)"><i class="fa fa-crop fa-2x" aria-hidden="true"></i></a></td>
+                                        <td><a title="{{sn_ct(edit:false,"Appliquer les changements")}}" id = "applylogo" href="javascript:void(0)"><i class="fa fa-floppy-o fa-2x" aria-hidden="true"></i></a></td>
+                                        <td><a title="{{sn_ct(edit:false,"Enlever la banderole")}}" id="rmLogo"  href="javascript:void(0)"><i class="fa fa-trash-o fa-2x" aria-hidden="true"></i></a></td>
+                                    </tr>
+                                </table>
+                                
+                                <button id='rmlogoButton'  type='submit' name='rmlogoButton' value="remove" class="btn btn-primary" style="display:none">
+                                        {{sn_ct("contractor_profile Enlever", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                                <button id='uploadlogo'  type='submit' name='uploadlogo' class="btn btn-primary" style="display:none">
+                                        {{sn_ct("contractor_profile Appliquer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </button>
+                            </fieldset>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                        <small>{{sn_ct(edit:true,"contractor_profile Note: vous pouvez couper un logo a votre suivant vos preferences pendant le chargement", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</small>
+                        </td>
+                    </tr>
+                </table>
+                <input type="hidden" name="toberemoved" value=""/>
+           </form>
+           
+            <form class="form-horizontal"  action="{{ sn_pages('ajax_edit_additional_profile', lg.rows.lg, table:'ressources')}}" id="add_license_form" name="add_license_form" method="POST">
+                
+                <hr/>
+                
+                <h4>
+                    {{sn_ct("contractor_profile Additional license or permit", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h4>
+                
+                
+                <!-- Dynamic form for additional license and permit information -->
+                <div class="panel panel-default">
+                  <div class="panel-body">
+                  
+                <div id="education_fields">
+                          
+                </div>
+                
+                <div class="col-sm-5 nopadding">
+                  <div class="form-group">
+                    <input type="text" class="form-control" id="licname" name="licname[]" value="" placeholder="{{sn_ct(edit:false,"contractor_profile Lic. Name", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+                  </div>
+                </div>
+                
+                <div class="col-sm-5 nopadding">
+                  <div class="form-group">
+                    <input type="text" class="form-control" id="licnumber" name="licnumber[]" value="" placeholder="{{sn_ct(edit:false,"contractor_profile Lic. Number", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}">
+                  </div>
+                </div>
+                
+                <div class="col-sm-2 nopadding">
+                  <div class="form-group">
+                    <div class="input-group">
+                      <div class="input-group-btn">
+                        <button class="btn btn-success" type='submit' id='licbtn' name='licbtn'><span class="glyphicon glyphicon-plus" aria-hidden="true"></span> </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="clear"></div>
+                  
+                  </div>
+                    <div class="panel-footer">
+                        <small id='lic_section'>
+                            <table class ='lic_table'>
+                                \{{lics_default}}
+                                \{{lics}}
+                            </table>
+                          \{{if (customLicenses.nbrows == 0) then}}
+                              {{sn_ct(edit:true,"contractor_profile press + to add new license or permit and - to remove", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                          \{{endif}}
+                      
+                      </small>
+                    </div>
+                
+                </div>
+                <hr/>
+                <input type="hidden" name="MAX_FILE_SIZE" value="4194304" />
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="well custom-well">
+            <form class="form-horizontal" action="{{ sn_pages('ajax_edit_contractor_profile', lg.rows.lg, table:'ressources')}}" id="edit_contractor_profile" name="edit_contractor_profile" method="POST">
+                
+                <h3>
+                    {{sn_ct("contractor_profile Personne contact dans l'enrtreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h3>
+                <fieldset class="form-group">
+                    <label for="contact_firstname" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Prénom", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_firstname" id="contact_firstname" value="\{{contractor.rows.contact_firstname}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_firstname"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_lastname" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Nom", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_lastname" id="contact_lastname" value="\{{contractor.rows.contact_lastname}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_lastname"></span>
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_phone" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input1}}">
+                        <input class="form-control" type="text" name="contact_phone" id="contact_phone" value="\{{contractor.rows.contact_phone}}"  placeholder="{{template_phone}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_phone"></span>    
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_email" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_email" id="contact_email" value="\{{contractor.rows.contact_email}}" placeholder="{{template_email}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="contact_email"></span>    
+                    </div>
+                
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="contact_title" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Position dans l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="contact_title" id="contact_title" value="\{{contractor.rows.contact_title}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="contact_title"></span>    
+                    </div>
+                </fieldset>
+            
+                    <h3
+                        {{sn_ct("contractor_profile Information sur l'entreprise", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                    </h3>
+                    
+
+                <fieldset class="form-group">
+                    <label for="description" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Company description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}" style="width:100%;padding-left:48px">
+                        <textarea class="ckeditor" maxlength="2000" id="ckdesc" name="ckdesc">\{{contractor.rows.company_desc}}</textarea>
+                        <textarea style="display:none" name='description' id='description'></textarea>
+                    </div>
+
+                </fieldset>
+               
+               
+                <fieldset class="form-group">
+                    <label for="street_no" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Numéro de rue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input0}}">
+                        <input class="form-control" type="text" name="street_no" id="street_no" value="\{{address.rows.street_no}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="street_no"></span>                    
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="street" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Rue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" name="street" id="street" value="\{{address.rows.street}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="street"></span>    
+                    </div>
+
+                </fieldset>
+                
+                
+                <fieldset class="form-group">
+                    <label for="city" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <select name="city" style="max-width:100%";>
+                            <option value="">{{sn_ct("contractor_profile Choisir une ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            \{{for i sql("SELECT uid,name_{{lg.rows.lg}} as name FROM sr_city WHERE active='yes' ORDER BY name_{{lg.rows.lg}}  ASC") do}}
+                                <option \{{if address.rows.uid_city eq i.rows.uid then}}selected\{{endif}} value="\{{i.rows.uid}}">\{{i.rows.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="city"></span>    
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="province" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Province", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                    <!--    <input class="form-control" type="text" name="province" id="province" value="\{{address.rows.province}}">-->
+                        <select name="province">
+                            <option value="">{{sn_ct("contractor_profile Choisir une province", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            \{{for i sql("SELECT uid,name_{{lg.rows.lg}} as name, code_prov FROM sr_province ORDER BY name_{{lg.rows.lg}}  ASC") do}}
+                                <option \{{if address.rows.province eq i.rows.code_prov then}}selected\{{endif}} value="\{{i.rows.code_prov}}">\{{i.rows.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Champs obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="province"></span>                    
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="zip" class="control-label {{col_label;}}">
+                        {{sn_ct("contractor_profile Code postale", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="col-md-3">
+                        <input class="form-control" type="text" name="zip" id="zip" value="\{{address.rows.zip}}" placeholder="A1A 1A1">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="zip"></span>                    
+                    </div>
+
+                </fieldset>
+    
+                <fieldset class="form-group">
+                    <label for="company_phone" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Téléphone", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input1}}">
+                        <input class="form-control" type="text" name="company_phone" id="company_phone" value="\{{contractor.rows.company_phone}}" placeholder="{{template_phone}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="company_phone"></span>                    
+                    </div>
+
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="website" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Site internet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="website" id="website" value="\{{contractor.rows.website}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="website"></span>                    
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="fbsite" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Facebook", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="fbsite" id="fbsite" value="\{{contractor.rows.fbsite}}">
+                        <!--<span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="fbsite"></span>                    -->
+                    </div>
+                </fieldset>
+                <fieldset class="form-group">
+                    <label for="instagramsite" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Instagram", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="instagramsite" id="instagramsite" value="\{{contractor.rows.igsite}}">
+                        <!--<span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="instagramsite"></span>                    -->
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="insurance_company" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Assureur", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="insurance_company" id="insurance_company" value="\{{contractor.rows.insurance_company}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile Compagnie assurance obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" data-validator-error="insurance_company"></span>                    
+                    </div>
+
+                </fieldset>
+                
+                
+                <fieldset class="form-group">
+                    <label for="insurance_number" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Numéro de police d'assurance", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="insurance_number" id="insurance_number" value="\{{contractor.rows.insurance_number}}">
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,"contractor_profile No assurance obligatoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}"  data-validator-error="insurance_number"></span>                  
+                    </div>
+                </fieldset>
+                
+                <h3>
+                    {{sn_ct("contractor_profile Courriel relié au compte", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h3>
+                            
+                <fieldset class="form-group">
+                    <label for="email_accounting" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel pour la facturation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="email_accounting" id="email_accounting" value="\{{contractor.rows.email_accounting}}"  placeholder="{{template_email}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="email_accounting"></span>                    
+                    </div>
+
+                </fieldset>
+                            
+                <fieldset class="form-group">
+                    <label for="email" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel pour recevoir les informations de clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                         <input class="form-control" type="text" name="email" id="email" value="\{{contractor.rows.email}}"   placeholder="{{template_email}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="email"></span>
+                    </div>
+                </fieldset>
+                            
+                <fieldset class="form-group">
+                    <label for="email_cc" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor_profile Courriel additionnel pour recevoir les informations de clients", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="{{col_input}}">
+                        <input class="form-control" type="text" name="email_cc" id="email_cc" value="\{{contractor.rows.email_cc}}">
+                        <span class="help-block" data-validator-msg="Invalid %field%" data-validator-error="email_cc"></span>
+                    </div>
+                </fieldset>
+                
+                <hr>
+                
+                <h3>{{sn_ct("contractor_profile Modifier vos filtres")}}</h3>
+                <!--<h4>-->
+                <!--    {{sn_ct("contractor_profile Délai de réception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    -->
+                <!--</h4>-->
+                <!--<fieldset class="">-->
+                <!--    <label for="activate_by_client" class="control-label{{col_label;}}">-->
+                <!--        {{sn_ct("contractor_profile activer délai de reception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} -->
+                <!--    </label>-->
+        	       <!-- <span class="tooltip_wrapper top"></span>-->
+        		      <!--  <a href="javascript:void(0);" onclick="sn_tooltip_show(this);" class="badge"  ><i class="fa fa-question" ></i></a>-->
+        	      	<!--    <div class="sn sn_tooltip" title="{{sn_ct(edit:false,"contractor_profile c'est quoi?")}}">-->
+        		      <!--      <div class="sn_tooltip2"> -->
+        		      <!--          <p>{{sn_ct("contractor__profile Délai pour recevoir des projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>-->
+                <!--            </div>-->
+                <!--        </div>-->
+                <!--        <input class="checkbox1" type="checkbox" name="enable_filter_delay" id="enable_filter_delay" value="yes" \{{(contractor.rows.enable_delay_filter eq 'yes')?' checked ':' '}}  >-->
+                <!--        <script> console.log($("#enable_filter_delay").val());</script>-->
+                <!--    </span>-->
+                
+                <!--</fieldset>-->
+                
+                <!--<label for="from" class="control-label{{col_label;}}">-->
+                <!--  {{sn_ct("contractor__profile Début réception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--</label>-->
+                    
+                <!--<div class="form-group  reception-delay-group "   >-->
+                <!--    <fieldset class="">  -->
+                <!--        <div class="col-md-6    "   >-->
+                <!--            <label for="start_reception_date">-->
+                <!--                    {{sn_ct("contractor_profile Début réception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--            </label>-->
+                <!--            <input class="form-control datepicker_date reception-delay-group" type="text"  name="start_reception_date" id="start_reception_date" value="\{{contractor.rows.delay_from}}" disabled>      -->
+                <!--            <span class="help-block" id="start_reception_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="start_reception_date"></span>                  -->
+                <!--        </div>-->
+                    
+                <!--        <div class="col-md-6"   >-->
+                <!--            <label for="end_reception_date">-->
+                <!--                {{sn_ct("contractor_profile Fin réception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--            </label>-->
+                <!--            <input class="form-control datepicker_date reception-delay-group" type="text" name="end_reception_date" id="end_reception_date" value="\{{contractor.rows.delay_to}}" disabled>   -->
+                <!--            <span class="help-block" id="end_reception_date_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="end_reception_date"></span>                  -->
+                <!--        </div>-->
+                        
+                <!--        <div class="col-md-12">-->
+                <!--            <label for="or">-->
+                <!--                {{sn_ct("contractor_profile OU", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--            </label>-->
+                <!--        </div>-->
+                        
+                <!--        <div class="col-md-6"   >-->
+                <!--            <label for="reception_days">-->
+                <!--                {{sn_ct("contractor_profile Nombre de jours", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--            </label>-->
+                <!--            <input class="form-control reception-delay-group" disabled type="text" name="reception_days" id="reception_days" value="\{{contractor.rows.delay_dynamic}}">   -->
+                <!--            <span class="help-block" id="days_validator" data-validator-msg="{{sn_ct(edit:false,'contractor_profile  invalide')}}" data-validator-error="reception_days"></span>                  -->
+                <!--        </div>-->
+                        
+                <!--    </fieldset>-->
+                <!--</div>-->
+                
+                
+                <h4>
+                    {{sn_ct("Daily schedule:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h4>
+                
+                <fieldset class="">
+                    <label for="activate_by_client" class="control-label{{col_label;}}">
+                        {{sn_ct("Enable reception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                    </label>
+        	        <span class="tooltip_wrapper top"></span>
+        		        <a href="javascript:void(0);" onclick="sn_tooltip_show(this);" class="badge"  ><i class="fa fa-question" ></i></a>
+        	      	    <div class="sn sn_tooltip" title="{{sn_ct(edit:false,"contractor__activer lhoraire")}}">
+        		            <div class="sn_tooltip2"> 
+        		                <p>{{sn_ct("contractor_profile Activer l horaire de reception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                            </div>
+                        </div>
+                        <input class="checkbox1" type="checkbox" name="enable_reception" id="enable_reception" value="yes" \{{(contractor.rows.enable_daily_schedule eq 'yes')?' checked ':' '}}  >
+                   <script> console.log($("#enable_reception").val()); </script>
+                    </span>
+                    
+                </fieldset>
+          
+                   <label for="from" class="control-label{{col_label;}}">
+                      {{sn_ct("Send me project:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                <div class="form-group reception-group"   >
+                    <fieldset class="">  
+                        <div class="col-md-6">
+                            <label for="from_active_hour"  class="control-label {{col_label;}}">
+                                    {{sn_ct("contractor_desactivate_date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <select class="form-control reception-group"  name="from_active_hour" id="from_active_hour">
+                                <option \{{(contractor.rows.from_active_hour eq '00:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:00</option>
+        						<option \{{(contractor.rows.from_active_hour eq '00:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '01:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '01:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '02:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '02:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '03:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '03:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '04:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '04:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '05:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '05:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '06:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '06:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '07:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '07:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '08:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '08:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '09:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '09:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '10:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '10:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '11:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '11:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '12:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '12:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '13:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '13:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '14:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '14:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '15:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '15:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '16:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '16:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '17:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '17:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '18:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '18:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '19:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '19:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '20:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '20:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '21:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '21:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '22:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '22:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:30</option>
+                                <option \{{(contractor.rows.from_active_hour eq '23:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:00</option>
+                                <option \{{(contractor.rows.from_active_hour eq '23:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:30</option>
+                            </select>
+                            <span class="help-block" id="from_active_hour_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="from_active_hour"></span>                  
+                        </div>
+                            
+                        <div class="col-md-6"   >
+                            <label for="to_activate_hour"  class="control-label{{col_label;}} vacation-group">
+                                {{sn_ct("contractor_reactivate_date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <select class="form-control reception-group"  name="to_active_hour" id="to_active_hour">
+                                <option \{{(contractor.rows.to_active_hour eq '00:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:00</option>
+        						<option \{{(contractor.rows.to_active_hour eq '00:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '01:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '01:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '02:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '02:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '03:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '03:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '04:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '04:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '05:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '05:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '06:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '06:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '07:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '07:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '08:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '08:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '09:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '09:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '10:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '10:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '11:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '11:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '12:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '12:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '13:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '13:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '14:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '14:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '15:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '15:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '16:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '16:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '17:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '17:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '18:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '18:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '19:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '19:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '20:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '20:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '21:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '21:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '22:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '22:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:30</option>
+                                <option \{{(contractor.rows.to_active_hour eq '23:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:00</option>
+                                <option \{{(contractor.rows.to_active_hour eq '23:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:30</option>
+                            </select>
+                            <span class="help-block" id="to_active_hour_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="to_ctive_hour"></span>                  
+                        </div>
+                    </fieldset>
+                </div>
+                
+                <h4>{{sn_ct("Langue des projets")}}</h4>
+                <fieldset class="form-group">
+                    <label for="comm" class="control-label col-md-4">
+                        {{sn_ct("contractor_profile Langages de communication", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+                    </label>
+                    <div class="col-md-8">
+                        <select class="form-control" name="comm" id="comm" value="">
+                            <option selected value=''>{{sn_ct(edit:true,'contractor_profile Choisissez une option')}}</option>
+                            <option \{{(contractor.rows.languages == 1)?'selected':''}} value='1'>{{sn_ct(edit:true,'contractor_profile french',publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            <option \{{(contractor.rows.languages == 2)?'selected':''}} value='2'>{{sn_ct(edit:true,'contractor_profile english',publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                            <option \{{(contractor.rows.languages == 3)?'selected':''}} value='3'>{{sn_ct(edit:true,'contractor_profile both',publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                        </select>
+                    </div>
+                </fieldset>
+                
+                
+                <!--<h4>-->
+                <!--    {{sn_ct("Project with Bugdet:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    -->
+                <!--</h4>-->
+                
+                <!--   <label for="from" class="control-label{{col_label;}}">-->
+                <!--      {{sn_ct("Only project with a budget:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                <!--    </label>-->
+                    
+                <!--<div class="form-group"   >-->
+                <!--    <fieldset class="">  -->
+                <!--        <input class="checkbox1" type="checkbox" name="enable_budget" id="enable_budget" value="yes" \{{(contractor.rows.allow_budget eq 'yes')?' checked ':' '}}  >-->
+                <!--    </fieldset>-->
+                <!--</div>                -->
+
+                <h4>
+                    {{sn_ct("contractor_profile Vacation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                </h4>
+ 
+                <fieldset class="">
+                    <label for="activate_by_client" class="control-label{{col_label;}}">
+                        {{sn_ct("contractor__activate_by_client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                    </label>
+        	        <span class="tooltip_wrapper top"></span>
+        		        <a href="javascript:void(0);" onclick="sn_tooltip_show(this);" class="badge"  ><i class="fa fa-question" ></i></a>
+        	      	    <div class="sn sn_tooltip" title="{{sn_ct(edit:false,"contractor__activer les vacances")}}">
+        		            <div class="sn_tooltip2"> 
+        		                <p>{{sn_ct("contractor__Activer la période de vacance", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</p>
+                            </div>
+                        </div>
+                        <input class="checkbox1" type="checkbox" name="enable_vacation" id="enable_vacation" value="yes" \{{(contractor.rows.enable_vacation eq 'yes')?' checked ':' '}}  >
+                   <script> console.log($("#enable_vacation").val());    </script>
+                    </span>
+                
+                </fieldset>
+          
+                    <label for="from" class="control-label{{col_label;}}">
+                      {{sn_ct("contractor__vacance_dates", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    
+                <div class="form-group  vacation-group "   >
+                    <fieldset class="">  
+                        <div class="col-md-4    "   >
+                            <label for="desactivate_date"  class="control-label {{col_label;}}">
+                                    {{sn_ct("contractor_desactivate_date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <input class="form-control datepicker_date vacation-group" type="text" disabled  name="desactivate_date" id="desactivate_date" value="\{{contractor.rows.deactivate_date}}">      
+                            <span class="help-block" id="desactivate_date_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="desactivate_date"></span>                  
+                        </div>
+                    
+                        <div class="col-md-4"   >
+                                <label for="reactivate_date"  class="control-label{{col_label;}} vacation-group">
+                                    {{sn_ct("contractor_reactivate_date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                </label>
+                                <input class="form-control datepicker_date vacation-group" disabled type="text" name="reactivate_date" id="reactivate_date" value="\{{contractor.rows.reactivate_date}}">   
+                                <span class="help-block" id="reactivate_date_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="reactivate_date"></span>                  
+                        </div>
+                    </fieldset>
+                </div>
+
+                <fieldset class="form-group">
+                    <label for="desactivate_reason" class="control-label {{col_label;}}  vacation-group">
+                        {{sn_ct("contractor__desactivate_reason", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class=" {{col_input}}"  >
+                        <input class="form-control vacation-group" type="text" disabled name="desactivate_reason" id="desactivate_reason" value="\{{contractor.rows.deactivate_reason}}">
+                    </div>
+                </fieldset>
+                 <script>
+                 </script>
+
+                <div class="form-group">
+                    <div class="{{col_label;}}">
+                        
+                    </div>
+                    <div class="{{col_input;}}">
+                        <button type="submit" class="btn btn-primary" onclick = "$('#description').text(CKEDITOR.instances['ckdesc'].getData())">
+                            {{sn_ct(edit:false,"contractor_profile Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                        </button>
+                    </div>
+                </div>
+                <input type='hidden' name='lang' id='lang' value="{{lg.rows.lg}}"/>
+            </form>
+        </div>
+    </div>
+</div>
+ 
+ 
+    <div class="modal" style="display: none">
+        <div class="center">
+            <img alt="" src="/sn_uploads/icon/loading3.gif" />
+        </div>
+    </div>
+
+
+\{{ 
+    // include the validator for contractor_form
+      %include "/site/contractor_dashboard/include/profile_validator.sn";
+    // validate client side
+     validator.validateJS(form:'edit_contractor_profile');
+}}
+
+
+<script>
+ $( function() {	
+    $(".datepicker_date").datepicker( $.datepicker.regional[ "fr" ] );
+    $(".datepicker_date").datepicker("option", "dateFormat", "yy-mm-dd");
+    $("#desactivate_date").val("\{{(contractor.rows.deactivate_date eq '0000-00-00')?'':contractor.rows.deactivate_date }}");
+    $("#reactivate_date").val( "\{{(contractor.rows.reactivate_date eq '0000-00-00')?'':contractor.rows.reactivate_date }}");
+    $("#start_reception_date").val("\{{contractor.rows.delay_from}}");
+    $("#end_reception_date").val("\{{contractor.rows.delay_to}}");
+ 
+    $('#enable_vacation').on('change', function(){ 
+        if($(this).is(":checked") )
+        {
+            $(".vacation-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $("#desactivate_date").val("");
+            $("#reactivate_date").val("");
+            
+            $('#reactivate_date_validator').html("");
+            $('#desactivate_date_validator').html("");
+            
+            $(".vacation-group").attr('disabled', '');
+        }
+        
+    }).trigger('change');
+    
+    
+    $('#enable_reception').on('change', function(){ 
+        
+        if($(this).is(":checked") )
+        {
+            $(".reception-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $("#from_active_hour").val("");
+            $("#to_active_hour").val("");
+            
+            $('#from_active_hour_validator').html("");
+            $('#to_active_hour_validator').html("");
+            
+            $(".reception-group").attr('disabled', '');
+        }
+        
+    }).trigger('change');
+    
+    
+    $('#enable_filter_delay').on('change', function(){ 
+        
+        if($(this).is(":checked") )
+        {
+            $(".reception-delay-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $("#start_reception_date").val("");
+            $("#end_reception_date").val("");
+            
+            $('#start_reception_validator').html("");
+            $('#end_reception_validator').html("");
+            
+            $(".reception-delay-group").attr('disabled', '');
+        }
+        
+    }).trigger('change');
+    
+    
+    $('#reception_days').keydown(function (e) {
+        // Allow: backspace, delete, tab, escape, enter and .
+        if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110]) !== -1 ||
+             // Allow: Ctrl+A, Command+A
+            (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) || 
+             // Allow: home, end, left, right, down, up
+            (e.keyCode >= 35 && e.keyCode <= 40)) {
+                 // let it happen, don't do anything
+                 return;
+        }
+        
+        // Ensure that it is a number and stop the keypress
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
+        }
+        
+    });
+    
+    
+ }); 
+ 
+ 
+ 
+</script>
+
+
+<script>
+$(document).ready(function(){
+    
+    $("#logo_input").hide();
+    
+    $('#reception_days').keyup(function(){
+        $('#start_reception_date').val("");
+        $('#end_reception_date').val("");
+    });
+    
+    $('#start_reception_date').on('change',function(){
+        $('#reception_days').val("");
+    });
+    
+    $('#end_reception_date').on('change',function(){
+        $('#reception_days').val("");
+    });
+
+});
+
+</script>
+
+<script>
+
+    $("#show_profil").change(function(){
+        $("#allow_profile_form").submit();
+    })
+    
+    var form = $('form[name=allow_profile_form]').ajaxForm({
+        
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                $("#ajax_success").show();
+            }
+            else{
+                $("#ajax_error").show();
+            }
+            window.scrollTo(0,0);
+        }
+    });
+
+
+    var form = $('form[name=add_license_form]').ajaxForm({
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                $("#ajax_success").html("");
+                $("#ajax_success").append("License(s) ajoutées / license added! - Rechargement de la page / refreshing data...");
+                $("#ajax_success").show();
+                window.scrollTo(0,0);
+                setTimeout(function(){
+                    window.location.reload();
+                }, 2000);            
+                
+            }
+            
+        }
+    });
+
+
+    // Bind edit_contractor_profile form to ajaxform plugin to send the form via ajax
+    var form = $('form[name=edit_contractor_profile]').ajaxForm({
+        
+        beforeSend: function(){
+            var lg = $('#lang').val();
+            var fb = $('#fbsite').val();
+            var ig = $('#instagramsite').val();
+            
+            if(fb != ""){
+                if(fb.substring(0, 24) != 'https://www.facebook.com' && fb.substring(0, 20) != 'https://facebook.com' && fb.substring(0, 16) != 'www.facebook.com' && fb.substring(0, 12) != 'facebook.com'){
+                    
+                    if(lg == 'en'){
+                        alert(fb + " is not a valid facebook link - eg. 'https://www.facebook.com' or 'https://www.facebook.com/page'");
+                    }else{
+                        alert(fb + " n'est pas un lien facebook valide - ex. 'https://www.facebook.com' ou 'https://www.facebook.com/mapage'");
+                    }
+                    
+                    $('#fbsite').val('https://www.facebook.com/');
+                    return false;
+                }
+            }
+            
+            if(ig != ""){
+                if(ig.substring(0, 24) != 'https://www.linkedin.com' && ig.substring(0, 20) != 'https://linkedin.com' && ig.substring(0, 16) != 'www.linkedin.com' && ig.substring(0, 14) != 'linkedin.com'){
+                    
+                    if(lg == 'en'){
+                        alert(ig + " is not a valid Linkedin link - eg. 'https://www.linkedin.com' or 'https://www.linkedin.com/company'");
+                    }else{
+                        alert(ig + " n'est pas un lien Linkedin valide - ex. 'https://www.linkedin.com' ou 'https://www.linkedin.com/company'");
+                    }
+                    
+                    $('#instagramsite').val('https://www.linkedin.com/');
+                    return false;
+                }
+            }
+
+            if( $('#enable_vacation').is(':checked')){
+                
+                if($('#desactivate_date').val() == "" ){
+                    //alert('reactivate_date is required');
+                    if($('#lang').val('en')){
+                        $('#desactivate_date_validator').html("Required");
+                        return false;
+                    }else{
+                        $('#desactivate_date_validator').html("Obligatoire");
+                        return false;
+                    }
+                }
+                
+                if($('#reactivate_date').val() == "" ){
+                    //alert('reactivate_date is required');
+                    
+                    if($('#lang').val("en")){
+                        $('#reactivate_date_validator').html("Required");
+                        return false;
+                    }else{
+                        $('#reactivate_date_validator').html("Obligatoire");
+                        return false;
+                    }
+                }
+                
+            }
+            
+            
+            if( $('#enable_reception').is(':checked')){
+                if(!$('#from_active_hour').val()){
+                    //alert('from active hour is required');
+                    
+                    if($('#lang').val("en")){
+                        $('#from_active_hour_validator').html("Required");
+                        return false;
+                    }else{
+                        $('#from_active_hour_validator').html("Obligatoire");
+                        return false;
+                    }
+                }
+                
+                if(!$('#to_active_hour').val()){
+                    if($('#lang').val("en")){
+                        $('#to_active_hour_validator').html("Required");
+                        return false;
+                    }else{
+                        $('#to_active_hour_validator').html("Obligatoire");
+                        return false;
+                    }
+                }
+                
+            }
+
+        },
+        
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                $("#ajax_success").show();
+            }
+            else{
+                $("#ajax_error").show();
+            }
+            window.scrollTo(0,0);
+        }
+    });
+
+</script>
+
+
+<script>
+//Section to Edit uploaded banner
+
+var crop_max_width = 200;
+var crop_max_height = 200;
+var jcrop_api;
+var canvas;
+var context;
+var image;
+var prefsize;
+
+
+    $("#logo_input").change(function() {
+      loadImage(this);
+      $(this).val('');
+    });
+
+    $("#loadLogo").click(function(){
+       $("#logo_input").click(); 
+    });
+    
+    $("#applylogo").click(function(){
+       $("#uploadlogo").click(); 
+    });
+    
+    $("#rmLogo").click(function(){
+       $("input[name=toberemoved]").val('yes');
+       $("#rmlogoButton").click(); 
+    });
+    
+    $(".banner_iframe").mouseenter(function() {
+        $('.bulle2').css('display', '');
+    }).mouseleave(function(){
+        $('.bulle2').css('display', 'none');
+    });
+
+    function loadImage(input) {
+      if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        canvas = null;
+        reader.onload = function(e) {
+          image = new Image();
+          image.onload = validateImage;
+          image.src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function dataURLtoBlob(dataURL) {
+      var BASE64_MARKER = ';base64,';
+      if (dataURL.indexOf(BASE64_MARKER) == -1) {
+        var parts = dataURL.split(',');
+        var contentType = parts[0].split(':')[1];
+        var raw = decodeURIComponent(parts[1]);
+    
+        return new Blob([raw], {
+          type: contentType
+        });
+      }
+      var parts = dataURL.split(BASE64_MARKER);
+      var contentType = parts[0].split(':')[1];
+      var raw = window.atob(parts[1]);
+      var rawLength = raw.length;
+      var uInt8Array = new Uint8Array(rawLength);
+      for (var i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+      }
+    
+      return new Blob([uInt8Array], {
+        type: contentType
+      });
+    }
+
+
+    function validateImage() {
+      if (canvas != null) {
+        image = new Image();
+        image.onload = restartJcrop
+        image.src = canvas.toDataURL('image/jpg');
+      } else restartJcrop();
+    }
+
+
+    function restartJcrop() {
+      if (jcrop_api != null) {
+        jcrop_api.destroy();
+      }
+      $("#logo_pane").empty();
+      $("#logo_pane").append("<canvas id=\"canvas_logo\"></canvas>");
+      canvas = $("#canvas_logo")[0];
+      context = canvas.getContext("2d");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0);
+      $("#canvas_logo").Jcrop({
+        onSelect: selectcanvas,
+        onRelease: clearcanvas,
+        boxWidth: crop_max_width,
+        boxHeight: crop_max_height,
+        bgColor: ''
+      }, function() {
+        jcrop_api = this;
+      });
+      clearcanvas();
+    }
+
+
+    function clearcanvas() {
+      prefsize = {
+        x: 0,
+        y: 0,
+        w: canvas.width,
+        h: canvas.height,
+      };
+    }
+
+    function selectcanvas(coords) {
+      prefsize = {
+        x: Math.round(coords.x),
+        y: Math.round(coords.y),
+        w: Math.round(coords.w),
+        h: Math.round(coords.h)
+      };
+    }
+
+    function applyCrop() {
+      canvas.width = prefsize.w;
+      canvas.height = prefsize.h;
+      context.drawImage(image, prefsize.x, prefsize.y, prefsize.w, prefsize.h, 0, 0, canvas.width, canvas.height);
+      context.fillstyle = "rgb(0,0,0)";
+      validateImage();
+    }
+
+    $("#croplogobutton").click(function(e) {
+      applyCrop();
+    });
+
+    $("#cropbannerbutton").click(function(e) {
+      applyCropBnr();
+    });
+
+
+    $("#edit_profile_form").submit(function(e) {
+        
+        e.preventDefault();
+        formData = new FormData($(this)[0]);
+
+        if(canvas === undefined){
+            blob = null;
+        }else{
+            var blob = dataURLtoBlob(canvas.toDataURL('image/jpeg'));
+            //---Add file blob to the form data
+            formData.append("cropped_image", blob, $('#fname').val());
+        }
+    
+        $.ajax({
+            url: "{{sn_pages('ajax_edit_additional_profile', lg.rows.lg, table:'ressources')}}",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            cache: false,
+            processData: false,
+            
+            beforeSend: function(data){
+                console.log($('input[name=toberemoved]').val());
+                if($('input[name=toberemoved]').val() == "yes" && ($('#blah').attr('src') === undefined || $('#blah').attr('src').length == 0) || $('#blah').attr('src') == '/sn_uploads/icon/default_logo.png' ){
+                    $('input[name=toberemoved]').val("");
+                    return false;
+                }
+                
+                if($('input[name=toberemoved]').val() == "" && canvas === undefined){
+                    return false;
+                }
+                
+                $(".modal").show();
+            },
+            
+            success: function(data, statusText, xhr) {
+                $('input[name=toberemoved]').val("");
+                
+                if(xhr.getResponseHeader("X-remove") == 1){
+                    $('#logo_pane').html("");
+                    $('#logo_pane').html('<img width = "200" src="/sn_uploads/icon/default_logo.png" id="blah" name="blah" alt="your image" />');
+                }else{
+                    $('#logo_pane').html("");
+                    $('#logo_pane').html('<img width = "200" src="' + xhr.getResponseHeader("X-logo") + '" id="blah" name="blah" alt="your image" />');
+                }
+            },
+            error: function(data) {
+              alert("Error");
+            },
+            complete: function(data) {
+                $(".modal").hide();
+            }
+        });
+    });
+
+    
+    
+
+</script>

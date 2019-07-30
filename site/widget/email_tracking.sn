@@ -1,0 +1,26 @@
+<meta name="robots" content="noindex">
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+    use extranet_user;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    
+}}
+
+\{{       
+cgidata = cgidata();
+
+if (cgidata.token_client ne '') then
+    void sql("UPDATE sr_log_email_client SET nb_open = if(nb_open is null, 1, nb_open + 1), first_open = if(first_open is null, now(), first_open), last_open = now() WHERE token = '?'", cgidata.token_client);
+endif
+
+if (cgidata.token ne '') then 
+    void sql("UPDATE sr_log_email_contractor SET nb_open = if(nb_open is null, 1, nb_open + 1), first_open = if(first_open is null, now(), first_open), last_open = now() WHERE token = '?'", cgidata.token);
+endif
+}}

@@ -1,0 +1,24 @@
+
+{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_cc_validator.sn";
+    
+    cgidata = cgidata();
+    use extranet_user;
+
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+    cgidata;
+    
+    // cc = insert(
+    //     table:"sr_cc",
+    //     fields:{
+    //         "type":cgidata.type,
+    //         "name":cgidata.name,
+    //         "exp":cgidata.exp,
+    //         "card_number":cgidata.card_number,
+    //         "cvv":cgidata.cvv
+    //     }
+    // );
+    endif
+}}

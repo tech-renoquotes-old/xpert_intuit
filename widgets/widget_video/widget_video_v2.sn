@@ -1,0 +1,121 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+	use widget;
+	use lg;
+	video = sql(single:true, "select * from widget_video_v2 where uid_widget = '?'", widget.rows.uid_widget_list);
+}}
+
+
+<style type="text/css" media="screen">
+/* ==============================================================
+RESPONSIVE VIDEO WIDGET
+============================================================== */
+
+.wdg_video {
+    width: 100%;
+    height: auto;
+}
+.wdg_video .video-responsive-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    padding-top: 30px;
+    height: 0;
+    overflow: hidden;
+}
+.wdg_video .video-responsive-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+.wdg_video .wdg_transcript {
+    margin: 0 0 15px 0;
+    padding: 10px 15px 20px 15px;
+    font-style: italic;
+    border-bottom: 2px solid #c3c3c3;
+    background-color: #e7e7e7;
+    color: #000000;
+}
+.wdg_video .btn_transcript {
+    font-size: 0.8em;
+    text-align: right;
+    text-decoration: underline;
+    font-style: italic;
+}
+.wdg_video .btn_close_transcript {
+    font-size: 0.8em;
+    text-align: right;
+    text-decoration: underline;
+    font-style: italic;
+    margin-bottom: 10px;
+}
+</style>
+
+
+
+
+<div class="wdg_video">
+	<div class="video-responsive-container">
+	    {{ if video.rows.video_source eq "youtube" || video.rows.video_source eq "vimeo" then
+		     if video.rows.video_source eq "youtube" then
+			    embed_link = "//youtube.com/embed/" .+ video.rows{'video_'.+ lg.rows.lg} .+ "?rel=0";
+			 else
+			 	embed_link = "//player.vimeo.com/video/" .+ video.rows{'video_'.+ lg.rows.lg} .+ "?color=1f3340&title=0&byline=0&portrait=0";
+			 endif
+			 video_img_f = 'video_img_' .+ lg.rows.lg;
+			 if video.rows{video_img_f} ne "" then }}
+				<img src="{{ video.rows{'video_img_' .+ lg.rows.lg} }}" class="preview_vid" data="{{video.rows.uid}}" style="width:100%;cursor:pointer;" onclick="play_video_cas(this,'{{video.rows.uid}}');" />
+				<img src="/sn_uploads/bt_play.png" class="bt_play bt_play_{{video.rows.uid}}" onclick="play_video_cas(this,'{{video.rows.uid}}');" />
+				<input type="hidden" name="video_link_{{video.rows.uid}}" id="video_link_{{video.rows.uid}}" value="{{embed_link;}}" />
+			{{ embed_link = "";
+			   endif 
+	    	 if video.rows.video_source eq "youtube" then }}
+	        	<iframe{{ if video.rows{'video_img_' .+ lg.rows.lg} ne "" then }} style="display:none;"{{ endif }} id="video_cas_{{ video.rows.uid}}" src="{{ embed_link; }}" frameborder="0" allowfullscreen></iframe>
+	        {{else}}
+	        	<iframe{{ if video.rows{'video_img_' .+ lg.rows.lg} ne "" then }} style="display:none;"{{ endif }} id="video_cas_{{ video.rows.uid}}" src="{{ embed_link; }}" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+	        {{ endif }}
+		{{ endif }}
+	</div>
+    
+    {{ if video.rows{'text_'.+ lg.rows.lg} ne "" then }}
+		<div id="btn_transcript_{{video.rows.uid_widget;}}" class="btn_transcript" style="display:block;" onclick="callTranscript('{{video.rows.uid_widget;}}');">{{sn_ct(allpages:true, code:"Show Transcript", edit:true)}}</div>
+        	<div id="{{video.rows.uid_widget;}}_transcript" class="wdg_transcript open" style="display:none;">
+        	<div class="btn_close_transcript" onclick="callTranscript('{{video.rows.uid_widget;}}');">{{sn_ct(allpages:true, code:"Close transcript", edit:true)}}</div>
+          	<p>{{video.rows{'text_'.+ lg.rows.lg};}}</p>
+    	</div>
+    {{ endif }}
+    
+</div>
+
+<style>
+	.bt_play {position: absolute; left: 45%; top: 40%;cursor:pointer;}
+</style>
+<script type="text/javascript">
+  function play_video_cas(obj,vidid){//
+    var video_link = $("#video_link_"+vidid).val() + "?rel=0&autoplay=1";
+  	$(obj).hide();
+	$('#video_cas_'+vidid).attr("src",video_link);
+	$('#video_cas_'+vidid).show();
+  }
+  $(document).ready(function(){//
+    $(".bt_play").hover(function(){//
+    	$(this).attr("src","/sn_uploads/bt_play_hover.png");
+     }, function(){//
+    	$(this).attr("src","/sn_uploads/bt_play.png");
+	});
+	$(".preview_vid").hover(function(){//
+	    var vid_cl = ".bt_play_" + $(this).attr("data");
+    	$(vid_cl).attr("src","/sn_uploads/bt_play_hover.png");
+     }, function(){//
+	 	var vid_cl = ".bt_play_" + $(this).attr("data");
+    	$(vid_cl).attr("src","/sn_uploads/bt_play.png");
+	});
+	
+  });
+  
+  function callTranscript(ID){
+		$('#'+ID+'_transcript').toggle();
+		$('#btn_transcript_'+ID+'').toggle();
+	}
+</script>

@@ -1,0 +1,71 @@
+{{
+    /*
+        @title 			suggestProjectToContractor
+        Description		Sends en email to a contractor to suggest him a potential client.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-07-21
+        @mod       		1.1   ajout de reference
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+\{{
+	use project;
+    use contractor;
+    use project_contractor;
+    use token;
+    
+    site = sql(single:true,"select url_prod from sn_configs"); 
+    site = site.rows.url_prod;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    if contractor.rows.contact_gender eq "f" then
+    	titre = mme;
+    elseif contractor.rows.contact_gender eq "m" then
+    	titre = mr;
+    endif   
+    
+    if(project.rows.rewritten eq 'yes') then
+    	nb_contractors = sql(single:true, "SELECT count(pc.uid) as total FROM sr_project_contractor pc WHERE pc.uid_project = ? AND pc.accepted = 'yes'", project.rows.uid);
+        rewrite_text_fr = "NB: Nous vous renvoyons ce projet puisque nous avons référé " .+nb_contractors.rows.total .+ " entrepreneur(s) sur 4.";
+        rewrite_text_en = "NB: This project has been resent to you because we have refered " .+nb_contractors.rows.total .+ " contractor(s) on 4.";
+    	rewrite_text = ("{{lg.rows.lg}}" eq "fr")? rewrite_text_fr : rewrite_text_en;
+    endif
+    
+    zip = ltrim(project.rows.zip);
+    ref_token = contractor.rows.token;
+    uid_contractor = contractor.rows.uid;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+    ville = project.rows.city;
+    
+    code_postal = strsub(start:0,finish:2,zip);
+ 
+    province = project.rows.province;
+    description = project.rows.description;
+    date_travaux = project.rows.due_date;
+    id_client = project.rows.uid;
+    prix_soumission = money_format(project.rows.lead_price,"{{lg.rows.lg}}");
+    budget = project.rows.shared_budget;
+    page_acceptation = site .+ "{{pages(table:'pages','sr_confirmation_accept_project',lg.rows.lg)}}?token=" .+ token .+ "&accepted=";
+    reference = "C05-".+project_contractor.rows.uid.+"A";
+    
+	address = urlencode(code_postal .+ ' ' .+ ville .+ ' ' .+ province);
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

@@ -1,0 +1,35 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a text field
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2016-05-18 14:08:00 ilya@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+	use field;
+	use field_title;
+	use field_name;
+	use lg;
+	use declaration;
+	
+}}
+
+<div class="form-group">
+    <label for="email">{{ 
+        field_title;
+        if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+            }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+        endif
+    }}</label>
+    
+    <input type="text" class="form-control date_selection" id="{{ field_name }}" name="{{ field_name }}" {{
+        if field.rows.onChange ne "" then 
+            ' onChange="';  parse(state:0,field.rows.onChange);  '"'; 
+        endif 
+        declaration;
+    }}>
+				
+</div>

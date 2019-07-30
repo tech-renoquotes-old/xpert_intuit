@@ -1,0 +1,1371 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/site/package/contractor.sn";
+    %include "/site/package/automail.sn";
+    
+    use lg;
+    use page;
+    
+    use contractor;
+    use address;
+}}
+
+\{{
+    cgidata = cgidata();
+
+    if(cgidata.lg eq 'fr' || cgidata.lg eq 'en') then
+        lg = cgidata.lg;
+    else
+        lg = "{{lg}}";
+    endif
+    
+    uid_contractor = "{{contractor.uid}}";
+    contractor_services = sql("SELECT * FROM sr_contractor_service cs INNER JOIN sr_service s ON s.uid = cs.uid_service WHERE cs.uid_contractor = ? GROUP BY name_?", uid_contractor, lg);
+    services = contractor_services.rows;
+    
+    //load contractor services
+    i = 0;
+    for s in services do 
+        if lg eq "fr" then
+            contractor.srv[i] = s.name_fr;
+            i = i + 1;
+        elseif lg eq "en" then
+            contractor.srv[i] = s.name_en;
+            i = i + 1;
+        endif
+    endfor
+}}
+
+ 
+
+<!DOCTYPE html>
+{{     //  @version    1.01   add include for blog_detail
+
+    use user;       // From sn_preload
+    use grid;       // In sn_publish grid is initialize 
+
+    %include "/extenso/functions/sn_widgets.snc"; 
+	if page.rows{'page_' .+ lg.rows.lg} ne "index" then
+		pageurl = page.rows{'folder_' .+ lg.rows.lg} .+ page.rows{'page_' .+ lg.rows.lg};
+	else
+		pageurl = page.rows{'folder_' .+ lg.rows.lg};
+	endif // use by menus
+}}
+\{{ 
+    config=config(); 
+	page={	"uid":"{{page.rows.uid}}", 
+			"role":"{{page.rows.role}}",
+			"code":"{{page.rows.code}}",
+			"url":"{{pageurl}}" 
+			{{ for l sql("select * from sn_languages where active = 'yes'") do }}
+				,"url_{{l.rows.lg}}":"{{page.rows{'folder_' .+ l.rows.lg};
+				if page.rows{'page_' .+ l.rows.lg} ne "index" then
+					page.rows{'page_' .+ l.rows.lg};
+				endif
+			}}"
+			{{ endfor }}
+	}; 
+}}
+
+\{{
+cookies = cookies();
+request = request();
+
+	date = datetime();
+	adwords = request.args;
+	cookie = { 'url' : request.hostname .+ request.uri, 'adwords' : adwords, 'date' : date };
+	expirytime=datetime(extended:true,op:"+3h",format:"%Sednove2");
+	cookies(name:"soumissionrenovation",value:cookie,path:"/",expiry:expirytime);
+
+    if cookies.first_visited == undefined then
+        	expiry=datetime(extended:true,op:"+3h",format:"%Sednove2");
+        	cookies(name:"first_visited",value:request.hostname .+ request.uri,path:"/",expiry:expiry);
+    endif
+
+}}
+
+
+<html lang="{{lg}}">
+    <head>
+        <link href="/css/{{lg}}/styles.css" rel="stylesheet">
+        {{ %include "/includes/header.sn"; }}
+        <script src="https://code.jquery.com/jquery-migrate-1.3.0.js"></script>
+    </head>
+
+    <body class="site">
+        <div class="cs sed">
+            <style>
+                .mylang {
+                    position:absolute;
+                    top:30px;
+                    padding-right:20px;
+                    right:0;
+                    z-index:999;
+                }
+                
+                .mylang a{
+                    color:#c8c9c2;
+                    font-size: 15px;
+                    font-weight: 700;
+                    font-family: 'Open Sans', sans-serif !important;
+                }
+                
+                .mylang a:hover{
+                    text-decoration:none;
+                    color:#fac45f;
+                    font-size: 15px;
+                    font-weight: 700;
+                    font-family: 'Open Sans', sans-serif !important;
+                }
+            </style>
+            <div class="mylang" >
+                \{{if lg eq 'fr' then}}
+                    <a class="item-link" href="?lg=en">English</a>
+                \{{else}}
+                    <a class="item-link" href="?lg=fr">Français</a>
+                \{{endif}}
+            </div>
+          	\{{ include("/" .+ config.site .+ "/includes/" .+ lg .+ "/header.snc"); }}
+		 	<div class="sed-content">
+                 <div class="widget_area_top">
+					{{ sn_widgets(add:true,table:"pages",uid:page.rows.uid,lg:lg,position:"haut"); }}
+                 </div>
+
+                  <style scoped>
+                  .sn_grid_main_menu {position:relative;right:0;top:0;z-index:502;margin:0!important;}
+                  a.sn_grid_main_menu {
+                      border: 1px solid transparent;
+                      -moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;
+                      display: inline-block;
+                      font-size: 14px!important;
+                      font-weight: 400;
+                      line-height: 1.42857;
+                      margin-bottom: 0;
+                      padding: 6px 12px;
+                      text-align: center;
+                      vertical-align: middle;
+                      white-space: nowrap;
+                      background-color: #dddddd!important;
+                      border-color: #dddddd!important;
+                      color: #666666!important;
+                  }
+
+                  a.sn_grid_main_menu.widget-add {
+                      padding: 1px;
+                  }
+
+                  a.sn_grid_main_menu.ct {
+                      padding: 1px 4px 1px 4px!important; /* MODIFICATION DES MARGIN */
+                      font-size: 8px!important; /* MODIFICITION FONT-SIZE */
+                      color: black!important;
+                  }
+                  .sn_grid_main_menu .link {
+                      border: 1px solid transparent;
+                      -moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;
+                      display: inline-block;
+                      font-size: 14px!important;
+                      font-weight: 400;
+                      line-height: 1.42857;
+                      margin-bottom: 0;
+                      padding: 6px 12px;
+                      text-align: center;
+                      vertical-align: middle;
+                      white-space: nowrap;
+                      background-color: #dddddd!important;
+                      border-color: #dddddd!important;
+                      color: #666666!important;
+                  }
+                  
+
+                  
+                    .banner{
+                        width:100%;
+                        height:248px;
+                        margin-top:20px;
+                        border-radius:5px;
+                        line-height:248px;
+                        background-position: 0 50%;
+                        background-size: 100% auto;
+                        background-repeat: no-repeat;
+                        border:1px solid #87a7bc;
+                        {{if contractor.default_banner ne 'yes' then}}
+                        background-image: url("{{contractor.mybanner}}");
+                        {{endif}}
+                    }
+                    
+                    .rating-block{
+                    	padding:15px 15px 20px 15px;
+                    	margin-top: 20px;
+                    }
+                    
+                    .review-block-rate{
+                        color:#f9b233;
+                    }
+                    
+                    .rating-block .glyphicon-star {
+                      font-size: 40px;
+                      color: #f9b233;
+                      &.half {
+                        position: relative;
+                        &:before {
+                          position: relative;
+                          z-index: 9;
+                          width: 47%;
+                          display: block;
+                          overflow: hidden;
+                        }
+                        &:after {
+                          content: '\e006';
+                          position: absolute;
+                          z-index: 8;
+                          color: #bdc3c7;
+                          top: 0;
+                          left: 0;
+                        }
+                      }
+                    }
+                    
+                    .rating-block .glyphicon-star-empty {
+                      font-size: 40px;
+                      color: #dddddd;
+                    }
+                    
+                    .title_name{
+                        color:#00517e;
+                        text-align:left;
+                        font-size:30px;
+                        font-weight:bold;
+                        margin-top:40px;
+                    }
+                    
+                    .table{
+                        border:0 !important;
+                    }
+                    
+                    .table td{
+                        border:0 !important;
+                        padding:20px !important;
+                    }
+                    
+                    .client-table{
+                        width: 100%;
+                    }
+                    
+                    .client-table textarea{
+                        width:100%;
+                        height: 60px;
+                        padding-left: 5px;
+                        border:0;
+                        color:#337ab7;
+                        font-size:16px;
+                    }
+                    
+                    .client-table input{
+                        width:100%;
+                        height:40px;
+                        padding: 5px;
+                        color:#337ab7;
+                        font-size:16px;
+                        border:0;
+                        
+                    }
+                    
+                    .client-table button{
+                        width:100%;
+                        height:40px;
+                        background-color:#f9b233 !important;
+                        color:#48340f!important;
+                        font-size:16px;
+                        font-weight:bold;
+                        border-bottom: 3px solid #996e20!important;
+                    }
+                    
+                    .client-area{
+                        width:100%;
+                        margin-top:20px;
+                        border: 1px solid #e5d2a5;
+                        border-top-left-radius: 10px;
+                        border-top-right-radius: 10px;
+                        border-bottom-left-radius: 5px;
+                        border-bottom-right-radius: 5px;
+                        padding-top: 10px;
+                    }
+                    
+                    .td-bordered {
+                        border: 1px solid #e5d2a5;
+                    }
+                    
+                    
+                    .goToComment{
+                        margin-top:40px;
+                        text-align:center;
+                        width:100%;
+                    }
+                    
+                    .goToComment a{
+                        background-color:#00517e;
+                    }
+                    
+                    .goToComment hr{
+                        border:3px solid #00517e;
+                        margin:0;
+                    }
+                    
+                    
+                    #form_suggestion_mobile{
+                        display:none;
+                        width:100%;
+                        margin-top:10px;
+                        border:1px solid #87a7bc;
+                        border-radius: 5px;
+                        overflow:hidden;
+                        
+                    }
+                    
+                    #form_suggestion_mobile input{
+                        height:30px;
+                        border:0;
+                        padding-left:5px;
+                        border:0;
+                        margin:0;
+                    }
+                    
+                    #form_suggestion_mobile textarea{
+                        width:100%;
+                        height:80px;
+                        border:0;
+                        padding-top:5px;
+                        padding-left:5px;
+                        padding-bottom: 0;
+                        padding-right:0;
+                        margin:0;
+                    }
+                    
+                    #form_suggestion_mobile button{
+                        height:40px;
+                        background-color:#00517e !important;
+                        font-size:16px;
+                        font-weight:bold;
+                    }
+                    
+                    #phones > a > i:before {
+                        content: "\f1f8"; /* fa-trash */
+                    }
+                    
+                    #phones > a > i:before {
+                        content: "\f067"; /* fa-plus */
+                    }
+                    
+                    #blck_phone2{
+                        display:none;
+                    }
+                    
+                    #upload_files_slim>div{
+                        position:relative;
+                    }
+                    
+                    #upload_files_slim > div > input {
+                        margin:3px 0px;
+                        font-size:0.8em;
+                    }
+                    
+                    #upload_files_slim > div > a {
+                        display:block;
+                        cursor: pointer;
+                        position:absolute;
+                        right:0;
+                        top:50%;
+                        margin-top:-10px;
+                    }
+                    
+                    #upload_files_slim > div > a > i:before {
+                        content: "\f1f8"; /* fa-trash */
+                    }
+                    
+                    #upload_files_slim > div:first-child > a > i:before {
+                        content: "\f067"; /* fa-plus */
+                    }
+                    
+                    
+                    .loader{
+                        width:100%;
+                        position:absolute;
+                        padding-top:40px;
+                        top:0;
+                        left: 0;
+                        filter: alpha(opacity=40);
+                        opacity: 0.4;
+                        -moz-opacity: 0.4;
+                        background-color:#000;
+                        border-radius:10px;
+                        overflow:hidden;
+                        z-index: 2;
+                    }
+                        
+                    .loader img{
+                        filter: alpha(opacity=30);
+                        opacity: 0.3;
+                        -moz-opacity: 0.3;
+                        line-height:50%;
+                        
+                    }
+                    
+                    .loader_center{
+                        margin-left:40%;
+                    }
+                    
+                    .side-form {
+                        margin-bottom:-20px;
+                        margin-left:15px;
+                    }
+                    
+                    [data-validator-error]{
+                        color:red;
+                        font-weight:bold;
+                    }
+                    
+                    .mypic{
+                        width:auto;
+                        max-height:auto;
+                        margin-left:40px;
+                        border-radius: 5px;
+                        float:left;
+                    }
+                    
+                    .mypic img{
+                        max-height:200px;
+                        max-width:400px;
+                        border-radius: 5px;
+                        -webkit-box-shadow: 4px 4px 12px 0px rgba(0,0,0,0.75);
+                        -moz-box-shadow: 4px 4px 12px 0px rgba(0,0,0,0.75);
+                        box-shadow: 4px 4px 12px 0px rgba(0,0,0,0.75);                        
+                    }
+
+                    .album{
+                        
+                        width:100%;
+                        overflow:hidden;
+                    }
+                    .album img {
+                        max-width: 150px;
+                        transition-duration: 0.3s;
+                        -webkit-transition-duration: 0.3s; /* Safari */
+                        }
+                    
+                    .album img:hover {
+                    	cursor: pointer;
+                        transition-duration: 0.3s;
+                        -webkit-transition-duration: 0.3s; /* Safari */
+                        box-shadow: 2px 2px 1px #888888;
+                        z-index: 1;
+                    }
+                    
+                    .albumpic{
+                        margin: 12px;
+                        width:150px;
+                        margin-top:20px;
+                        float:left;
+                    }
+                    
+                    .styling1{
+                        color:#00517e;
+                        font-size:14px;
+                    }
+                    
+                    .styling2{
+                        color:#00517e;
+                        font-size:1.5px;
+                    }
+                    
+                    
+                    .icons{
+                        font-size:20px;
+                    }
+                    
+                    .popup{
+                        background-color:#eee;
+                        -moz-border-radius:5px;
+                        -webkit-border-radius:5px;
+                        border-radius:5px;
+                        border:1px #333 solid;
+                        width:300;
+                        max-width:400px;
+                        position:fixed;
+                        z-index:999;
+                        top:50%;
+                        left:50%;
+                        margin-top: -250px;
+                        margin-left: -200px;
+                        padding:10px;
+                    }
+                    
+                    
+                    .popup table{
+                        border-collapse:collapse;
+                        width:auto%;
+                    }
+                    
+                    .popup td{
+                        word-wrap:break-word;
+                    }
+                    .popup textarea{
+                        width:100%;
+                        height:150px;
+                    }
+                    
+                    .popup .cnotes{
+                        width:80%;
+                    }
+                    
+                    
+                  </style>
+           </div>
+        </div><!--/.cs-->
+
+<!--<link href="https://use.fontawesome.com/releases/v5.0.1/css/all.css" rel="stylesheet">-->
+
+
+\{{
+    project = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE token = '?'", cgidata.token);
+    nowdate = datetime(format:'%Y-%m-%d');
+    complete = (cgidata.token ne "" && (project.nbrows > 0))? -1: "";
+
+    if(cgidata.complete) then
+        // pc = project_contractor uid, n = client note, p = project uid
+        if project.nbrows > 0 && cgidata.n ne "" then
+            project_contractor = sql(single:true,"SELECT * FROM sr_project_contractor WHERE token='?'", cgidata.token);
+            // if note is not 1,2,3,4 or 5 then null
+            note = (cgidata.n  =~ "^[1-5]$") ? cgidata.n : null;
+
+            if project_contractor.nbrows > 0 then
+                if note then // if note is a number
+                    res = update(
+                        tables:"sr_project_contractor",
+                        uid: project_contractor.rows.uid,
+                        fields: {
+                            "client_satisfaction":note,
+                            "evaluation_date":nowdate,
+                            "client_comment": cgidata.comment,
+                            "comment_verified": null
+                        }
+                    );
+                    
+                    if res.sqlcode == 0 then
+                        complete = 1;
+                        if(cgidata.comment ne "") then
+                            automail::sendClientReviewToContractor(project_contractor.rows.uid, lg);
+                            void insert(table:'sr_debug', fields:{'Description':'contractor rating sent to contractor(en): ' .+ project_contractor.rows.uid_contractor,'text':'rate:'.+ note .+ ' projet: '.+ project_contractor.rows.uid_project .+ ' comment: '.+ cgidata.comment});
+                        endif
+                    endif
+                    
+                else // if note is null, put null in db
+                    void sql("UPDATE sr_project_contractor SET client_satisfaction=NULL WHERE uid='?'", project_contractor.rows.uid);
+                endif
+            endif
+        endif
+    endif
+    
+    if(cgidata.suggestion ne "") then
+        // send email to admin
+        automail::clientSuggestionToAdmin(uid_contractor, cgidata.email, cgidata.suggestion);
+        SUGGESTION_SENT = 1;
+        headers_out('X-response', SUGGESTION_SENT);
+    endif
+    
+}}
+
+{{    
+    r = [];
+
+    for rates in contractor.reviews do
+        review =  {
+                "@context": "http://schema.org/",
+                "@type": "Review",
+                "reviewBody": rates.comment,
+                "reviewRating": {
+                "@type": "Rating",
+                "ratingValue": rates.rating,
+                "bestRating": "5",
+                "worstRating": "1"
+                },
+            
+                "datePublished": substr(rates.comment_date,0,10),
+                "author": {"@type": "Person", "name": rates.firstname}
+            };
+        push(r, review);  
+    endfor
+    
+}}
+
+    
+    \{{if(complete == -1) then}}
+        <div class='popup' id='popup'>
+            <span align='center'><h4>\{{contractor::profile_ct("Leave a comment about your experience","profile_template",lg:lg)}}</h4></span>
+            <p align='center'>\{{contractor::profile_ct("Note: votre commentaire sera rendu public, toutefois seul votre prénom sera affiché.","profile_template",lg:lg)}}</p>
+            <form class="form-horizontal" name='rating_form' method='POST' action='{{contractor.clink}}'>
+                <table align='center'>
+                    <tr>
+                        <td colspan='2'>
+                            <span ><label for="comment">\{{contractor::profile_ct("Laissez votre commentaire ci-dessous (optionnel):","profile_template",lg:lg)}}</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan='2'>
+                            <fieldset class="form-group">
+                                
+                            <textarea name='comment' class='textarea'></textarea>
+                            </fieldset>
+                        </td>
+                    </tr>
+                    <tr>
+                        <div>
+                            <table class='cnotes' align='center'>
+                                <tr><td colspan = '2'><h4>\{{contractor::profile_ct("Selected Note :","profile_template",lg:lg)}}</h4></td></tr>
+                                <tr>
+                                    <td>
+                                        <div class="radio">
+                                          <label><input type="radio" \{{(cgidata.n == 1)? 'checked': ''}} value='1' name="n"><span class="glyphicon glyphicon-star" ></span></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="radio">
+                                          <label><input type="radio" \{{(cgidata.n == 2)? 'checked': ''}} value='2' name="n"><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="radio">
+                                          <label><input type="radio" \{{(cgidata.n == 3)? 'checked': ''}} value='3' name="n"><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="radio">
+                                          <label><input type="radio" \{{(cgidata.n == 4)? 'checked': ''}} value='4' name="n" ><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="radio">
+                                          <label><input type="radio" \{{(cgidata.n == 5)? 'checked': ''}} value='5' name="n" ><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span><span class="glyphicon glyphicon-star" ></span></label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <hr />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <input type='hidden' name='token' value='\{{cgidata.token}}' />
+                                        <input type='hidden' name='complete' value='complete' />
+                                        <button type='button' name='no_comment' id='no_comment' class='btn btn-primary'>\{{contractor::profile_ct("Cancel","profile_template",lg:lg)}}</button>
+                                        <button type='submit' name='submit_ok' id='submit_ok' class='btn btn-primary'>\{{contractor::profile_ct("Ok","profile_template",lg:lg)}}</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    \{{elseif(complete == 1) then}}
+        <div class='popup' id='popup_confirm'>
+            <span align='center'><h4>\{{contractor::profile_ct("Thank you!","profile_template",lg:lg)}}</h4></span>
+                <table align='center'>
+                    <tr>
+                        <td colspan='2'>
+                            <span ><label for="comment">\{{contractor::profile_ct("Regarding your comment :","profile_template",lg:lg)}}</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            \{{contractor::profile_ct("Your comment will not be published immediately as we have to verify and approve it. This will be done within a delay of two business days","profile_template",lg:lg)}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <button type='button' name='complete_ok' id='complete_ok' class='btn btn-primary' onclick="$('#popup_confirm').hide()">Ok</button>
+                        </td>
+                    </tr>
+                </table>
+        </div>
+    \{{endif}}
+    
+    
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-lg-12">
+                    <div class="banner" id="banner">
+                        {{if contractor.mylogo ne "" then}}
+                            <div class="mypic">
+                		    	<img src="{{contractor.mylogo}}">
+                		    </div>
+                		{{elseif 1 == 0 then}}
+                    		<i class="fas fa-question fa-5x" style="color:#00517e"></i>
+                        {{endif}}
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-6">
+        			<div class="rating-block">
+        				{{c=1}}
+        				{{while (c <= round(contractor.avgRate)) do}}
+            				<span class="glyphicon glyphicon-star" ></span>
+        				{{c++}}
+        				{{endw}}
+        					
+        				{{for (f = 0; f < 5 - round(contractor.avgRate); f++) do}}
+                			<span class="glyphicon glyphicon-star-empty" ></span>
+        				{{endfor}}
+        			</div>
+    			</div>
+                <div class="col-lg-6">
+                    <div class="title_name"><h1>{{contractor.company_name}}</h1></div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6 col-md-6 col-lg-6 profil">
+                    <table class="table">
+                    <tr>
+                        <td>
+                            <i class="fa fa-home fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                        <a class="styling1" href="http://maps.google.com/maps?q={{contractor.streetNo}}+{{contractor.street}}+{{contractor.city}}+{{contractor.province}}+{{contractor.zip}}" target="_blank">
+                            {{if contractor.hide_address eq 'yes' then
+                            else
+                                }}
+                                {{contractor.streetNo .+ " " .+ contractor.street}}
+                                    		
+                                {{if contractor.city ne "" then}}
+                                    {{contractor.city}}, 
+                                {{endif}}
+                                    		
+                                {{if contractor.province ne "" then}}
+                                    {{contractor.province}},  
+                                {{endif}}
+                                
+                                {{if contractor.zip ne "" then}}
+                                    {{contractor.zip}}
+                                {{endif}}
+                            {{endif}}
+                        </a>
+                        </td>
+                    </tr>
+                
+                    <tr>
+                        <td>
+                            <i class="fa fa-phone-square fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                            <span class="styling1"><a href="tel:{{contractor.contact_phone}}">{{contractor.contact_phone;}}</a></span>
+                        </td>
+                    </tr>
+    
+                    {{if contractor.weburl ne "" then}}
+                    <tr>
+                        <td>
+                            <i class="fa fa-globe fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                            <a target="_blank" href="{{contractor.weburl}}" class="styling1">{{contractor.weburl}}</a>
+                        </td>
+                    </tr>
+                    {{endif}}
+                    
+                	{{if contractor.fbsite ne "" then}}
+                    <tr>
+                        <td>
+                            <i class="fa fa-facebook-square fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                    	    <a target="_blank" href="{{contractor.fbsite}}">{{contractor.fbsite}}</a>
+                        </td>
+                    </tr>
+                    {{endif}}
+                    
+                    {{if contractor.company_desc ne "" then}}
+                    <tr>
+                        <td>
+                            <i class="fa fa-info-circle fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                            {{contractor.company_desc}}
+                        </td>
+                    </tr>
+                    {{endif}}
+                    
+                    {{if(contractor.lics ne "") then}}
+                    <tr>
+                        <td>
+                            <i class="fa fa-hashtag fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                            <span class="styling1">\{{contractor::profile_ct("Licences","profile_template",lg:lg)}}</span>
+                            <table class="table">
+                            {{contractor.lics}}
+                            </table>
+                        </td>
+                    </tr>
+                    {{endif}}
+                    
+                    <tr>
+                        <td>
+                            <i class="fa fa-tags fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </td>
+                        <td>
+                            <ul style="margin-left:10px;padding-left:0">
+                                \{{for categ in contractor.srv do}}
+                                <li>
+                                    <span class="styling1">\{{categ}}</span>
+                                </li>
+                                \{{endfor}}
+                            </ul>
+                        </td>
+                    </tr>
+                    </table>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="client-area">
+                        <form class="form-horizontal" enctype="multipart/form-data" action="{{(contractor.contact_lg eq 'fr')? '/fr/ajax-client-form.snc':'/en/ajax-client-form.snc'}}" id="add_client_slim" name="add_client_slim" method="POST">
+                            <table class="client-table">
+                                <tr>
+                                    <td colspan="3" class="col-sm-12">
+                                        <textarea name="description" placeholder="\{{contractor::profile_ct("Inscrivez la description, le delai et le budget pour le travail a effectuer","profile_template",lg:lg)}}"></textarea>
+                                        <span class="help-block" data-validator-msg="\{{contractor::profile_ct("invalid description","profile_template",lg:lg)}}" data-validator-error="description"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-bordered col-sm-6">
+                                        <input name="name" placeholder="\{{contractor::profile_ct("votre nom","profile_template",lg:lg)}}" type="text" />
+                                        <span class="help-block LoNotSensitive" data-validator-msg="\{{contractor::profile_ct("invalid name","profile_template",lg:lg)}}" data-validator-error="name"></span>
+                                    </td>
+                                    <td class="td-bordered col-sm-4">
+                                        <input name="phone" placeholder="\{{contractor::profile_ct("votre Téléphone ici","profile_template",lg:lg)}}" type="text" />
+                                        <span class="help-block LoNotSensitive" data-validator-msg="\{{contractor::profile_ct("Composé de chiffres seulement, au moins 10 caractères","profile_template",lg:lg)}}" data-validator-error="phone"></span>
+                                    </td>
+                                    <td class="td-bordered col-sm-2">
+                                        <input placeholder="Ext" type="text" name="ext1" id="ext1" value="">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="td-bordered col-sm-6">
+                                        <input name="email" placeholder="\{{contractor::profile_ct("votre courriel ici","profile_template",lg:lg)}}" type="text" />
+                                        <span class="help-block" data-validator-msg="\{{contractor::profile_ct("invalid email","profile_template",lg:lg)}}" data-validator-error="email"></span>
+                                        <span style="display:none" class="validemail" name="validemail" >\{{contractor::profile_ct("Warning: your email seems to be invalid.  Please verify your email.  If there are no mistakes, please ignore this warning.","profile_template",lg:lg)}}</span>
+                                    </td class="td-bordered">
+                                    <td colspan="2" class="col-sm-6">
+                                        <input name="address" placeholder="\{{contractor::profile_ct("votre adresse ici","profile_template",lg:lg)}}",  type="text" />
+                                        <input type="hidden" class="field" id="street_number" name="street_number" disabled="true"></input>
+                                        <input type="hidden" class="field" id="route" name="route" disabled="true"></input>
+                                        <input type="hidden" class="field" id="locality" name="locality" disabled="true"></input>
+                                        <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" disabled="true"></input>
+                                        <input type="hidden" class="field" id="postal_code" name="postal_code" disabled="true"></input>
+                                        <input type="hidden" class="field" id="country" name="country" disabled="true"></input>
+                                        <span class="help-block" data-validator-msg="\{{contractor::profile_ct("invalid address","profile_template",lg:lg)}}" data-validator-error="address"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan ="3">
+                                        <div class="col-md-6">
+                                            <div style="width:10%;display:inline-block"><input type="checkbox" name="more_quotes" id="more_quotes" style="width:15px;border:1px solid #ddd" checked/></div>
+                                            <div style="width:70%;display:inline-block;font-size:0.8em">\{{contractor::profile_ct("I want to receive more quotes from certified contractors","profile_template",lg:lg)}}</div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <b>\{{contractor::profile_ct("Attach a file","profile_template",lg:lg)}}</b>
+                                            <div id="upload_files_slim"></div>
+                                            <input class="form-control LoNotSensitive" type='hidden' name="upld" id="uploaded_size" value="0"/>
+                                            <span class="help-block" data-validator-msg="\{{contractor::profile_ct("Vos fichiers ont atteint une taille de","profile_template",lg:lg)}}" data-validator-error="upld"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan ="3">
+                                        <input type='hidden' name='freeQuote' value='yes' />
+                                        <input type='hidden' name='cuid' value='{{contractor.uid}}'/>
+                                        <button name="submit" class="btn btn-warning">\{{contractor::profile_ct("Obtenez 3 soumissions","profile_template",lg:lg)}}</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        <div class="loader" style="display:none" ><div class="loader_center"><img alt="" src="/sn_uploads/icon/loading3.gif" /></div></div>    
+                        </form>
+                    </div>
+                    
+                    <div class="goToComment text-center">
+                        <a id="show_suggestion" class="btn btn-primary">\{{contractor::profile_ct("Envoyez-nous votre commentaire","profile_template",lg:lg)}} <i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
+                        <!--<hr>-->
+                    </div>
+                    
+                    <div class="form_suggestion_mobile" id="form_suggestion_mobile">
+                        \{{if(SUGGESTION_SENT == 1) then}}
+                            <div class="alert alert-success">\{{contractor::profile_ct("Sugestion envoyée. Merci!","profile_template",lg:lg)}}</div>
+                        \{{else}}
+                            <form action="" name="add_suggestion" method="POST">
+                                <fieldset class="col-md-12" style="padding:0 !important;margin:0 !important">
+                                    <textarea class="form-control LoNotSensitive" name="suggestion" placeholder='\{{contractor::profile_ct("Inscrivez votre commentaire ici","profile_template",lg:lg)}}' rows="4"></textarea>    
+                                    <span class="help-block" data-validator-msg='\{{contractor::profile_ct("Suggestion obligatoire","profile_template",lg:lg)}}' data-validator-error="suggestion"></span>
+                                </fieldset>
+                                <fieldset class="col-md-6" style="padding:0;margin:0">
+                                    <input class="form-control LoNotSensitive" type="text" name="email" value="" placeholder='\{{contractor::profile_ct("Your email","profile_template",lg:lg)}}'>
+                                    <span class="help-block" data-validator-msg='\{{contractor::profile_ct("Invalid email","profile_template",lg:lg)}}' data-validator-error="email"></span>
+                                    <span style="display:none" class="validemail" name="validemail" >\{{contractor::profile_ct("Warning: your email seems to be invalid.  Please verify your email.  If there are no mistakes, please ignore this warning.","profile_template",lg:lg)}}</span>
+                                </fieldset>
+                                <fieldset class="col-md-6" style="padding:0 !important;margin:0 !important">
+                                    <input type='hidden' name='freeQuote' value='yes' />
+                                    <input type='hidden' name='cuid' value='{{contractor.uid}}'/>
+                                    <button id="submit_add_suggestion" name="submit_add_suggestion" type="submit" class="btn btn-primary btn-block">
+                                        \{{contractor::profile_ct("Submit","profile_template",lg:lg)}}
+                                    </button>
+                                </fieldset>
+                            </form>
+                        \{{endif}}
+                    </div>
+                    
+                    <div id="msg_error" class="alert alert-success" style="display:none;text-align:center;font-size:1.5em;font-weight:bold">\{{contractor::profile_ct("Merci pour votre commentaire!","profile_template",lg:lg)}}</div>
+
+                    
+                    <div class="row text-center" style="{{(contractor.pic[0])? '': 'display:none'}}">
+                    {{if contractor.pic[0] then}}
+                    <div class="title_name">\{{contractor::profile_ct("Galerie","profile_template",lg:lg)}}</div>
+                    {{endif}}                        
+                        
+                        <div class='album'>
+                            <div class='albumpic'>
+                            {{if contractor.pic[0] then}}
+                        	<img  src="{{contractor.pic[0]}}" alt="{{contractor.desc[0]}}" class="img-rounded">
+                        	{{endif}}
+                	        </div>
+                            <div class='albumpic'>
+                            {{if contractor.pic[1] then}}
+                        	<img  src="{{contractor.pic[1]}}" alt="{{contractor.desc[1]}}" class="img-rounded">
+                        	{{endif}}
+                	        </div>
+                            <div class='albumpic'>
+                            {{if contractor.pic[2] then}}
+                        	<img src="{{contractor.pic[2]}}" alt="{{contractor.desc[2]}}" class="img-rounded">
+                        	{{endif}}
+                	        </div>
+                            <div class='albumpic'>
+                        	{{if contractor.pic[3] then}}
+                        	<img  src="{{contractor.pic[3]}}" alt="{{contractor.desc[3]}}" class="img-rounded">
+                        	{{endif}}
+                	        </div>
+                            <div class='albumpic'>
+                            {{if contractor.pic[4] then}}
+                        	<img  src="{{contractor.pic[4]}}" alt="{{contractor.desc[4]}}" class="img-rounded">
+                        	{{endif}}
+                	        </div>
+                            <div class='albumpic'>
+                        	<h4>
+                        	{{if contractor.pic[0] then}}
+                        	
+                        	\{{if lg eq 'fr' then}}
+                        	    <a target="_blank" class='profile_links' href='https://xpertsource.com/extranet/fr/galerie-photo-expert?cuid={{contractor.uid}}' style="font-size:0.8em">\{{contractor::profile_ct("see more..", "profile_template", lg:lg )}}.</a>
+                        	\{{else}}
+                        	    <a target="_blank" class='profile_links' href='https://xpertsource.com/extranet/en/expert-photo-gallery?cuid={{contractor.uid}}' style="font-size:0.8em">\{{contractor::profile_ct("see more..", "profile_template", lg:lg )}}.</a>
+                        	\{{endif}}
+                        	{{endif}}
+                        	</h4>
+                	        </div>
+                        </div>
+                        
+                    </div>                                 
+                    
+                    {{for rates in contractor.reviews do}} 
+                    <div class="row" style="margin-top:40px;margin-bottom:40px;">
+                       <div class="title_name">\{{contractor::profile_ct("Témoignages","profile_template",lg:lg)}}</div>
+                       <br>
+                        <div class="col-md-1">
+                            <i class="fa fa-user fa-2x" aria-hidden="true" style="color:#00517e"></i>
+                        </div>
+                        <div class="col-md-11">
+                            <div class="col-md-4" >
+                                <span><b>{{rates.firstname}}</b></span>
+                                <br>
+                                <span style="color:#00517e;font-size:0.8em">{{substr(rates.comment_date,0,10)}} {{rates.city}}</span>
+                            </div>
+                            <div class="col-md-4" style="text-align:left;color:#00517e;font-size:0.8em"><br> <i class="fa fa-tag fa-1x" aria-hidden="true" style="color:#00517e"></i> {{rates.service}}</div>
+                            <div class="col-md-4" style="text-align:right">
+                    		    <div class="review-block-rate">
+                    		        <br>
+                					{{r1=1}}
+                					{{while (r1 <= rates.rating) do}}
+                						<span class="glyphicon glyphicon-star" ></span>
+                						{{r1++}}
+                					{{endw}}
+                					
+                					{{for (f = 0; f < 5 - rates.rating; f++) do}}
+                						<span class="glyphicon glyphicon-star-empty" ></span></span>
+                					{{endfor}}
+                    			</div>
+                            </div>
+                            <div class="col-md-12" style="padding-top:10px">
+                    			{{if(rates.comment ne "") then}}
+                    			<div class="review-block-description"><i class="fa fa-comment-o" aria-hidden="true" style="color:#00517e;font-weight:bold"></i> {{rates.comment}}</div>
+                        			<div class='review-block-response'>
+                        			    <div class="response" id='{{rates.pc_uid}}' style='display:\{{("{{rates.response}}" eq "")?"none":""}}'>
+                            			    <label>\{{contractor::profile_ct("Answered on", "profile_template", lg:lg )}}: {{rates.resp_date}}:</label>
+                            			    <br>
+                            			   <div name="textzone" class="textzone" id='textzone_{{rates.pc_uid}}' contentEditable="false"/><i class="fa fa-reply" aria-hidden="true"></i> {{rates.response}}</div>
+                            			    <input type='hidden' value="{{rates.pc_uid}}"/>
+                        	            </div>
+                                    </div>
+                    			{{else}}
+                    			<!--<div class="review-block-description">«\{{contractor::profile_ct("no comment", "profile_template", lg:lg )}}»</div>-->
+                    			{{endif}}
+                            </div>
+                        </div>
+                    </div>
+                    {{endfor}}
+                </div>
+            </div>
+        </div>
+        \{{ include("/" .+ config.site .+ "/includes/" .+ lg .+ "/footer.snc");}}    
+    </body>
+</html>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator_slim.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_client_slim');
+}}
+    
+    
+\{{
+    // include the validator for contractor_form
+    %include "/site/profiles/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_suggestion');
+}}
+
+<script>
+    $(document).ready(function(){
+        var form_height = $('#add_client_slim').innerHeight();
+        $('.loader').height(form_height);
+        $('.loader').css({'line-height': form_height + 'px'});
+        
+        //show or hide suggestion
+        $("#show_suggestion").click(function () {
+            if(!$("#form_suggestion_mobile").is(':visible')){
+                $("#form_suggestion_mobile").slideDown( "slow", function() {
+                // Animation complete.
+                });
+            }else{
+                $("#form_suggestion_mobile").slideUp( "slow", function() {
+                // Animation complete.
+                });
+            }
+            
+        });
+        
+       //support to valideEmail() function 
+        $('#email').on('input',function(e) {
+            $(this).val($.trim($(this).val()));
+        });
+        
+        $('#email').on('input',function(e) {
+            $(this).val($.trim($(this).val()));
+        });
+        
+        $('#email').keypress(function(e) {
+            if(e.which === 32) 
+                return false;
+        });
+        
+        
+        $('#email').on('input',function(e) {
+               $('.validemail').hide();
+        });   
+        //end support
+        
+        $('.review-block-response').find('.response').each(function(){
+            resp = $('#' + this.id);
+                if(resp.find('.textzone').text().length == 0){
+                    resp.hide();
+                }else{
+                    resp.show();
+                    resp.parent().find('.cancel').show();
+                }
+        });
+        
+    
+        $( "#no_comment" ).click(function() {
+          $('#popup').css('display', 'none');
+        });
+    })
+</script>
+
+<script>
+    function addPhones(){
+        $('#blck_phone2').show();
+    }
+
+    function addUploadFile_slim() {
+        return $('<div><a><i class="fa"></i></a><input type="file" name="file" onchange="sizeLimit_slim()"></div>').prependTo('#upload_files_slim');
+    }
+    $('#upload_files_slim').on('click', "div:not(:first-child) > a", function(){
+        $(this).parent().remove();
+        $('#upload_files_slim > span').remove();
+        sizeLimit_slim();
+    });
+    $('#upload_files_slim').on('click', "div:first-child > a", function(){
+        addUploadFile_slim();
+        if ($('#upload_files_slim').find('div > input').length >= 5) {
+            $('#upload_files_slim').prepend('<span>');
+        }
+    });
+    addUploadFile_slim();
+</script>
+
+<script>
+
+    $('form[name=add_suggestion]').ajaxForm({
+        success:function(data, textStatus, xhr){
+            if(xhr.getResponseHeader('X-response')) {
+                $("#show_suggestion").click();
+                $('#msg_error').show();
+            }
+        }
+    })
+
+    $("#add_client_slim").ajaxForm({
+        beforeSubmit: function(arr, $form, options){
+            var file_nb = 0;
+            var browser = Object.keys(jQuery.browser)[0] + " " + $.browser.version[0];
+            
+            $('#upload_files_slim').find('div > input').each(function(){
+                file_nb++;
+                $(this).attr("name", $(this).attr("name") + file_nb);
+                var file = $(this).get(0).files[0];
+                
+                var min=1111;
+                var max=99999; 
+                var rand = Math.random() * (+max - +min) + +min;
+    
+                if(file != undefined){
+                    var newFileName = 'project_' + rand.toFixed(0) +"_"+file_nb;
+                    var ext = file.name.substring(file.name.lastIndexOf('.')+1, file.name.length);
+                    
+                    for (key=0;key<=arr.length;key++){
+                        if(arr[key] != undefined && arr[key].name == 'file'){
+                            arr[key].name = 'file'+file_nb;
+                            break;
+                        }
+                    }
+                }
+                
+            });
+            
+            $('.loader').show(); 
+        },
+        
+        success: function(data, textStatus, xhr){
+            // GTM Tracking for success
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                'event': 'sr_form_submit'
+            });
+            
+            var puid = xhr.getResponseHeader("X-res");
+            window.location = "/\{{lg}}/client-info-plus?prj=" + puid;
+        },
+        
+        complete: function(data) {
+            $('.loader').hide();
+        }
+    })
+</script>
+
+<script>
+    function sizeLimit_slim() {
+        var total_size = 0;
+        $('input[name=file]').each(function(){
+            if(this.files[0] !== undefined){
+                total_size = total_size + this.files[0].size; 
+            }
+        });
+        
+        $('#uploaded_size').val(total_size);
+        $('span[data-validator-error=upld]').attr('data-validator-msg','\{{contractor::profile_ct("Vos fichiers ont atteint une taille de ","profile_template",lg:lg)}} ' + total_size + ' Bytes. ' +  '\{{contractor::profile_ct("Le maximum autorisé est 64000000 Bytes", "profile_template",lg:lg)}}');
+        
+        if(total_size >= 64000000){
+            return false;
+        }
+        
+    }
+</script>
+
+<script>
+function validate_email(){
+    if( isValidEmailAddress($('#email').val())){
+        if($('#emailChk').val() != $('#email').val()){
+            $.ajax({
+                type: "POST",
+                url: "{{sn_pages('ajax_verify_email', lg.rows.lg, table:'ressources')}}",
+                data: {'neverbounce':$('#email').val()},
+                beforeSend: function(){
+                    if ($('#email').val() == ""){
+                        return false;
+                    }
+                    $(".center").show();
+                },
+        
+                success: function(data, statusText, xhr){
+                    $('#emailChk').val($('#email').val());
+                    
+                    if(xhr.getResponseHeader('X-response') == 0){
+                        $(".center").hide();
+                        $('.validemail').hide();
+                        $('.address').focus();
+                    }else if(xhr.getResponseHeader('X-response') == 1){
+                        $(".center").hide();
+                        $('.validemail').show();
+                        $('.address').focus();
+                    }else{
+                        
+                    }
+                },
+                
+                complete: function(data, statusText, xhr) {
+                    $(".center").hide();
+                }
+            });
+        }
+    }
+}
+
+
+function isValidEmailAddress(emailAddress) {
+    var pattern = /^([a-z\d!#$%&'*+\-\/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+(\.[a-z\d!#$%&'*+\-\/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+)*|"((([ \t]*\r\n)?[ \t]+)?([\x01-\x08\x0b\x0c\x0e-\x1f\x7f\x21\x23-\x5b\x5d-\x7e\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|\\[\x01-\x09\x0b\x0c\x0d-\x7f\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))*(([ \t]*\r\n)?[ \t]+)?")@(([a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|[a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF][a-z\d\-._~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]*[a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])\.)+([a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|[a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF][a-z\d\-._~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]*[a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])\.?$/i;
+    return pattern.test(emailAddress);
+};
+</script>
+
+
+    <!-- Google map api for addresses -->
+<script>
+    // This example displays an address form, using the autocomplete feature
+    // of the Google Places API to help users fill in the information.
+    
+    var placeSearch, autocomplete, autocomplete_slim;
+    var componentForm = {
+      street_number: 'short_name',
+      route: 'long_name',
+      locality: 'long_name',
+      administrative_area_level_1: 'short_name',
+      country: 'long_name',
+      postal_code: 'short_name'
+    };
+    
+    function initAutocomplete() {
+      // Create the autocomplete object, restricting the search to geographical
+      // location types.
+      autocomplete = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */(document.getElementById('address')),
+          {types: ['geocode']});
+    
+      // When the user selects an address from the dropdown, populate the address
+      // fields in the form.
+      autocomplete.addListener('place_changed', fillInAddress);
+      autocomplete.name="normal";
+    
+    
+      // For the second form in the article_detail page (slim)
+      if (document.getElementById('address_slim')){
+          autocomplete_slim = new google.maps.places.Autocomplete(
+              /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+              {types: ['geocode']});
+          autocomplete_slim.addListener('place_changed', fillInAddress);
+          autocomplete_slim.name="slim";
+        }
+    }
+    
+    // [START region_fillform]
+    function fillInAddress() {
+      // Get the place details from the autocomplete object.
+      var place = this.getPlace();
+      index = (this.name === "normal") ? 0 : 1 ;
+    
+      for (var component in componentForm) {
+        document.getElementsByName(component)[index].value = '';
+        document.getElementsByName(component)[index].disabled = false;
+      }
+    
+      // Get each component of the address from the place details
+      // and fill the corresponding field on the form.
+      for (var i = 0; i < place.address_components.length; i++) {
+        var addressType = place.address_components[i].types[0];
+        if (componentForm[addressType]) {
+          var val = place.address_components[i][componentForm[addressType]];
+          document.getElementsByName(addressType)[index].value = val;
+        }
+      }
+    }
+    // [END region_fillform]
+    
+    // [START region_geolocation]
+    // Bias the autocomplete object to the user's geographical location,
+    // as supplied by the browser's 'navigator.geolocation' object.
+        function geolocate() {
+          if (navigator.geolocation) {
+        //     navigator.geolocation.getCurrentPosition(function(position) {
+        //       var geolocation = {
+        //         lat: position.coords.latitude,
+        //         lng: position.coords.longitude
+        //       };
+        //       var circle = new google.maps.Circle({
+        //         center: geolocation,
+        //         radius: position.coords.accuracy
+        //       });
+        //      autocomplete.setBounds(circle.getBounds());
+        //     });
+           }
+        }
+    // [END region_geolocation]
+    
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8"async defer></script>
+
+
+<script type="application/ld+json">
+//Google review rating snippet 
+{
+  "@context": "http://schema.org",
+  "@type": "HomeAndConstructionBusiness",
+  "@id": "\{{contractor::profile_ct("https://soumissionrenovation.ca", "profile_template", lg:lg )}}/\{{contractor::profile_ct("entrepreneur", "profile_template", lg:lg )}}/{{contractor.seo}}",
+  "name": "{{contractor.company_name}}",
+  "image": "\{{contractor::profile_ct("https://soumissionrenovation.ca", "profile_template", lg:lg )}}{{contractor.mylogo}}",
+  "sameAs": "\{{contractor::profile_ct("https://soumissionrenovation.ca", "profile_template", lg:lg )}}/\{{contractor::profile_ct("entrepreneur", "profile_template", lg:lg )}}/{{contractor.seo}}",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "{{contractor.streetNo}} {{contractor.street}}",
+    "addressLocality": "{{contractor.city}}",
+    "addressRegion": "{{contractor.province}}",
+    "postalCode": "{{contractor.zip}}",
+    "addressCountry": "CA"
+  },
+  "telephone": "{{Contractor.contact_phone}}",
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": {{(strpos(contractor.avgRate, '.') > 0)? substr(contractor.avgRate,0,strpos(contractor.avgRate,'.') + 2): contractor.avgRate}},
+    "bestRating": 5,
+    "worstRating": 1,
+    "ratingCount": {{contractor.reviews.length()}}
+  },
+  
+  "review":{{r}}
+}
+</script>

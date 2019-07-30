@@ -1,0 +1,208 @@
+{{ v1 = 'en';}}
+
+url_prod = {{(v1 eq 'en') ? 'url_prod_en' : 'sn_configs.rows.url_prod' //executé statiquement
+}}; 
+<br>TEST1234<br>
+{{
+     
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    //%include '/site/package/all.sn';
+    use page;
+    use lg;
+    cgidata=cgidata();
+    "cgidata=".+cgidata;
+
+}}
+
+{{      //   ?contact_phone=123456&contact_email=mjodoin@soumissionrenovation.ca
+
+            tel = resub(cgidata.contact_phone,"-| ","$1","g");// remove -  and spaces 
+            "<br>cgidata.contact_phone=".+cgidata.contact_phone;
+            "<br>tel=".+tel;
+ /*           contractors =  sql("SELECT t.idtbl_appels_entrepreneurs as id, t.telephone, t.courriel
+                FROM tbl_appels_entrepreneurs t
+                WHERE  REPLACE(REPLACE(t.telephone,'-',''),' ','') = '?' 
+                    OR  t.courriel = '?' 
+                ",tel,cgidata.contact_email) ;
+            "nbrows=".+contractors.nbrows;
+            ids = ids .+ contractor.id .+ " ";
+            "<br>id=".+contractor.rows.id;
+            cgidata.idtbl_appels_entrepreneurs = contractor.id ;
+
+*/                      
+                      
+/*
+*/          ids ='';
+            id = '';
+            
+ //           for  contractor in contractors.rows  do
+  
+             for contractor   sql("SELECT t.idtbl_appels_entrepreneurs as id, t.telephone, t.courriel
+                FROM tbl_appels_entrepreneurs t
+                WHERE  REPLACE(REPLACE(t.telephone,'-',''),' ','') = '?' 
+                    OR  t.courriel = '?' 
+                ",tel,cgidata.contact_email) 
+             do
+            "rows=".+contractor.nbrows;
+
+           
+/*           for  contractor sql("SELECT t.idtbl_appels_entrepreneurs as id, t.telephone, t.courriel
+                FROM tbl_appels_entrepreneurs t
+                WHERE 
+                      REPLACE(REPLACE(t.telephone,'-',''),' ','') = '?' 
+                ",'5144868689') 
+                do
+*//*           for  contractor sql("SELECT t.idtbl_appels_entrepreneurs as id, t.telephone, t.courriel
+                FROM tbl_appels_entrepreneurs t
+                WHERE 
+                      t.courriel = '?' 
+                ",'mjodoin@soumissionrenovation.ca') 
+                do
+*/                    //void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 5 WHERE id_tbl_appels_entrepreneurs = '?' ", contractor.id);
+                    //Update and record
+                    //void insert(table:'sr_log', fields:{'type':'contractor form','uid_project_contractor':id_appels_entrepreneurs,'uid_project':'', 'email_to': cgidata.contact_email  ,'description':'update status for tel or email existing ','value':tel});
+                    //"rows=".+contractor.nbrows;
+                    id = contractor.rows.id;
+                    ids = ids .+ contractor.rows.id .+ " ";
+                    "<br>id=".+contractor.rows.id;
+                    cgidata.idtbl_appels_entrepreneurs = contractor.rows.id ;
+                    
+            endfor
+            "<br>all ids=".+ids;
+            "cgidata2=".+cgidata;
+}}
+
+
+
+
+<br><br>
+Entrez un nom de table<input     name="tbl"></input>
+{{
+   
+
+ "<br>";
+    n = 1;
+    "Liste <br>";         
+    for  resTbl sql("SELECT *,REPLACE(REPLACE(t.telephone,'-',''),' ','') as telephone2, t.telephone, t.courriel
+            -- ,t.telephone REGEXP '[[:digit:]]{3}[() -]*[[:digit:]]{3}[() -]*[[:digit:]]{4}$') as dd
+            -- ,  resub('DDD','','')
+            FROM tbl_appels_entrepreneurs t
+            -- WHERE (t.telephone REGEXP '[[:digit:]]{3}[() -]*[[:digit:]]{3}[() -]*[[:digit:]]{4}$') 
+            LIMIT  2
+            ") do
+    /* 
+            if   ( resub(trim2(project.rows.email),emailRegex,"") ne '')    then 
+                    "<br>".+ n++ .+ "-".+project.rows.uid.+ "-"  .+ project.rows.email;
+            endif
+    */
+    //phoneRegex = "((\+?[01][ \.-]?)?[ \.-]?(\(?\d{3}\)?[ \.-]?)?(\d{3})[ \.-]?(\d{4}).*)";
+    //wherePhoneRegex = "WHERE telephone_number REGEXP '^1[() -]*[[:digit:]]{3}[() -]*[[:digit:]]{3}[() -]*[[:digit:]]{4}$';"
+    v=resub(resTbl.rows.telephone,"-| ","$1","g");
+    //v=resub(resTbl.rows.telephone,phoneRegex,"$1"); 
+    //SELECT REPLACE('stackowerflow', 'ower', 'over');
+    //SELECT X_REG_REPLACE('Stackoverflow','/[A-Zf]/','-');
+    
+    
+    
+        "<br>".+  "tel.:".+ v.+ "  ------   "   .+ n++ .+ "-----".+resTbl.rows.telephone2.+ "-"  .+ resTbl.rows.courriel;
+    endfor
+    
+    //resub(snfilepath, "([A-Za-z0-9]*)(_rotated_\d+)?\.(jpe?g|png|gif)$", "$1_rotated_".+t.secs.+".$3"); 
+    
+            // add test of phone or email if no id 
+        if (cgidata.id_tbl_appels_entrepreneurs) then
+            // Change Status on tbl_appels_entrepreneurs so that the contractor can stop receiving reminders
+           // void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 5 WHERE idtbl_appels_entrepreneurs = '?'", cgidata.id_tbl_appels_entrepreneurs);
+            "<br>id_tbl_appels_entrepreneurs=".+cgidata.id_tbl_appels_entrepreneurs;
+        else   //search for existing telephone or email
+                           //  tbl_appels_entrepreneurs.      =cgidata.contact_phone,  //  tbl_appels_entrepreneurs.courriel = cgidata.contact_email   
+           //void sql("UPDATE tbl_appels_entrepreneurs SET Statut = 5 WHERE courriel = '?'  OR  telehone = '?'"  , cgidata.contact_email,cgidata.contact_phone);
+ /*       for  resTbl sql("SELECT id_tbl_appels_entrepreneurs, t.telephone, t.courriel
+            FROM tbl_appels_entrepreneurs t
+            WHERE REPLACE(REPLACE(t.telephone,'-',''),' ','') = '5144868689'
+            LIMIT  20
+            ") do
+
+        "<br><br>".+  "tel.:".+ v.+ "  ------   "   .+ n++ .+ "-----".+resTbl.rows.telephone.+ "-"  .+ resTbl.rows.courriel;
+        endfor
+*/
+
+        
+        endif
+
+    /*note:  pour remplcer des mots 
+    Dump the table - mysqldump -u user -p database table > dump.sql
+Find and replace a couple patterns - find /path/to/dump.sql -type f -exec sed -i 's/old_string/new_string/g' {} \;, There are obviously other perl regeular expressions you could perform on the file as well.
+Import the table - mysqlimport -u user -p database table < dump.sql   */
+
+
+configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+//"<br>configs=".+configs;
+sqlTxt= "                SELECT 
+                    c.uid AS 'uid_contractor',
+                    c.balance as 'balance',
+                    IFNULL((
+                        SELECT sum(i.amount) 
+                        FROM sr_invoice i 
+                        INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+                        WHERE pc.uid_contractor = c.uid
+                        AND (i.completed is null OR i.completed != 'yes')
+                    ),0) AS 'invoices_total',
+                    IFNULL((
+                        SELECT sum(pc.lead_price) 
+                        FROM sr_credit cr 
+                        INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
+                        WHERE pc.uid_contractor = c.uid
+                        AND cr.accepted = 'yes' 
+                        AND (cr.completed is null OR cr.completed != 'yes')
+                    ),0) AS 'credits_total',
+                    IFNULL((
+                        SELECT sum(t.amount)
+                        FROM sr_transaction t
+                        WHERE t.uid_contractor = c.uid
+                        AND (t.completed is null OR t.completed != 'yes')
+                    ),0) AS 'transactions_total'
+                FROM sr_contractor c
+            ";
+"<br>debut contracteur";
+// uid_contractor, balance, invoices_total, credits_total, transactions_total
+for contractor sql(sqlTxt.+" 
+    WHERE c.active = 'yes'
+    AND c.credit_cards = 'yes'                   
+    AND IFNULL(c.balance,0) + IFNULL((
+        SELECT sum(i.amount) 
+        FROM sr_invoice i 
+        INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
+        WHERE pc.uid_contractor = c.uid
+        AND (i.completed is null OR i.completed != 'yes')
+    ),0) >= '?'
+    AND EXISTS (SELECT null FROM sr_cc cc WHERE cc.uid_contractor = c.uid LIMIT 1)
+    HAVING (balance + invoices_total - credits_total - transactions_total) >= '?'
+    LIMIT 2
+    ", 10,10)
+    //configs.rows.min_amount_debit, configs.rows.min_amount_debit) //20,20
+do
+    "<br>rows=".+contractor.nbrows;
+    //"<br>contractor=".+contractor;
+    
+    //
+    subtotal = contractor.rows.invoices_total - contractor.rows.credits_total;
+    "<br>subtotal".+subtotal;
+    //taxes = calculateTaxesByProv(subtotal, contractor.rows.uid_contractor);
+    taxes = 100;  //contractor::calculateTaxes(subtotal);
+    "<br>taxes=".+taxes;
+    amount = contractor.rows.balance + taxes.total - contractor.rows.transactions_total;
+    "<br>amount".+amount;
+    ///////////uid_transaction = contractor::debit_charge(contractor.rows.uid_contractor, amount);
+    
+    //void insert(table:'sr_log', fields:{'type':'pivotal cron','uid_project_contractor':contractor.rows.uid_contractor,'uid_project':'', 'email_to': contact_email'  ,'description':'uid_transaction= '.+ uid_transaction.+'   amount','value':amount});
+
+endfor
+
+
+
+
+
+
+}}

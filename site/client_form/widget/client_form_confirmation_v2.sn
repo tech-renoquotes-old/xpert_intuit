@@ -1,0 +1,130 @@
+{{
+    /*
+        @title client_form_confirmation
+        Description: This widget is the confirmation message after a client fills a form.
+        
+        @author madupuis@sednove.comapi
+        
+        @version 1.0 2016-07-19
+        @version 1.01 2017-01-20  Adwords
+        @version 1.02 2017-02-14  add  first_visited = cookies.first_visited   (créé quand on entre dans la page sans requete(?))
+        @version 1.03 2017-03-10  description escaped
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    // %include "/site/package/all.sn";
+    //     //session 
+    // %include "/extenso/functions/sessions.snc"; 
+
+}}
+<style>
+    .table>tbody>tr, .table>tbody>tr>td{
+        border:none;
+    }
+</style> 
+
+<!-- ********************************* -->
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator_v2.sn";
+    
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/");  
+    connection = connection();
+    
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+        // check if an email has been submitted for this client
+        if(cgidata.email.length() <= 0) then
+
+        else
+        // Check for existing client in the database and merge it. 
+            existing = sql(single:true, "SELECT * FROM sr_client WHERE email = '?'", cgidata.email);
+        endif
+        
+        void insert(table:'sr_debug', fields:{'description':'test_cre  photo arg','text':request.args});
+
+
+        configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+        site= (lg.rows.lg  eq 'en')?'https://renoquotes.com':'https://soumissionrenovation.ca';
+        
+        //v1.02
+        description = cgidata.description;
+        description = html2text(description);//empêche script de passer
+        
+        void insert(table:'sr_debug', fields:{'description':'Client confirmation uid='.+' ','text':project.uid.+ '  first_url='.+first_visited});
+
+    endif
+}}
+
+
+\{{
+    client = sql(single:true,"
+        SELECT  firstname, lastname, address, sr_address.phone1 as phone, sr_project.description as description, sr_project.file1 as file1,
+                sr_project.file2 as file2, sr_project.file3 as file3, sr_project.file4 as file4, sr_project.file5 as file5 
+        FROM sr_client 
+        INNER JOIN sr_address ON sr_address.uid_client = sr_client.uid 
+        INNER JOIN sr_project ON sr_project.uid_client = sr_client.uid 
+        WHERE sr_client.uid='?' AND sr_project.uid='?' AND sr_address.uid='?'"
+        ,client.uid, project.uid, address.uid);
+}}
+
+<h2>
+    {{sn_ct("Veuillez vérifier les informations que vous nous avez envoyé", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}    
+</h2>
+<div class="table-responsive">
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>{{sn_ct("Votre nom:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.firstname}}&nbsp;\{{client.rows.lastname}}</th>
+            </tr>
+            <tr>
+                <td>{{sn_ct("Votre numéro de téléphone:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.phone}}</th>
+            </tr>
+            <tr>
+                <td>{{sn_ct("Votre adresse: ", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.address}}</th>
+            </tr>
+            <tr>
+                <td>{{sn_ct("La description de vos travaux:", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} </th>
+                <td>\{{client.rows.description}}</th>
+            </tr>
+        </tbody>
+    </table>
+</div>       
+
+
+\{{if client.rows.file1 ne "" then}}
+    <div class="container">
+        <h4>{{sn_ct(" Fichiers :", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</h4>
+        <div class="list-group">
+            {{for (i=1;i<6;i++) do}}
+                \{{if client.rows.file{{i}} ne "" then }}
+                    <a target="_blank" href="\{{client.rows.file{{i}} }}" class="list-group-item">
+                        \{{if basename(client.rows.file{{i}}) =~:i "\.(png|jpe?g)$" then}}
+                            <img src="\{{client.rows.file{{i}}}}?size=48x48&crop"> 
+                        \{{else}}
+                            <i class="fa fa-file-o" aria-hidden="true" style="font-size:18px"></i> 
+                        \{{endif}}
+                        <span> \{{basename(client.rows.file{{i}})}}</span>
+                    </a>
+                \{{endif}}
+            {{endfor}}
+    
+        </div>
+    </div>
+\{{endif}}
+
+<!-- Navigation Link to return to Quotes form -->
+    <div class="container">
+        <h4>
+            {{sn_ct("Nouvelle soumission", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+        </h4>
+    </div>

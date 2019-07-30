@@ -1,0 +1,49 @@
+\{{ 
+	cgidata = cgidata(); 
+	if cgidata.code ne "" && cgidata.url eq "" then
+		info = decrypt(value:cgidata.code,key:"sednoveextensomm",error:t);
+		if t.errcode == 0 then
+			c = connection();
+			h = headers_in();
+			cookie = cookies();
+			g = geoip(error: t, c.client_ip);
+			void insert(table:"sed_directmail_track",snc:true,fields:{
+				"email":info.email,
+				"uid_status":info.s,
+				"operation":"open",
+				"ip":c.client_ip,
+				"agent":h.User_Agent,
+				"cookie":cookie.sednove,
+				"region":g.region,
+				"country_code":g.country_code,
+				"city":g.city,
+				"region_name":g.region_name
+				});
+		endif
+		redirect("/module/sed/directmail/image/pixel.gif");
+	endif
+	if cgidata.u ne "" && cgidata.url ne "" then
+		info = decrypt(value:cgidata.u,key:"sednoveextensomm",error:t);
+		if t.errcode == 0 then
+			c = connection();
+			h = headers_in();
+			cookie = cookies();
+			g = geoip(error: t, c.client_ip);
+			void insert(table:"sed_directmail_track",snc:true,fields:{
+				"email":info.email,
+				"uid_status":info.s,
+				"operation":"click",
+				"ip":c.client_ip,
+				"agent":h.User_Agent,
+				"cookie":cookie.sednove,
+				"region":g.region,
+				"country_code":g.country_code,
+				"city":g.city,
+				"region_name":g.region_name,
+				"url":cgidata.url
+				});
+		endif
+		redirect(cgidata.url);
+    endif
+	
+}}

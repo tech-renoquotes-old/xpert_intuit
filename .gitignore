@@ -1,0 +1,23 @@
+#Ignore following files and/or folders
+README.txt
+README.md
+adnove/
+extenso/
+hash/
+html/
+httpd.conf
+logs/
+pdf/
+publish/
+sn_uploads/*
+srv1.conf
+srv1/
+staging/*.snc
+sync
+tex/
+tmp/**
+ttf/
+version.sn
+*.snc
+*.swp
+*~

@@ -1,0 +1,32 @@
+
+{{
+//timeout(20);
+    // include the validator for contractor_form
+   %include "/site/contractor_dashboard/include/add_photo_validator.sn";
+    use extranet_user;
+    
+    //remove("/sn_uploads/logo/logo_" .+ extranet_user.uid .+ ".jpg");
+    
+    cgidata = cgidata(disable_upload:false, directory:"/sn_uploads/banner");  
+//    void insert(table:'sr_debug', fields:{'description':cgidata.title,'text':cgidata.photo.+" ".+cgidata.photo.sn_fullname});
+
+    profil_exists = sql(single:true, "select * from sr_contractor_profil where uid_contractor = ?", extranet_user.uid);
+    
+    if(cgidata.cropped_image.length() > 0) then
+        if(profil_exists.nbrows == 0 && cgidata.cropped_image.sn_fullname ne "") then
+        // validate server side
+                photo = insert(
+                    table: "sr_contractor_profil",
+                    fields:{
+                        "uid_contractor":extranet_user.uid,
+                        "banner_1": cgidata.cropped_image.sn_fullname,
+                        "active": "yes"
+                    }
+                );
+        else
+            update_photo = sql("UPDATE sr_contractor_profil SET banner_1 = '?' WHERE uid_contractor = ?", cgidata.cropped_image.sn_fullname, extranet_user.uid); 
+            if(update_photo.affrow  >= 1) then
+            "Logo successfully updated!";
+            endif
+        endif
+    endif;

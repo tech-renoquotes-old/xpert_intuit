@@ -1,0 +1,32 @@
+{{
+    /*
+        @title ajax_change_photo_title
+        Description: Change the title of a photo in the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    //%include "/extenso/functions/sn_ct.snc";
+    //%include "/extenso/functions/sn_pages.snc";
+    
+    //use page;
+    //use lg;
+}}
+
+
+
+{{
+    cgidata = cgidata();
+    if(cgidata.token eq 'pwwbkvv7abqzonnvztpea91ich7vprwdorbt4w4') then
+        thisurl =  "http://ssr.sednove.ca/site/testme.sn"; 
+        res = curl(sslversion:6, url: thisurl, textfile: '/html/adwreport.xml', header: 'Content-type: text/xml', header: 'Authorization: BEARER pwwbkvv7abqzonnvztpea91ich7vprwdorbt4w4');
+        res.post;
+    else
+        http_status(404); 
+        set_content_type("text/html");
+
+    endif
+}}

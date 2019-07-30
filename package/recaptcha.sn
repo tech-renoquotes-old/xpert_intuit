@@ -1,0 +1,39 @@
+{{
+    /* 
+     * @title recaptcha package
+     * @author madupuis@sednove.ca, olivier@sednove.ca
+     * @version 1.0
+     */
+    
+    use lg;
+}}
+
+\{{
+    package recaptcha; 
+    
+        public_key = "6LdJ8B0TAAAAALYBBKlAdj7B35P477ZQ_g94Lpz7";
+        secret_key = "6LdJ8B0TAAAAAGrke6n32hpWjfpfIfalqRS1Sa3_";
+
+        function show()
+            }}
+            <!-- ReCaptcha -->
+            <div class="field-row">
+                <script src='https://www.google.com/recaptcha/api.js?hl={{lg.rows.lg}}'></script>
+                <div class="g-recaptcha" data-sitekey="\{{recaptcha::public_key}}"></div>
+            </div>
+            \{{ 
+        endf
+           
+        function validate()
+            cgidata = cgidata();
+            // ReCaptcha
+            captcha_check = curl(
+                url: 'https://www.google.com/recaptcha/api/siteverify',
+                data:"secret=" .+ recaptcha::secret_key .+ "&response=" .+ cgidata{'g-recaptcha-response'}
+            );
+            google_check_data = unstringnify(captcha_check.body);
+            return google_check_data.success; //return true or false
+        endf
+    endp
+}}
+

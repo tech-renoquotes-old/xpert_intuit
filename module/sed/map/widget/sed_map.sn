@@ -1,0 +1,201 @@
+{{
+    /*
+    	@title	sed_map
+    	Description:Use to display the map with the parameter selected
+        @author laplante@sednove.com
+    	@version 1.0 2015-06-02 10:00:00 Version initial
+    	@version 1.1 2016-06-07 10:30:00 Modification to change the name of table
+        @version 1.2 2016-06-08 8:30:00 Modification to change the type of texte  (fck))
+        @version 1.3 2016-06-09 10:55:00 change the scale of map from satelite and map
+        @version 1.4 2016-06-09 10:55:00 Display  the map with default value
+        @version 1.4 2016-06-09 10:55:00 add a zoom and map style fr the table
+    */
+}}
+<style type="text/css">
+.wdg-gmap{
+  width:100%;
+}
+
+.wdg-gmap.small{
+  height:250px;
+}
+.wdg-gmap.regular{
+  height:350px;
+}
+.wdg-gmap.big{
+  height:450px;
+}
+
+
+@media all and (max-width: 768px) {
+  .wdg-gmap.big{
+    height:300px;
+  }
+  .wdg-gmap.regular{
+    height:250px;
+  }
+  .wdg-gmap.small{
+    height:200px;
+  }
+  
+}
+@media all and (max-width: 460px) {
+  .wdg-gmap.big{
+    height:200px;
+  }
+  .wdg-gmap.regular{
+    height:200px;
+  }
+  .wdg-gmap.small{
+    height:200px;
+  }
+  
+  
+}
+</style>
+{{ 
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc"; 
+    %include "/extenso/functions/sn_pages.snc";     
+    use lg;         // Function publish use context lg	
+	use widget;
+	
+	data = sql(single:true,"SELECT * FROM sed_map where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+	
+	//class_map = data.rows.map_size;
+    //class_sat = data.rows.satellite_size;
+    
+    if data.nbrows eq '0' then
+        fields = {
+            "address" : "791 rue saint charles",
+            "lat":"45.5023753",
+            "lng":"-73.5015009",
+            "map_size":"regular",
+            "zoom":"14",
+            "map_type":"ROADMAP",
+            "mapstyle":"regular",
+            "uid" : widget.rows.uid_widget_list,
+            "uid_widget":widget.rows.uid_widget_list
+        };
+      
+        for l sql("select * from sn_languages where active = 'yes'") do
+                    fields{"titre_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                    fields{"texte_" .+ l.rows.lg} = "Texte " .+ l.rows.lg;
+        endfor
+            verif_ctx = sql(single:true,"SELECT uid FROM sed_map WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_map",fields:fields);
+	        endif
+            data = sql(single:true,"SELECT * FROM sed_map where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+        
+    endif
+    
+    
+    if data.rows.lat eq "" then
+        data.rows.lat = '45.5023753';
+    endif
+    if data.rows.lng eq "" then
+        data.rows.lng = '-73.5015009';
+    endif
+    if data.rows.map_size eq "" then
+         data.rows.map_size = 'regular';
+    endif
+    if data.rows.zoom eq "0" then
+         data.rows.zoom = '14';
+    endif
+    if data.rows.lat ne "" && data.rows.lng ne "" then }}
+
+        \{{use maps_js;
+        if map_js ne "1" then }}
+		    <!--<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false&amp;language={{lg.rows.lg;}}"></script>-->
+		\{{endif}}
+		\{{map_js=1}}
+		
+		<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8&amp;v=3.exp&amp;sensor=false&amp;language={{lg.rows.lg;}}"></script>
+		<script>
+			function initialize() {
+			  var myLatlng = new google.maps.LatLng({{data.rows.lat}}, {{data.rows.lng}});
+              
+                {{ if data.rows.mapstyle eq "gray" then }}
+                  	var styles = [{"featureType":"water","elementType":"geometry.fill","stylers":[{"color":"#d3d3d3"}]},{"featureType":"transit","stylers":[{"color":"#808080"},{"visibility":"off"}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"visibility":"on"},{"color":"#b3b3b3"}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"road.local","elementType":"geometry.fill","stylers":[{"visibility":"on"},{"color":"#ffffff"},{"weight":1.8}]},{"featureType":"road.local","elementType":"geometry.stroke","stylers":[{"color":"#d7d7d7"}]},{"featureType":"poi","elementType":"geometry.fill","stylers":[{"visibility":"on"},{"color":"#ebebeb"}]},{"featureType":"administrative","elementType":"geometry","stylers":[{"color":"#a7a7a7"}]},{"featureType":"road.arterial","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"road.arterial","elementType":"geometry.fill","stylers":[{"color":"#ffffff"}]},{"featureType":"landscape","elementType":"geometry.fill","stylers":[{"visibility":"on"},{"color":"#efefef"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#696969"}]},{"featureType":"administrative","elementType":"labels.text.fill","stylers":[{"visibility":"on"},{"color":"#737373"}]},{"featureType":"poi","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"poi","elementType":"labels","stylers":[{"visibility":"off"}]},{"featureType":"road.arterial","elementType":"geometry.stroke","stylers":[{"color":"#d6d6d6"}]},{"featureType":"road","elementType":"labels.icon","stylers":[{"visibility":"off"}]},{},{"featureType":"poi","elementType":"geometry.fill","stylers":[{"color":"#dadada"}]}];
+    			  	var styledMap = new google.maps.StyledMapType(styles,
+                  	{name: "Styled Map"});
+                {{endif}}
+              
+              
+			    var mapOptions = {
+				zoom: {{data.rows.zoom}},
+				scrollwheel: false,
+				center: myLatlng,
+				{{if data.rows.map_type eq 'ROADMAP' then }}
+    				mapTypeId: google.maps.MapTypeId.ROADMAP
+    			{{elseif data.rows.map_type eq 'SATELLITE' then }}
+    			    mapTypeId: google.maps.MapTypeId.SATELLITE
+    			{{elseif data.rows.map_type eq 'HYBRID' then }}  
+    			     mapTypeId: google.maps.MapTypeId.HYBRID
+    			 {{else}}
+    			    mapTypeId: google.maps.MapTypeId.TERRAIN
+				{{endif
+			    }}
+			    }
+			    
+			    var map = new google.maps.Map(document.getElementById('map{{widget.rows.uid_widget_list}}'), mapOptions);
+                
+                // google.maps.event.addListener( map, 'maptypeid_changed', function() { 
+                //     document.getElementById("map{{widget.rows.uid_widget_list}}").value = map.getMapTypeId();
+                //     //console.log(map.getMapTypeId());
+                //     var class_hybrid = "{{class_sat}}";
+                //     var class_roadmap = "{{class_map}}";
+                //     //console.log("class_hybrid"+class_hybrid);
+                //     //console.log("class_roadmap"+class_roadmap);
+                //     $("#map{{widget.rows.uid_widget_list}}").removeClass("big");
+                //     $("#map{{widget.rows.uid_widget_list}}").removeClass("regular");
+                //     $("#map{{widget.rows.uid_widget_list}}").removeClass("small");
+                //     if(map.getMapTypeId() == "hybrid"){
+                //         $("#map{{widget.rows.uid_widget_list}}").addClass(class_hybrid);
+                //     }
+                //     else{
+                //         $("#map{{widget.rows.uid_widget_list}}").addClass(class_roadmap);
+                //     }
+                // } );
+               
+      
+			  {{ if data.rows.mapstyle eq "gray" then }}
+              	//Associate the styled map with the MapTypeId and set it to display.
+              	map.mapTypes.set('map_style', styledMap);
+              	map.setMapTypeId('map_style');
+              {{endif}}
+              // faire un escpae pour les '' ou le"" et enleve les lignes pour le fck
+              {{texte_map = esc(filter:"sql",data.rows["texte_" .+ lg.rows.lg]);
+                texte_map = texte_map.resub("[\n\r]","","gi");
+			    titre_map=  esc(filter:"sql",data.rows["titre_" .+ lg.rows.lg]);
+			  }}
+			  
+                var marker = new google.maps.Marker({
+				  position: myLatlng,
+				  map: map,
+				  animation: google.maps.Animation.DROP,
+				  title: '{{titre_map}}'
+			    });
+			  
+			    
+			    var contentString = '<div class="info-window-content"><h4>{{titre_map}}</h4>'+
+								  '<p>{{texte_map}}</p></div>';	  
+			    var infowindow = new google.maps.InfoWindow({
+				  content: contentString
+			    });
+			  
+			  google.maps.event.addListener(marker, 'click', function() {
+				infowindow.open(map,marker);
+			  });
+			}
+
+			google.maps.event.addDomListener(window, 'load', initialize);
+		</script>
+        
+        
+		<div id="map{{widget.rows.uid_widget_list}}" class="wdg-gmap {{data.rows.map_size}}  "></div>
+        
+   {{ endif 
+}}

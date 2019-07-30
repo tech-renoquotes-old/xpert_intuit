@@ -1,0 +1,144 @@
+{{
+    /* 
+     * @title Pivotal payment class
+     * @version 1.0
+     * @author Olivier st-laurent <olivier@sednove.com>
+     * 
+     * 
+     * // CONSTRUCTOR
+     * @param terminalID
+     * @param secret
+     * @param sandbox bool (optional named param)
+     * 
+     * 
+     * @method save_card(merchantref:"...", cardtype:"VISA", cardnumber:"****************", cardexpiry:"0000", name:"John Doe", cvv:"***")
+     *  returns {success:bool, error:string, reference:string}
+     * 
+     * @method payment_card(orderID:"...", amount:"100.00", currency:"CAD", cardtype:"VISA", cardnumber:"****************", cardexpiry:"0000", name:"John Doe", cvv:"***")
+     *  returns {success:bool, error:string, uniqueref:string}
+     * 
+     * @method payment_ref(orderID:"...", amount:"100.00", currency:"CAD", cardnumber:saved_card.reference)
+     *  returns {success:bool, error:string, uniqueref:string}
+     * 
+     * 
+     * 
+     // TEST VALUES
+        terminalID = "33002";
+        secret = "SandboxSecret002";
+        // Constructor example :
+        pivotal = new Pivotal(terminalID, secret, sandbox:true);
+        
+        // Only needed for saving a card
+        merchantref = "1670".+random(min:10, max:99999);
+        
+        // Only needed for save card and payment with card
+        cardnumber = "4444333322221111";
+        cardexpiry = "1218";
+        cardtype = "VISA";
+        name = "John Doe";
+        cvv = "1234";
+        
+        // Only needed for payments
+        orderID = 1141.+random(min:100, max:99999);
+        currency = "CAD";
+        amount = 123.45;
+        
+     */
+    
+    class Pivotal
+        
+        method Pivotal(terminalID, secret)
+            if (date eq '') then
+                date = datetime(format:'%Y-%m-%d %H:%M:%S');
+            endif
+            this.url = "https://payments.globalone.me/merchant/xmlpayment";
+            if (sandbox) then
+                this.url = "https://testpayments.globalone.me/merchant/xmlpayment";
+            endif
+            this.formattedDatetime = this.getFormattedDate(date);
+            this.terminalID = terminalID;
+            this.secret = secret;
+        endm
+    
+        method getFormattedDate(datetime)
+        	day = datetime(date: datetime, format: "%d");
+        	day = (int) day;
+        	month = datetime(date: datetime, format: "%m");
+        	month = (int) month;
+        	return datetime(date: datetime, format: day.+"-".+month.+"-%Y:%H:%M:%S:000");
+        endm
+        
+        method save_card(;) // merchantref,cardtype,cardnumber,cardexpiry,name,cvv
+            terminalID = this.terminalID;
+            secret = this.secret;
+            formattedDatetime = this.formattedDatetime;
+            //
+        	hash = md5(terminalID.+merchantref.+formattedDatetime.+cardnumber.+cardexpiry.+cardtype.+name.+secret);
+        	res = curl(sslversion:6, url: this.url, compilefile: '/class/pivotal/securecardregistration.xml', header: 'Content-type: text/xml');
+    	    return {
+    	        'error': resub(res.body, "^.*(<ERRORSTRING>(.+)</ERRORSTRING>).*|.*$", "$2", "si"),
+    	        'success': (res.body =~:i '<CARDREFERENCE>(\d+)</CARDREFERENCE>'),
+    	        'reference': resub(res.body, "^.*(<CARDREFERENCE>(\d+)</CARDREFERENCE>).*|.*$", "$2", "si")
+    	    };
+        endm
+
+        method save_my_card(;) // merchantref,cardtype,cardnumber,cardexpiry,name,cvv
+            terminalID = this.terminalID;
+            secret = this.secret;
+            formattedDatetime = this.formattedDatetime;
+            //
+        	hash = md5(terminalID.+merchantref.+formattedDatetime.+cardnumber.+cardexpiry.+cardtype.+name.+secret);
+        	res = curl(sslversion:6, url: this.url, compilefile: '/class/pivotal/securecardregistration2.xml', header: 'Content-type: text/xml');
+    	    res.body;
+    	    return {
+    	        'error': resub(res.body, "^.*(<ERRORSTRING>(.+)</ERRORSTRING>).*|.*$", "$2", "si"),
+    	        'success': (res.body =~:i '<CARDREFERENCE>(\d+)</CARDREFERENCE>'),
+    	        'reference': resub(res.body, "^.*(<CARDREFERENCE>(\d+)</CARDREFERENCE>).*|.*$", "$2", "si")
+    	    };
+        endm
+        
+        method payment_card(;) // orderID,amount,currency,cardtype,cardnumber,cardexpiry,name,cvv
+            terminalID = this.terminalID;
+            secret = this.secret;
+            formattedDatetime = this.formattedDatetime;
+            //
+            formattedAmount = round(amount * 100) / 100.0;
+            terminalType = "2";
+            transactionType = "7";
+            hash = md5(terminalID.+orderID.+formattedAmount.+formattedDatetime.+secret);
+            res = curl(sslversion:6, url: this.url, compilefile: '/class/pivotal/payment.xml', header: 'Content-type: text/xml');
+            
+            return {
+                'error': resub(res.body, "^.*(<ERRORSTRING>(.+)</ERRORSTRING>).*|.*$", "$2", "si"),
+                'success': (res.body =~:i '<RESPONSECODE>A</RESPONSECODE>'),
+                'uniqueref': resub(res.body, "^.*(<UNIQUEREF>(.+)</UNIQUEREF>).*|.*$", "$2", "si")
+            };
+            
+            
+        endm
+        
+        method payment_ref() // orderID,amount,currency,cardnumber
+            terminalID = this.terminalID;
+            secret = this.secret;
+            formattedDatetime = this.formattedDatetime;
+            //
+            cardtype = "SECURECARD";
+            formattedAmount = round(amount * 100) / 100.0;
+            terminalType = "2";
+            transactionType = "7";
+            
+            hash = md5(terminalID.+orderID.+formattedAmount.+formattedDatetime.+secret);
+            res = curl(sslversion:6, timeout:8, error:t, url: this.url, compilefile: '/class/pivotal/paymentref.xml', header: 'Content-type: text/xml');
+            
+            //debugger after curl response
+            l = terminalID.+' '.+orderID.+' '.+formattedAmount.+' '.+formattedDatetime.+' '.+secret;
+            void insert(table:'sr_debug', fields:{'description':'payment_ref_after='.+l,'text':'res.body='.+res.body.+ t.error});
+            
+            return {
+                'error': t.error,
+                'success': (res.body =~:i '<RESPONSECODE>A</RESPONSECODE>'),
+                'uniqueref': resub(res.body, "^.*(<UNIQUEREF>(.+)</UNIQUEREF>).*|.*$", "$2", "si")
+            };
+        endm
+        
+    endc

@@ -1,0 +1,65 @@
+{{
+    /*
+        @title ajax_add_photo
+        Description: Add a photo to the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-01
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    use extranet_user;
+    
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_photo_validator.sn";
+    
+    //organize sn_uploads directory
+    current_month = datetime(format:"%m");
+    current_day = datetime(format:"%d");
+    current_year = datetime(format:"%Y");
+    
+    destination = "/sn_uploads/gallery/album_" .+ current_year .+ "_" .+ current_month .+ "/";
+    
+    if !(-e destination) then
+        mkdir(owner:"rwx",group:"rwx",other:"x",destination);
+    else
+        "directory already exist"; "<br>";
+    endif
+    
+    if-e destination then
+        a = stat(destination);
+    else
+        destination = "/sn_uploads/gallery/";
+    endif
+    //finish organizing
+    
+    
+    
+    cgidata = cgidata(disable_upload:false, directory:destination);
+    // headers_out("X-success",cgidata.photo);
+    
+    void insert(table:'sr_debug', fields:{'description':cgidata.title,'text':cgidata.photo.+" ".+cgidata.photo.sn_fullname});
+
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+        photo = insert(
+            table: "sr_gallery",
+            fields:{
+                "uid_contractor":extranet_user.uid,
+                "photo": cgidata.photo.sn_fullname,
+                "active": "yes",
+                "title":cgidata.title
+            }
+        );  
+        
+    endif
+
+}}

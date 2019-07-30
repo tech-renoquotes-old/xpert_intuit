@@ -1,0 +1,109 @@
+{{ 
+	//
+	// Name:		header : Display header of the page
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2015-06-07 10:42:03 etienne@sednove.com
+	//
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc";
+	%include "/functions/search.sn"; 
+
+	use lg;
+	use ressource;
+
+}}
+    <!-- =================== SED-SIDEBAR ===================-->
+    <div class="sed-sidebar sed-header">
+        <!-- Client logo =============================  -->
+        <div class="sed-logo sidebar-padding">
+            {{ // Call for the logo
+            	logo_client = sql(single:true,"select * from sn_configs where uid = '1'");}}
+            <a href="/"><img src="{{logo_client.rows.logo}}" class="logo-1"></a>
+        </div>
+
+        <!-- BEGIN SLIDING PANEL ==============================-->
+        <div class="sliding-panel sed-header">
+
+            <!-- Mobile Menu Icon ======  -->
+            <div class="mobile-relative">
+                <div class="mobile-nav" onclick="openSlidingPanel();">
+                    <button class="c-hamburger c-hamburger--htx">
+                      <span>toggle menu</span>
+                    </button>
+                    <div class="mobile-menu-text">M<br/>E<br/>N<br/>U</div>
+                </div>
+            </div>
+
+            <!-- MENU TOP ======  -->
+            <div class="menu-top-full menu-top-wrapper clearfix">
+                {{ %include "/includes/menu_haut.sn"; }}
+            </div><!--menu-top-wrapper-->
+
+
+            <!-- Main nav ======  -->
+            <div class="sidebar-padding">
+                <nav class="menu-main clearfix"> 	
+                    {{ // ===================== INCLUDE FOR THE MAIN NAV
+                    %include "/includes/call_main_nav.sn";}}          
+                </nav><!--menu-main-->
+              
+              <div class="sed_search">
+                {{ search() }}
+              </div>
+              
+              
+            </div><!-- / end main nav -->
+        </div><!-- / end .sliding-panel -->
+
+    </div>
+
+<script>
+
+   // -------------------------------------------
+    // JS FOR THE SLIDNG PANEL
+    // -------------------------------------------
+    var openSlidingPanel = function (){
+
+        var panelWidth = $('.sliding-panel').width();
+
+        $( window ).resize(function() {
+            var panelWidth = $('.sliding-panel').width();
+        });
+
+        if($('.sliding-panel').hasClass('openned')){
+            $('.sliding-panel').animate({
+                left: ["-"+panelWidth+"px", "easeInOutQuint"]
+              }, 500, function() {
+                // Animation complete.
+                $('.sliding-panel').removeClass('openned');
+                $('.mobile-menu-text').fadeIn();
+                $('.c-hamburger').removeClass('is-active');
+              });
+        }else{
+            $('.sliding-panel').addClass('openned');
+            $('.c-hamburger').addClass('is-active');
+            $('.mobile-menu-text').hide();
+            $('.sliding-panel').animate({
+                left: ["0px", "easeInOutQuint"]
+              }, 500, function() {
+                // Animation complete.
+              });
+        }
+    }
+    
+    
+    // -------------------------------------------
+    // JS FOR THE NAV
+    // -------------------------------------------
+    /* main menu : when click on an item of level 1, show/hide level 2 */
+    
+    function menu_main_toggle_children(bo){
+        $(bo).parent().siblings().removeClass("on-js").end().toggleClass("on-js");
+    }
+
+
+
+</script>

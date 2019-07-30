@@ -1,0 +1,36 @@
+{{
+	// --------------------------------------------------------------------------
+	/* 
+		@title		Implement a checkbox field
+		
+		This file is read by package sed_xform.
+	
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+	
+	use field;
+	use lg;
+	use declaration;
+	use field_title;
+	use field_name;
+	
+	display_default = false; // Default display is input text
+	enum =  splitre(value:field.rows.field_enum_values,re:"\s*,\s*");
+	firstvalue = enum[0];
+	secondvalue = enum[1];
+}}
+<div class="checkbox">
+  <label>
+    <input type="hidden" name="{{ field_name }}" id="{{ field_name }}" value="{{ secondvalue }}">
+    <input type="checkbox" data-on="{{ firstvalue }}" data-off="{{ secondvalue }}" name="{{if 0 then}}sed_xform_{{endif}}{{ field_name }}" id="sed_xform_{{ field_name }}" value="{{ firstvalue }}" 
+        onChange="sed_xform_checkbox('{{ field_name }}');"
+        {{
+			if field.onChange ne "" then ' onChange="'; parse(state:0,field.onChange);; '"'; endif 
+			">"; "<strong>"; field_title; "</strong>";
+            if field.rows{"help_" .+ lg.rows.lg} ne "" then  
+                }}&nbsp;<a href="#" data-toggle="tooltip" title="{{ esc(filter:"html", field.rows{"help_" .+ lg.rows.lg}); }}"><span class="glyphicon glyphicon-question-sign" aria-hidden="true"></span></a>{{
+            endif
+        }}
+  </label>
+</div>

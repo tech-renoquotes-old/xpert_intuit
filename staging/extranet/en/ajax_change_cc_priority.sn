@@ -1,0 +1,9 @@
+
+{{
+    cgidata = cgidata();
+    use extranet_user;
+    cgidata.cc_uid;
+    for cc in explode(",", cgidata.cc_uid) do
+        void sql("UPDATE sr_cc SET priority='?' WHERE uid='?' AND uid_contractor='?'", sn_nb1, cc, extranet_user.uid);
+    endfor
+}}

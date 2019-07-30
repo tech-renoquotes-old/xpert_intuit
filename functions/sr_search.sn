@@ -1,0 +1,22 @@
+{{ 
+	%include "/extenso/functions/sn_pages.snc";  
+	%include "/extenso/functions/sn_ct.snc"; 
+
+	function search() 
+		use lg; url = pages("sr_search",lg.rows.lg,error:false); 
+		url="http://ssr.sednove.ca/fr/recherche.snc";
+		"url=";url;
+}}
+<div class="search-2-wrap desktop">
+	<form class="search-2 clearfix" action="{{url}}">
+		<div class="search-left">
+			<input type="search" placeholder="{{ sn_ct(edit:false,"Recherche") }}" name="textsearch" value="\{{esc(filter:"html",cgidata.'https://search.yahoo.com/search?p=site%3A{{site1}} + \{{cgidata.textsearch}}');}}">
+		</div>
+		<div class="search-right">
+			<button onclick="document.submit();">
+				<i class="fa fa-search"></i>
+			</button>
+		</div>
+	</form><!--/.search-2-->
+</div><!--/.search-2-wrap-->
+{{ endf }}

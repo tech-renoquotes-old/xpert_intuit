@@ -1,0 +1,91 @@
+{{
+    /*
+        @title ajax_make_payment_card
+        Description: Make a payment using the new card informations.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-27
+        
+        @modified by louis.jhonny@gmail.com
+        changes: add a custom amount (not mandatory)
+        @version 1.1 2017-07-04
+        
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+}}
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/contractor_dashboard/include/add_cc_validator.sn";
+    
+    cgidata = cgidata();
+    use extranet_user;    
+    custom = cgidata.custom_amount;
+    
+    // validate server side
+    if (validator.validate(data:cgidata)) then  
+    
+        currency = "CAD";
+
+        amount = contractor::getCurrentBillingTotal(extranet_user.uid);
+        if(custom > 10) then
+            amount = custom;
+        endif
+        
+         if (amount > 0) then
+        
+            cardInfo = cgidata.type .+ " ************" .+ substr(cgidata.card_number, -4);
+            //headers_out("X-test", amount);
+            
+            // save credit card is checked
+            if cgidata.save_cc eq 'yes' then
+                cc = pivotal::save_credit_card(cgidata.type, cgidata.name, cgidata.card_number, cgidata.exp_year, cgidata.exp_month, cgidata.cvv, extranet_user.uid);
+                if cc.uid then
+                    headers_out("X-save_cc_success", "1");
+                else
+                    headers_out("X-save_cc_error", "1");
+                    headers_out("X-save_cc_error_msg", cc.error);
+                    stop();
+                endif
+               
+                // make pivotal payment with card reference
+                transaction = pivotal::make_payment_cc_uid(cc.uid, currency, amount, extranet_user.uid);
+                void insert(table:'sr_debug', fields:{'description':'ajax_make_payment_card - pivotal::make_payment_cc_uid: '.+extranet_user.uid,'text':'uid_transaction='.+transaction.uid.+" ".+'error_transaction='.+transaction.error.+" ".+'amount='.+amount});
+
+                if transaction.uid then
+                    // Add credit cards privilege (for calculation of the contractor's score)
+                    contractor::addCreditCardPrivilege(extranet_user.uid);
+                    // Trigger transaction success
+                    contractor::trigger_transaction(transaction.uid);
+                    headers_out("X-payment_card_success", "1");
+                else
+                    headers_out("X-payment_card_error", "1");
+                    headers_out("X-payment_card_error_msg", transaction.error);
+                    // Trigger transaction success
+                    contractor::trigger_payment_failed(extranet_user.uid, cardInfo .+ " (".+transaction.error.+")", amount);
+                endif
+            else
+                // make pivotal payment with card information
+                transaction = pivotal::make_payment_card(cgidata.type, cgidata.name, cgidata.card_number, cgidata.exp_year, cgidata.exp_month, cgidata.cvv, currency, amount, extranet_user.uid);        
+                void insert(table:'sr_debug', fields:{'description':'ajax_make_payment_card - pivotal::make_payment_card: '.+extranet_user.uid,'text':'uid_transaction='.+transaction.uid.+" ".+'error_transaction='.+transaction.error.+" ".+'amount='.+amount});
+                
+                if transaction.uid then
+                    contractor::trigger_transaction(transaction.uid);
+                    headers_out("X-payment_card_success", "1");
+                else
+                    headers_out("X-payment_card_error", "1");
+                    headers_out("X-payment_card_error_msg", transaction.error);
+                    contractor::trigger_payment_failed(extranet_user.uid, cardInfo .+ " (".+transaction.error.+")", amount);
+                endif
+            endif
+        endif
+    endif
+}}

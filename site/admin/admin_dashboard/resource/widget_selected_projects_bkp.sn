@@ -1,0 +1,551 @@
+     {{
+         %include "/extenso/functions/sn_ct.snc"; 
+    	%include "/extenso/functions/sn_pages.snc"; 
+    	%include '/site/package/all.sn';
+		use page;
+		use lg;
+
+     }}    
+     
+     
+     \{{
+        cgidata = cgidata();
+        ptype = sql("SELECT name_? as name, uid FROM sr_project_type WHERE active='yes'", "{{lg.rows.lg}}");
+        service = sql("SELECT name_long_? as name, uid FROM sr_service WHERE active='yes' GROUP BY name", "{{lg.rows.lg}}");
+        sub = "SELECT uid, name_? as name, lead_price FROM sr_subservice WHERE uid_service = '?'";
+        
+        if(cgidata.action eq 'sub_lookup') then
+            subservice = sql(sub, "{{lg.rows.lg}}", cgidata.suid);
+            headers_out("X-sub",subservice.rows);
+        endif
+        
+        if(cgidata.action eq 'price_lookup') then
+            currsub = sql(single:true,"SELECT * FROM sr_subservice WHERE uid ='?'", cgidata.subid);
+            headers_out("X-price",currsub.rows.lead_price);
+        endif
+        
+        prodata = {
+            "project_type": cgidata.project_type,
+            "uid_service": cgidata.service1,
+            "uid_subservice": cgidata.subservice,
+            "uid_secondary_service": cgidata.service2,
+            "due_date": cgidata.due_date,
+            "estimate_duration": cgidata.estimate_duration,
+            "lead_price": cgidata.lead_price,
+            "budget":cgidata.budget,
+            "budget_type":cgidata.budget_type,
+            "is_owner":cgidata.is_owner,
+            "property_type":cgidata.property_type,
+            "best_contact_way":cgidata.best_reach
+        };
+        
+        addrdata = {
+            "city": cgidata.locality,
+            "street_no": cgidata.street_number,
+            "street": cgidata.route,
+            "zip": cgidata.postal_code,
+            "province": cgidata.administrative_area_level_1,
+            "country":cgidata.country,
+            "phone1": cgidata.phone1
+        };
+        
+        
+        if(cgidata.activate) then
+            uid_addr = (cgidata.uid_address == 0)? "" : cgidata.uid_address;
+            project::updateProject(cgidata.uid_project, cgidata.uid_address, prodata, addrdata);
+            
+            activate = sql("UPDATE `sr_project` SET `status` = 'active' WHERE `uid` = '?'", cgidata.uid_project);
+            project::activateProject(cgidata.uid_project);
+            
+        endif
+
+        if(cgidata.save) then
+            uid_addr = (cgidata.uid_address == 0)? "" : cgidata.uid_address;
+            project::updateProject(cgidata.uid_project, cgidata.uid_address, prodata, addrdata);
+            IS_UPDATED = true;
+        endif
+        
+        project = sql("SELECT c.locked, c.locked_by, s.name_? as service_name, 
+                    p.project_type, p.uid, p.uid_service, p.uid_subservice, 
+                    p.uid_secondary_service, p.uid_client, p.description, 
+                    p.comments, p.additional_comments, p.is_owner, p.best_contact_way, 
+                    p.property_type, p.budget, p.budget_type, p.status, 
+                    p.lead_price, p.due_date, p.estimate_duration, p.uid_address,
+                    a.phone1, a.country, a.city, a.province, a.street_no, 
+                    a.street, a.zip
+                    FROM sr_project p
+                    INNER JOIN sr_client c ON c.uid = p.uid_client
+                    LEFT JOIN sr_service s ON s.uid = p.uid_service
+                    LEFT JOIN sr_address a ON a.uid = p.uid_address
+                    WHERE p.uid = '?'", "{{lg.rows.lg}}", cgidata.puid);
+                      
+     }}
+     
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script src="/js/encode.js"></script>
+
+<style>
+    .action_list table{
+        width:100%;
+        background-color:#eee;
+    }
+    
+    .action_list td{
+        border:none;
+        padding:10px
+    }
+    
+    .data{
+        width:100%;
+        height:600px;
+        border: 1px solid #ddd;
+        font-family: sans-serif;
+        font-size: 12px;
+
+    }
+    
+    .project_table{
+        width:100%;
+        padding:10px;
+        border-bottom:1px solid #ddd;
+        border-left:1px solid #ddd;
+        border-right:1px solid #ddd;
+        margin-bottom:20px;
+    }
+    
+    .project_table td,th{
+        padding:10px;
+    }
+    
+    
+    span{
+        font-family:'Open Sans', sans-serif !important;
+        font-size: 14px;
+    }
+    
+    input{
+        width:100%;
+    }
+    
+    textarea{
+        width:100%;
+    }
+    
+    hr {
+        display: block;
+        height: 1px;
+        border: 0;
+        border-top: 1px solid #f7d38f;
+        margin: 1em 0;
+        padding: 0; 
+    }
+    
+    .caption{
+        height:40px;
+        color:#fac45f;
+        font-size:18px;
+        background-color:#4f4f4f
+    }
+    
+    .tabhover {
+        background-color:#f9deb1;
+        cursor:pointer;
+    }
+    
+
+    .project_body{
+        width:100%;
+    }
+    
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    
+</style>  
+    
+    <input name="uid_client" type='hidden' value="\{{cgidata.puid}}" />
+    \{{if(IS_UPDATED) then}} 
+        <div class="alert alert-success">#\{{cgidata.uid_project}}: {{sn_ct("projet modifié avec succès!")}}</div>
+    \{{endif}}
+    
+
+    \{{for p in project.rows do}}
+        <div class="project_body" id="body_\{{p.uid}}" >
+            <form name="project_form" action="" method="POST" >
+                <input type='hidden' name="uid_address" value="\{{p.uid_address}}"/>
+                <input name="uid_project" type="hidden" value="\{{p.uid}}"/>
+                <input name="clid" type="hidden" value="\{{p.uid_client}}"/>
+                <div class="col-xs-10" style="padding:5px">
+                    <table class="project_table" id="project_table">
+                        <tr class="caption"><td colspan='2' >{{sn_ct("Projet")}} : #\{{p.uid}}</td>
+                            <td>
+                                \{{if (p.locked eq 'yes') then }}
+                                <img width="30px" src='/sn_uploads/icon/cadena.png'/>
+                                \{{endif}}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <span><hr style="margin-top:5px;margin-bottom:5px">\{{p.description}}<hr style="margin-top:5px;margin-bottom:5px"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'>
+                                <span>{{sn_ct("Date d'échéance ")}}:</span>
+                            </td>
+                            <td>
+                                <input name="due_date" class='form-control' value='\{{p.due_date}}'/>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'durée du projet obligatoire')}}" data-validator-error="estimate_duration"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Service ")}}:</span></td>
+                            <td>
+                                <select name="service1" id="service_\{{p.uid}}" class="form-control">
+                                    <option selected value="">{{sn_ct("choisissez un service")}}</option>
+                                    \{{for s in service.rows do}}
+                                        <option \{{(p.uid_service == s.uid)?'selected':''}} value="\{{s.uid}}">\{{s.name}}</option>
+                                    \{{endfor}}
+                                </select>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'service obligatoire')}}" data-validator-error="service1"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("sous-service ")}} :</span></td>
+                            <td>
+                                <select name="subservice" id="subservice_\{{p.uid}}" class="form-control subservice">
+                                    <option selected value="">{{sn_ct("choisissez un sous-service")}}</option>
+                                    \{{subqry = (p.uid_service ne "")?sql(sub,'{{lg.rows.lg}}',p.uid_service):""}}
+                                    \{{for sub in subqry.rows do}}
+                                        <option \{{(p.uid_subservice == sub.uid)?'selected':''}} value="\{{sub.uid}}">\{{sub.name}}</option>
+                                    \{{endfor}}
+                                </select>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'sous-service obligatoire')}}" data-validator-error="subservice"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Service secondaire ")}}:</span></td>
+                            <td>
+                                <select name="service2" class="form-control">
+                                    <option selected value="">{{sn_ct("choisissez un service secondaire")}}</option>
+                                    \{{for s in service.rows do}}
+                                        <option \{{(p.uid_secondary_service eq s.uid)?'selected':''}} value="\{{s.uid}}">\{{s.name}}</option>
+                                    \{{endfor}}
+                                </select>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'service secondaire obligatoire')}}" data-validator-error="service2"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Téléphone")}} :</span>
+                            </td>
+                            <td>
+                                <input name="phone1" class='form-control' value='\{{p.phone1}}'/>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Telephone invalide')}}" data-validator-error="phone1"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="right"><span>{{sn_ct("Adresse ")}} :</span></td>
+                            <td>
+                                <input class="form-control" type="text" name="address" id="address" value="\{{a = p.street_no .+ ' ' .+ p.street .+ ' ' .+ p.city .+ ' ' .+ p.province .+ ' ' .+ p.zip; (p.uid_address == 0 || p.uid_address eq '')? '':a}}" onFocus="geolocate()" placeholder="">
+                                <input type="hidden" class="field" id="street_number" name="street_number"  value="\{{p.street_no}}"></input>
+                                <input type="hidden" class="field" id="route" name="route"  value="\{{p.street}}"></input>
+                                <input type="hidden" class="field" id="locality" name="locality"  value="\{{p.city}}"></input>
+                                <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" value="\{{p.province}}"></input>
+                                <input type="hidden" class="field" id="postal_code" name="postal_code"  value="\{{p.zip}}"></input>
+                                <input type="hidden" class="field" id="country" name="country"  value="\{{p.country}}"></input>
+                                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Address invalide')}}" data-validator-error="address"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Prix ")}}:</span>
+                            </td>
+                            <td>
+                                <input name="lead_price" id="lead_price_\{{p.uid}}" class='form-control' value='\{{(p.lead_price == 0)?"":p.lead_price}}'/>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Prix obligatoire')}}" data-validator-error="lead_price"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Type de projet ")}}:</span></td>
+                            <td>
+                                <select name="project_type"  class="form-control" name="project_type">
+                                    <option selected value="">{{sn_ct("choisissez un type")}}</option>
+                                    \{{for t in ptype.rows do}}
+                                        <option \{{(p.project_type == t.name)?'selected':''}} value="\{{t.name}}">\{{t.name}}</option>
+                                    \{{endfor}}
+                                </select>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Type de projet obligatoire')}}" data-validator-error="project_type"></span>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan='2'>
+                                <label>Information Additionelle</label>
+                                <hr style="margin-top:5px;margin-bottom:5px">
+                            </td>
+                        </tr>
+                        <tr>
+                        <td align='right'><span>{{sn_ct("Type de propriété ")}}:</span></td>
+                            <td>
+                            <select class="form-control LoNotSensitive" name="property_type">
+                                <option selected value='' >{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                <option \{{(p.property_type eq 'Cottage')?'selected':''}} >{{sn_ct(edit:true,'Cottage')}}</option>
+                                <option \{{(p.property_type eq 'Bungalow')?'selected':''}}>{{sn_ct(edit:true,'Bungalow')}}</option>
+                                <option \{{(p.property_type eq 'Semi-detachee')?'selected':''}}>{{sn_ct(edit:true,'Semi-détaché')}}</option>
+                                <option \{{(p.property_type eq 'Maison de ville')?'selected':''}}>{{sn_ct(edit:true,'Maison de ville')}}</option>
+                                <option \{{(p.property_type eq 'Condo')?'selected':''}}>{{sn_ct(edit:true,'Condo')}}</option>
+                                <option \{{(p.property_type eq 'Apartement')?'selected':''}}>{{sn_ct(edit:true,'Apartement')}}</option>
+                                <option \{{(p.property_type eq 'Chalet')?'selected':''}}>{{sn_ct(edit:true,'Chalet')}}</option>
+                                <option \{{(p.property_type eq 'Commerciale')?'selected':''}}>{{sn_ct(edit:true,'Commerciale')}}</option>
+                                <option \{{(p.property_type eq 'Multi-Plex6')?'selected':''}}>{{sn_ct(edit:true,'Multi-Plex (6 logements et moins)')}}</option>
+                                <option \{{(p.property_type eq 'Multi-Plex7')?'selected':''}}>{{sn_ct(edit:true,'Multi-Plex (Plus de 6 logements)')}}</option>
+                                <option \{{(p.property_type eq 'Autre')?'selected':''}}>{{sn_ct(edit:true,'Autre')}}</option>
+                            </select>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Type de projet obligatoire')}}" data-validator-error="project_type"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("propriétaire")}}:</span>
+                            </td>
+                            <td>
+                                <input name="is_owner" class='form-control' value='\{{p.is_owner}}'/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Type de budget ")}}:</span></td>
+                            <td>
+                                <select class="form-control LoNotSensitive" name="budget_type">
+                                    <option selected value=''>{{sn_ct(edit:false,'Choisissez une option')}}</option>
+                                    <option \{{(p.budget_type eq '1')?'selected':''}} value="1" >{{sn_ct(edit:false,"budget pour main d'oeuvre uniquement")}}</option>
+                                    <option \{{(p.budget_type eq '2')?'selected':''}} value="2" >{{sn_ct(edit:false,"budget pour main d'oeuvre + matériaux")}}</option>
+                                </select>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Type de projet obligatoire')}}" data-validator-error="project_type"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'><span>{{sn_ct("Budget")}}:</span>
+                            </td>
+                            <td>
+                                <input name="budget" class='form-control' value='\{{p.budget}}'/>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'>
+                                <span>{{sn_ct("Durée du projet")}}:</span>
+                            </td>
+                            <td>
+                                <input name="estimate_duration" class='form-control' value='\{{p.estimate_duration}}'/>
+                                <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'date échéance obligatoire')}}" data-validator-error="due_date"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align='right'>
+                                <span>{{sn_ct("Meilleur moyen de contacte")}}:</span>
+                            </td>
+                            <td>
+                                <select class="form-control LoNotSensitive" name="best_reach" id="best_reach" value="">
+                                    <option selected value="">{{sn_ct(edit:true,'Choisissez une option')}}</option>
+                                    <option \{{(p.best_contact_way eq "Par téléphone")?'selected':''}}>{{sn_ct(edit:true,'Par téléphone')}}</option>
+                                    <option \{{(p.best_contact_way eq "Par email")?'selected':''}}>{{sn_ct(edit:true,'Par email')}}</option>
+                                    <option \{{(p.best_contact_way eq "Par sms/texto")?'selected':''}}>{{sn_ct(edit:true,'Par sms/texto')}}</option>
+                                    <option \{{(p.best_contact_way eq "Autre")?'selected':''}}>{{sn_ct(edit:true,'Autre')}}</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="right">{{sn_ct("commentaires ")}}:</td>
+                            <td>
+                                <span>\{{p.comments}}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="right">{{sn_ct("commentaires additionnelles ")}}:</td>
+                            <td>
+                                <span>\{{p.additional_comments}}</span>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td colspan='2'>
+                               <input type="submit" name="save" class="btn btn-primary" value="{{sn_ct(edit:false,'Sauvegarder')}}" \{{(p.locked eq 'yes' && p.locked_by ne user.username)?'disabled':''}}/> 
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-xs-1" style="padding:0">
+                    <table class="action_list" >
+                        <tr><td colspan='2'>&nbsp;</td></tr>
+                        <tr><td> <input type="submit" name="save" class="btn btn-primary" value="{{sn_ct(edit:false,'Sauvegarder')}}" \{{(p.locked eq 'yes' && p.locked_by ne user.username)?'disabled':''}}/></td></tr>
+                        <tr><td><input name="cancel" class='btn btn-primary' type='button' value='{{sn_ct(edit:false,"Annuler")}}'  \{{(p.locked eq 'yes' && p.locked_by ne user.username)?'disabled':''}}/></td></tr>
+                        <tr><td><input name="google_map" class='btn btn-warning' type='submit' value='{{sn_ct(edit:false,"Map")}}'/></td></tr>
+                        <tr><td colspan='2'>&nbsp;</td></tr>
+                    </table>
+                </div>
+                
+            </form>
+            <input type='radio' style="display:none" name="selected" value="\{{p.uid}}" \{{(i==0)?'checked':''}} />
+        </div>
+        \{{i++}}
+    \{{endfor}}
+    
+<script>
+    h = $('#project_table').height();
+    window.parent.$('object').css('height', h+'px');
+</script>
+
+
+<script>
+
+$('select[name=service1').on('change',function(){
+    ctrl = $(this);
+    ctrlID = $(this).attr('id');
+    subctrl = $('#sub'+ctrlID);
+    
+    suid = ctrl.val();
+
+    $.ajax({
+        type: "POST",
+        data: {'action': 'sub_lookup','suid':suid},
+        beforeSend: function(){
+        },
+        
+        success: function(data, statusText, xhr) {
+            var res = xhr.getResponseHeader('X-sub');
+            res = res.decode();
+            res = jQuery.parseJSON(res);
+            puid = window.parent.$('#selected_project').val();
+            
+            if(res.length > 0){
+                subctrl.html("");
+                $.each(res, function(key,value){
+                    subctrl.append('<option value="' + value.uid + '">' + value.name + '</option');
+                    if(key == 0){
+                        $('#lead_price_'+puid).val(value.lead_price);
+                    }
+                });
+            }
+        }
+    });
+
+});
+
+
+$('select[name=subservice').on('change',function(){
+    ctrl = $(this);
+    subid = ctrl.val();
+    
+    $.ajax({
+        type: "POST",
+        data: {'action': 'price_lookup','subid':subid},
+        beforeSend: function(){
+        },
+        
+        success: function(data, statusText, xhr) {
+            var res = xhr.getResponseHeader('X-price');
+            puid = window.parent.$('#selected_project').val();
+    
+            if(res != ""){
+                $('#lead_price_'+puid).val(res);
+               
+            }
+        }
+    });
+
+});
+
+</script>
+
+
+
+<!-- Google map api for addresses -->
+<script>
+// This example displays an address form, using the autocomplete feature
+// of the Google Places API to help users fill in the information.
+
+var placeSearch, autocomplete, autocomplete_slim;
+var componentForm = {
+  street_number: 'short_name',
+  route: 'long_name',
+  locality: 'long_name',
+  administrative_area_level_1: 'short_name',
+  country: 'long_name',
+  postal_code: 'short_name'
+};
+
+function initAutocomplete() {
+  // Create the autocomplete object, restricting the search to geographical
+  // location types.
+  autocomplete = new google.maps.places.Autocomplete(
+      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      {types: ['geocode']});
+      
+  // When the user selects an address from the dropdown, populate the address
+  // fields in the form.
+  autocomplete.addListener('place_changed', fillInAddress);
+  autocomplete.name="normal";
+
+
+  // For the second form in the article_detail page (slim)
+  if (document.getElementById('address_slim')){
+      autocomplete_slim = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+          {types: ['geocode']});
+      autocomplete_slim.addListener('place_changed', fillInAddress);
+      autocomplete_slim.name="slim";
+    }
+}
+
+// [START region_fillform]
+function fillInAddress() {
+  // Get the place details from the autocomplete object.
+  var place = this.getPlace();
+  index = (this.name === "normal") ? 0 : 1 ;
+    
+  for (var component in componentForm) {
+    document.getElementsByName(component)[index].value = '';
+    document.getElementsByName(component)[index].disabled = false;
+  }
+
+  // Get each component of the address from the place details
+  // and fill the corresponding field on the form.
+  for (var i = 0; i < place.address_components.length; i++) {
+    var addressType = place.address_components[i].types[0];
+    if (componentForm[addressType]) {
+      var val = place.address_components[i][componentForm[addressType]];
+      document.getElementsByName(addressType)[index].value = val;
+    }
+  }
+}
+// [END region_fillform]
+
+// [START region_geolocation]
+// Bias the autocomplete object to the user's geographical location,
+// as supplied by the browser's 'navigator.geolocation' object.
+    function geolocate() {
+      if (navigator.geolocation) {
+    //     navigator.geolocation.getCurrentPosition(function(position) {
+    //       var geolocation = {
+    //         lat: position.coords.latitude,
+    //         lng: position.coords.longitude
+    //       };
+    //       var circle = new google.maps.Circle({
+    //         center: geolocation,
+    //         radius: position.coords.accuracy
+    //       });
+    //      autocomplete.setBounds(circle.getBounds());
+    //     });
+       }
+    }
+// [END region_geolocation] 
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8"async defer></script>
+

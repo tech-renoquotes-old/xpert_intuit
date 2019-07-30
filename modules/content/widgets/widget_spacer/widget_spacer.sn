@@ -1,0 +1,32 @@
+{{
+	use widget;
+    use lg;	
+    use uid;
+	use table;
+	wdgspacer = sql(single:true,"SELECT * FROM widget_spacer where uid_widget='?'", widget.rows.uid_widget_list);
+    
+    height = wdgspacer.rows.height;
+}}
+
+
+<style type="text/css">
+.cs .wdg_spacer {
+    clear:both;
+}
+.cs .wdg_spacer.wdg_spacer_small { height:25px; }
+.cs .wdg_spacer.wdg_spacer_medium { height:50px; }
+.cs .wdg_spacer.wdg_spacer_tall { height:100px; }
+
+@media (max-width: 767px) {
+    .cs .wdg_spacer.wdg_spacer_small { height:20px; }
+    .cs .wdg_spacer.wdg_spacer_medium { height:35px; }
+    .cs .wdg_spacer.wdg_spacer_tall { height:60px; }
+}
+@media (max-width: 460px) {
+    .cs .wdg_spacer.wdg_spacer_small { height:15px; }
+    .cs .wdg_spacer.wdg_spacer_medium { height:25px; }
+    .cs .wdg_spacer.wdg_spacer_tall { height:35px; }
+}
+</style>
+
+<div class="wdg_spacer {{height}}">&nbsp;</div>

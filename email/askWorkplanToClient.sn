@@ -1,0 +1,49 @@
+{{
+    /*
+        @title 			askWorkplanToClient
+		Description		Ask the client for the workplan to continue working on his/her project. 
+        
+        @author 		louis.jhonny@gmail.com
+        
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+	use client;
+}}
+
+\{{
+    use project;
+	uid_client = project.rows.uid_client;
+	uid_project = project.rows.uid;
+	client_email = project.rows.email;
+	client_firstname = project.rows.firstname;
+	client_lastname = project.rows.lastname;
+	client_gender = project.rows.gender;
+
+	client_gender = (client_gender eq 'm')?'Mr.':'Mme.';
+}}
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+        </span>
+    </span>
+</div>
+<br>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://xpertsource.com/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

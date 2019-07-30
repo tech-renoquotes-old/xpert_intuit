@@ -1,0 +1,5 @@
+\{{ 
+	users = sql("select username from sn_users");
+	stringnify(users.rows);
+
+}}

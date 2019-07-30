@@ -1,0 +1,84 @@
+Start Direct-Mail
+{{ 
+	
+	datetime(); "\n";
+	start = datetime(format:"%s");
+	cgidata = cgidata(); 
+	if ! isdigit(cgidata.uid_status) then
+		error("Invalid status: %d", cgidata.uid_status);
+	endif
+	status = sql(single:true,"select * from sed_directmail_status where uid = '?'", cgidata.uid_status);
+	if status.nbrows != 1 then
+		error("Can't find status : %d", cgidata.uid_status);
+	endif
+
+	res = sql("update sed_directmail_status set status='running', pid = '?' where uid = '?'", getpid(), cgidata.uid_status);
+
+	mailfrom = status.rows.mailfrom;
+	"Mail from "; mailfrom; "\n";
+	format  = status.rows.format;
+	"format "; format; "\n";
+
+	template = sql(single:true, "select * from sed_directmail_template where uid = '?'", status.rows.template);
+	if template.nbrows != 1 then
+		error("Can't read template %d", status.rows.template);
+	endif
+
+	if format eq "HTML" then
+		"html file is "; template.rows.html; "\n";
+	elseif format eq "TEXT" then
+		"text file is "; template.rows.txt; "\n";
+	else 
+		"text file is "; template.rows.txt; "\n";
+		"html file is "; template.rows.html; "\n";
+	endif
+
+	"Sending email\n";
+	for user sql("select *,sed_directmail_transmit.uid as sed_directmail_transmit_uid from sed_directmail_transmit inner join ? on sed_directmail_transmit.uid_list = ?.uid 
+		where uid_status = '?'", status.rows.list, status.rows.list, cgidata.uid_status) do
+
+		// Is this a test email ?
+		if status.rows.mailtest eq "yes" then
+			mailto=status.rows.mailtestto;
+			"Sending to "; user.rows.email; " but change to "; mailto; "\n";
+		else
+			mailto = user.rows.email;
+			"Sending to "; user.rows.email; "\n";
+		endif
+
+		code = crypt(key:"sednoveextensomm",value:{"s":status.rows.uid,"email":user.rows.email,"list":status.rows.list,"user":user.rows.uid});
+
+		if format eq "HTML" then
+			email(from:mailfrom,to:mailto,subject:status.rows.subject,
+			header:"X-SedNove-Extenso: " .+ code,
+			ct:"text/html", charset:"utf-8",compilefile:template.rows.html,
+			error:v);
+		elseif format eq "TEXT" then
+			email(from:mailfrom,to:mailto,subject:status.rows.subject,
+			header:"X-SedNove-Extenso: " .+ code,
+			ct:"text/plain", charset:"utf-8",compilefile:template.rows.txt,
+			error:v);
+		else 
+			email(from:mailfrom,to:mailto,subject:status.rows.subject,
+			header:"X-SedNove-Extenso: " .+ code,
+			ct:"text/plain", charset:"utf-8",compilefile:template.rows.txt,
+			ct:"text/html", charset:"utf-8",compilefile:template.rows.html,
+			error:v);
+		endif
+		
+		void sql("delete from sed_directmail_transmit where uid = '?' ", user.rows.sed_directmail_transmit_uid);
+		res = sql("update sed_directmail_status set nb_email_transmit=nb_email_transmit-1 where uid = '?'", cgidata.uid_status);
+		current_status = sql(single:true,"select status from sed_directmail_status where uid = '?'", cgidata.uid_status);
+		if current_status.rows.status eq "stop" || current_status.rows.status eq "cancel" then
+			exit(0);
+		endif
+		sleep(1);
+
+	endfor
+	"End of loop sending email\n";
+	now = datetime(format:"%s");
+	diff = now - start;
+	res = sql("update sed_directmail_status set status = 'finish',pid='0', total='diff' where uid = '?'", cgidata.uid_status);
+	datetime(); "\n";
+}}
+End of job

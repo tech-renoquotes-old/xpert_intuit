@@ -1,0 +1,4 @@
+User-agent: * 
+Disallow: /extenso/extranet
+Disallow: /extranet 
+Sitemap: https://xpertsource.com/sitemap.xml

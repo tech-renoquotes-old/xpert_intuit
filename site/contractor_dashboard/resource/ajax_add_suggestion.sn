@@ -1,0 +1,27 @@
+{{
+    /*
+        @title ajax_add_suggestion
+        Description: Links a project to a contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-02
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+\{{
+    cgidata = cgidata();  
+    use extranet_user;
+    
+    // send email
+    automail::contractorSuggestionToAdmin(extranet_user.uid, cgidata.suggestion);
+    headers_out("X-success",1);
+
+}}

@@ -1,0 +1,10 @@
+
+
+{{
+cgidata = cgidata();
+
+if cgidata.save_ajax then
+    void sql("UPDATE sr_project SET description = '?' WHERE uid = '?' AND adwords_campaign = 'atonelabs.com'", cgidata.value, cgidata.uid);
+endif
+
+}}

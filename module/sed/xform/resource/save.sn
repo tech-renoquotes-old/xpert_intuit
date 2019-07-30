@@ -1,0 +1,110 @@
+{{ 
+	// --------------------------------------------------------------------------
+	/* 
+		@title		resource save.sn
+	
+		Use to save a form with module xform
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+		@version    1.1 2016-03-21 laplante@sednove.com Save error email in the json
+		@version    1.2 2016-04-01 laplante@sednove.com Create table field_title
+	*/
+	// --------------------------------------------------------------------------
+	
+	 %include "/module/sed/package/sed_util.sn";
+	 
+	 use lg;
+}}\{{
+    config = config();
+    
+    // default return status in json
+	json.errcode = 0;
+	json.errmesg = "";
+	
+	// Check key using query string
+	r = request(); 
+    args = r.args;
+    qs = parse_query_string(args);
+	
+	// Check time form was submitted
+	now = datetime(format:"%s");
+	widget = decrypt(key : "duhf498u4r349r36", value: qs.widget);
+	diff = now - widget.date;
+	
+	// If this form has been submitted more than 5 mins, refuse it.
+	if diff > 3000 then
+	    json.errcode = 1;
+	    json.errmesg = dq[[{{sed_util::ct(module:"sed_xform","Retransmit your form");}}]];
+	else
+	    widget_content = sql(single:true, "select * from sed_xform_info where uid_widget = '?'", widget.uid_widget);
+	    table_name  = sql(single:true, "select table_name from sn_tables where uid = '?'", widget_content.rows.uid_sn_tables);
+	    
+	    //"widgert="; widget;
+	    //"wc="; widget_content; "tn="; table_name;
+	    
+	    // Verify google captcha if one is present
+	    ok = true;
+	    if widget_content.rows.with_captcha eq "yes" && widget_content.rows.captcha ne "" then 
+	        google_url = "https://www.google.com/recaptcha/api/siteverify";
+	        captcha_check = curl(url: google_url,  data:"secret=" .+ widget_content.rows.captcha_secret .+ '&response=' .+ cgidata{'g-recaptcha-response'});
+	        google_check_data = unstringnify(captcha_check.body);
+            if ! google_check_data.success  then
+                ok = false;
+                json.errcode = 2;
+	            json.errmesg = dq[[{{sed_util::ct(module:"sed_xform","Invalid google captcha check. Are you a robot ?");}}]];
+            endif
+	    endif
+	    
+	    // if google captcha was good or not used.
+	    if ok then
+	        // Save form
+	       
+	        cgidata = cgidata(disable_upload: false, directory: '/sn_uploads');
+	        deletectx(cgidata, "widget", "g-recaptcha-response");
+	        for post in cgidata do
+	            if (post.value.sn_fullname ne '') then
+	                cgidata{post.key} = post.value.sn_fullname;
+	            endif
+	        endfor
+	        
+	        void insert(table: table_name.rows.table_name, snc : true, user : user, fields : cgidata);
+	        
+	        // Get title for each field
+	        for f sql("select field_name,field_title_{{lg.rows.lg}} as field_title from sn_fields where uid_sn_tables = '?'", widget_content.rows.uid_sn_tables) do
+	           field_title{f.rows.field_name} = f.rows.field_title;
+	        endfor
+	   
+	        // Check email template
+	        template = sql(single:true, "select * from email where  code = '?'", widget_content.rows.email_template);
+			module = sql(single:true,"select * from sn_modules where module_code = 'sed_xform'");
+	        email = "/" .+ config.site .+ "/email/{{lg.rows.lg}}/" .+ template.rows.page_name_{{lg.rows.lg}} .+ ".snc";
+	        email = "/" .+ config.site  .+ "/module/" .+ module.rows.developer .+ "/" .+ module.rows.dir .+ "/email/{{lg.rows.lg}}/" .+ template.rows.page_name_{{lg.rows.lg}} .+ ".snc";
+	        json.email = email;
+	    
+	        // Send email to admin
+	        if widget_content.rows.email_admin eq "yes" && template.nbrows == 1 then
+	            //"Sending email to "; widget_content.rows.email_to_admin;
+	            email(error: err, from: widget_content.rows.email_from, to: widget_content.rows.email_to_admin, subject: widget_content.rows.email_subject_{{lg.rows.lg}},
+	                  headercharset:"utf-8", charset: "utf-8",
+	                 ct: "text/html", binaryfile: email);
+	            json.admin_email=err;
+	        endif
+	    
+	        // Send email to client
+	        if widget_content.rows.email_client eq "yes" && template.nbrows == 1 then
+	        
+	            email_to_client = widget_content.rows.email_to_client;
+	            
+	            email_to = esc(filter:"sql",cgidata{email_to_client});
+
+	            //"Sending email to client "; email_to;
+	            email(error: err, from: widget_content.rows.email_from, to: email_to, subject: widget_content.rows.email_subject_{{lg.rows.lg}}, headercharset:"utf-8", charset: "utf-8",
+	                ct: "text/html", binaryfile: email);
+	            json.client_email=err;
+	        endif
+	   endif
+	endif
+	
+	// return status
+	json;
+}}

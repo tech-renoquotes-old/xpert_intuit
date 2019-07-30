@@ -1,0 +1,19 @@
+{{
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+	use cgidata;
+	
+	sujet = cgidata.subject;
+	message = cgidata.message;
+	courriel = cgidata.email;
+	nom = cgidata.name;
+	telephone = cgidata.phone;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

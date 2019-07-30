@@ -1,0 +1,446 @@
+{{
+/* 
+ * @title   SNCODE ImageProcessor
+ * @version 1.8 - 2016-09-15
+ * @author  Olivier St-Laurent
+ * 
+ * Simple Front-end Image Processor. 
+ *      This script will process images at page load then cache it, instead of when you upload it in the cms. 
+ *      This way, it's easier to change the wanted image size AFTER uploading all your images, 
+ *      and also easier to make more than one size for a single image, to be shown at different places in the front-end.
+ * 
+ * Usage : <img src="/original_image_path.jpg?params" />
+ * 
+ * Params : 
+ *      type = string (jpg|png|gif)  will keep original if none given
+ *      quality = (0-100)  default 80 (only for jpeg)
+ *      maxw = integer (set maximum width without changing original image ratio)
+ *      maxh = integer (set maximum height without changing original image ratio)
+ *      minw = integer (set minimum width without changing original image ratio)
+ *      minh = integer (set minimum height without changing original image ratio)
+ *      size = string "640x480" (Set the exact new image size. Use with crop or margins, otherwise the image might be distorted)
+ *      w = integer (set specific width and automatic height for destination image... If given, will override size param)
+ *      h = integer (set specific height and automatic width for destination image... If given, will override w and size params)
+ *      crop = string or no value
+ *      margins = string or no value
+ *              (For crop and margins, No need for a value... True if param is present, otherwise defaults to False) 
+ *              (String can be given for the cropped/margins region with the following possibilities : top, left, right, topleft, topright, bottom, bottomleft, bottomright)
+ *                  *** You can also give specific align position x,y relative to the final output size
+ *              (if no region is defined, image will be centered)
+ *      bgcolor = string "255,255,255" RGB color (default is transparent for png otherwise white) (used as margin colors when resizing with margins)
+ *      nocache (if this param is set, it will not save the file but instead it will output if directly, processing it everytime... FOR DEBUGGING PURPOSES ONLY)
+ *      savefile = string "/sn_uploads/newimage.png" Will save the file to a specific location and output nothing instead of doing a sendfile(). 
+ *              It can also be set to nothing, which will effectively simply put the file in cache with the standard processed name (without the &savefile), and without outputing anything.
+ * 
+ * Crop Tool params : Take specific portion of the source image for use in conjunction with a crop tool, passing left,top,right,bottom. (may use with size param)
+ *      left = integer (take source image from position in x)
+ *      top = integer (take source image from position in y)
+ *      right = integer (take source image to position in x)
+ *      bottom = integer (take source image to position in y)
+ * 
+ * Any additional param will still be used in the resulting image name so it is possible (although not recommended) to prevent caching by adding a timestamp value. 
+ * If none of the params listed above are used, the original image will be returned directly without any processing. 
+ * If size param is given, the min/max params are completely ignored (maxw, maxh, minw, minh)
+ * If crop param is given, margins param is ignored
+ * 
+ *  Ex 1 : <img src="/images/logo.png?size=200x200&margins&bgcolor=0,0,0&quality=80&type=jpg" />
+ *      The above example will resize an image to exactly 200x200, adding black margins around the image if necessary to prevent image distortion, and converting to JPEG with a quality of 80
+ * 
+ *  Ex 2 : <img src="/images/logo.png?size=200x200&crop=topright" />
+ *      The above example will resize an image to exactly 200x200, cropping either the top or the right side if necessary to prevent image distortion, keeping the bottom left corner always visible
+ * 
+ *  Ex 3 : <img src="/images/logo.png?maxh=80" />
+ *      The above example will simply make sure that the resulting image has a height of 80 pixels of less. If the input image is more than 80px of height, it will shrink it down to 80 pixels of height, also shrinking the width, keeping the original ratio. 
+ *
+ *  Ex 4 :  { {
+                // This example uses an include from an sncode context, useful for protected images
+                // It will effectively do a sendfile() so that the image is output directly to the browser, unless a savefile param is specified.
+                snfilepath = "/module/sed/images/img1.png"; // full path from the project's root directory
+                querystring = "size=200x200&margins&quality=90&savefile=/sn_uploads/newimage.png"; // optional, otherwise it will still take the original querystring
+                include('/staging/image_processor.sn');
+            } }
+ *      
+ */
+
+/* 
+Dependencies : GD extension enabled, Apache 2.2 or 2.4 with modules mod_rewrite and mod_env enabled, Special rules in .htaccess and vhost file (see below)
+
+.htaccess : 
+    
+    RewriteEngine On
+    
+    # ImageProcessor
+    RewriteCond %{QUERY_STRING} .
+    RewriteCond %{REQUEST_FILENAME}&%{QUERY_STRING} -s
+    RewriteCond %{REQUEST_FILENAME}&%{QUERY_STRING} -f
+    RewriteRule ^.*$ %{REQUEST_FILENAME}\%26%{QUERY_STRING} [NC,L]
+    RewriteCond %{ENV:IMAGEPROCESSOR} On
+    RewriteCond %{QUERY_STRING} .
+    RewriteCond %{REQUEST_FILENAME} -s
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_FILENAME} \.(jpg|JPG|jpeg|JPEG|png|PNG|gif|GIF)$
+    RewriteRule ^.*$ /image_processor.sn [NC,L,QSA]
+
+vhost for staging : 
+ 
+    <Directory /usr/local/website/SITENAME/staging>
+        Allowoverride All
+    </Directory>
+    SetEnvIf Request_URI "\.(jpe?g|JPE?G|png|PNG|gif|GIF)$" IMAGEPROCESSOR=On
+    
+ */
+
+    
+    // Configuration
+    forceSha1Hash = false;
+    forceNoCache = false;
+    cacheSeparator = '&';
+    defaultbgcolor = "255,255,255";
+    checkEnv = true;
+    
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Main Logic
+
+    // sncode variables
+    request = request();
+    filenames = filenames();
+    cgidata = cgidata();
+    
+    // Regexes
+    URI_REGEX = "^GET\s+(/.+\.(jpe?g|png|gif))(\?(.+))?\s+HTTP/1\.1\s*$"; // $1 = filepath, $2 = ext, $4 = querystring
+    PATH_REGEX = "^(/.+/|/)([^/]+)\.(jpe?g|png|gif)$"; // $1 = dir, $2 = filename, $3 = ext
+    IMAGESIZE_REGEX = "^(\d*)x(\d*)$";
+    IMAGECROPORMARGINSDIR_REGEX = "^(-?\d+)[x,;\|/ -]+(-?\d+)$";
+    
+    // Take variables from parent script if the imageprocessor is included instead
+    use snfilepath; // Contains the full path from the project's root (ex: "/staging/sn_uploads/image01.png")
+    use querystring; // Contains a string equivalent to the query string that would have been passed, without the '?'
+    
+    //test bd
+    //snfilepath = "http://ssr.sednove.ca/test/imagestest/original/20160719_095216.jpg";
+    
+    
+    // Security check
+    if (snfilepath eq '' && request.the_request !~:i URI_REGEX) then
+        "ERROR - Invalid file request "; // possibly a hacker
+        exit(0);
+    endif
+    
+    // Initialize image path information
+    included = false;
+    if (snfilepath eq '') then // If snfilepath is not passed by a parent file, take it from the original url.
+        fullfilepath = str_replace(request.uri, '', filenames.filenames[0]) .+ urldecode(resub(request.the_request, URI_REGEX, '$1', 'i'));
+        snfilepath = resub(fullfilepath, "^/usr/local/website/[^/]+/", "/");
+    else
+        included = true;
+    endif
+    
+    // Initialize other path information
+    dirpath = resub(snfilepath, PATH_REGEX, '$1', 'i');
+    filename = resub(snfilepath, PATH_REGEX, '$2', 'i');
+    fileext = resub(snfilepath, PATH_REGEX, '$3', 'i');
+    filetype = esc('filter':'lowercase', fileext);
+    filebasename = filename .+ '.' .+ fileext;
+    
+    // Initialize params
+    if (querystring eq '') then // If querystring is not passed by a parent file, take it from the original url.
+        querystring = resub(request.the_request, URI_REGEX, '$4', 'i');
+        params = cgidata;
+    else
+        // If querystring is passed by the parent file, use it to create a new cgidata object
+        params = {};
+        for param in explode('&', querystring) do
+            keyval = explode('=', param, 2);
+            key = urldecode(keyval[0]);
+            val = urldecode(keyval[1]);
+            params{key} = val;
+        endfor
+    endif
+    
+    // Check for the savefile param
+    if (querystring =~ '(^|&)savefile') then
+        querystring = resub(querystring, "^(.*)((^|&)savefile(=([^&]*))?)(&.*|$)", "$1$6");
+        savefile = true;
+    endif
+    
+    // Prepare output suffix
+    outputsuffix = (querystring ne '') ? cacheSeparator .+ querystring : '';
+    // If file name would be more than 255 characters, use sha1 instead
+    if (length(filebasename .+ outputsuffix) > 255 || forceSha1Hash) then
+        outputsuffix = cacheSeparator .+ sha1(querystring);
+    endif
+    
+    // Prepare output file path
+    outputfilename = filebasename .+ outputsuffix;
+    outputfilepath = dirpath .+ outputfilename;
+    
+    if (savefile && params.savefile ne '') then
+        outputfilepath = params.savefile;
+    endif
+    
+    // If matching params file exists, Return the image directly without any processing
+    if (savefile eq '' && (-e outputfilepath)) then
+        sendfile('ct':"image/".+filetype, outputfilepath);
+        exit(0);
+    endif
+    
+    // Check Environment variable for security or send image directly. 
+    if (!included) then
+        env = subprocess_env();
+        if (checkEnv && env.REDIRECT_IMAGEPROCESSOR eq '' && env.IMAGEPROCESSOR eq '') then
+            if (!savefile && (-e snfilepath)) then
+                sendfile('ct':"image/".+filetype, snfilepath);
+            endif
+            exit(0);
+        endif
+    endif
+    
+    // If no known param is given, Return the image directly without any processing
+    if (params.type eq '' &&
+        params.quality eq '' &&
+        params.maxw eq '' &&
+        params.maxh eq '' &&
+        params.minw eq '' &&
+        params.minh eq '' &&
+        params.size eq '' &&
+        params.w eq '' &&
+        params.h eq '' &&
+        params.crop eq '' &&
+        params.margins eq '' &&
+        params.bgcolor eq '' &&
+        params.left eq '' &&
+        params.top eq '' &&
+        params.right eq '' &&
+        params.bottom eq '' &&
+        (querystring !~:i '(^|&)nocache')
+      ) then
+        sendfile('ct':"image/".+filetype, snfilepath);
+        exit(0);
+    endif
+    
+    // Get given params or Defaults
+    type = (params.type ne '') ? esc('filter':'lowercase', params.type) : filetype;
+    if (type eq 'jpeg') then
+        type = 'jpg';
+    endif
+    quality = (params.quality ne '') ? params.quality : 80;
+    maxw = (params.maxw ne '') ? params.maxw : null;
+    maxh = (params.maxh ne '') ? params.maxh : null;
+    minw = (params.minw ne '') ? params.minw : null;
+    minh = (params.minh ne '') ? params.minh : null;
+    size = (params.size ne '') ? params.size : null;
+    if (params.w ne '') then size = params.w.+'x'; endif
+    if (params.h ne '') then size = 'x'.+params.h; endif
+    if (querystring =~:i '(^|&)crop') then
+        crop = (params.crop ne '') ? params.crop : true;
+    endif
+    if (querystring =~:i '(^|&)margins') then
+        margins = (params.margins ne '') ? params.margins : true;
+    endif
+    bgcolor = (params.bgcolor ne '') ? params.bgcolor : ((type eq 'png') ? null : defaultbgcolor);
+    bgcolor_array = splitre('re': "[\|, ;-]+", 'value': bgcolor);
+    nocache = (forceNoCache) ? true : ((querystring =~:i '(^|&)nocache') ? true : false);
+    
+    // Create image object from original image
+    image = gd_new('filename':snfilepath);
+    imageCanvasSize = gd_get_size(gd: image);
+    
+    // Parse exif data for Orientation
+    if (existf('exif_read')) then
+        exif = exif_read(snfilepath);
+        if (exif ne '' && exif.Orientation ne '') then
+            angle = 0;
+            flipRatio = false;
+            
+            // 3 || 4
+            if (exif.Orientation eq 'Bottom-right' || exif.Orientation eq 'Bottom-left') then
+                angle = 180;
+            endif
+            // 6 || 5
+            if (exif.Orientation eq 'Right-top' || exif.Orientation eq 'Left-top') then
+                angle = 270;
+                flipRatio = true;
+            endif
+            // 8 || 7
+            if (exif.Orientation eq 'Left-bottom' || exif.Orientation eq 'Right-bottom') then
+                angle = 90;
+                flipRatio = true;
+            endif
+            
+            if (angle > 0) then
+                originalImg = image;
+                image = gd_rotate(
+                    gdsrc: originalImg, 
+                    angle: angle, 
+                    srcx: 0, 
+                    srcy: 0, 
+                    dstx: ((flipRatio)? imageCanvasSize.height:imageCanvasSize.width) / 2, 
+                    dsty: ((flipRatio)? imageCanvasSize.width:imageCanvasSize.height) / 2, 
+                    srcw: imageCanvasSize.width, 
+                    srch: imageCanvasSize.height,
+                    dstw: (flipRatio)? imageCanvasSize.height:imageCanvasSize.width,
+                    dsth: (flipRatio)? imageCanvasSize.width:imageCanvasSize.height
+                );
+                gd_free(originalImg);
+                imageCanvasSize = gd_get_size(gd: image);
+            endif
+        endif
+    endif
+    
+    // Take specific portion from source image (Crop Tool)
+    left = (params.left ne '') ? params.left : 0;
+    top = (params.left ne '') ? params.top : 0;
+    right = (params.left ne '') ? params.right : imageCanvasSize.width;
+    bottom = (params.left ne '') ? params.bottom : imageCanvasSize.height;
+
+    // Set base size params for processing
+    imageWidth = (float) right - left;
+    imageHeight = (float) bottom - top;
+    imageRatio = imageWidth / imageHeight;
+    outputWidth = imageWidth;
+    outputHeight = imageHeight;
+    
+    // Process Specific Size
+    if (size ne '') then
+        if (size !~:i IMAGESIZE_REGEX) then // (size=200x100)
+            "invalid size param";
+            exit(0);
+        endif
+
+        outputWidth = resub(size, IMAGESIZE_REGEX, '$1', 'i'); outputWidth = (float) outputWidth;
+        outputHeight = resub(size, IMAGESIZE_REGEX, '$2', 'i'); outputHeight = (float) outputHeight;
+        
+        if (outputWidth && !outputHeight) then // Automatic height based on original image ratio if only width is given (size=200x) (w=200)
+            outputHeight = outputWidth / imageRatio;
+        elseif (!outputWidth && outputHeight) then // Automatic width based on original image ratio if only height is given (size=x100) (h=100)
+            outputWidth = outputHeight * imageRatio;
+        elseif (!outputWidth && !outputHeight) then // (size=x)
+            outputWidth = imageWidth;
+            outputHeight = imageHeight;
+        endif
+    endif
+    
+    // Max Width
+    if (maxw && outputWidth > maxw) then
+        outputWidth = maxw;
+        if (size eq '') then
+            outputHeight = outputWidth / imageRatio;
+        endif
+    endif
+
+    // Max Height
+    if (maxh && outputHeight > maxh) then
+        outputHeight = maxh;
+        if (size eq '') then
+            outputWidth = outputHeight * imageRatio;
+        endif
+    endif
+
+    // Min Width
+    if (minw && outputWidth < minw) then
+        outputWidth = minw;
+        if (size eq '') then
+            outputHeight = outputWidth / imageRatio;
+            if (maxh && outputHeight > maxh) then
+                outputHeight = maxh;
+            endif
+        endif
+    endif
+
+    // Min Height
+    if (minh && outputHeight < minh) then
+        outputHeight = minh;
+        if (size eq '') then
+            outputWidth = outputHeight * imageRatio;
+            if (maxw && outputWidth > maxw) then
+                outputWidth = maxw;
+            endif
+        endif
+    endif
+
+    // Initial fit without crop or margins
+    dst_x = 0;
+    dst_y = 0;
+    src_x = left;
+    src_y = top;
+    dst_w = outputWidth;
+    dst_h = outputHeight;
+    src_w = imageWidth;
+    src_h = imageHeight;
+    outputRatio = outputWidth / outputHeight;
+
+    // Preventing distortion by cropping or by adding margins
+    if (crop ne '' || margins ne '') then
+        if (crop ne '') then
+            if (outputRatio > imageRatio) then // output size is wider than original image, will crop on top and bottom, fit by width
+                resizeRatio = outputWidth / imageWidth;
+            else // output size is higher than original image, will crop on sides, fit by height
+                resizeRatio = outputHeight / imageHeight;
+            endif
+        elseif (margins ne '') then
+            if (outputRatio > imageRatio) then // output size is wider than original image, margins would be on the sides, fit by height
+                resizeRatio = outputHeight / imageHeight;
+            else // output size is higher than original image, margins would be on top and bottom, fit by width
+                resizeRatio = outputWidth / imageWidth;
+            endif
+        endif
+
+        // Set destination width and height in output image
+        dst_w = imageWidth * resizeRatio;
+        dst_h = imageHeight * resizeRatio;
+        
+        // Get differences of width and height between destination cut and total output image
+        diffw = outputWidth - dst_w;
+        diffh = outputHeight - dst_h;
+
+        // Set Crop/Margins for a centered image
+        dst_x = diffw / 2;
+        dst_y = diffh / 2;
+
+        // Position the image if a certain direction is given
+        direction = (crop ne '') ? crop : margins;
+        if (length(direction) > 1) then
+            if (direction =~:i 'top') then // Align Bottom, crop or add margins on top
+                dst_y = diffh;
+            endif
+            if (direction =~:i 'bottom') then // Align Top, crop or add margins on the bottom
+                dst_y = 0;
+            endif
+            if (direction =~:i 'left') then // Align Right, crop or add margins to the left
+                dst_x = diffw;
+            endif
+            if (direction =~:i 'right') then // Align Left, crop or add margins to the right
+                dst_x = 0;
+            endif
+            if (direction =~:i IMAGECROPORMARGINSDIR_REGEX) then // Align to a given position x,y relative to the output size
+                dst_x = resub(direction, IMAGECROPORMARGINSDIR_REGEX, '$1', 'i');
+                dst_y = resub(direction, IMAGECROPORMARGINSDIR_REGEX, '$2', 'i');
+            endif
+        endif
+    endif
+    
+    // Create output image
+    outputImage = gd_new(width: outputWidth, height: outputHeight, truecolor: true, bgcolor: bgcolor, transparent: bgcolor);
+    
+    // Disable alpha blending in order to keep the alpha values of the source image
+    gd_alpha_blending(outputImage, false);
+
+    // Resize image
+    void gd_resampled('gdsrc':image, 'gddst':outputImage, 'dstx':round(dst_x), 'dsty':round(dst_y), 'srcx':round(src_x), 'srcy':round(src_y), 'dstw':round(dst_w), 'dsth':round(dst_h), 'srcw':round(src_w), 'srch':round(src_h));
+
+    // Destroy old image object
+    gd_free(image);
+    
+    // Save new image to a file (or output it directly if the nocache param is given)
+    if (nocache && !savefile) then
+        gd_write('format': type, 'gd': outputImage, 'quality': quality);
+    else
+        gd_write('filename': outputfilepath, 'format': type, 'gd': outputImage, 'quality': quality);
+        if (!savefile) then
+            sendfile('ct':"image/".+filetype, outputfilepath);
+        endif
+    endif
+
+    // Destroy new image object
+    gd_free(outputImage);

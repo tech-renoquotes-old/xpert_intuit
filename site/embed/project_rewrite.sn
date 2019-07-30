@@ -1,0 +1,4 @@
+	//to_be_rewritten = sql(single:true,"SELECT * FROM sr_project WHERE uid = ?", cgidata.uid);
+   if(cgidata.rewritten ne "") then
+	 
+   endif

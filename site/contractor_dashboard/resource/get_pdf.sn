@@ -1,0 +1,41 @@
+{{
+    /*
+        @title get_pdf
+        Description: Download a pdf from the billing history.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-09
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+    
+    if cgidata.token eq "419eee76e3764b39f8be7cdcd96f950b20a8b8e7376023e2cd8d5378dd3a0e1" then
+        pdf = sql(single:true,"SELECT pdf FROM sr_billing_pdf WHERE uid='?'",  cgidata.p);
+        void insert(table:'sr_debug', fields:{'description':'demande de='.+extranet_user.uid,'text':'pdf='.+pdf.rows.pdf});
+    else
+        pdf = sql(single:true,"SELECT pdf FROM sr_billing_pdf WHERE uid_contractor='?' AND uid='?'", extranet_user.uid, cgidata.p);
+    endif
+    pdf_file = "/pdf/".+pdf.rows.pdf;
+    
+    if pdf.nbrows > 0 && pdf.rows.pdf ne "" && -e pdf_file then
+        headers_out("Content-Disposition",'inline; filename="'.+pdf.rows.pdf.+'"');
+        sendfile(ct:"application/pdf", pdf_file);
+    endif
+    
+    if cgidata.token eq "419eee76e3764b39f8be7cdcd96f950b20a8b8e7376023e2cd8d5378dd3a999" then
+        pdf_file = "/pdf/".+cgidata.pdf;
+        headers_out("Content-Disposition",'inline; filename="'.+cgidata.pdf.+'"');
+        sendfile(ct:"application/pdf", pdf_file);
+    endif
+
+}}

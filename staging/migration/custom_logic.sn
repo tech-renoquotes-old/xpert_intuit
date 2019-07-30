@@ -1,0 +1,80 @@
+{{
+    projectstatus = [''
+        /* 1 */, 'new'
+        /* 2 */, 'cancelled-before-qualification'
+        /* 3 */, 'cancelled-after-qualification'
+        /* 4 */, 'cancelled-sold-elsewhere'
+        /* 5 */, 'active'
+        /* 6 */, 'completed'
+        /* 7 */, 'inactive-incomplete'
+    ];
+    
+    // For more complex logic for certain fields, do it here and return the new value.
+    function custom_logic_value(srcRow, srcFieldName)
+        use projectstatus;
+        
+        address_regex = "^\s*(\d+)[,\s]?\s*(.*)$";
+        if (srcFieldName eq '_Adresse_NO') then
+            return resub(srcRow.Adresse, address_regex, "$1");
+        endif
+        if (srcFieldName eq '_Adresse_STREET') then
+            return resub(srcRow.Adresse, address_regex, "$2");
+        endif
+        
+        if (srcFieldName eq 'Personne_Contacte_Genre' || srcFieldName eq 'Sexe') then
+            // M.  Mme  NULL  Ms  f  H
+            if (srcRow{srcFieldName} =~:i '^\s*(m\.?|h)\s*$') then
+                return 'm';
+            endif
+            if (srcRow{srcFieldName} =~:i '^\s*(mme|ms|f)\s*$') then
+                return 'f';
+            endif
+            return '';
+        endif
+        
+        if (srcFieldName eq 'contact_lg' || srcFieldName eq 'Langue' || srcFieldName eq 'Personne_Contacte_Langue') then
+            // F  NULL  A  m
+            if (lc(trim(srcRow{srcFieldName})) eq 'a') then
+                return 'en';
+            else
+                return 'fr';
+            endif
+        endif
+        
+        // Project status mapping
+        if (srcFieldName eq 'Statut') then
+            value = srcRow{srcFieldName};
+            if (value == 1) then return projectstatus[2];endif
+            if (value == 2) then return projectstatus[1];endif
+            if (value == 3) then return projectstatus[1];endif
+            if (value == 4) then return projectstatus[5];endif
+            if (value == 5) then return projectstatus[7];endif
+            if (value == 6) then return projectstatus[7];endif
+            if (value == 7) then return projectstatus[7];endif
+            if (value == 8) then return projectstatus[7];endif
+            if (value == 9) then return projectstatus[7];endif
+            if (value == 10) then return projectstatus[4];endif
+            if (value == 11) then return projectstatus[3];endif
+            if (value == 12) then return projectstatus[7];endif
+            if (value == 13) then return projectstatus[7];endif
+            if (value == 15) then return projectstatus[7];endif
+            if (value == 16) then return projectstatus[7];endif
+            if (value == 17) then return projectstatus[7];endif
+            if (value == 18) then return projectstatus[7];endif
+            if (value == 19) then return projectstatus[5];endif
+            if (value == 20) then return projectstatus[6];endif
+            if (value == 21) then return projectstatus[7];endif
+            if (value == 22) then return projectstatus[1];endif
+        endif
+        
+        if (srcFieldName eq 'post_content') then
+            value = srcRow{srcFieldName};
+            value = resub(value, "\[/?(caption|gallery)[^\]]*\]", "", "g");
+            value = resub(value, "(https?://soumissionrenovation.ca)?/wp-content/uploads/", "/sn_uploads/", "g");
+            return value;
+        endif
+        
+        // Default behavior returns the current value as is.
+        return srcRow{srcFieldName};
+    endf
+    

@@ -1,0 +1,93 @@
+{{
+    /*
+    	@title	sed_extranet_profile1
+    	Description:template of extranet profile
+        @author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47
+    */
+	use lg;
+	%include "/extenso/functions/sn_ct.snc";
+	%include "/extenso/functions/sn_pages.snc";
+	use page;
+}}
+\{{
+	cgidata = cgidata();
+	if cgidata.op eq "update" then
+		error = 0;
+		msg ="";
+		if cgidata.lastname eq "" || cgidata.firstname eq "" then
+			error++;
+			msg .+= "{{ sn_ct(edit:false,'Name fields cannot be empty', publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}<br/>";
+		endif
+
+		if cgidata.password eq cgidata.password1 then
+			if cgidata.password ne "" then
+				password = cgidata.password;
+				if extranet_user.sn_hash_password eq "md5" then
+					password = md5(password .+ extranet_user.sn_salt_password);
+				endif
+			else
+				password = extranet_user.password;
+			endif
+		else
+			error++;
+			msg .+= "{{ sn_ct(edit:false,'Passwords do not match', publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}";
+		endif
+
+		if error == 0 then
+			void sql("UPDATE users
+				SET firstname = '?', lastname = '?', password ='?', lg='?'
+				WHERE uid = '?' ",
+				cgidata.firstname, cgidata.lastname, password, cgidata.lang, extranet_user.uid);
+
+			success = "{{ sn_ct(edit:false,'Profile updated successfully', publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}";
+
+			//Reset the extranet_user to have updated values.
+			ext = sql(single:true, "SELECT * FROM users WHERE uid = '?'", extranet_user.uid);
+			extranet_user = ext.rows;
+		endif
+	endif
+}}
+<div class="row">
+	<div class="col-md-6">
+		\{{ if msg ne "" then }}
+			<div class="alert alert-danger">
+				\{{ msg; }}
+			</div>
+		\{{ endif }}
+		\{{ if success ne "" then }}
+			<div class="alert alert-success">
+				\{{ success; }}
+			</div>
+		\{{ endif }}
+		<form method="POST">
+			<input type="hidden" name="op" value="update"/>
+			<div class="form-group">
+				<label>{{ sn_ct("First name", publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}</label>
+				<input type="text" name="firstname" class="form-control" value="\{{ extranet_user.firstname; }}"/>
+			</div>
+			<div class="form-group">
+				<label>{{ sn_ct("Last name", publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}</label>
+				<input type="test" name="lastname" class="form-control" value="\{{ extranet_user.lastname; }}"/>
+			</div>
+			<div class="form-group">
+				<label>{{ sn_ct("Language", publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}</label>
+				<select class="form-control" name="lang">
+					\{{ for lang sql("SELECT * FROM sn_languages WHERE active='yes'") do}}
+						<option \{{ if extranet_user.lg eq lang.rows.lg then }} selected \{{ endif }} value="\{{ lang.rows.lg;}}">\{{ lang.rows.lgname; }}</option>
+					\{{ endfor }}
+				</select>
+			</div>
+			<hr/>
+			<div class="form-group">
+				<label>{{ sn_ct("Password", publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}</label>
+				<input type="password" name="password" class="form-control"/>
+			</div>
+			<div class="form-group">
+				<label>{{ sn_ct("Confirm Password", publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}</label>
+				<input type="password" name="password1" class="form-control"/>
+			</div>
+			<button class="btn btn-primary" type="submit">{{ sn_ct("Submit", publish:"/extenso/publish/pages.sn", uids:page.rows.uid, module:"sed_extranet"); }}
+		</form>
+	</div>
+</div>

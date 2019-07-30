@@ -1,0 +1,30 @@
+
+
+
+\{{
+    
+    /*
+    *@title update user access to notifications
+    *
+    *
+    */
+    
+    cgidata = cgidata();  
+    use extranet_user;
+    
+    uid_notification =  cgidata.msgid;
+    access_type = cgidata.access;
+    cuid = cgidata.userid;
+
+    contractor = sql(single:true, "SELECT * FROM sr_notification_access WHERE uid_contractor = ? AND uid_notification = ?", cuid, uid_notification);
+    accessUser = contractor.rows;
+    
+    if(contractor.nbrows > 0) then
+        void sql("UPDATE sr_notification_access SET access = '?' where uid_contractor = '?' AND uid_notification = '?'", access_type, cuid, uid_notification);
+        'success update';
+    else
+        void insert(table:'sr_notification_access', fields:{'uid_contractor':cuid,'uid_notification':uid_notification, 'access':access_type});
+        'success insert';
+    endif
+
+}}

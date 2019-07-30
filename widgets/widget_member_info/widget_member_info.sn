@@ -1,0 +1,198 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+    use lg;
+    use widget;
+}}
+\{{
+    cgidata = cgidata();
+    muid = cgidata.memberid + 0;
+  
+    config=config();    
+    sql_select = "uid='?' AND active='yes'";
+    if config.site ne "staging" then 
+        sql_select .+= " AND production='yes'"; 
+    endif      
+    company = sql(single:true, "SELECT * FROM member WHERE " .+ sql_select, muid); 
+    extra = sql(single:true," 
+                    SELECT 
+                        province.name_{{lg.rows.lg}} AS province,
+                        province.code AS province_code,
+                        city.name_{{lg.rows.lg}} AS city,
+                        member_cat.category_{{lg.rows.lg}} AS category
+                    FROM 
+                        member_cat,
+                        member LEFT JOIN city ON member.uid_city=city.uid
+                               LEFT JOIN province ON member.uid_province=province.uid
+                    WHERE 
+                        member.uid='?' AND
+                        member_cat.uid='?'
+                ", company.rows.uid, company.rows.uid_category); 
+}}
+
+<section class="slice bg-3 animate-hover-slide">
+    <div class="w-section inverse blog-grid">
+        <div class="container"> 
+            <div class="row">
+                \{{ if company.nbrows > 0 then }}
+                <div class="col-md-3">
+                    \{{ martin_style = ""; }}
+                    \{{ if company.rows.website ne "" && company.rows.logo ne "" && -e company.rows.logo then }}
+                    <a href="\{{company.rows.website}}" target="_blank"> 
+                        <img class="max-100" src="\{{company.rows.logo}}" alt="\{{company.rows.name}}" />
+                    </a>
+                    \{{ elseif company.rows.logo ne "" && -e company.rows.logo then }}
+                        <img class="max-100" src="\{{company.rows.logo}}" alt="\{{company.rows.name}}" />
+                    \{{ else 
+                            martin_style = "style='margin-top:0;'";
+                        endif }}
+                    <div class="box-c" \{{martin_style}}>
+                        <h4 class="sn_pencil" 
+                            data-sn_link1="/extenso/extranet/member/{{lg.rows.lg}}/edit.snc?uid=\{{company.rows.uid}}" 
+                            data-sn_class1="edit" 
+                            data-sn_title1="{{sn_ct(edit:false,"Edit member",lg:lg.rows.lg,publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}">
+                            \{{company.rows.name}}
+                        </h4>
+                        <ul class="ul-b">
+                            <li>
+                                <i class="fa fa-tag"></i><strong>\{{extra.rows.category}}</strong>
+                            </li>
+                            <li>
+                                \{{ if company.rows.civic_number ne "" || company.rows.street ne "" then }}
+                                    <i class="fa fa-map-marker"></i>
+                                    \{{company.rows.civic_number}}, \{{company.rows.street}}
+                                    <br>
+                                \{{ endif }}
+                                \{{ if extra.rows.city ne "" || extra.rows.province_code ne "" || company.rows.zip_code ne "" then }}
+                                    \{{extra.rows.city}}, \{{extra.rows.province_code}}  \{{company.rows.zip_code}}
+                                    <br>
+                                \{{ endif }}
+                                \{{ if company.rows.cia_phone ne "" then }}
+                                    <br>
+                                    {{ sn_ct("Phone_first_char", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} \{{company.rows.cia_phone}}
+                                \{{ endif }}
+                                \{{ if company.rows.cia_fax ne "" then }}
+                                    <br>
+                                    {{ sn_ct("Fax_first_char", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} \{{company.rows.cia_fax}}
+                                \{{ endif }}
+                                \{{ if company.rows.cia_email ne "" then }}
+                                    <br>
+                                    \{{company.rows.cia_email}}
+                                \{{ endif }}
+                            </li>
+                        </ul>
+                    </div><!--/.box-c-->
+                </div>
+                <div class="col-md-9">
+                    <h3 class="title-4">
+                        \{{ esc(filter:"multbr", company.rows.introduction_{{lg.rows.lg}});  }}
+                    </h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p>
+                                \{{ esc(filter:"multbr", company.rows.description_{{lg.rows.lg}});  }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="carousel-3 slide animate-hover-slide" id="carouselWork">
+                                <div class="carousel-inner">
+                                    \{{ item_class = "item active"; img_counts = 0;}}
+                                    {{
+                                        img_fields = ["photo1","photo2","photo3"];
+                                        for img_field in img_fields do                            
+                                            }}
+                                            \{{
+                                            img_path = company.rows.{{img_field}};
+                                            if img_path ne "" then
+                                                ++img_counts;
+                                                }}                                            
+                                                <div class="\{{item_class;item_class="item";}}">
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <div class="w-box inverse">
+                                                                <div class="figure">
+                                                                    <img class="img-responsive" src="\{{img_path}}" alt="{{img_fields}}" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                \{{ 
+                                            endif 
+                                            }} 
+                                            {{
+                                        endfor
+                                    }}
+                                </div>
+                                \{{ if img_counts then }}
+                                <div class="carousel-nav">
+                                    <a href="#carouselWork" class="left" data-slide="prev"><i class="fa fa-angle-left"></i></a>
+                                    <a href="#carouselWork" class="right" data-slide="next"><i class="fa fa-angle-right"></i></a>
+                                </div>
+                                \{{ endif }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                \{{ else }}
+                    <div role="alert" class="alert alert-danger">
+                        <strong><i class="fa fa-exclamation-circle fa-lg" style="padding-right: 10px;"></i></strong> 
+                        {{ sn_ct("Member not found!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+                    </div>
+                \{{ endif }}
+            </div>
+        </div>
+    </div>
+</section>
+
+\{{ if company.nbrows > 0 then }}
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8&amp;sensor=false"></script>
+<!--<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&amp;sensor=false"></script>-->
+<script>
+    var geo = new google.maps.Geocoder;
+    var adrs = "\{{company.rows.civic_number;}} \{{company.rows.street;}}, \{{extra.rows.city}}, \{{extra.rows.province_code}} \{{company.rows.zip_code}}";
+    geo.geocode({'address':adrs},function(results, status){
+        if (status == google.maps.GeocoderStatus.OK) {              
+            var myLatLng = results[0].geometry.location;
+            var map;
+            function initialize() {
+                var myLatlng = new google.maps.LatLng(myLatLng.lat(), myLatLng.lng());
+                var mapOptions = {
+                    zoom : 12,
+                    scrollwheel : false,
+                    center : myLatlng,
+                    mapTypeId : google.maps.MapTypeId.ROADMAP
+                }
+                map = new google.maps.Map(document.getElementById('mapCanvas'), mapOptions);        
+                var marker = new google.maps.Marker({
+                    position : myLatlng,
+                    map : map,
+                    animation : google.maps.Animation.DROP,
+                    title : "\{{company.rows.name}}"
+                });        
+                var contentString = "<div class=\"info-window-content\">" +
+                                    "<h2>\{{company.rows.name}}</h2>" +
+                                    "<p>" + adrs + "</p></div>";        
+                var infowindow = new google.maps.InfoWindow({
+                    content : contentString
+                });        
+                google.maps.event.addListener(marker, 'click', function() {
+                    infowindow.open(map, marker);
+                });
+            }        
+            google.maps.event.addDomListener(window, 'load', initialize);  
+            $( document ).ready(function() {
+                setTimeout(function(){
+                    if (!map){
+                        initialize();
+                    }
+                }, 500); 
+            });                   
+        } else {
+            console.log("Geocode was not successful for the following reason: " + status);
+        }
+    });
+</script>
+<section class="slice no-padding">
+    <div id="mapCanvas" class="map-canvas no-margin"></div>
+</section>
+\{{ endif }}

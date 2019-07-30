@@ -1,0 +1,778 @@
+<link rel="stylesheet" href="/css/blog.css">
+{{
+    /*
+     * @title Widget blog_article_detail
+     * @Version 1.0 2016
+     * @author madupuis@sednove.ca
+     * 
+     * Detail 2 of an article of the blog
+     */
+}}
+
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/module/sed/blog/package/sed_recaptcha.sn";
+    use page;
+    use lg;    
+    
+}}
+
+\{{
+    // Function that sets a flashmessenger cookie for when a comment is entered to display message
+    function set_flashmessenger(value)
+        cookies(
+                name:"flashmessenger", 
+                value: value,
+                maxage:10,    //10 seconds
+                path:"/"
+        );
+    endf
+
+    cgidata = cgidata();
+    config = config();    
+    request = request();
+    use user;
+    use extranet_user;
+
+	blog_config = sql(single:true,"SELECT * FROM sed_blog_config");
+	site_config = sql(single:true,"SELECT * FROM sn_configs");
+    
+    if cgidata.seo ne "" then
+        sql_article_uid = sql(single:true,"SELECT uid FROM sed_blog_article WHERE seo_{{lg.rows.lg}} = '?' LIMIT 1", cgidata.seo);
+        article_uid = sql_article_uid.rows.uid;
+    elseif cgidata.uid ne "" then
+        article_uid = cgidata.uid;
+    else
+        redirect("{{pages(table:'pages','blog_list',lg.rows.lg)}}");
+    endif   
+    
+    // Active in prod only, concatenated with sql 
+    prod_active = "";
+    if config.site ne "staging" then 
+        prod_active .+= " AND sed_blog_article.prod_active ='yes'";     
+    endif  
+ 
+    // Get the article
+    article = sql(single:true,"
+                SELECT  sed_blog_article.title_{{lg.rows.lg}} AS title,
+                    sed_blog_article.full_text_{{lg.rows.lg}}  AS full_text,
+                    sed_blog_article.brief_text_{{lg.rows.lg}}  AS brief_text,
+                    sed_blog_article.surtitle_{{lg.rows.lg}} AS surtitle,
+                    sed_blog_article.seo_{{lg.rows.lg}} AS seo,
+                    sed_blog_article.author,
+                    sed_blog_article.uid,
+                    sed_blog_article.alt_attribute,
+                    sed_blog_article.featured_image,
+                    sed_blog_article.date_article,
+                    sed_blog_article.show_social_bookmark,
+                    sed_blog_article.category,
+                    sed_blog_article.allow_comments,
+                    sed_blog_article.language,
+                    sed_blog_article.prod_active,
+                    sed_blog_article.approve_comment,
+                    sn_users.firstname as firstname,
+                    sn_users.lastname as lastname,
+                    sn_users.email as email
+                FROM sed_blog_article
+                LEFT join sn_users ON sn_users.uid = sed_blog_article.author
+                WHERE sed_blog_article.uid = '?'
+                AND sed_blog_article.active = 'yes'
+                " .+ prod_active .+ " 
+                LIMIT 1
+        ", article_uid
+    );
+
+    // If article does not exist, redirect to the list
+    if article.nbrows == 0 then
+        redirect("{{pages(table:'pages','blog_list',lg.rows.lg)}}");
+    endif
+
+    // Remove the flashmessenger cookie after page is refreshed
+    cookies = cookies();
+    cookies(name:"flashmessenger", value:"",maxage:1,path:"/");
+    
+    // Add a comment
+    if cgidata.comment ne "" && cgidata.name ne "" then
+        // if ReCaptcha Success
+        if(recaptcha::validate()) then
+            // if comment does not need approval
+            if article.rows.approve_comment ne "yes" then
+                // Insert approved comment
+                res = insert(
+                        table:  "sed_blog_comment",
+                        fields:{
+                                'comment':esc(filter:"html",cgidata.comment),
+                                'commentator_name':esc(filter:"html",cgidata.name),
+                                'language': "{{lg.rows.lg}}",
+                                'uid_user': extranet_user.uid,
+                                'uid_article': article_uid,
+                                'approved': "yes"
+                        }
+                );
+                // Set a flashmessenger cookie to display confirmation
+                set_flashmessenger(
+                    dq([
+                        <div class="alert alert-success">
+                            Great! Thank you for sharing 
+                        </div>
+                    ])
+                );
+            
+            // If comment needs approval
+            else
+                // If both to and from email adress are filled in the configs
+                if blog_config.rows.admin_email_to ne "" && blog_config.rows.admin_email_from ne "" then
+                    // Insert non approved comment 
+                    res = insert(
+                            table:  "sed_blog_comment",
+                            fields:{
+                                    'comment':esc(filter:"html",cgidata.comment),
+                                    'commentator_name':esc(filter:"html",cgidata.name),
+                                    'language': "{{lg.rows.lg}}",
+                                    'uid_user': extranet_user.uid,
+                                    'uid_article': article_uid
+                            }
+                    );
+                    
+                    // Set parameters for the email
+                    article_title = article.rows.title;
+                    comment_text = cgidata.comment;
+                    email_to = blog_config.rows.admin_email_to;
+                    email_from = blog_config.rows.admin_email_from;
+                    
+                    // Send the email to the admin
+                    email(
+                            from: email_from,
+                            to: email_to,
+                            subject:"A comment needs your approval", /*  TODO: sn_ct */
+                            ct:"text/html",
+                            file:"/staging" .+ "{{ sn_pages('email_template_admin', lg.rows.lg, table:'ressources')}}"
+                        );
+                        
+                    // Set a flashmessenger cookie to display confirmation   
+                    set_flashmessenger(
+                        dq([
+                            <div class="alert alert-success">
+                            
+                                Great! thank you for sharing {{/* TODO: sn_ct*/}}
+                                <br/>
+                                Your comment will be visible as soon as an administrator approves it  {{/* TODO: sn_ct*/}}
+                            </div>
+                        ])
+                    );
+                endif
+                
+            endif
+            
+            // After comment is added, refresh page
+            redirect(request.unparsed_uri);
+        endif
+    endif
+}}
+
+
+<!-- HEADER INCLUDE FILES -->
+
+<!-- Magnific Popup core CSS file -->
+<link rel="stylesheet" href="/css/magnific-popup.css">
+
+<!-- Magnific Popup core JS file -->
+<script src="/js/jquery.magnific-popup.min.js"></script>
+
+
+<!-- ************** header include files-->
+
+<!-- BODY -->
+<div class="wdg_blog wdg_blog_detail">
+    
+    <!-- CONTACT FORM POPUP -->
+    <div id="blog_contact_form" class="zoom-anim-dialog mfp-hide cs">
+    	<form onsubmit="return false;">
+    	    <input type="hidden" id="author_email" name="author_email" value="\{{article.rows.email}}">
+        	<div class="font16">
+        	    SEND EMAIL TO AUTHOR {{  /* TODO: sn_ct  */}} 
+        	</div>
+        	<div class="mb15 font16">
+        	   \{{article.rows.firstname}} \{{article.rows.lastname}}
+        	</div>
+        	<fieldset style="border:0;">
+        		<div class="mb15">
+        		    <input id="user_name" name="user_name" type="text" placeholder="YOUR NAME {{  /* TODO: sn_ct  */}} " required="" class="form-control">
+        		</div>
+				<div class="mb15">
+        		    <input id="user_email" name="user_email" type="email" placeholder="YOUR EMAIL {{  /* TODO: sn_ct  */}} " required="" class="form-control">
+        		</div>
+        		<div class="mb15">
+        		    <textarea name="user_message" id="user_message" class="form-control" rows="6" placeholder="YOUR MESSAGE {{  /* TODO: sn_ct  */}} "></textarea>
+        		</div>
+        		<button onclick="send_email();" class="btn btn-primary mb5">
+                    SEND MESSAGE {{  /* TODO: sn_ct  */}} 
+                </button>
+        	</fieldset>
+        </form>
+    </div>
+    <!-- ************** contact form popup-->
+    
+    
+    <!-- DISPLAY ARTICLE DETAILS -->
+    <div>
+        <div>
+            <a href="{{pages(table:'pages','blog_list',lg.rows.lg)}}" class="btn btn-default mob_full_width mb5">
+                BACK TO THE LIST {{ /* TODO: sn_ct */}}
+            </a>
+        </div>
+    </div>
+    
+    <style>
+        .wdg_blog_nb_comment span{
+            color:#FFF;
+        }
+        .cs .text-center .img-responsive{
+            margin:auto;
+        }
+        .cs .dtable{
+            display:table;
+            width:100%;
+        }
+        .cs .dcell{
+            display:table-cell;
+            vertical-aling:middle;
+        }
+        .cs .blog_header .blog_img_legend{
+            font-size:11px;
+        }
+        .cs .blog_header .dcell{
+            width:33%;
+        }
+        
+        /*Author box*/
+        
+        .author_box .author_box_container{
+            position:relative;
+            background:#DDD;
+            padding:0 10%;
+        }
+        .author_box .author_image{
+            position:absolute;
+            width:100%;
+            text-align:center;
+            top:-50px;
+            left:0;
+        }
+        .author_box .author_image img{
+            margin:auto;
+            width:100px;
+        }
+        .col-sm{
+            max-width:500px;
+            margin:auto;
+        }
+        .author_box{
+            padding-top:70px;    
+        }
+        .author_box .author_name{
+            border-bottom:1px #000 solid;
+            text-align:center;
+            position:relative;
+            padding-top:70px;
+            margin-bottom:20px;
+        }
+        .author_box .author_name:before{
+            content:'\f040';
+            display: inline-block;
+            font-family: FontAwesome;
+            font-style: normal;
+            font-weight: normal;
+            line-height: 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            position:absolute;
+            left:0;
+            bottom:0;
+        }
+        .author_box .author_desc{
+            text-align:center;
+            line-height:1.5;
+        }
+        .author_box .author_btn{
+            text-align:center;
+            padding:25px 0;
+        }
+        
+        /************/
+        .blog_title h1{
+            margin:0;
+        }
+        .blog_text{
+            line-height:1.7;
+            font-size:1em;
+            text-align:left;
+        }
+        
+        /*View 2
+        *********************/
+        .cs .wdg_blog_image{
+            position:relative;
+        }
+        .cs .blog_title_section{
+            position:absolute;
+            bottom:30px;
+            width:100%;
+        }
+        
+        .cs .blog_title_section *{
+            color:#FFF!important;
+        }
+        .cs .blog_header .dcell{
+            width:50%;
+        }
+        @media (max-width:768px){
+            .cs .blog_header.dtable{
+                display:block;
+            }
+            .cs .blog_header .dcell{
+                display:block;
+                width:100%;
+            }
+            .cs .blog_header .blog_comment{
+                text-align:center;
+            }
+            .cs .blog_header .blog_img_legend{
+                position:relative;
+                top:-15px;
+            }
+            .cs .blog_title_section h1{
+                font-size:24px;
+            }
+            .cs .blog_title_section{
+                bottom:10px;
+            }
+        }
+        /***********/
+    </style>
+    \{{
+        comments = sql("
+                        SELECT * 
+                        FROM sed_blog_comment
+                        WHERE uid_article = '?'
+                        AND approved = 'yes'
+                        ORDER BY sn_cdate DESC
+                     ", article_uid)
+    
+    }}
+    
+    <div class="wdg_blog_image">
+        <div class="mb-20 text-center">
+            \{{if article.rows.featured_image ne "" then}}
+                <img src="\{{article.rows.featured_image}}\{{first_image_size}}" alt="\{{(article.rows.alt_attribute eq '')?article.rows.title : article.rows.alt_attribute}}" class="img-responsive">
+            \{{else}}
+                <img src="\{{blog_config.rows.article.rows_default_image}}\{{first_image_size}}" alt="article.rows.title" class="img-responsive">
+            \{{endif}}
+            <div class="blog_title_section">
+                <div class="blog_brand text-center mt15">
+                \{{article.rows.surtitle}}
+                </div>
+                <div class="blog_title text-center">
+                    <h1>\{{article.rows.title}}</h1>
+                </div>             
+                <div class="text-center">
+                        \{{ for category sql("SELECT uid,name_{{lg.rows.lg}} AS name FROM sed_blog_category WHERE find_in_set(uid, '?')",article.rows.category) do}}
+                            <a class="noblue"  href="javascript:void(0)" onclick="$('#category').val('\{{category.rows.uid}}'); $('#sed_blog_form').submit();">#\{{category.rows.name}}</a>    
+                        \{{ endfor }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="blog_content blog_container">
+        <div>
+            <div class="dtable blog_header">
+                <div class="dcell blog_img_legend">
+                    Légende de l'image
+                </div>
+                <div class="dcell blog_comment text-right">
+                    \{{ucfirst(datetime(lg:"{{lg.rows.lg}}",date:article.rows.date_article.rows, format:"%d %B %Y"))}}
+                    \{{if article.rows.allow_comments eq "yes" then}}
+                            &nbsp;&nbsp;&nbsp;<span class="fa-stack wdg_blog_nb_comment">
+                                <i class="fa fa-comment fa-stack-2x" aria-hidden="true"></i>
+                                <span class="fa-stack-1x fa-stack-text masonry_comment_count">\{{(comments.nbrows > 0) ? comments.nbrows : 0;}}</span>
+                            </span>
+                    \{{endif}}
+                </div>
+            </div>
+             <div class="blog_text mt30 col-sm">
+                \{{ article.rows.full_text }}
+            </div> 
+        </div>
+        
+        <!-- ************** display article details-->
+        
+        
+         \{{
+            medias = sql("
+                            SELECT  title_{{lg.rows.lg}} as title,
+                                    type,
+                                    image,
+                                    credit,
+                                    video_type,
+                                    youtube,
+                                    file,
+                                    uid_article
+                            FROM    sed_blog_media
+                            WHERE   uid_article = '?'
+                            ORDER BY sn_custom
+                            ", article_uid
+                        );  
+
+        }}{{%include "/module/sed/blog/include/sed_media.sn"}}        
+        
+        <div class="mb15 mt30 col-sm">
+            <table class="table_sm">
+                <tbody>
+                    <tr>
+                        <td style="">
+                            <div class="blog_filter">
+                                Categories : {{ /* TODO: sn_Ct */ }}
+                                \{{ categories = sql("SELECT uid,name_{{lg.rows.lg}} AS name FROM sed_blog_category WHERE find_in_set(uid, '?')",article.rows.category);
+                                    for category in categories.rows do
+                                }}
+                                    <a href="{{pages(table:'pages','blog_list',lg.rows.lg)}}?category=\{{category.uid}}">#\{{category.name}}</a>  
+                                \{{ endfor }}
+                            </div>
+                        </td>
+                        <td class="s_col-sm-right mb5">
+                            <div>
+                                \{{ if (article.rows.show_social_bookmark eq 'yes') then }}
+                                    {{%include '/module/sed/blog/include/share.sn';}}
+                                \{{ endif }}
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="author_box">
+        <div class="author_box_container col-sm">
+            <div class="author_image">
+                <img src="http://placehold.it/200x200" class="img-circle img-responsive" alt=""/>
+            </div>
+            <div class="author_name">
+                Super Tienne
+            </div>
+            <div class="author_desc">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at porttitor sem.  Aliquam erat volutpat. Donec placerat nisl magna, et faucibus arcu condim sed.Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+            </div>
+            <div class="author_btn">
+                <a href="#" class="btn btn-primary">
+                    Écrivez-moi
+                </a>
+            </div>
+        </div>
+        
+    </div>
+    \{{if article.rows.allow_comments eq "yes" then}}
+        <div id="flashmessenger">
+           \{{cookies.flashmessenger; }}
+        </div>
+        <form action="#flashmessenger" onsubmit="return check_empty_fields()" id="comment_form" method="POST">
+            <div id="comment_box">
+                <div id="blog_content" class="blog_content blog_container padtop0">
+                    <div class="col-sm">
+                        <h2>Add a comment {{/* TODO: sn_ct*/}}</h2>
+                        <input name="name"  class="form-control mb15" placeholder="Enter your name {{/* TODO: sn_ct*/}}" required>
+                        <textarea form="comment_form" rows="6" name="comment" class="form-control mb15" placeholder="Say something nice..." required></textarea>
+                        
+                        <div class="mb30">
+                            <div class="field">
+                                \{{recaptcha::show()}}
+            		        </div>
+                        </div>
+                        <div>
+                            
+                            <button type="submit" onclick="check_comment()" class="btn btn-default  mob_full_width mb5" >Post {{/* TODO: sn_ct*/}}</button>
+                                
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>    
+       <div class="blog_content padtop0">
+            <h3 class="text-center">\{{comments.nbrows}} comments {{/* TODO: sn_ct*/}}</h3>
+            \{{for comment in comments.rows do}}
+                <div class="comment_container comment_user">
+                    <div class="commentator_name">
+                        \{{comment.commentator_name}}
+                    </div>
+                    <div class="mb15">
+                        \{{comment.comment}}
+                    </div>
+                    <div class="comment_date">
+                        \{{datetime(lg:"{{lg.rows.lg}}",date:comment.sn_cdate, format:"%d %B %Y, %H:%M:%S")}}
+                    </div>
+                </div>
+                \{{if comment.author_reply ne "" then}}    
+                    <div class="comment_container comment_author">
+                        <div class="author_name">
+                            \{{article.rows.firstname}} \{{article.rows.lastname}} 
+                        </div>
+                        <div class="mb15">
+                            \{{comment.author_reply}}
+                        </div>
+                        <div class="comment_date">
+                            \{{datetime(date:comment.author_reply_date, format:"%d %B %Y, %H:%M:%S")}}
+                        </div>
+                    </div>
+                \{{endif}}
+            \{{endfor}}
+        </div> 
+    \{{endif}}
+    
+    {{
+        //RELATED ARTICLES
+    }}
+    <style>
+        /* IMG GALLERY
+        *************/
+        .cs .gal_img_container{
+            margin:0 -7px;
+        }
+        .cs .gal_img{
+            max-width:514px;
+            margin:auto;
+        }
+        .cs .gal_img_item{
+            width:50%;
+            float:left;
+            padding:7px;
+        }
+        .cs .gal_img_item>a{
+            height:auto;
+        }
+        .cs .gal_img_container .aspectratio{
+            width:100%;
+            padding-bottom:70%;
+            position:relative;
+        }
+        .cs .gal_img_container .aspectratio .position{
+            width:100%;
+            height:100%;
+            position:absolute;
+        }
+        .cs .gal_img_container .aspectratio .dtable{
+            width:100%;
+            height:100%;
+        }
+        .cs .gal_img_container .aspectratio a{
+            vertical-align:middle;
+            display:table-cell;
+            line-height:initial;
+            height:100%;
+        }
+        /**************/
+        
+        .related_title{
+            margin:3px 0 0 0;
+            line-height:1;
+            font-size:1.1em;
+            font-weight:bold;
+            line-height:1.4;
+            text-decoration:none;
+        }
+        .related_articles>div{
+            width:33.3334%;
+            float:left;
+        }
+        .related_surtitle{
+            font-weight:bold;
+            opacity:0.80;
+            font-size:0.8em;
+            margin-top:3px;
+        }
+        .related_articles a{
+            color:#000;
+            text-decoration:none;           
+        }
+        .related_articles a:hover .related_title{
+            color:orange;
+        }
+        @media (max-width:515px){
+            .related_articles>div{
+                width:100%;
+                float:none;
+                max-width:300px;
+                margin:auto auto 10px auto;
+            }
+            .related_articles_title>*{
+                text-align:center;
+            }
+        }
+    </style>
+    <div class="related_articles_title">
+        <h4>
+            Related articles
+        </h4>
+    </div>
+    <div class="row related_articles">
+        <div class="col-sm-4">
+            <a href="#">
+                <div>
+                    <img src="/sn_uploads/cow-1509258_960_720.jpg" class="s_img-responsive mauto">
+                </div>
+                <div class="related_title">
+                    5 most popular cow joke to tell at parties
+                </div>
+                <div class="related_surtitle">
+                    Surtitle
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-4">
+            <a href="#">
+                <div>
+                    <img src="/sn_uploads/cow-1509258_960_720.jpg" class="s_img-responsive mauto">
+                </div>
+                <div class="related_title">
+                    5 most popular cow joke to tell at parties
+                </div>
+                <div class="related_surtitle">
+                    Surtitle
+                </div>
+            </a>
+        </div>
+        <div class="col-sm-4">
+            <a href="#">
+                <div>
+                    <img src="/sn_uploads/cow-1509258_960_720.jpg" class="s_img-responsive mauto">
+                </div>
+                <div class="related_title">
+                    5 most popular cow joke to tell at parties
+                </div>
+                <div class="related_surtitle">
+                    Surtitle
+                </div>
+            </a>
+        </div>
+    </div>
+</div>  
+        
+<!--********************* body-->
+    
+
+<!-- SCRIPTS -->
+<script>
+    $(document).ready(function() {
+    	$('.popup-with-move-anim').magnificPopup({
+    		type: 'inline',
+    
+    		fixedContentPos: false,
+    		fixedBgPos: true,
+    
+    		overflowY: 'auto',
+    
+    		closeBtnInside: true,
+    		preloader: false,
+    		
+    		midClick: true,
+    		removalDelay: 300,
+    		mainClass: 'my-mfp-slide-bottom',
+    		focus: '#name',
+    
+    		// When elemened is focused, some mobile browsers in some cases zoom in
+    		// It looks not nice, so we disable it:
+    		callbacks: {
+    			beforeOpen: function() {
+    				if($(window).width() < 700) {
+    					this.st.focus = false;
+    				} else {
+    					this.st.focus = '#name';
+    				}
+    			}
+    		}
+    	});
+        
+    	var mfp_img_gallery = $('.zoom-gallery').magnificPopup({
+    		delegate: '.mfp',
+    		type: 'image',
+    		closeOnContentClick: false,
+    		closeBtnInside: false,
+    		mainClass: 'mfp-with-zoom mfp-img-mobile',
+    		image: {
+    			verticalFit: true,
+    			titleSrc: function(item) {
+    				return item.el.attr('title') + ' &middot; <a class="image-source-link" href="'+item.el.attr('data-source')+'" target="_blank">image source</a>';
+    			}
+    		},
+    		gallery: {
+    			enabled: true,
+    			tCounter: '<span class="mfp-counter">%curr% of %total%</span>' // markup of counter
+    		},
+    		zoom: {
+    			enabled: true,
+    			duration: 300, // don't foget to change the duration also in CSS
+    			opener: function(element) {
+    				return element.find('img');
+    			}
+    		}
+    		
+    	});
+        
+         $('.open-popup-link').magnificPopup({
+          type:'inline',
+          midClick: true,
+          mainClass: 'custom-popup-class'
+          // Optionally pass markup without attaching it to DOM
+          /*items: {
+            src: '<div id="popup-with-something" class="mfp-hide"><div class="some-element">Instead of this element you may put anything else and it\'ll scale proportionally (e.g. flash embed object or your custom video player) </div></div>' 
+          }*/
+        });
+        
+    });
+
+
+    function check_empty_fields(){
+        if ($("textarea[name='comment']").val() == ""){
+            alert("Please write a comment {{ /* TODO: sn_ct */}}");
+            return false;
+        }
+        else if ($('#g-recaptcha-response').val() == ""){
+            alert("Please fill the captcha {{ /* TODO: sn_ct */}}");
+            return false;
+        }
+        else{
+            return true;
+        }
+    }
+
+    function send_email(){
+        user_name = $('#user_name').val();
+        user_email = $('#user_email').val();
+        user_message = $('#user_message').val();
+        author_email = $('#author_email').val();
+        if  (user_name != "" && user_email != "" && user_message != ""){
+            $.ajax({
+                type: "post",
+                data: {
+                    user_name: user_name,
+                    user_email: user_email,
+                    user_message: user_message,
+                    author_email: author_email,
+                    article_title: "\{{article.rows.title}}",
+                    article_uid: "\{{article_uid}}"
+                },
+                url: "/modules/fixauto/blog/{{lg.rows.lg}}/ajax_email_to_author.snc",
+        		success:function(result){
+                    $.magnificPopup.instance.close();
+                        user_name = $('#user_name').val("");
+                        user_email = $('#user_email').val("");
+                        user_message = $('#user_message').val("");
+                }
+            });
+        }
+    }
+</script>
+
+<!-- Script for add this -->
+{{/*hub_config.rows.code_addthis*/}}
+
+<!-- ************** scripts-->

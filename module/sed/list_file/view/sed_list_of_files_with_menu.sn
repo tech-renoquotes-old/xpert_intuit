@@ -1,0 +1,329 @@
+{{
+     /*
+    	@title	sed__list_of_file_with_menu
+    	Description: template for  list of file with menu
+        @author laplante@sednove.com
+    	@version 1.0 2015-05-31 13:15:47 
+    */
+	use lg;
+	use widget;
+	%include "/extenso/functions/sn_ct.snc";
+
+	// CALL FOR THE THEME COLOR CHOSEN BY THE CLIENT
+    theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'");
+    
+}}
+
+<style type="text/css">
+    /*================================================================
+SIDE-BAR-MENU*/
+.cs #cssmenu,
+.cs #cssmenu ul,
+.cs #cssmenu ul li,
+.cs #cssmenu ul li a {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+  line-height: 1;
+  display: block;
+  position: relative;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.cs #cssmenu {
+  max-width: 100%;
+  color: #ffffff;
+  margin-bottom: 20px;
+  border:1px solid #DBDBDB;
+  border-bottom:none;
+}
+.cs #cssmenu ul ul {
+  display: none;
+}
+.cs #cssmenu > ul > li.active > ul {
+  display: block;
+}
+.align-right {
+  float: right;
+}
+.cs #cssmenu > ul > li > a {
+  padding: 12px 35px 12px 20px;
+  cursor: pointer;
+  z-index: 2;
+  font-size: 16px;
+  text-decoration: none;
+  color: #666666;
+  background: #efefef;
+  -webkit-transition: color .2s ease;
+  -o-transition: color .2s ease;
+  transition: color .2s ease;
+  border-bottom:1px solid #DBDBDB;
+}
+.cs #cssmenu > ul > li > a.on, .cs #cssmenu > ul > li > a:hover.on {
+  color: #ffffff;
+  background-color: #{{theme_color.rows.content_link_color}};
+  text-decoration: none;
+}
+
+.cs #cssmenu > ul > li > a:hover {
+  color: #666666;
+  text-decoration: none;
+  background-color:#D9D9D9;
+}
+.cs #cssmenu ul > li.has-sub > a:after {
+  position: absolute;
+  right: 26px;
+  top: 19px;
+  z-index: 5;
+  display: block;
+  height: 10px;
+  width: 2px;
+  background: #{{theme_color.rows.content_link_color}};
+  content: "";
+  -webkit-transition: all 0.1s ease-out;
+  -moz-transition: all 0.1s ease-out;
+  -ms-transition: all 0.1s ease-out;
+  -o-transition: all 0.1s ease-out;
+  transition: all 0.1s ease-out;
+}
+.cs #cssmenu ul > li.has-sub > a:before {
+  position: absolute;
+  right: 22px;
+  top: 23px;
+  display: block;
+  width: 10px;
+  height: 2px;
+  background: #{{theme_color.rows.content_link_color}};
+  content: "";
+  -webkit-transition: all 0.1s ease-out;
+  -moz-transition: all 0.1s ease-out;
+  -ms-transition: all 0.1s ease-out;
+  -o-transition: all 0.1s ease-out;
+  transition: all 0.1s ease-out;
+}
+.cs #cssmenu ul > li.has-sub.open > a:after,
+.cs #cssmenu ul > li.has-sub.open > a:before {
+  -webkit-transform: rotate(45deg);
+  -moz-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  -o-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+.cs #cssmenu ul ul li a {
+  padding: 14px 36px 14px 20px;
+  cursor: pointer;
+  z-index: 2;
+  font-size: 13px;
+  text-decoration: none;
+  color: #5e5e5e;
+  background: #e3e3e3;
+  -webkit-transition: color .2s ease;
+  -o-transition: color .2s ease;
+  transition: color .2s ease;
+}
+.cs #cssmenu ul ul ul li a {
+  padding-left: 32px;
+}
+.cs #cssmenu ul ul li a:hover {
+  color: #{{theme_color.rows.content_link_hover_color}};
+}
+.cs #cssmenu ul ul > li.has-sub > a:after {
+  top: 16px;
+  right: 26px;
+  background: #{{theme_color.rows.content_link_color}};
+}
+.cs #cssmenu ul ul > li.has-sub > a:before {
+  top: 20px;
+  background: #{{theme_color.rows.content_link_color}};
+}
+.cs #cssmenu ul ul li a.on{text-decoration:underline;}
+
+.cs #cssmenu-mobile{
+    padding: 12px 34px 12px 22px;
+    cursor: pointer;
+    z-index: 2;
+    font-size: 16px;
+    text-decoration: none;
+    color: #666666;
+    background: #E7E7E7;
+    -webkit-transition: color .2s ease;
+    -o-transition: color .2s ease;
+    transition: color .2s ease;
+    margin-bottom: 5px;
+    display: none;
+}
+.cs #cssmenu-mobile:after {
+    position: absolute;
+    right: 30px;
+    top: 19px;
+    z-index: 5;
+    display: block;
+    height: 10px;
+    width: 2px;
+    background: #{{theme_color.rows.content_link_color}};
+    content: "";
+        -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+.cs #cssmenu-mobile:before {
+    position: absolute;
+    right: 26px;
+    top: 23px;
+    display: block;
+    width: 10px;
+    height: 2px;
+    background: #{{theme_color.rows.content_link_color}};
+    content: "";
+    -webkit-transition: all 0.1s ease-out;
+    -moz-transition: all 0.1s ease-out;
+    -ms-transition: all 0.1s ease-out;
+    -o-transition: all 0.1s ease-out;
+    transition: all 0.1s ease-out;
+}
+
+.cs #cssmenu-mobile.on:after,
+.cs #cssmenu-mobile.on:before {
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+@media (max-width: 990px) {
+    .cs #cssmenu{
+        display: none;
+    }
+    .cs #cssmenu-mobile{
+        display: block;
+    }
+}
+@media (min-width: 991px) {
+    .cs #cssmenu{
+        display: block!important;
+    }
+    .cs #cssmenu-mobile{
+        display: none!important;
+    }
+}
+    </style>
+
+\{{
+    config=config();    
+    file_select = "active='yes'";
+    if config.site ne "staging" then 
+        file_select = file_select .+ " AND production='yes'";     
+    endif  
+}}	
+<div class="row news-details">
+    <div class="col-md-3">
+        <div id="cssmenu-mobile" onclick="showsubmenu();">{{ sn_ct('list-of-files-menu-title'); }}</div>
+        <div id="cssmenu">
+            <ul>
+				\{{ for cat sql("SELECT * FROM sed_accordeon_file WHERE active='yes' AND uid_widget = '?' ORDER BY sn_custom", "{{ widget.rows.uid_widget_list}}") do }}
+					<li><a href='#\{{cat.rows.uid}}'>\{{ cat.rows.title_{{lg.rows.lg}} }}</a></li>
+				\{{ endfor }}
+            </ul>
+        </div>
+        <!--cssmenu-->
+    </div>
+    <style type="text/css">
+    .wdg-files h2 {
+        margin-top: 0px;
+    }
+    
+    .wdg-file {
+        padding: 10px 0px 5px 0px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #E2E2E2;
+    }
+    
+    .wdg-file-title {
+        font-size: 16px;
+        font-weight: bold;
+      	margin-bottom: 0px;
+    }
+    
+    .wdg-file-title small {
+        font-size: 13px;
+        font-weight: normal;
+        margin-left: 10px;
+    }
+    
+    .wdg-file-cat {
+        margin-bottom: 30px;
+    }
+    </style>
+    <div class="wdg-files col-md-9">
+		
+		\{{ 
+		    
+	    content_test= sql(single:true,"select uid from sed_accordeon_file where active='yes' and uid_widget = '?' ORDER BY sn_custom", "{{widget.rows.uid_widget_list}}");
+	     for cat sql("SELECT * FROM sed_accordeon_file WHERE active='yes' AND uid_widget = '?'", "{{ widget.rows.uid_widget_list}}") do }}
+			\{{ 
+				files = sql("select * from sed_accordeon_file_detail where " .+ file_select .+ " AND uid_accordeon='?' ORDER BY sn_custom", cat.rows.uid);
+				if files.nbrows > 0 then 
+			}}
+			<!-- CATEGORIE ============== -->
+			<div class="wdg-file-cat">
+				<h2 id="\{{ cat.rows.uid; }}">\{{ cat.rows.title_{{lg.rows.lg}} }}</h2>
+				\{{ for file in files.rows do }}
+					\{{ if file.type eq "file" then 
+							if file.upload_file eq "" || !-e file.upload_file then 
+								continue;
+							endif 
+						endif 
+					}}
+						<!--  ITEM ======= -->
+						<div class="wdg-file">
+							<div class="row">
+								<div class="col-sm-9">
+									<p class="wdg-file-title">
+										\{{ file.title_{{lg.rows.lg}}}} 
+										<small>\{{ datetime(date: file.sn_cdate, lg:"{{lg.rows.lg}}", format:"%Y/%m/%d") }} </small>
+									</p>
+									\{{ file.text_{{lg.rows.lg}} }}
+								</div>
+								<div class="col-sm-3">
+									\{{ if file.type eq "file" then }}
+										\{{ if file.upload_file ne "" && -e file.upload_file then }}
+											<a href="\{{file.upload_file}}" target="_blank" class="btn btn-primary" style="float:right;margin-left:10px;">
+												\{{extension(file.upload_file)}}
+											</a>
+										\{{ endif }}  
+									\{{ elseif file.type eq "internal" then }}
+										\{{ internal_page = 
+												sql(single:true, "SELECT page_{{lg.rows.lg}} as page, folder_{{lg.rows.lg}} as dir FROM pages WHERE uid = '?'", file.internal_link);
+											link = internal_page.rows.dir .+ internal_page.rows.page;
+										}}
+										<a href="\{{link}}" \{{ if file.new_tab eq "yes" then}} target="_blank" \{{endif}} class="btn btn-primary" style="float:right;margin-left:10px;">
+											\{{file.link_text_{{lg.rows.lg}} }}
+										</a>
+									\{{ elseif file.type eq "external" then }}
+										<a href="\{{file.external_link}}" \{{ if file.new_tab eq "yes" then}} target="_blank" \{{endif}} class="btn btn-primary" style="float:right;margin-left:10px;">
+											\{{file.link_text_{{lg.rows.lg}}}}
+										</a>
+									\{{ endif }}
+								</div>
+							</div>
+						</div>
+				\{{ endfor}} 
+			</div>
+			\{{ endif }}
+		\{{ endfor }}
+    </div>
+    <!-- / END col-md-9 -->
+</div>
+<!-- / END .row -->
+
+<script type="text/javascript">
+	function showsubmenu() {
+        $('#cssmenu').toggle();
+        $('#cssmenu-mobile').toggleClass('on');
+    }
+</script>

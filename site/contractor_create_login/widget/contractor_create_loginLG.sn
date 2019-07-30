@@ -1,0 +1,97 @@
+{{
+    /*
+        @title contractor_create_login
+        Description: Creates a username and password for the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+ 
+}}
+<style>
+
+</style>
+\{{
+    cgidata = cgidata();
+      redirect("{{pages(table:'pages','sr_contractor_dashboard','fr')}}");
+    contractor = sql(single:true, "SELECT uid FROM sr_contractor WHERE token='?' AND token != '' AND (username='' OR username IS null)", cgidata.token);
+    if contractor.nbrows == 0 then
+       // redirect("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+        redirect("{{pages(table:'pages','sr_contractor_dashboard','fr')}}");
+        stop();
+    endif
+ 
+}}
+        {{sn_ct("contractor_create_login Nouvel identifiant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+    </h1>
+    <div class="row">
+        <div class="col-md-3"></div>
+        <div class="col-md-6">
+        <form action="{{sn_pages('ajax_create_login', lg.rows.lg, table:'ressources')}}" id="create_login" name="create_login" method="POST">
+                <fieldset class="form-group" style="margin-bottom:30px">
+                    <label for="username" class="control-label">
+                        {{sn_ct("contractor_create_login Nouvel identifiant", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="text" name="username" id="username" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("contractor_create_login Identifiant trop court ou existe déjà", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="username"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="password" class="control-label">
+                        {{sn_ct("contractor_create_login Nouveau mot de passe", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="password" name="password" id="password" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("contractor_create_login Le mot de passe doit contenir au moins 6 caractères, 1 lettre majuscule, 1 lettre minuscule et 1 chiffre ", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="password"></span>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label for="password2" class="control-label">
+                        {{sn_ct("contractor_create_login Confirmer le mot de passe", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    </label>
+                    <input class="form-control" type="password" name="password2" id="password2" value="">
+                    <span class="help-block" data-validator-msg="{{sn_ct("contractor_create_login Les deux mots de passe doivent être pareil", publish:"/extenso/publish/pages.sn", edit:false, uids:page.rows.uid)}}" data-validator-error="password2"></span>
+                </fieldset>
+                
+                <input type="hidden" name="token" value="\{{cgidata.token}}">
+                
+                <button class="btn btn-primary pull-right" type="submit">{{sn_ct("contractor_create_login Soumettre", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>
+            </form>
+        </div>    
+        <div class="col-md-3"></div>
+    </div>
+{{
+    // include the validator for contractor_create_login
+    %include "/site/contractor_create_login/include/validator.sn";
+}}
+\{{
+    // validate client side
+    validator.validateJS(form:'create_login');    
+}}
+<script>
+    function confirm_password(password2){
+        password1 = $("input#password").val();
+        if (password1 === password2){
+            return true;
+        }
+        return false;
+    }
+    
+    // send form via ajax
+    $('form[name=create_login]').ajaxForm({
+        resetForm:true,
+        success:function(data, statusText, xhr){
+            if (xhr.getResponseHeader("X-success")){
+                location.replace("{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}");
+            }
+        }    
+    });   
+    
+</script>

@@ -1,0 +1,277 @@
+{{
+/**
+     * Author: Jhonny L. Alcius
+     * Desc : Class generator of static pages in specified location using a specific template.
+     * version : 1.00
+     * 
+**/
+class Profilgen 
+
+    
+
+method Profilgen()
+    this.template = "/site/profiles/profile_template.sn";
+    this.configs = sql(single:true,"SELECT * FROM sn_configs WHERE uid = 1");
+endm
+
+
+    method generate(cuid)
+        // if(cuid eq '6312') then
+        //     this.template = "/site/profiles/profile_template_test.sn";
+        // endif
+        
+        //get contractor profil information
+        res = sql(single:true,"select * 
+        from sr_contractor 
+        where 
+        (active = 'yes'
+        or
+        leaving_reason > '') 
+        and uid = ?", cuid);
+        contractor = res.rows;
+     	
+        if(contractor.active eq 'no' || contractor.active eq 'yes') then
+        //get additional information for this contractor.
+            photos = sql("SELECT * FROM sr_gallery WHERE uid_contractor='?' AND active='yes' ORDER BY priority ASC, uid DESC", contractor.uid);    	
+            address = sql(single:true, "SELECT a.street_no, a.street, a.zip, a.province, c.name_? as real_city FROM sr_address a INNER JOIN sr_city c ON a.uid_city = c.uid WHERE uid_contractor = ?", contractor.contact_lg, contractor.uid);
+            contractor_services = sql("SELECT * FROM sr_contractor_service cs INNER JOIN sr_service s ON s.uid = cs.uid_service WHERE cs.uid_contractor = ? GROUP BY name_?", contractor.uid, contractor.contact_lg);
+            profil = sql(single:true, "SELECT * FROM sr_contractor_profil WHERE uid_contractor='?'", contractor.uid);
+            customLicenses = sql("SELECT * FROM sr_additional_license WHERE uid_contractor='?'", contractor.uid);
+            update_profile = sql("UPDATE sr_contractor SET show_profile = 'yes' WHERE show_profile IS NULL and uid = ? ", contractor.uid);
+
+            // contractor_rating = "SELECT ps.uid_project_contractor as uid,
+            //         ps.sn_cdate as evaluation_date, 
+            //         ps.uid_project, 
+            //         ps.service_comment, 
+            //         ps.service_rate, 
+            //         ps.xpert_reply, 
+            //         ps.xpert_reply_date, 
+            //         ps.comment_verified,
+            //         (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
+            //         (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
+            //         (select firstname from sr_client where uid = p.uid_client) as firstname 
+            //         FROM xpert_project_survey ps 
+            //         INNER JOIN sr_project p on p.uid = ps.uid_project 
+            //         WHERE ps.winner = '" .+ contractor.uid .+ "' 
+            //         AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL)
+            //         AND (ps.comment_verified = 'yes')
+                    // ";            
+            
+            contractor_rating = sql("SELECT ps.uid_project_contractor, 
+                ps.sn_cdate as evaluation_date, 
+                ps.uid_project, 
+                ps.service_comment, 
+                ps.service_rate, 
+                ps.xpert_reply, 
+                ps.xpert_reply_date, 
+                ps.comment_verified, 
+                psv.name_? as sname, 
+                psv.city, 
+                psv.firstname 
+                FROM xpert_project_survey ps  
+                INNER JOIN (select p.uid, s.name_?, 
+                                (select ct.name_? from sr_address ad INNER JOIN sr_city ct on ad.uid_city = ct.uid where ad.uid = p.uid_address) as city, 
+                                (select firstname from sr_client where uid = p.uid_client) as firstname 
+                                FROM sr_project p INNER JOIN sr_service s on s.uid = p.uid_service
+                            ) 
+                        psv
+                WHERE ps.winner = '?'
+                AND psv.uid = ps.uid_project
+                AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL) 
+                AND ps.comment_verified = 'yes'
+                ORDER BY service_comment IS NOT NULL DESC, service_comment <> '' DESC, evaluation_date DESC, ps.service_rate DESC;
+                ", contractor.contact_lg, contractor.contact_lg, contractor.contact_lg, contractor.uid);
+            
+            //  some variable information
+            licenses = customLicenses.rows;
+            lic_iterator = 0;
+            current_profil = profil.rows;
+            pics = photos.rows;
+            services = contractor_services.rows;
+            numpic = 0;
+            contractor.streetNo = address.rows.street_no;
+            contractor.street = address.rows.street;
+            contractor.city = address.rows.real_city;
+            contractor.zip = address.rows.zip;
+            contractor.province = address.rows.province;
+            //contractor.services = services;
+            contractor.language = lg;
+            contractor.mylogo = current_profil.company_logo;
+            contractor.mybanner = current_profil.banner_1;
+            default_banner = "";
+            current_page = contractor.seo;
+    		lg = contractor.contact_lg;
+
+    		//Create array of banners to be loaded
+    		banner_img = [];
+    		next = [];
+    		for a dir(order:"desc",sortby:"mtime","/sn_uploads/rotator/") do
+    		    rn = random(min:111,max:999);
+               push(banner_img, {'banner': "/sn_uploads/rotator/" .+ a.file, 'next': rn});
+               push(next, rn);
+            endfor
+            
+            //pull max next weight from banner away
+            max = next[0];
+            for (i=0;i<next.length();i++) do
+                if(next[i] > max) then
+                max = next[i];
+                endif
+            endfor
+            
+            //load the banner with maximum next weight
+            for img in banner_img do
+                if(img.next == max) then
+                    default_banner = img.banner;
+                endif
+            endfor
+            
+            if(contractor.mybanner eq "") then
+                contractor.mybanner = default_banner;
+                contractor.default_banner = 'yes';
+            endif
+    		
+            //calcul average rate for customer
+            total_rate = 0;
+            contractor.reviews = [];
+            c = 1;
+            f = 0;
+            
+    		for r in contractor_rating.rows do
+    		   total_rate = total_rate + r.service_rate;
+    		   
+    		   //display rating date. If not provided display project_contractor sn_mdate.
+    		   if(r.evaluation_date ne "" && r.evaluation_date ne '0000-00-00') then
+    		       d = r.evaluation_date;
+    		   else
+    		       d = datetime();
+    		   endif
+    		   
+    		   push(contractor.reviews,{
+    		    'rating': r.service_rate, 
+    		    'comment': r.service_comment, 
+    		    'service': r.sname, 
+    		    'city': r.city, 
+    		    'firstname': r.firstname, 
+    		    'comment_date': d,
+            	'pc_uid': r.uid,
+            	'response': r.xpert_reply,
+            	'resp_date': r.xpert_reply_date,
+            	'verified': r.comment_verified
+    		   });
+    		endfor
+
+    		if(contractor_rating.nbrows != 0) then
+        		contractor.avgRate = total_rate / contractor_rating.nbrows;
+        	else
+        	    contractor.avgRate = 0;
+    		endif
+            
+    		//Company description length
+    		if(contractor.company_desc.length() > 200) then
+    		    if(lg eq 'fr') then
+        		    new_string = contractor.company_desc.substr(0,200) .+ "<a href='#apropos'>Lire plus</a>";
+    		        contractor.brieve_desc = new_string;
+    		    else
+        		    new_string = contractor.company_desc.substr(0,200) .+ "... <a href='#about'>Read more</a>";
+    		        contractor.brieve_desc = new_string;
+    		    endif
+    		endif
+
+    		
+    		
+    		//Generate bgcolor if there is no logo
+    		if(current_profil.company_logo ne "") then
+                contractor.logoBg = "";
+            else
+        		contractor.logoBg = "#eeeeee";
+    		endif
+    		
+    		
+            //create album element
+            for thePic in pics do
+                contractor.pic[numpic] = thePic.photo;
+                numpic++;
+            endfor
+            
+            for l in licenses do 
+                contractor.licname[lic_iterator]  = l.lic_name;
+                contractor.licnumber[lic_iterator] = l.lic_number;
+                
+                contractor.lics .+= '<tr><td style="padding-top:0px !important; padding-bottom:0px !important;">';
+                contractor.lics .+= contractor.licname[lic_iterator];
+                contractor.lics .+= ':';
+                contractor.lics .+= contractor.licnumber[lic_iterator];
+                contractor.lics .+= '</td></tr>';
+                lic_iterator = lic_iterator + 1;
+            endfor
+
+            
+            //load contractor services
+            i = 0;
+            for s in services do 
+                if lg eq "fr" then
+                    contractor.srv[i] = s.name_fr;
+                    i = i + 1;
+                elseif lg eq "en" then
+                    contractor.srv[i] = s.name_en;
+                    i = i + 1;
+                endif
+            endfor
+
+
+            //contractor website format
+            if(contractor.website ne "") then
+                if(strpos(contractor.website, 'http') == -1) then
+                    contractor.weburl = 'http://' .+ contractor.website;
+                else
+                    contractor.weburl = contractor.website;
+                endif
+            else
+                contractor.weburl = contractor.website;
+            endif
+
+            
+            //contractor facebook website format
+            if(contractor.fbsite ne "") then
+                if(strpos(contractor.fbsite, 'http') == -1) then
+                    contractor.fbsite = 'https://' .+ contractor.fbsite;
+                else
+                    contractor.fbsite = contractor.fbsite;
+                endif
+            endif
+
+            //contractor instagram website format
+            if(contractor.igsite ne "") then
+                if(strpos(contractor.igsite, 'http') == -1) then
+                    contractor.igsite = 'https://' .+ contractor.igsite;
+                else
+                    contractor.igsite = contractor.igsite;
+                endif
+            endif
+            
+            seo = lc(esc(nodouble:true,filter:"filenameinutf8", contractor.company_name)) .+ contractor.uid;
+            void sql("update sr_contractor set seo = '?' where uid = '?'", seo, contractor.uid);
+            contractor.seo = seo;
+            
+            if(lg eq 'fr') then
+                contractor.clink = "/expert/" .+ contractor.seo .+ ".snc"; 
+                // generate the profile in french for the contractor
+                void generate(delcompile: false, compile: true, file: "/html/expert/" .+ contractor.seo .+ ".snc",template: this.template);
+        	    void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/expert/" .+ contractor.seo .+ ".snc"});
+                '<br>';'<a href="'.+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc"' .+ '>' .+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc</a>'; 
+            elseif(lg eq 'en') then
+                contractor.clink = "/expert/" .+ contractor.seo .+ ".snc";
+                // generate the profile in english for the contractor
+                void generate(delcompile: false, compile: true, file: "/html/expert/" .+ contractor.seo .+ ".snc",template: this.template);
+                void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/expert/" .+ contractor.seo .+ ".snc"});
+                '<br>';'<a href="'.+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc"' .+ '>' .+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc</a>';
+            endif
+            
+            
+        endif
+    endm
+endc
+}}
+    
+    

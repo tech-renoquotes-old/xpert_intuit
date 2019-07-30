@@ -1,0 +1,7 @@
+
+{{
+    cgidata = cgidata();
+    use extranet_user;
+    void sql("DELETE FROM sr_gallery  WHERE uid='?' AND uid_contractor='?'", cgidata.photo_uid, extranet_user.uid);
+    
+}}

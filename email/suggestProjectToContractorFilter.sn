@@ -1,0 +1,51 @@
+{{
+    /*
+        @title 			suggestProjectToContractor
+        Description		Sends en email to a contractor to suggest him a potential client.
+        
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-07-21
+        @mod       		1.1   ajout de reference
+
+    */
+    
+    use email;
+    use lg;
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+}}
+
+\{{
+	use project;
+    use contractor;
+    use project_contractor;
+    use token;
+    
+    site = sql(single:true,"select url_prod from sn_configs"); 
+    site = site.rows.url_prod;
+    
+    mr = "{{sn_ct("Mr", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    mme = "{{sn_ct("Mme", publish:"", edit:false, uids:"", lg:lg.rows.lg)}}";
+    titre = (contractor.rows.contact_gender eq "f") ? mme : mr; 
+    
+    ref_token = contractor.rows.token;
+    uid_contractor = contractor.rows.uid;
+    prenom = contractor.rows.contact_firstname;
+    nom = contractor.rows.contact_lastname;
+    ville = project.rows.city;
+    code_postal = substr(project.rows.zip, 0, 3);
+    province = project.rows.province;
+    description = nl2br(project.rows.description);
+    date_travaux = project.rows.due_date;
+    id_client = project.rows.uid;
+    prix_soumission = money_format(project.rows.lead_price,"{{lg.rows.lg}}");
+    page_acceptation = site .+ "{{pages(table:'pages','sr_confirmation_accept_project',lg.rows.lg)}}?token=" .+ token .+ "&accepted=";
+    reference = "C05-".+project_contractor.rows.uid.+"A";
+    
+	address = urlencode(code_postal .+ ' ' .+ ville .+ ' ' .+ province);
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

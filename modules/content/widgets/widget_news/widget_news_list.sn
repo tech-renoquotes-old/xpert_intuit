@@ -1,0 +1,92 @@
+{{
+	%include "/extenso/functions/sn_ct.snc"; 
+	use uid;
+	use table;
+	use lg;
+	dir_nouvelles="/fr/nouvelles/";
+	if lg.rows.lg eq "en"  then
+		dir_nouvelles="/en/news/";
+	endif
+}}
+\{{	
+	config=config();
+	cgi=cgidata();
+	/* ----- code pour fonction news_link.sn
+	%include "/modules/content/functions/news_link.sn";
+	if uid_news !="" then
+		url_news="/{{lg.rows.lg}}/nouvelles/\{{content.rows.seo_{{lg.rows.lg}};}}";
+	else
+		url_news="/{{lg.rows.lg}}/nouvelles/";
+	endif
+	*/
+	
+	/* ----- la variable cpp = affichage de 5 nouvelles par page ---*/
+	cpp = 5.0;
+	if cgi.page ne "" && isdigit(cgi.page) then p=cgi.page; else p=1; endif
+	/* ----- la variable start = a partir de quel nombre on commence a afficher ---*/
+	start = (p - 1) * cpp;
+	lg_rows="{{lg.rows.lg}}";
+	production_select= "";
+	if config.site ne "staging" then production_select .+= " and production='oui'"; endif	
+}}
+<section class="slice">
+	<div class="w-section inverse">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12">
+					\{{ 
+						for content sql("select * from actualites where actif='oui' ".+ production_select .+ " ORDER BY adate DESC LIMIT ?, ?;",start,cpp) do
+						adate = datetime(lg:"{{lg.rows.lg}}", date:content.rows.adate,format:"%B %Y");
+					}}
+					<div class="row mb-20">
+						<div class="col-md-8 col-md-offset-2">
+							<p class="nouvelle_date">\{{adate}}</p>
+							<a class="nouvelle_texte" href="{{dir_nouvelles}}\{{content.rows.seo_{{lg.rows.lg}};}}">\{{content.rows.breve_{{lg.rows.lg}}}}</a>
+						</div>
+					</div>
+					\{{endfor
+					nb_items = sql(single:true, "select count(*) as nb from actualites where actif='oui' ".+ production_select);
+					nb_news=nb_items.rows.nb;
+					//stop();
+					nbpages=ceil((float)nb_news/cpp);
+					
+					if p > nbpages then p=nbpages; endif
+					if p <= 0 then p=1; endif 					
+					nbpagesmoins = p-2;
+						if nbpagesmoins < 1 then nbpagesmoins = 1; endif
+						nbpagesplus = p+2;
+						if nbpagesplus > nbpages then nbpagesplus = nbpages; endif
+						pagesmoins = p-1;
+						if pagesmoins < 1 then pagesmoins = 1; endif
+						pagesplus = p+1;
+						if pagesplus > nbpages then pagesplus = nbpages; endif
+					}}
+					
+					<div class="row mb-20">
+						\{{ if nbpages > 1 then }}
+						<div class="text-center margin-y-20">
+							<ul class="pagination">
+						
+								\{{ if pagesmoins != p then }}
+									<li><a href="?page=\{{pagesmoins;}}">«</a></li>
+								\{{endif}}
+								\{{ for (i=nbpagesmoins; i<=nbpagesplus; i+=1) do }}
+									\{{ if i == p then }}
+										<li class="active"><span>\{{i;}}</span></li>
+									\{{ else }}
+										<li><a href="?page=\{{i;}}">\{{i;}}</a></li>
+									\{{ endif }} 
+								\{{ endfor }}
+								\{{ if pagesplus != p then }}
+									<li><a href="?page=\{{pagesplus;}}">»</a></li>
+								\{{endif}}
+							</ul>
+						</div>
+						\{{endif}}
+					</div>
+					
+				</div>
+			</div>
+		</div>
+	</div>    
+</section>

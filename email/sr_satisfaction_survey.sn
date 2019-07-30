@@ -1,0 +1,139 @@
+{{
+    /*
+        @title 			survey
+        Description		survey. 
+        
+        @author 		madupuis@sednove.com
+        
+		@version		1.0 2016-08-08 madupuis@sednove.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+}}
+
+\{{
+    project = sql(single:true, "SELECT uid FROM sr_project WHERE token = '?'", "12w34r6789034567890456789");
+
+    contractors = sql("
+        SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid
+        FROM sr_project_contractor pc
+        INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+        WHERE accepted = 'yes'
+        AND uid_project = '?' 
+        ", project.rows.uid
+    );  
+        
+}}
+<div>
+    <span style="font-size:12px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+            RAPPEL   Vous recevez ce courriel en tant que client de soumissionrenovation.ca.
+        </span>
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+            <p>
+                <b>Bonjour,</b>
+            </p>
+            <p>
+                <b>En tant que client Soumission Rénovations, nous souhaitons connaître votre avis et votre satisfaction.</b>
+            </p>   
+            <p>
+                Ce sondage se complètera* en moins de 2 minutes. Vos réponses sont confidentielles et ne seront utilisées que pour des fins de recherche.
+            </p>
+            <p>
+                Attribuez à l'entrepreneur que vous avez retenu une note de 1 à 5 étoiles.
+            </p>
+        </span>
+    </span>
+</div>
+<br>
+\{{for c in contractors.rows do}}
+<div>
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+       <span style="font-size:16px;font-weight:bold;">
+           \{{c.contact_firstname}} \{{c.contact.lastname}} - \{{c.company_name}}
+       </span> 
+    </span> 
+</div>
+<table class="vote" cellpadding="0" cellspacing="5" width="100%">
+    <tr>
+        <td width="20%">
+            <a href="{{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?pc=\{{c.uid}}&p=\{{project.rows.uid}}&n=1" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="{{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?pc=\{{c.uid}}&p=\{{project.rows.uid}}&n=2" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    **
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="{{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?pc=\{{c.uid}}&p=\{{project.rows.uid}}&n=3" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ***
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="{{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?pc=\{{c.uid}}&p=\{{project.rows.uid}}&n=4" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ****
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="{{pages(table:'pages','client_survey_confirmation',lg.rows.lg)}}?pc=\{{c.uid}}&p=\{{project.rows.uid}}&n=5" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *****
+                </div>
+            </a>
+        </td>
+    </tr>
+</table>
+\{{endfor}}
+<br>
+<br>
+<hr style="background:#2a769f;color:#2a769f;">
+<br>
+<br>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td>
+      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td align="center" style="font-weight:bold;-webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;" 
+             bgcolor="#2a769f"><a href="#" target="_blank" 
+            style="border-top:7px #2a769f solid;border-bottom:7px #2a769f solid;font-size: 14px; color: #ffffff; text-decoration: none; text-decoration: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;display: block;width:100%;">
+                 <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">Je n'ai pas retenu les services de ces entrepreneurs</span></a></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<br>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td style="padding:7px;border:1px #000 solid;font-size:13px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">https://www.ssoumissionrenovation.ca/evaluation.snc?r=Gu4Q9V7aq9sB=600</span>
+    </td>
+  <tr>
+</table>
+<br>
+<div style="font-size:16px;">
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+        Vous ne pouvez pas cliquer sur le lien? Copiez et collez-le dans votre navigateur web.
+        <br><br>
+        Merci de votre participation!
+    </span>
+</div>

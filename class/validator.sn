@@ -1,0 +1,775 @@
+{{
+/*
+ * @title Validator Class
+ * @version 0.16 - 2016-09-21
+ * @author Olivier st-laurent <olivier@sednove.com>
+ * 
+ * @description Easy and Fast to implement Form Validation with a single configuration for both Server-side and Client-side
+ * 
+ * 
+ * Server-side implementation (within a dynamic sncode context) : 
+ 
+    %include '/snzo/module/sed/validator/class/validator.sn';
+    validator = new Validator(name: 'trim,notempty', email: 'email');       // If using a recaptcha validation, Add param  recaptcha:'recaptcha'
+    validator.setAntibotDelay(4); // For this feature to work, you need to call validator.startAntibot() on the client side only or if the form was not submited, and have the following table : session_antibot (token VARCHAR, time INT)
+    // validator.setGoogleRecaptcha("***************************");   // If using ReCaptcha, set recaptcha secret key and uncomment this line
+    
+    if length(cgidata) then // If form has been submited
+        if (validator.validate(data:cgidata)) then
+            // VALID!
+        else
+            // Error!   'validator.errors' is an array containing the invalid fields
+        endif
+    endif
+    
+ *
+ *
+ * Client-side implementation (after instantiation of server-side validator) : 
+ 
+    <form name="form1">
+        <div data-validator-errors></div><!-- optional div that will contain the list of errors -->
+        <label>Name : <input type="text" name="name" value=""></label>
+        <span data-validator-error="name" data-validator-msg="The name is required"><!-- optional element that will contain individual errors --></span>
+        <br>
+        <label>Email : <input type="text" name="email" value=""></label>
+        <span data-validator-error="email" data-validator-msg-email="This email is not valid" data-validator-msg-required="The email is required"></span>
+        <br>
+    </form>
+    \{{
+        validator.startAntibot();
+        validator.validateJS(form:'form1');
+    }}
+    
+    <!--  Function to call to force revalidate a specific field: validator_revalidate('form_name', 'field_name');   -->
+    <!--  Function to call to force revalidate everything: validator_revalidate('form_name');   -->
+        
+ * 
+ * 
+ * DOCUMENTATION: 
+ * 
+ * CONSTRUCTOR
+ * @params multiple fields as named params  ( fieldname: {options}|"validators" , ... )   OR   fields as positioned string params, default validator is "required"
+ *   ex1:   
+ *      fieldname: {
+ *          'field': 'fielaname',   // Optional Specific field name to be used for validation
+ *          'validators': "trim,uc,lc,required,notempty,word,date,time,datetime,number,integer,phone,email,zip,password,regex:STR,func:STR,min:INT,max:INT,minlen:INT,maxlen:INT,ajax:URL,passwd_number,passwd_uppercase,passwd_lowercase,passwd_special,sameas:FIELDNAME",   // one or more of these
+ *          'op': "and" | "or" ,    // Condition between validators (default = "and"),
+ *          'regex': "^.*$",        // To be used with regex validator (case sensitive)
+ *          'name': "FieldName",    // Optional human-readable field name, default is the raw fieldname
+ *          'message': "Error Message"   // Default: "Invalid value for field '%field%'" // %field% will be replaced by the human-readable field name
+ *      }
+ *   ex2:
+ *      fieldname: "func:FUNCNAME"    // Call a user function that returns a boolean and takes one argument which is the value. The function must be defined in Javascript and Sncode. May use with other validators. 
+ *   ex3:
+ *      fieldname: "trim,notempty"   // When trim is defined before other validators, it will trim the string before validation with the consequent validators
+ *   ex4:
+ *      fieldname: "required"       // Same as "trim,notempty"
+ *   ex5:
+ *      fieldname: "regex:^.*$"     // Same as setting validators to "regex" and specifying the regex. Cannot use multiple validators in a comma-separated string when using regex. Do not put required in front, the actual regex will determine if the field is required. 
+ *   ex6:
+ *      fieldname: ['trim', 'notempty', 'regex:^.*$']    // Combination of examples 3 and 5
+ *   ex7:
+ *      password: "required,password,minlen:8"   // Example of a very secure password field
+ *   ex8:
+ *      birthyear: "min:1900,max:2016"   // Example of year of birth
+ *   ex9:
+ *      email: "required,email,ajax:check_email_unique.sn" // the value will be passed as cgidata.value to the ajax resource. The ajax call must return the string "OK" if valid, anything else is considered invalid. 
+ *   ex10:
+ *      username: "trim,lc,func:FUNCNAME" // Compare the trimmed lowercased value with FUNCNAME. (uc for uppercase)
+ * 
+ * @method validate(fields...;data)
+ *      To be called for server-side validation
+ *
+ * @method validateJS(fields...;form)
+ *      To be called for client-side validation
+ * 
+ * @method setAntibotDelay(seconds)
+ *      To be called just after instantiation to set the minimum time between the page load and the submit of the form, to ignore bots. 
+ * 
+ * @method setGoogleRecaptcha(key)
+ *      To be called just after instantiation to activate the validation of the ReCaptcha and set the key
+ * 
+ * 
+ * HTML attributes : 
+ *  data-validator-name="INPUT_NAME"
+ *      Set this attribute on an element without a name attribute and that you still want the validator to trigger the validator on change and show the 'has-error' class on its parent.
+ * 
+ */
+class Validator
+    
+    method Validator()
+        // Default Global Options
+        this.dateRegex = "(([12]\d{3})-(0\d|1[012])-(0[1-9]|[12]\d|3[01]))";
+        this.dateFormat = "%Y-%m-%d"; // This format is mandatory for now
+        this.timeRegex = "(([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?)";
+        this.dateTimeRegex = "(" .+ this.dateRegex .+ " " .+ this.timeRegex .+ ")";
+        this.dateTimeFormat = "%Y-%m-%d %H:%M:%S"; // This format is mandatory for now
+        this.zipRegex = "([a-zA-Z]\d[a-zA-Z] ?\d[a-zA-Z]\d|\d{5})";
+        this.phoneRegex = "((\+?[01][ \.-]?)?[ \.-]?(\(?\d{3}\)?[ \.-]?)?(\d{3})[ \.-]?(\d{4}).*)";
+        this.emailRegex = "([\w\.-]+@[\w\.-]+\.[\w]+)";
+        this.defaultErrorMessage = "Invalid value for field '%field%'";
+        this.defaultCaptchaMessage = "Please check the captcha";
+        this.errorMsgDisplayType = "empty"; // empty | nbsp | slideup | hide
+        
+        this.antibot_delay = 0;
+        this.google_recaptcha_secret = "";
+        
+        this.errors = [];
+        this.fields = {};
+        
+        // Positioned params
+        if (sn_argcp > 0) then
+            args = sn_argsp;
+            if (sn_argcp == 1 && type(sn_argsp[0]) eq 'string') then
+                args = explode(',', sn_argsp[0]);
+            endif
+            for arg in args do
+                if (type(arg) eq 'string') then
+                    this.fields{arg} = this.getDefaultOptions(arg);
+                    this.fields{arg}.validators = ['required'];
+                endif
+            endfor
+        endif
+        
+        // Named params
+        if (sn_argcn > 0) then
+            for arg in sn_argsn do
+                argv = arg.value;
+                if (type(argv) eq 'string') then
+                    if (argv st "regex:") then
+                        argv = {
+                            'validators': 'regex',
+                            'regex': substr(arg.value, 6)
+                        };
+                    else
+                        argv = {'validators': arg.value};
+                    endif
+                endif
+                if (type(argv) eq 'array') then
+                    this.fields{arg.key} = this.getDefaultOptions(arg.key);
+                    for validator in argv do
+                        if (validator st "regex:") then
+                            this.fields{arg.key}.regex = substr(validator, 6);
+                            validator = 'regex';
+                        endif
+                        push(this.fields{arg.key}.validators, validator);
+                    endfor
+                endif
+                if (type(argv) eq 'context' && argv.validators ne '') then
+                    this.fields{arg.key} = this.getDefaultOptions(arg.key);
+                    if (argv.field ne '') then this.fields{arg.key}.field = argv.field; endif
+                    if (argv.name ne '') then this.fields{arg.key}.name = argv.name; endif
+                    if (argv.op ne '') then this.fields{arg.key}.op = argv.op; endif
+                    if (argv.regex ne '') then this.fields{arg.key}.regex = argv.regex; endif
+                    this.fields{arg.key}.validators = explode(',', argv.validators);
+                else
+                    //ERROR: options must be a string, an array of validators or an object with a 'validators' property
+                endif
+            endfor
+        endif
+        
+    endm
+    
+    method getFields(argsp, argcp)
+        fields = [];
+        // TODO uncomment when bug is fixed (classes args count)
+        // if argcp == 1 then
+        //     // Validate a list of fields from string
+        //     fields = explode(',', argp[0]);
+        // elseif argcp > 1 then
+        //     fields = argsp;
+        //     void shift(fields);
+        // else
+            for field in this.fields do
+                push(fields, field.key);
+            endfor
+        // endif
+        return fields;
+    endm
+    
+    method getDefaultOptions(field)
+        return {
+            'key': field,
+            'field': field,
+            'validators': [],
+            'op': 'and',
+            'name': field,
+            'message': "DEFAULT",
+            'regex': ""
+        };
+    endm
+    
+    method getOptions(field)
+        options = this.fields{field};
+        if (options eq '') then
+            // DEFAULTS
+            options = this.getDefaultOptions(field);
+            options.validators = ['required'];
+        endif
+        return options;
+    endm
+    
+    method validate() //TODO (;data)
+        if (!this.checkAntibot()) then
+            this.failedAntibot();
+            return false;
+        endif
+        for field in this.getFields(sn_argsp, sn_argcp) do
+            options = this.getOptions(field);
+            if !this.validateField(field, data, options) then
+                return false;
+            endif
+        endfor
+        this.clearAntibot();
+        return true;
+    endm
+    
+    method validateField(field, data, options)
+        value = data{options.field};
+        
+        if (type(value) eq 'context') then
+            value = value.filename;
+        endif
+        
+        if (options.validators[0] eq 'trim') then
+            value = trim(value);
+            void shift(options.validators);
+        endif
+        
+        if (options.validators[0] eq 'uc') then
+            value = uc(value);
+            void shift(options.validators);
+        endif
+        
+        if (options.validators[0] eq 'lc') then
+            value = lc(value);
+            void shift(options.validators);
+        endif
+        
+        if (options.op eq 'and') then
+            for validator in options.validators do
+                if !this.validateWithValidator(value, validator, options, data) then
+                    push(this.errors, field);
+                    return false;
+                endif
+            endfor
+            return (length(options.validators) > 0) ? true : false;
+        endif
+        
+        if (options.op eq 'or') then
+            for validator in options.validators do
+                if this.validateWithValidator(value, validator, options, data) then
+                    return true;
+                else
+                    push(this.errors, field);
+                endif
+            endfor
+            return false;
+        endif
+    endm
+    
+    method validateWithValidator(value, validator, options, data)
+        
+        if (validator eq 'required') then
+            return (trim(value) ne '');
+        endif
+        
+        if (validator eq 'notempty') then
+            return (value ne '');
+        endif
+        
+        if (validator eq 'regex') then
+            return (value =~ options.regex);
+        endif
+        
+        if (validator eq 'recaptcha') then
+            use cgidata;
+            captcha_check = curl(
+                url: 'https://www.google.com/recaptcha/api/siteverify',
+                data:"secret=" .+ this.google_recaptcha_secret .+ '&response=' .+ cgidata{'g-recaptcha-response'}
+            );
+            google_check_data = unstringnify(captcha_check.body);
+            return google_check_data.success;
+        endif
+        
+        if (validator st 'sameas:') then
+            otherfield = substr(validator, 7);
+            return (value eq data{otherfield});
+        endif
+        
+        // Validators above this line are always "Required"
+        // Empty value returns true for validators below this condition.
+        if (value eq '') then
+            return true;
+        endif
+        
+        if (validator eq 'word') then 
+            options.regex = '^\w*$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'number') then
+            options.regex = "^(\d+(\.\d+)?)?$";
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'integer') then
+            options.regex = "^\d*$";
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'date') then
+            options.regex = '^'.+this.dateRegex.+'$';
+            if (value =~ options.regex) then
+                value2 = datetime(date: datetime(date: value, format:'%s', locale:'fr_CA.UTF-8'), format:this.dateFormat, locale:'fr_CA.UTF-8');
+                return (value2 eq value);
+            endif
+            return false;
+        endif
+        
+        if (validator eq 'time') then
+            options.regex = '^'.+this.timeRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'datetime') then
+            options.regex = '^'.+this.dateTimeRegex.+'$';
+            if (value =~ options.regex) then
+                value2 = datetime(date: datetime(date: value, format:'%s', locale:'fr_CA.UTF-8'), format:this.dateTimeFormat, locale:'fr_CA.UTF-8');
+                return (value2 eq value);
+            endif
+            return false;
+        endif
+        
+        if (validator eq 'phone') then
+            options.regex = '^'.+this.phoneRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'email') then
+            options.regex = '^'.+this.emailRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'zip') then
+            options.regex = '^'.+this.zipRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'regex') then
+            return (value =~ options.regex);
+        endif
+        
+        if (validator st 'func:') then
+            funcname = substr(validator, 5);
+            if (existf(funcname)) then
+                return @funcname(value);
+            else
+                return true;
+            endif
+        endif
+        
+        if (validator st 'min:') then
+            i = substr(validator, 4);
+            return (value >= i);
+        endif
+        
+        if (validator st 'max:') then
+            i = substr(validator, 4);
+            return (value <= i);
+        endif
+        
+        if (validator st 'minlen:') then
+            i = substr(validator, 7);
+            return (length(value) >= i);
+        endif
+        
+        if (validator st 'maxlen:') then
+            i = substr(validator, 7);
+            return (length(value) <= i);
+        endif
+        
+        if (validator eq 'passwd_number') then
+            return (value =~ '\d');
+        endif
+        
+        if (validator eq 'passwd_special') then
+            return (value =~ '\W');
+        endif
+        
+        if (validator eq 'passwd_uppercase') then
+            return (value =~ '[A-Z]');
+        endif
+        
+        if (validator eq 'passwd_lowercase') then
+            return (value =~ '[a-z]');
+        endif
+        
+        if (validator eq 'password') then 
+            return (
+                length(value) >= 6
+                && value =~ '\W'    // Special characters
+                && value =~ '\d'    // Numbers
+                && value =~ '[A-Z]' // Uppercase letters
+                && value =~ '[a-z]' // Lowercase letters
+            );
+        endif
+        
+        if (validator st "ajax:") then
+            return true; // Ignore ajax on server side
+        endif
+        
+        return false;
+    endm
+    
+    method getJsValueExpression(fieldname, form)
+        return "($('form[name=".+form.+"]').find('[name=".+fieldname.+"]').val() || '')";
+    endm
+    
+    method validateFieldJS(field, form, options)
+        value = this.getJsValueExpression(options.field, form);
+        
+        if (options.validators[0] eq 'trim') then
+            value .+= ".trim()";
+            void shift(options.validators);
+        endif
+        
+        if (options.validators[0] eq 'uc') then
+            value .+= ".toUpperCase()";
+            void shift(options.validators);
+        endif
+        
+        if (options.validators[0] eq 'lc') then
+            value .+= ".toLowerCase()";
+            void shift(options.validators);
+        endif
+        
+        condition = "";
+        
+        for validator in options.validators do
+            validator_short = resub(validator, "^([^:]*)(:.*)?$", "$1");
+            condition .+= ((condition eq "")? "":((options.op eq 'and') ? " && " : " || ")) .+ "((" .+ this.validateJSWithValidator(value, validator, options, form) .+ ") || ((_validator_last_failed_validator='" .+ validator_short .+ "') && false))";
+        endfor
+        
+        return condition;
+    endm
+    
+    method validateJSWithValidator(value, validator, options, form)
+    
+        if (validator eq 'required') then
+            return (value .+ ".trim() != ''");
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'notempty') then
+            return (value .+ " != ''");
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'regex' && options.regex ne '') then
+            return (value .+ ".match(/".+str_replace('/','\/',options.regex).+"/)");
+        endif
+        
+        if (validator eq 'recaptcha') then
+            if (options.message eq 'DEFAULT') then
+                this.fields{options.key}.message = this.defaultCaptchaMessage;
+            endif
+            return ("$('[name=g-recaptcha-response]').val() != ''");
+        endif
+        
+        if (validator st 'sameas:') then
+            otherfield = substr(validator, 7);
+            return (value.+ ' == ' .+ this.getJsValueExpression(otherfield, form));
+        endif
+        
+        // Validators above this line will always be "Required"
+        
+        if (validator eq 'word') then
+            options.regex = "^\w*$";
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'date') then
+            options.regex = '^'.+this.dateRegex.+'$';
+            return (
+                value .+ " == '' || (" .+ 
+                value .+ ".match(/".+str_replace('/','\/',options.regex).+"/) && (" .+ 
+                "((new Date(" .+ value .+ ")).toString() !== 'Invalid Date' && " .+
+                value .+ " === (new Date(" .+ value .+ ")).toISOString().split('T')[0])))"
+            );
+        endif
+        
+        if (validator eq 'time') then
+            options.regex = '^'.+this.timeRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'datetime') then
+            options.regex = '^'.+this.dateTimeRegex.+'$';
+            return (
+                value .+ " == '' || (" .+ 
+                value .+ ".match(/".+str_replace('/','\/',options.regex).+"/) && (" .+ 
+                "((new Date(" .+ value .+ ".replace(' ','T') + 'Z')).toString() !== 'Invalid Date' && " .+
+                value .+ " === (new Date(" .+ value .+ ".replace(' ','T') + 'Z')).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/,''))))"
+            );
+        endif
+        
+        if (validator eq 'number') then
+            options.regex = '^(\d+(\.\d+)?)?$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'integer') then
+            options.regex = "^\d*$";
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'phone') then
+            options.regex = '^'.+this.phoneRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'email') then
+            options.regex = '^'.+this.emailRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'zip') then
+            options.regex = '^'.+this.zipRegex.+'$';
+            validator = 'regex';
+        endif
+        
+        if (validator eq 'regex' && options.regex ne '') then
+            return (value .+ " == '' || " .+ value .+ ".match(/".+str_replace('/','\/',options.regex).+"/)");
+        endif
+        
+        if (validator st 'func:') then
+            funcname = substr(validator, 5);
+            return value .+ " == '' || typeof(".+funcname.+") != 'function' || ".+funcname.+"(".+value.+")";
+        endif
+        
+        if (validator st 'min:') then
+            i = substr(validator, 4);
+            return (value .+ " == '' || " .+ value.+ ' >= ' .+ i);
+        endif
+        
+        if (validator st 'max:') then
+            i = substr(validator, 4);
+            return (value .+ " == '' || " .+ value.+ ' <= ' .+ i);
+        endif
+        
+        if (validator st 'minlen:') then
+            i = substr(validator, 7);
+            return (value .+ " == '' || " .+ value.+ '.length >= ' .+ i);
+        endif
+        
+        if (validator st 'maxlen:') then
+            i = substr(validator, 7);
+            return (value .+ " == '' || " .+ value.+ '.length <= ' .+ i);
+        endif
+        
+        if (validator eq 'passwd_number') then
+            return (value .+ " == '' || "
+                 .+ value .+ '.match(/\d/)'
+            );
+        endif
+        
+        if (validator eq 'passwd_special') then
+            return (value .+ " == '' || "
+                 .+ value .+ '.match(/\W/)'
+            );
+        endif
+        
+        if (validator eq 'passwd_uppercase') then
+            return (value .+ " == '' || "
+                 .+ value .+ '.match(/[A-Z]/)'
+            );
+        endif
+        
+        if (validator eq 'passwd_lowercase') then
+            return (value .+ " == '' || "
+                 .+ value .+ '.match(/[a-z]/)'
+            );
+        endif
+        
+        if (validator eq 'password') then
+            return (value .+ " == '' || "
+                          .+ value .+ '.length >= 6'
+                .+ ' && ' .+ value .+ '.match(/\W/)'    // Special characters
+                .+ ' && ' .+ value .+ '.match(/\d/)'    // Numbers
+                .+ ' && ' .+ value .+ '.match(/[A-Z]/)' // Uppercase letters
+                .+ ' && ' .+ value .+ '.match(/[a-z]/)' // Lowercase letters
+            );
+        endif
+        
+        if (validator st "ajax:") then
+            url = substr(validator, 5);
+            var = "_validator_ajax_response[form+'_".+options.key.+"_'+".+value.+"]";
+            return value .+ " == '' || (typeof ".+var.+" != 'undefined' && ".+var.+" == 'OK') || ($.ajax({async:false, url:'".+url.+"', data:{value:".+value.+"}, success:function(res){".+var.+" = res;}}) && ".+var.+" == 'OK')";
+        endif
+        
+    endm
+    
+    method validateJS() //TODO (;form)
+    
+        // Init javascript variables
+        baseJS = "\n// Form Validator\n\n";
+        baseJS .+= "if (typeof _validator_fields == 'undefined') _validator_fields = {};\n";
+        baseJS .+= "if (typeof _validator_errors == 'undefined') _validator_errors = {};\n";
+        baseJS .+= "_validator_errors['".+form.+"'] = [];\n";
+        baseJS .+= "if (typeof _validator_functions == 'undefined') _validator_functions = {};\n";
+        baseJS .+= "if (typeof _validator_form_dirty == 'undefined') _validator_form_dirty = {};\n";
+        baseJS .+= "if (typeof _validator_fields_dirty == 'undefined') _validator_fields_dirty = {};\n";
+        baseJS .+= "_validator_fields_dirty['".+form.+"'] = {};\n";
+        baseJS .+= "_validator_form_dirty['".+form.+"'] = false;\n";
+        baseJS .+= "var _validator_ajax_response = {};\n";
+        baseJS .+= "if (typeof _validator_show_errors == 'undefined') _validator_show_errors = {};\n";
+        
+        // Display Errors
+        baseJS .+= "
+        _validator_show_errors['".+form.+"'] = function(){
+            var form = '".+form.+"';
+            var errorElems = $('form[name='+form+'] [data-validator-errors], form[name='+form+'] [data-validator-error], [data-validator-errors='+form+']');
+            ";
+            if (this.errorMsgDisplayType eq 'nbsp') then
+                baseJS .+= "errorElems.html('&nbsp;');";
+            endif
+            if (this.errorMsgDisplayType eq 'empty') then
+                baseJS .+= "errorElems.html('');";
+            endif
+            if (this.errorMsgDisplayType eq 'slideup') then
+                baseJS .+= "errorElems.stop().slideUp();";
+            endif
+            if (this.errorMsgDisplayType eq 'hide') then
+                baseJS .+= "errorElems.hide();";
+            endif
+            baseJS .+= "
+            $('form[name='+form+'] .form-group').removeClass('has-error');
+            for (var i in _validator_errors[form]) {
+                var key = _validator_errors[form][i].field;
+                var validator = _validator_errors[form][i].validator;
+                var options = _validator_fields[form][key];
+                if (options.message === 'DEFAULT') options.message = \"".+this.defaultErrorMessage.+"\";
+                var msg = ($('form[name='+form+'] [data-validator-error='+options.field+']').attr('data-validator-msg') || options.message).replace('%field%', options.name);
+                var specificMsg = $('form[name='+form+'] [data-validator-error='+options.field+']').attr('data-validator-msg-' + _validator_errors[form][i].validator);
+                if (specificMsg) msg = specificMsg;
+                $('form[name='+form+'] [data-validator-errors], [data-validator-errors='+form+']').append(msg + \"<br>\\n\");
+                var errorElem = $('form[name='+form+'] [data-validator-error='+options.field+']');
+                errorElem.html(msg);
+                ";
+                if (this.errorMsgDisplayType eq 'slideup') then
+                    baseJS .+= "errorElem.stop().slideDown();";
+                endif
+                if (this.errorMsgDisplayType eq 'hide') then
+                    baseJS .+= "errorElem.show();";
+                endif
+                baseJS .+= "
+                $('form[name='+form+']').find('[name='+options.field+'], [data-validator-name='+options.field+']').parents('.form-group').addClass('has-error');
+            }
+        };\n
+        _validator_show_errors['".+form.+"']();\n";
+        
+        // Revalidate
+        baseJS .+= "function validator_revalidate(form, field){
+            if (field) {
+                _validator_fields_dirty[form][field] = true;
+                _validator_functions[form](false);
+                _validator_show_errors[form]();
+                return _validator_errors[form].length == 0;
+            } else {
+                var valid = _validator_functions[form](true);
+                _validator_show_errors[form]();
+                return valid;
+            }
+        }\n";
+        
+        // OnSubmit
+        binding = "$('form[name=".+form.+"]').submit(function(e){
+            if (!validator_revalidate('".+form.+"')) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                return false;
+            }
+        });\n";
+        
+        // Validator function conditions
+        condition = "(1";
+        for field in this.getFields(sn_argsp, sn_argcp) do
+            options = this.getOptions(field);
+            
+            // Condition
+            condition .+= " && ((!validateAll && typeof _validator_fields_dirty['".+form.+"']['".+field.+"'] == 'undefined') || (" .+ this.validateFieldJS(field, form, options) .+ ") || _validator_errors['".+form.+"'].push({'field':'".+field.+"','validator':_validator_last_failed_validator}))";
+            
+            // OnChange
+            binding .+= "$('form[name=".+form.+"]').find('[name=".+options.field.+"],[data-validator-name=".+options.field.+"]').on('change', function(){
+                validator_revalidate('".+form.+"', '".+field.+"');
+            });\n";
+            
+        endfor
+        condition .+= ")";
+        
+        // Make field options available to javascript
+        baseJS .+= "_validator_fields['".+form.+"'] = ".+stringnify(this.fields).+";\n";
+        
+        // Validator function
+        baseJS .+= "_validator_functions['".+form.+"'] = function(validateAll){
+            if (validateAll) _validator_form_dirty['".+form.+"'] = true;
+            if (_validator_form_dirty['".+form.+"']) validateAll = true;
+            var form = '".+form.+"';
+            _validator_errors['".+form.+"'] = [];
+            return ".+condition.+" && 
+                   _validator_errors['".+form.+"'].length == 0;
+        };\n".+binding.+"\n";
+        
+        // Output javascript content
+        "<script>\n";baseJS;"\n</script>\n";
+    endm
+    
+    method setGoogleRecaptcha(key)
+        this.google_recaptcha_secret = key;
+        this.fields.recaptcha = this.getDefaultOptions(arg);
+        this.fields.recaptcha.validators = ['recaptcha'];
+    endm
+    
+    method setAntibotDelay(seconds)
+        this.antibot_delay = seconds;
+    endm
+    
+    method startAntibot()
+        use encrypted_cookie;
+        if (encrypted_cookie eq '') then
+            cookies = cookies();
+            encrypted_cookie = cookies.sednove;
+        endif
+        time = time();
+        void sql("DELETE FROM session_antibot WHERE `token` = '?'", encrypted_cookie, error:err);
+        void sql("INSERT INTO session_antibot (`token`,`time`) VALUES('?','?')", encrypted_cookie, time.secs, error:err);
+    endm
+    
+    method checkAntibot()
+        if (this.antibot_delay > 0) then
+            cookies = cookies();
+            time = time();
+            res = sql(single:true, "SELECT `time` FROM session_antibot WHERE `token` = '?'", cookies.sednove, error:err);
+            if (res.nbrows == 0) then
+                return false;
+            endif
+            if (res.rows.time ne '' && res.rows.time > 0 && res.rows.time + this.antibot_delay > time.secs) then
+                return false;
+            endif
+        endif
+        return true;
+    endm
+    
+    method clearAntibot()
+        if (this.antibot_delay > 0) then
+            cookies = cookies();
+            void sql("DELETE FROM session_antibot WHERE `token` = '?'", cookies.sednove, error:err);
+        endif
+    endm
+    
+    method failedAntibot()
+        this.clearAntibot();
+    endm
+    
+endc

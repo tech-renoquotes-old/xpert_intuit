@@ -1,0 +1,74 @@
+{{
+    /*
+        @title share_satisfaction
+        Description: This widget is to prompt the client to share his experience with soumission renovation.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-11
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    
+    urls = sql(single:true,"SELECT url_facebook_review, url_monavis_review, url_google_review FROM sn_configs");
+}}
+<style>
+    .title {
+        font-weight:bold;
+        font-size:20px;
+        margin-bottom:30px;
+    }
+    .font-md{
+        font-size:20px;
+    }
+    .btn-share{
+        margin:15px 0px;
+    }
+</style>
+<div class="title">
+    {{sn_ct("share_satisfaction Merci pour votre participation! Votre réponse a été enregistrée.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+</div>
+\{{
+    if cgidata.n ne "" then
+        project = sql(single:true, "SELECT uid, comment_satisfaction FROM sr_project WHERE token LIKE '?%'", cgidata.token);
+        if project.nbrows > 0 then
+            void sql("UPDATE sr_project set comment_satisfaction = 'Did not choose a contractor' WHERE uid = ?", project.rows.uid);
+            note = (cgidata.n  =~ "^[1-5]$") ? cgidata.n : null;
+            if note then // if note is a number
+                void sql("UPDATE sr_project SET client_satisfaction='?' WHERE uid='?'", note, project.rows.uid);
+            else // if note is null, put null in db
+                void sql("UPDATE sr_project SET client_satisfaction=NULL WHERE uid='?'", project.rows.uid);
+            endif
+        endif
+    endif
+}}
+\{{ if cgidata.n eq "5" || cgidata.n eq "4" || cgidata.n eq "not_evaluated"  then}}
+    <!--<div class="font-md">-->
+    <!--    {{sn_ct("share_satisfaction message central",format:"ck", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+    <!--</div>-->
+    <!--<div class="row">-->
+    <!--    <div class="col-md-4"></div>-->
+    <!--    <a href="\{{urls.rows.url_facebook_review}}" target="_blank" class="btn btn-primary btn-share col-md-4">{{sn_ct("share_satisfaction Évaluation facebook", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a><br/>-->
+    <!--</div>-->
+    <!--<div class="row">-->
+    <!--    <div class="col-md-4"></div>-->
+    <!--    <a href="\{{urls.rows.url_monavis_review}}" target="_blank" class="btn btn-primary btn-share col-md-4">{{sn_ct("share_satisfaction Monavis.ca", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a><br/>-->
+    <!--</div>-->
+    <!--<div class="row">-->
+    <!--    <div class="col-md-4"></div>-->
+    <!--    <a href="\{{urls.rows.url_google_review}}" target="_blank" class="btn btn-primary btn-share col-md-4">{{sn_ct("share_satisfaction Évaluation google", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>-->
+    <!--</div>-->
+
+    <!--<div class="font-md">-->
+    <!--    {{sn_ct("share_satisfaction Merci !", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<br/>-->
+    <!--    {{sn_ct("share_satisfaction L'équipe de Soumission Rénovation.ca", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+    <!--</div>-->
+\{{endif}}

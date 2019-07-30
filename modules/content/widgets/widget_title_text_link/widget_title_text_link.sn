@@ -1,0 +1,47 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+	%include "/extenso/functions/sn_ct.snc"; 
+
+	wcontent = sql(single:true, "select * from widget_title_text_link where uid = '?'", widget.rows.uid_widget_list);
+}}
+
+<style>
+/* box-a */
+.box-a {min-height:150px;background-repeat:no-repeat;background-position:0 0;padding:30px 0 40px 0;}
+.box-a.with-image {padding-left:100px;}
+.box-a h2 {color:#4f8c69;font-size:14px;line-height:16px;font-variant:small-caps;}
+.box-a h1 {color:#002d58 !important;font-size:30px;line-height:34px;text-transform:uppercase;padding-bottom:10px;}
+.box-a p {color:#6d6d6d;font-size:14px;line-height:18px;font-family:"Open Sans",sans-serif;}
+.box-a .link-2 {color:#bda380;font-size:14px;line-height:16px;text-decoration:underline;}
+</style>
+{{/*<!-- 
+	If the instance has an image we add a new class 'with-image' to the box.
+	This class adds left padding. 
+	-->*/}}
+{{ if wcontent.rows.sn_dir_image ne "" && wcontent.rows.image ne "" then }}
+	<div class="box-a with-image" style="background-image:url({{wcontent.rows.image;}});">
+{{ else }}
+	<div class="box-a">
+{{ endif }}
+	{{if wcontent.rows{'sous_titre_'.+ lg.rows.lg} ne "" then }} 
+		<h2>{{wcontent.rows{'sous_titre_' .+ lg.rows.lg};}}</h2>
+	{{ endif }}
+	{{if wcontent.rows{'titre_'.+ lg.rows.lg} ne "" then }} 
+		<h1>{{wcontent.rows{'titre_'.+ lg.rows.lg};}}</h1>
+	{{ endif }}
+	{{wcontent.rows{'texte_'.+ lg.rows.lg};}}
+	{{if wcontent.rows{'lien_'.+ lg.rows.lg} ne "" then }} 
+		<a class="link-1" href="{{wcontent.rows{'lien_'.+ lg.rows.lg};}}">
+		{{
+			if wcontent.rows{'lien_texte'.+ lg.rows.lg} ne "" then 
+				wcontent.rows{'lien_texte'.+ lg.rows.lg};
+			else 
+				sn_ct("En savoir plus", edit:"false", publish:"/publish/pages.sn", uids:page.rows.uid);
+			endif 
+		}}</a>
+	{{ endif }}
+</div>

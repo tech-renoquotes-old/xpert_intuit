@@ -1,0 +1,489 @@
+{{ 
+	//
+	// Name:		header : Display header of the page
+	//
+	// Parameters:	none
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	//
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc"; 
+
+	use lg;
+	use ressource;
+
+}}
+
+
+{{ // CALL FOR THE THEME COLOR CHOSEN BY THE CLIENT
+theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'")}}
+
+
+<style>
+     /* COLOR FOR THE TOP MENU - Wrapper width*/
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    
+    /* menu top full */
+    .cs .menu-top-full {
+        padding: 0 8px;
+        border-bottom: 1px solid #E7E7E7;
+    }
+    
+    /* menu top - wrapper */
+    .cs .menu-top-wrapper {
+        padding: 8px 0;
+    }
+    
+    /* menu top */
+    .cs .menu-top {
+        float: right;
+    }
+
+    @media screen and (max-width: 500px) {
+        /*.cs .menu-top {float:none;}*/
+    }
+
+    .cs .menu-top a,
+    .cs .menu-top a:focus {
+        outline: 0;
+    }
+    /* menu top - level 1 */
+
+    .cs .menu-top .item-link {
+        float: left;
+        color: #666666;
+        padding: 5px 8px;
+        font-size: 13px;
+        line-height: 16px;
+        text-decoration: none;
+    }
+
+    .cs .menu-top .item-link.on, .cs .menu-top > .item-link:hover {
+        text-decoration: none;
+        color: #999999;
+    }
+
+    @media screen and (max-width: 997px) {
+        .menu-top-full {
+            display: none;
+        }
+        .cs .menu-top .item-link {
+            display: inline;
+            float: left;
+            margin: 0px 1% 1% 0px !important;
+            color: #666666;
+            padding: 5px 10px;
+            width: 49%;
+            font-size: 12px;
+            line-height: 16px;
+            text-decoration: none;
+            background-color: rgba(0, 0, 0,0.08);
+        }
+        .cs .menu-top {
+            float: none;
+            padding: 0 0 0 1%;
+        }
+        .cs .menu-top-wrapper {
+            padding: 0px;
+        }
+        .cs .menu-top-full .container-fluid {
+            padding-right: 0px;
+            padding-left: 0px;
+            padding-bottom:0px;
+            padding-top:0px;
+        }
+        .cs .menu-top-full {
+            padding: 0px;
+        }
+    }
+    @media screen and (min-width: 998px) {
+        .menu-top-full {
+            display: block!important;
+        }
+    }
+    /* ==============================================
+    CSS FOR THE MAIN NAV
+    is a temporrary class to protect menu style
+    ============================================== */
+
+    .cs .clearfix:before {
+        content: " ";
+        display: table;
+    }
+
+    .cs .clearfix:after {
+        content: " ";
+        display: table;
+        clear: both;
+    }
+    /* logo-1 */
+
+    .cs .logo-1 {
+        display: inline-block;
+        margin: 5px 0 16px 10px;
+        vertical-align: bottom;
+        max-width: 250px;
+        max-height: 50px;
+        margin-top: 17px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .logo-1 {
+            display: none;
+        }
+    }
+    /* menu main - mobile control */
+
+    .cs .menu-main-mobile-control {
+        display: none;
+        padding: 10px 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn {
+        display: inline-block;
+        margin: 0 10px 0 0;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 6px 9px;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover {
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn,
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:focus {
+        outline: 0;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn .fa {
+        font-size: 24px;
+        color: #4d4d4d;
+    }
+
+    .cs .menu-main-mobile-control .menu-main-mobile-btn:hover .fa {
+        color: #417bad;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main-mobile-control {
+            display: block;
+        }
+    }
+
+    .cs .logo-2 {
+        vertical-align: bottom;
+        width: 100%;
+        max-width: 160px;
+        max-height: 70px;
+        margin: 0;
+    }
+    /* menu main - wrapper */
+
+    .cs .menu-main-wrapper {
+        min-height: 75px;
+        padding-top: 15px;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs.model-2 {
+            padding: 0;
+        }
+        .cs .menu-main-wrapper {
+            display: none;
+            padding-top: 0px;
+            position: absolute;
+            right: 0;
+            left: 0;
+            padding: 0;
+            z-index: 600;
+        }
+        .cs .menu-main-wrapper.on-js {
+            display: block;
+            background-color: #fff;
+        }
+    }
+    /* menu main */
+
+    .cs .menu-main {
+        padding: 5px 0 0 15px;
+        float: right;
+    }
+
+    .cs .menu-main-wrapper .container-fluid {
+        padding: 0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main {
+        	padding-top: 0;
+            padding-left: 0;
+            padding-right: 0;
+            float: none;
+        }
+    }
+
+    .cs .menu-main a,
+    .cs .menu-main a:focus {
+        outline: 0;
+    }
+    /* menu main - level 1 */
+
+    .cs .menu-main > .item {
+        float: left;
+        position: relative;
+        margin: 0 5px 5px 0;
+    }
+
+    .cs .menu-main > .item.separator {
+        border-left: 1px solid #7d7d7d;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item {
+            float: none;
+            position: static;
+            margin: 0;
+        }
+    }
+
+    .cs .menu-main > .item:last-child {
+        margin-right: 0;
+    }
+
+    .cs .menu-main > .item > .item-link {
+        display: block;
+        margin: 0 0 0 30px;
+        padding: 10px 0;
+        font-size: 16px;
+        line-height: 18px;
+        text-decoration: none;
+        color: #666666;
+    }
+
+    .cs .menu-main > .item.on-js > .item-link {
+        color: #000000;
+    }
+
+    .cs .menu-main > .item > .item-link:hover {
+        text-decoration: none;
+        color: #{{theme_color.rows.header_highlight_color}};
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-link {
+            background: #f8f8f8;
+            margin: 0;
+            padding: 10px 14px;
+            border-bottom: none;
+        }
+        .cs .menu-main > .item.on > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item.on-js > .item-link {
+            background: #eeeeee;
+        }
+        .cs .menu-main > .item > .item-link:hover {
+            background: #e0e0e0;
+            border-bottom: none;
+        }
+    }
+    /* menu main - level 2 */
+
+    .cs .menu-main > .item > .item-children {
+        display: none;
+        position: absolute;
+        z-index: 600;
+        left: -50%;
+        top: 100%;
+        width: 200px;
+        border-bottom: none;
+        background: #e0e0e0;
+    }
+
+    @media screen and (max-width: 997px) {
+        .cs .menu-main > .item > .item-children {
+            position: static;
+            width: auto;
+            border-bottom: 0;
+            border-top: 0px solid #ffffff;
+        }
+        .cs .item-group .item-link {
+            padding-right: 20px;
+        }
+        .cs .item-group > .item-link::after {
+            content: "+";
+            float: right;
+            color: #{{theme_color.rows.header_highlight_color}};
+        }
+        .cs .menu-main > .item.on-js > .item-link::after {
+            content: "-";
+            color: #{{theme_color.rows.header_highlight_color}};
+        }
+    }
+
+    .cs .menu-main .item.on-js > .item-children {
+        display: block;
+    }
+
+    @media screen and (min-width: 501px) {
+        /*.cs .menu-main > .item:hover > .item-children {display:block;}*/
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link {
+        display: block;
+        border-top: 1px solid #cccccc;
+        padding: 7px 14px 7px 25px;
+        font-size: 14px;
+        line-height: 18px;
+        color: #4d4f53;
+        text-decoration: none;
+    }
+
+    .cs .menu-main > .item > .item-children > .item:first-child > .item-link {
+        border-top: 0;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link.on {
+        background: #d8d8d8;
+    }
+
+    .cs .menu-main > .item > .item-children > .item > .item-link:hover {
+        text-decoration: none;
+      	color:#ffffff;
+        background: #{{theme_color.rows.header_highlight_color}};
+    }
+    /* Underline From Left ======================================  */
+
+    .menu-main > .item>.item-link {
+        display: inline-block;
+        vertical-align: middle;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -moz-osx-font-smoothing: grayscale;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .menu-main>.item>.item-link:before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: 0;
+        right: 100%;
+        bottom: 0;
+        background: #{{theme_color.rows.header_highlight_color}};
+        height: 2px;
+        -webkit-transition-property: right;
+        transition-property: right;
+        -webkit-transition-duration: 0.3s;
+        transition-duration: 0.3s;
+        -webkit-transition-timing-function: ease-out;
+        transition-timing-function: ease-out;
+    }
+
+    .menu-main>.item>.item-link:hover:before,
+    .menu-main>.item>.item-link:focus:before,
+    .menu-main>.item>.item-link:active:before {
+        right: 0;
+    }
+
+	/* SOCIAL MEDIA LIST ========== =*/
+
+      /* ======= Color for the text link */
+      {{ if theme_color.rows.menu_top_link_color ne "" then}}
+      .cs .menu-top-full .social-media-list a {
+          color:#{{theme_color.rows.menu_top_link_color}};
+      }
+      {{endif}}
+
+      /* ======= Color for the hover text link */
+      {{ if theme_color.rows.menu_top_link_color_hover ne "" then}}
+      .cs .menu-top-full .social-media-list a:hover {
+          color:#{{theme_color.rows.menu_top_link_color_hover}};
+      }
+      {{endif}}
+
+
+
+      .cs .menu-top-full .social-media-list {
+          float: right;
+          margin-left: 20px;
+      }
+
+      .cs .menu-top-full .social-media-list a {
+          margin-left: 5px;
+          font-size: 18px;
+      }
+
+      @media screen and (max-width: 997px) {
+          .cs .menu-top-full .social-media-list {
+              float: none;
+              width: 100%;
+              margin-left: 0px;
+              text-align: center;
+              margin-bottom: 5px;
+          }
+          .cs .menu-top-full .social-media-list a {
+              margin-left: 5px;
+              margin-right: 5px;
+              font-size: 22px;
+          }
+      }
+      </style>
+    
+<div class="container-full menu-top-full">
+	{{ %include "/includes/menu_haut.sn"; }}
+</div><!--/.container-full-->
+<div class="container-full header">
+	<div class="pt model-2 clearfix">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-4">
+                    {{ logo_client = sql(single:true,"select * from sn_configs where uid = '1'");}}
+                    <a href="/"><img src="{{logo_client.rows.logo}}" class="logo-1"></a>
+                    <div class="menu-main-mobile-control clearfix">
+                        <a href="javascript:void(0);" class="menu-main-mobile-btn" onclick="menu_main_toggle_mobile('.menu-main-wrapper');"><i class="fa fa-bars"></i></a><a href="/"><img src="{{logo_client.rows.logo}}" class="logo-2"></a>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="menu-main-wrapper clearfix">
+                        <div class="container-fluid">
+                            <nav class="menu-main clearfix">
+                                {{ %include "/includes/call_main_nav.sn"; }}
+                            </nav><!--menu-main-->
+                        </div><!--container-fluid-->
+                    </div><!--menu-main-wrapper-->
+                </div>
+            </div>
+        </div><!--container-fluid-->
+    </div>
+</div><!--/.container-full-->
+
+
+
+<script>
+	/* main menu : when click on an item of level 1, show/hide level 2 */
+	function menu_main_toggle_children(bo){
+		$(bo).parent().siblings().removeClass("on-js").end().toggleClass("on-js");
+	}
+
+    /* main menu : mobile view : show/hide */
+            function menu_main_toggle_mobile(sel) {
+                $(sel).toggleClass("on-js");
+                $(".cs .menu-top-full").slideToggle("slow");
+            }
+</script>

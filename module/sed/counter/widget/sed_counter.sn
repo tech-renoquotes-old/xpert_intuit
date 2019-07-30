@@ -1,0 +1,131 @@
+{{
+use lg;
+use widget;
+
+%include "/extenso/functions/sn_ct.snc"; 
+}}
+
+<div class="container-fluid wdg_counter">
+    <div class="row">
+        <div class="col-sm-4">
+            <div class="counter_box" style="background-image:url(/sn_uploads/icon/optimi/projets.png);">
+                <div class="counter_box_content">
+                    <div class="text">
+                        {{sn_ct("counterbox_text_1", lg:lg.rows.lg, publish:"/extenso/publish/widget.sn", uids:widget.rows.uid)}}
+                    </div>
+                    <div class="value js_nb_increment"> 
+                            \{{clients = sql(single:true, noarg:true,"SELECT  count(*)as nbr from sr_project");clients.rows.nbr}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="counter_box" style="background-image:url(/sn_uploads/icon/optimi/entrepreneurs_2.png);">
+                <div class="counter_box_content">
+                    <div class="text">
+                        {{sn_ct("counterbox_text_2", lg:lg.rows.lg, publish:"/extenso/publish/widget.sn", uids:widget.rows.uid)}}
+                    </div>
+                    <div class="value js_nb_increment">
+                         \{{contractors = sql(single:true, noarg:true,"SELECT count(*) as nbr from sr_contractor where active ='yes' and verified = 'yes'");contractors.rows.nbr}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="counter_box" style="background-image:url(/sn_uploads/icon/optimi/temps_de_reponse.png);">
+                <div class="counter_box_content">
+                    <div class="text">
+                        {{sn_ct("counterbox_text_3", lg:lg.rows.lg, publish:"/extenso/publish/widget.sn", uids:widget.rows.uid)}}
+                    </div>
+                    <div class="value">
+                        {{sn_ct("counterbox_value_3", lg:lg.rows.lg, publish:"/extenso/publish/widget.sn", uids:widget.rows.uid)}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function js_nb_increment(){
+        var arr_interval = new Array();
+        var minval = Number.POSITIVE_INFINITY;
+        var maxval = 0;
+        $(".js_nb_increment").each(function(index) {
+            if (maxval < +$(this).text()) maxval = +$(this).text();
+            if (minval > +$(this).text()) minval = +$(this).text();
+        });
+        $(".js_nb_increment").each(function(index) {
+            var val = +$(this).text();
+            $(this).attr('data-nb', val);
+            $(this).text(0);
+            var ele = this;
+            var timeToComplete = 800 + ((val - minval)/(maxval-minval) * 1200);
+            arr_interval[index] = setInterval(function(){
+                $(ele).text(parseInt(+$(ele).text()+(val/timeToComplete*20 + Math.random(2))));
+                if(parseInt($(ele).text())>=parseInt($(ele).attr('data-nb'))){
+                    $(ele).text($(ele).attr('data-nb'));
+                    clearInterval(arr_interval[index]);
+                }
+            }, 20);
+        });
+    }
+    $(window).bind("scroll.increment_scroll", function(){
+        if(($(window).scrollTop()+$(window).height())>$('.js_nb_increment').offset().top){
+            $(window).unbind('.increment_scroll');
+            js_nb_increment();
+        }
+    });
+</script>
+<style>
+    .wdg_counter{
+        padding:15px 30px;
+        background:#c9c9c9;
+    }
+    .counter_box{
+        padding:15px;
+        background-color:#dfdfdf;
+        border-bottom:5px #5896b4 solid;
+        background-position:10% center;
+        background-size:auto 80%;
+        background-repeat:no-repeat;
+        margin:15px 0;
+        border-top-right-radius:10px;
+        border-top-left-radius:10px;
+    }
+    .counter_box .text{
+        font-size:16px;
+        color:#5896b4;
+        padding-left:15%;
+        font-weight:bold;
+    }
+    .counter_box .value{
+        font-size:46px;
+        color:#005a8c;
+        padding-left:15%;
+        font-weight:bold;
+        white-space:nowrap;
+    }
+    @media (max-width:990px) and (min-width:769px){
+        .counter_box .text{
+            padding-left:0;
+        }
+        .counter_box .value{
+            padding-left:0;
+        }
+    }
+    @media (max-width:768px){
+        .counter_box{
+            background-position:20% center;
+        }
+        .counter_box{
+            text-align:center;
+        }
+        .counter_box_content{
+            display:inline-block;
+        }
+        .counter_box .text,.counter_box .value{
+            text-align:left;
+            padding:0;
+        }
+    }
+</style>

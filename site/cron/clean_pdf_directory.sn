@@ -1,0 +1,45 @@
+ {{%include '/site/package/all.sn';}}
+\{{// Every 20 minutes
+
+//page 2
+/*      modified by louis.jhonny@gmail.com
+
+        @version 1.02 2017-02-16    ajout test avant de completed, log CRON started
+        @version 1.03 2017-03-20    Tester si contractor a le privilege de carte de credit avant prelevement.
+        @version 1.04 2017-04-13    Michel: Ajouter la fonction "urgent" qui envoie le projet à plus d'entrepreneur BUG: tous les projets sont maintenant considéré comme urgent
+        @version 1.05 2017-04-27    Michel: J'ai changé la façon de calculé les accepted_links pour tenir compte de lead price au lieu de accepted
+
+*/
+
+configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+//V1.02   
+gallery = sql("SELECT * FROM sr_billing_pdf WHERE pdf NOT LIKE '%/%' AND pdf NOT like '%bills/%' ORDER BY sn_cdate ASC LIMIT 1000");
+ 
+ 
+    for file in gallery.rows do
+        month = datetime(date:file.sn_cdate, format:'%m');
+        year = datetime(date:file.sn_cdate, format:'%Y');
+        destination = "bills/bill_" .+ year .+ '_' .+ month .+ '/';
+        fulldest = "/pdf/" .+ destination;
+        fullorigin = "/pdf/" .+ file.pdf;
+        
+        arr = explode('/', file.pdf);
+        
+        f = (arr.last() ne "")? fulldest .+ arr.last():"";
+        
+        
+        if !(-e fulldest) then
+            mkdir(owner:"rwx",group:"rwx",other:"x", fulldest);
+        endif
+         
+        if(f ne "") then
+            
+            if(-e fullorigin) then
+                fullorigin .+ "::" .+ f .+ "<br>";
+                mv("/pdf/" .+ file.pdf, f);
+                void sql("UPDATE sr_billing_pdf set pdf = '?' WHERE uid = '?'", destination .+ file.pdf, file.uid);
+                void insert(table:'sr_debug', fields:{'description':'Move billing file ' .+ file.pdf .+ 'for contractor ' .+ file.uid_contractor,'text':'uid: ' .+ file.uid .+ ' moved to new location '.+ f});
+             endif
+        endif
+    endfor
+}}

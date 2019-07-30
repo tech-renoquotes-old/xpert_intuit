@@ -1,0 +1,53 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+	%include "/extenso/functions/sn_ct.snc";
+	
+	etude_cas = sql(single:true,"select * from pages where code = 'etudes_de_cas'");
+}}
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-sm-4">
+			<div class="service-tech">
+				{{sc = sql(single:true,"select * from services_cat where ref='web'");}}
+				<h2>{{sc.rows{'nom_'.+ lg.rows.lg};}}</h2>
+				<p>{{ for s sql("select services.* from services_cat,services where services_cat.uid=services.cat and services.actif='oui' and services_cat.ref='web'  ORDER BY services.sn_custom") do 
+					s.rows{'nom_' .+ lg.rows.lg} }}
+					<br>
+					{{ endfor }}
+				</p>
+			</div>
+		</div>
+		<div class="col-sm-4">
+			<div class="service-strategie">
+				{{sc = sql(single:true,"select * from services_cat where ref='strategy'");}}
+				<h2>{{sc.rows{'nom_'.+ lg.rows.lg};}}</h2>
+				<p>{{ for s sql("select services.* from services_cat,services where services_cat.uid=services.cat and services.actif='oui' and services_cat.ref='strategy'  ORDER BY services.sn_custom") do 
+					s.rows{'nom_' .+ lg.rows.lg} }}
+					<br>
+					{{ endfor }}
+				</p>
+			</div>
+		</div>
+		<div class="col-sm-4">
+			<div class="service-design">
+				{{sc = sql(single:true,"select * from services_cat where ref='design'");}}
+				<h2>{{sc.rows{'nom_'.+ lg.rows.lg};}}</h2>
+				<p>{{ for s sql("select services.* from services_cat,services where services_cat.uid=services.cat and services.actif='oui' and services_cat.ref='design'  ORDER BY services.sn_custom") do 
+					s.rows{'nom_' .+ lg.rows.lg} }}
+					<br>
+					{{ endfor }}
+				</p>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12 text-right">
+			<a class="btn btn-default" href="{{etude_cas.rows{'folder_'.+ lg.rows.lg};}}">{{sn_ct("Voir les études de cas", edit: false, lg:lg.rows.lg, publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}</a>
+		</div>
+	</div>
+</div>

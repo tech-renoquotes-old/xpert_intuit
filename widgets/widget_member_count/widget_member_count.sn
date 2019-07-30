@@ -1,0 +1,49 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+    use lg;
+    use widget;
+}}
+\{{
+    member_form = sql(single:true, "SELECT folder_{{lg.rows.lg}} AS url FROM pages WHERE code='become_member'");
+    services = sql(single:true, "SELECT folder_{{lg.rows.lg}} AS url FROM pages WHERE code='members_services'");
+    members_dir = sql(single:true, "SELECT folder_{{lg.rows.lg}} AS url FROM pages WHERE code='members'");
+    
+    config=config();    
+    sql_select = "active='yes'";
+    if config.site ne "staging" then 
+        sql_select .+= " AND production='yes'"; 
+    endif      
+    members = sql(single:true, "SELECT count(uid) AS count FROM member WHERE " .+ sql_select); 
+}}
+<div class="box-b">
+    <div class="row ml-0 mr-0 mb-30">
+        <div class="col-xs-6 pl-0">
+            <h1 class="title-2">\{{members.rows.count}}</h1>
+        </div>
+        <div class="col-xs-6 pr-0">
+            <h2 class="title-3">
+                {{ sn_ct("Active members", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} 
+            </h2>
+        </div>
+    </div>
+    <a class="btn-b" href="\{{members_dir.rows.url}}">
+        {{ sn_ct(edit:false, "View directory", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} 
+        <i class="fa fa-angle-right"></i>
+    </a>
+    <div class="sep-a"></div>
+    <h2>
+        {{ sn_ct("Not a member?", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} 
+    </h2>
+    <ul>
+        <li>
+            <a href="\{{services.rows.url}}">
+                {{ sn_ct(edit:false, "Members services", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} 
+            </a>
+        </li>
+        <li>
+            <a href="\{{member_form.rows.url}}">
+                {{ sn_ct(edit:false, "Become member", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}} 
+            </a>
+        </li>
+    </ul>
+</div><!-- /.box-b-->

@@ -1,0 +1,377 @@
+{{theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'")}}
+{{font_heading = sql(single:true,"SELECT * FROM sn_fonts where uid = '?'", theme_color.rows.heading_font_familly);}}
+{{font_heading.rows.import}}
+{{font_body = sql(single:true,"SELECT * FROM sn_fonts where uid = '?'", theme_color.rows.content_font_familly);}}
+{{font_body.rows.import}}
+
+/* CALL SQL FOR THE THEME TABLE sn_gg_layout_setup 
+============================================================== */
+
+{{theme_choice = sql(single:true,"SELECT * FROM sn_theme_color");}}
+
+{{layout_setup = sql(single:true,"SELECT * FROM sn_theme where uid = '?'", theme_choice.rows.theme_choice)}}
+
+
+/* Fichier CSS pour le site */
+/* Ceci sera utilisé par ck editor */
+{{
+a=curl(url:"https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.0/themes/smoothness/jquery-ui.css"); a.body;
+a=curl(url:"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css"); a.body;
+}}
+
+
+/* ==============================================================
+CSS CUSTOM FOR THE THEME OF THE SITE. DO NOT DELETE THIS CODE
+Created the 6 february 2015
+Etienne Carrier
+- TO DO 
+1- First we will set the width of layout of each element
+2- Second part we will manage color and font aspect
+============================================================== */
+
+
+
+/* CONTENT AREA LAYOUT
+============================================================== */
+/* ======== SET WIDTH OF LAYOUT ELEMENT */
+{{ if layout_setup.rows.main_content_width ne "" then}}
+.cs .content-width{
+	max-width:{{layout_setup.rows.main_content_width}};/* Default class for content width.*/
+}
+{{endif}}
+
+/* ======== SET THE WIDTH OF THE CONTENT WRAPPER*/
+.cs .cs-main-content{
+	margin:0 auto;
+  	{{ if layout_setup.rows.wrapper_content_width ne "" then}}
+  		max-width:{{layout_setup.rows.wrapper_content_width}};
+	{{endif}}
+}
+
+/* ======== SET THE WIDTH OF THE CONTENT WRAPPER*/
+{{ if layout_setup.rows.main_content_width ne "" then}}
+.cs .container{
+	max-width:{{layout_setup.rows.main_content_width}};
+}
+{{endif}}
+
+/* ======== SET THE WIDTH OF THE MENU-TOP WRAPPER*/
+.cs .menu-top-full {
+  {{ if layout_setup.rows.menu_top_wrapper_width ne "" then}}
+      max-width:{{layout_setup.rows.menu_top_wrapper_width}};
+  {{endif}}
+  margin:0 auto;
+}
+
+/* ======== SET THE WIDTH OF THE MENU-TOP CONTENT*/
+{{ if layout_setup.rows.menu_top_content_width ne "" then}}
+	.cs .menu-top-full .container-fluid {
+      max-width:{{layout_setup.rows.menu_top_content_width}};
+	}
+{{endif}}
+
+/* ======== SET THE WIDTH OF THE HEADER WRAPPER*/
+.cs .container-full.header{
+ 	{{ if layout_setup.rows.header_wrapper_width ne "" then}}
+  		max-width:{{layout_setup.rows.header_wrapper_width}};
+  	{{endif}}
+  	margin:0 auto;
+}
+
+/* ======== SET THE WIDTH OF THE HEADER CONTENT*/
+.cs .container-full.header .container-fluid, 
+.cs .container-full.header .menu-main-wrapper{
+	{{ if layout_setup.rows.header_content_width ne "" then}}
+  		max-width:{{layout_setup.rows.header_content_width}};
+  	{{endif}}
+  	margin:0 auto;
+}
+
+/* ======== SET THE WIDTH OF THE FOOTER WRAPPER*/
+.cs .sed-footer{
+  	{{ if layout_setup.rows.footer_wrapper_width ne "" then}}
+  		max-width:{{layout_setup.rows.footer_wrapper_width}};
+  	{{endif}}
+  	margin:0 auto;
+} 
+
+/* ======== SET THE WIDTH OF THE FOOTER CONTENT*/
+.cs .sed-footer .container-fluid {
+  	{{ if layout_setup.rows.footer_content_width ne "" then}}
+		max-width:{{layout_setup.rows.footer_content_width}};
+  	{{endif}}
+  	margin:0 auto;
+}
+
+
+
+
+
+/* ======================================================
+SET COLOR OF ELEMENT
+====================================================== */
+
+
+/* ======== SET THE COLOR/BACKGROUND-IMAGE OF THE MAIN CONTENT background*/
+body {
+  	{{ if theme_color.rows.body_bck_image ne "" then}}
+  		background-image: url("{{theme_color.rows.body_bck_image}}");
+  		background-position: top center;
+  	{{endif}}
+  	{{ if theme_color.rows.body_bck_color  ne "" then}}
+  		background-color: #{{theme_color.rows.body_bck_color}};
+  	{{endif}}
+}
+
+/* ======== SET THE COLOR OF THE MAIN CONTENT background*/
+.cs .cs-main-content{
+  	{{ if theme_color.rows.wrapper_content_color ne "" then}}
+  		background-color:#{{theme_color.rows.wrapper_content_color}};
+  	{{endif}}
+}
+
+/* ======== SET THE COLOR/BACKGROUND-IMAGE OF THE MENU-TOP background*/
+.cs .menu-top-full {
+ {{ if theme_color.rows.menu_top_wrapper_bck_color ne "" then}}
+ 	background-color:#{{theme_color.rows.menu_top_wrapper_bck_color}};
+  {{endif}}
+  {{ if theme_color.rows.menu_top_bck_image ne "" then}}
+  		background-image: url("{{theme_color.rows.menu_top_bck_image}}");
+  		background-position: center;
+  {{endif}}
+}
+/* ======= Color for the text link */
+{{ if theme_color.rows.menu_top_link_color ne "" then}}
+.cs .menu-top a.item-link:link, .cs .menu-top a.item-link:visited{
+    color:#{{theme_color.rows.menu_top_link_color}};
+}
+{{endif}}
+
+/* ======= Color for the hover text link */
+{{ if theme_color.rows.menu_top_link_color_hover ne "" then}}
+.cs .menu-top a.item-link:hover, .cs .menu-top a.item-link:active{
+    color:#{{theme_color.rows.menu_top_link_color_hover}};
+}
+{{endif}}
+
+/* ======== SET THE COLOR/BACKGROUND-IMAGE OF THE HEADER background*/
+.cs .container-full.header, .cs .sed-header{
+    {{ if theme_color.rows.header_wrapper_bck_color ne "" then}}
+  		background-color:#{{theme_color.rows.header_wrapper_bck_color}};
+  	{{endif}}
+  	{{ if theme_color.rows.header_bck_image ne "" then}}
+  		background-image: url("{{theme_color.rows.header_bck_image}}");
+  		background-position: center;
+  	{{endif}}
+}
+
+
+/* FOOTER SETTING
+============================================================== */
+.cs .sed-footer{
+    {{ if theme_color.rows.footer_bck_image ne "" then}}
+  		background-image: url("{{theme_color.rows.footer_bck_image}}");
+  		background-position: center;
+  	{{endif}}
+} 
+
+.cs .sed-footer p, .cs .sed-footer {
+  	{{ if theme_color.rows.footer_font_color ne "" then}}
+  		color:#{{theme_color.rows.footer_font_color}};
+  	{{endif}}
+}
+.cs .sed-footer {
+  	{{ if theme_color.rows.footer_wrapper_bck_color ne "" then}}
+ 		background-color:#{{theme_color.rows.footer_wrapper_bck_color}};
+  	{{endif}}
+}
+
+.cs .sed-footer h1, .cs .sed-footer h2, .cs .sed-footer h3, .cs .sed-footer h4, .cs .sed-footer h5, .cs .sed-footer h6 {
+	font-weight: normal;
+  	{{ if theme_color.rows.footer_font_color ne "" then}}
+  		color:#{{theme_color.rows.footer_font_color}};
+  	{{endif}}
+  	font-size: 1.6rem; line-height: 1.9rem;
+}
+.cs .sed-footer a{
+  	{{ if theme_color.rows.footer_link_color ne "" then}}
+  		color:#{{theme_color.rows.footer_link_color}};
+  	{{endif}}
+}
+.cs .sed-footer a:hover {
+  	{{ if theme_color.rows.footer_link_hover_color ne "" then}}
+  		color:#{{theme_color.rows.footer_link_hover_color}};
+  	{{endif}}
+}
+
+
+
+
+
+/* CONTENT TYPOGRAPHY
+============================================================== */
+.cs, .cs p {
+  	{{ if font_body.rows.value ne "" then}}
+		font-family: {{font_body.rows.value}} !important;
+  	{{endif}}
+  	{{ if theme_color.rows.content_font_color ne "" then}}
+  		color:#{{theme_color.rows.content_font_color}};
+  	{{endif}}
+}
+
+.cs h1, .cs h2, .cs h3, .cs h4, .cs h5, .cs h6 {
+	font-weight: normal;
+  	{{ if font_heading.rows.value ne "" then}}
+		font-family: {{font_heading.rows.value}} !important;
+  	{{endif}}
+  	{{ if theme_color.rows.heading_font_color ne "" then}}
+  		color:#{{theme_color.rows.heading_font_color}};
+  	{{endif}}
+}
+
+{{ if theme_color.rows.content_link_color ne "" then}}
+.cs p a:link, .cs p a:visited,
+.cs h1 a:link, .cs h1 a:visited,
+.cs h2 a:link, .cs h2 a:visited,
+.cs h3 a:link, .cs h3 a:visited,
+.cs h4 a:link, .cs h4 a:visited,
+.cs h5 a:link, .cs h5 a:visited,
+.cs h6 a:link, .cs h6 a:visited{
+  	color:#{{theme_color.rows.content_link_color}};
+}
+{{endif}}
+
+
+{{ if theme_color.rows.content_link_hover_color ne "" then}}
+.cs p a:hover,
+.cs h1 a:hover,
+.cs h2 a:hover,
+.cs h3 a:hover,
+.cs h4 a:hover,
+.cs h5 a:hover,
+.cs h6 a:hover{
+  	color:#{{theme_color.rows.content_link_hover_color}};
+}
+{{endif}}
+
+
+{{ if theme_color.rows.border_radius ne "" then}}
+.cs .btn{
+	border-radius:{{theme_color.rows.border_radius}}px;
+}
+.accordion .panel-heading{
+	border-radius:{{theme_color.rows.border_radius}}px;
+}
+{{endif}}
+
+
+.cs .btn.btn-primary {
+  color: #{{theme_color.rows.btn_primary_text_color}};
+  background-color: #{{theme_color.rows.btn_primary_bck_color}};
+  border-color: #{{theme_color.rows.btn_primary_border_color}};
+}
+.cs .btn.btn-primary:hover {
+  color: #{{theme_color.rows.btn_primary_text_hover_color}}!important;
+  background-color: #{{theme_color.rows.btn_primary_bck_hover_color}}!important;
+  border-color: #{{theme_color.rows.btn_primary_border_hover_color}}!important;
+}
+.cs .btn-default {
+  color: #{{theme_color.rows.btn_default_text_color}}!important;
+  {{(theme_color.rows.btn_default_bck_color ne '') ? 'background-color:#'.+theme_color.rows.btn_default_bck_color.+';' : 'background-color:transparent;';}}
+  border: 1px solid #{{theme_color.rows.btn_default_border_color}}!important;
+}
+.cs .btn-default:hover {
+  color: #{{theme_color.rows.btn_default_text_hover_color}}!important;
+  background-color: #{{theme_color.rows.btn_default_bck_hover_color}}!important;
+  border-color: #{{theme_color.rows.btn_default_border_hover_color}}!important;
+}
+
+
+
+
+
+
+
+
+/* CUSTOM CSS SN_GG TABLE
+KEEP THIS PAR AT THE END OF THE CSS
+============================================================== */
+
+{{ 
+if layout_setup.rows.css_code ne "" then
+	read(compilefile:layout_setup.rows.css_code);
+endif
+}}
+
+
+/* CUSTOM CSS FROM CLIENT THEME COLOR
+KEEP THIS PAR AT THE END OF THE CSS
+============================================================== */
+{{ if theme_color.rows.custom_css ne "" then}}
+  	{{theme_color.rows.custom_css}}
+{{endif}}
+/* ==============================================================
+END OF THE THEME CSS
+============================================================== */
+
+
+/* ==== Modification for the CKEDITOR */
+body.cke_editable {
+	background-color:#ffffff;
+  background-image:none;
+}
+
+.table_blog {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.table_blog td {
+    border: 2px solid #ddd;
+    padding: 8px;
+}
+
+.table_blog tr:nth-child(even){background-color: #f2f2f2;}
+
+.table_blog tr:hover {background-color: #ddd;}
+
+.table_blog th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: center;
+    background-color: #00517e;
+    color: white;
+}
+
+.steps_summary{
+    border: solid;
+    border-color: #00507d;
+    background-color: rgb(249,184,66, 0.25);
+}
+
+.article_cta {
+    border-top-style: solid;
+    border-bottom-style: solid;
+    border-width: 1px;
+    color: #00507d !important;
+    text-align:center;
+    width:80%;
+    margin:0 auto;
+}
+.article_cta .title{
+    font-weight: bold;
+    font-size: 18pt;
+    font-family: Arial, Arial_MSFontService, sans-serif;
+    line-height: 33.35px; 
+    outline: transparent solid 1px;
+    color: #585858 !important;
+}
+.article_cta .subtext{
+    outline: transparent solid 1px; 
+    font-weight: bold; 
+    font-size: 14pt; 
+    font-family: Arial, Arial_MSFontService, sans-serif; 
+    line-height: 25.3px; 
+    color: #909090 !important;
+}

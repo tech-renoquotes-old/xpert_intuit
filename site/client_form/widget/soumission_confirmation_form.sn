@@ -1,0 +1,76 @@
+{{
+    /*
+        @title client_form_confirmation
+        Description: This widget is the confirmation message after a client fills a form.
+        
+        @author louis.jhonny@gmail.com
+        
+        @version 1.0 2017-04-18
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+        //session 
+    %include "/extenso/functions/sessions.snc"; 
+
+}}
+<style>
+    .table>tbody>tr, .table>tbody>tr>td{
+        border:none;
+    }
+</style>
+\{{
+
+    cgidata = cgidata();  
+    best_way_to_contact = cgidata.best_reach .+ " " .+ cgidata.moment;
+    success = 0;
+    
+    if(cgidata.project_uid) then
+    // validate server side
+        existing = sql(single:true, "SELECT * FROM sr_project WHERE uid = ?", cgidata.project_uid);
+        if (existing.nbrows > 0) then
+            if cgidata.budget_type eq "1" then
+                shared_budget = "{{sn_ct(edit:false,'budget pour main d\'oeuvre uniquement')}}";
+            elseif cgidata.budget_type eq "2" then
+                shared_budget = "{{sn_ct(edit:false,'budget pour main d\'oeuvre + matériaux')}}";
+            endif
+            project = existing.rows;
+            void update(tables: "sr_project", fields: {
+                'additional_comments': cgidata.comments,
+                'property_type': cgidata.house_type,
+                'budget': cgidata.budget,
+                'budget_type': cgidata.budget_type,
+                'estimate_duration': cgidata.duration,
+                'best_contact_way': best_way_to_contact,
+                'is_owner': cgidata.is_owner,
+                'shared_budget': cgidata.budget .+ ' ' .+ shared_budget
+            }, uid: project.uid);
+            
+            if(cgidata.moment ne "") then
+                void update(tables: "sr_client", fields: {
+                    'when_to_call': cgidata.moment .+ " (" .+ cgidata.best_reach .+ ")"
+                }, uid: project.uid_client);
+            endif
+            
+            if(cgidata.comm ne "") then
+                void update(tables: "sr_client", fields: {
+                    'languages': cgidata.comm
+                }, uid: project.uid_client);
+            endif
+            
+            success = 1;
+        endif
+    endif
+}}
+
+
+\{{if (success == 1) then}}
+<div id="ajax_success" class="alert alert-success">
+    {{sn_ct("Vos informations additionnelles ont été envoyées Merci!. ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    <a href="javascript:$('#ajax_result').hide();" class="close">&times;</a> 
+</div>
+\{{endif}}

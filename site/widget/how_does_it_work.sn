@@ -1,0 +1,166 @@
+{{  
+    // --------------------------------------------------------------------------
+    // Name:        How does it work
+    //
+    // Description: Displays how our service works in 3 steps
+    //
+    // Version:      1.0 2018-01-09 15:20 Michel Jodoin
+    // --------------------------------------------------------------------------
+    
+    %include "/extenso/functions/sn_ct.snc"; 
+    
+    use lg;
+    use widget;
+}}
+
+<style> 
+#inner {
+    margin: 0 auto; 
+}
+  .widget-image-text-ck {margin:0 0 30px 0;}
+  .widget-image-text-ck > .box {text-align:center;padding-top:20px;}
+  .widget-image-text-ck > .box img {display:block; margin:0 auto;}
+  .widget-image-text-ck > .box h4 {margin:16px 0 4px 0;}
+  
+  @media screen and (max-width :640px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:left;}
+  }
+   @media screen and (max-width :991px) {
+      .widget-image-text-ck > .box:nth-child(2n+1) {clear:none;}
+      .widget-image-text-ck > .box:nth-child(3n+1) {clear:left;}
+      .widget-image-text-ck > .box:last-child{
+          float:none;
+          margin:auto;
+          clear:both;
+      }
+  }
+  
+      .img-circle {
+        border-radius: 50%;
+    }
+    .btn_centered {
+        text-align: center;
+    }
+
+    .btn_right {
+        text-align: right;
+    }
+
+    .btn_left {
+        text-align: left;
+    }
+    
+    .widget-image-text-ck h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .widget-image-text-ck p{
+        margin:15px 0 5px 0;
+    }
+    .widget-image-text-ck .wdg_image{
+        min-height:150px;
+        display:table;
+        width:100%;
+    }
+    .widget-image-text-ck .wdg_image_container{
+        display:table-cell;
+        vertical-align:middle;
+    }
+    .wdg_spotlight_container{
+        position:relative;
+    }
+    /*.row .wdg_spotlight_container .container{
+        padding:0;
+        max-width:initial;
+        width:auto;
+    }*/
+    .wdg_spotlight_container .mask{
+        background-size:cover;background-repeat:no-repeat;background-position:center;
+        position:absolute;
+        top:0;
+        left:0;
+        width:100%;
+        height:100%;
+    }
+    .wdg_spotlight_container .single_box{
+        max-width:600px;
+        margin:auto;
+        float:none;
+    }
+    .wdg_spotlight_container .wdg_title{
+        text-align:center;
+        position:relative;
+        top:0;
+    }
+    .wdg_spotlight_container .wdg_title h5{
+        font-size:26px;
+        margin:10px 0;
+        font-size:x-large;
+    }
+    .wdg_spotlight_container .wdg_title>*{
+        margin:10px 0;
+    }
+    @media (max-width:768px){
+        .wdg_spotlight_container{
+            /*this remove the user padding in mobile*/
+            padding:0!important;
+         }
+        .wdg_spotlight_container .wdg_title{
+            top:0px;
+        }
+    }
+</style>
+
+<div class="wdg_spotlight_container" style="background-color:#ffffff;padding:50px 0;">
+    <!--<div class="mask" style="background-image:url(/sn_uploads/networking-links_23.jpg?maxw=1200&maxh=900);background-attachment: fixed;">-->
+        
+    <!--</div>-->
+    <!--<div class="mask" style="background-color:#000;opacity:.7;">-->
+        
+    <!--</div>-->
+    
+    <div class="container" style="background-color:#ffffff;">
+        
+            <div class="wdg_title">
+                <h5 style="color:#808080;">
+                    {{sn_ct("as_seen_in_media COMMENT ÇA FONCTIONNE?", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}
+                </h5>
+            </div>
+        
+        
+        <div class="row widget-image-text-ck">
+            
+                    <div class="col-xs-12 col-sm-6 col-md-4 box">
+                    <div class="wdg_image"><div class="wdg_image_container"><img class="img-responsive" src="/sn_uploads/step_1_6_1.png" alt="ICÔNE ÉTAPE 1"></div></div>
+                        <div><p><span style="font-size:18px;color:#808080;">—</span></p>
+
+<p><span style="font-size:18px;color:#808080;">{{sn_ct("as_seen_in_media Vous nous décrivez votre besoin", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span></p>
+</div>
+                        
+                    </div><!-- /.box -->
+            
+                    <div class="col-xs-12 col-sm-6 col-md-4 box">
+                    <div class="wdg_image"><div class="wdg_image_container"><img class="img-responsive" src="/sn_uploads/WorkersNew-2x_1.png" alt="ICÔNE ÉTAPE 2"></div></div>
+                        <div><p><span style="font-size:18px;color:#808080;">—</span></p>
+
+<p><span style="font-size:18px;color:#808080;">{{sn_ct("as_seen_in_media Nous vous trouvons 3 professionnels pré-qualifiés en 48 heures", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span></p>
+</div>
+                        
+                    </div><!-- /.box -->
+            
+                    <div class="col-xs-12 col-sm-6 col-md-4 box">
+                    <div class="wdg_image"><div class="wdg_image_container"><img class="img-responsive" src="/sn_uploads/step_3_4_1.png" alt="ICÔNE ÉTAPE 3"></div></div>
+                        
+                        <div><p><span style="font-size: 18px;color:#808080;">—</span></p>
+
+<p><span style="font-size: 18px;color:#808080;">{{sn_ct("as_seen_in_media Vous êtes en contact avec 3 différents professionnels et vous choisissez celui ou celle qui correspond le mieux à vos critères", publish:"/extenso/publish/sn_widgets.sn", lg:lg.rows.lg, uids:widget.rows.uid)}}</span></p>
+</div>
+                        
+                    </div><!-- /.box -->
+            
+        </div><!-- /.widget-image-text-ck -->
+        
+    </div>
+</div>
+<div class="clearfix"></div>

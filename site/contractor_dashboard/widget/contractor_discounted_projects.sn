@@ -1,0 +1,674 @@
+<style>
+    .navigator_table {
+        width: 100%;
+    }
+
+    
+    /* Styling pagination nav default links container*/
+    .navContainer {
+        width: auto%;
+        text-align: center;
+    }
+    
+    .custom_nav {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    
+    /* Styling pagination nav right next button link*/
+    .next_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: right;
+        padding-left: 30px;
+        padding-right: 10px;
+        background: url("/sn_uploads/icon/arrow_prev.png") no-repeat left;
+        background-size: 20px;
+        border: solid 1px #ccc;
+    }
+    
+    .next_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .next_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    
+    /* Styling pagination nav right button link*/
+    .right_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: left;
+        padding-left: 10px;
+        padding-right: 30px;
+        background: url("/sn_uploads/icon/arrow_next.png") no-repeat right;
+        background-size: 20px;
+        border: solid 1px #ccc;
+
+    }
+    
+    .right_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .right_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+
+    
+    /* Styling pagination nav standalone links*/
+    .linkStyle{
+        float:left;
+        min-width:30px;
+        height: 30px;
+        line-height: 30px;
+        border: solid 1px #ccc;
+        padding: 2px;
+    }
+    
+    .linkStyle:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    /* Styling pagination nav page interval links*/
+    .linkStyle a:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle a:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle a:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+
+    .accepted_half{
+        width:100%;
+        text-align: right;
+    }
+    
+    .accepted_half_input{
+        width:100%;
+        text-align: right;
+    }
+    
+    #display_half_price{
+        width:30px;
+    }
+
+    .half_price_lst{
+    	width: 100%;
+    	max-height: 500px;
+    	float:left;
+    	overflow:scroll;
+    	border: 1px #ebebeb solid;
+    	padding-left:5px;
+    }
+    
+
+    .desc{
+        width:40%;
+        text-align:left;
+    }
+    
+    
+    .active_date{
+        width:30%;
+        text-align:left;
+    }
+    
+    .actions{
+        width:10%;
+        text-align:left;
+    }
+
+    .price{
+        width:10%;
+        text-align:left;
+    }
+    
+    .itemuid{
+        width:10%;
+        text-align:left;
+        line-height: 100%px;
+    }
+    
+    
+</style>
+
+
+{{
+    /*
+        @title contractor_discounted_projects
+        Description: This widget display the list of projects with discounts to the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-02
+        
+        @modified by louis.jhonny@gmail.com
+        @version 2.0 2017-06-27
+        @desc manage pending rebate project
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    %include "/site/package/all.sn";
+    use page;
+    use lg;
+    use widget;
+
+}}
+\{{
+    use extranet_user;
+    %include "/site/package/pagination.sn";
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+    cgidata = cgidata();
+    
+    
+    items_per_page = 12;//customizable
+    links_per_page = 10;//customizable
+    limit = 50;//customizable
+    page_index = (cgidata.page > 0)? cgidata.page: 1;
+    offset = (page_index-1) * items_per_page;
+
+        query= "
+        SELECT p.uid, p.uid_service as suid, '" .+ cgidata.services .+ "' as s,  c.uid_territory as tuid, '" .+ cgidata.territories .+ "' as t, p.description, p.lead_price, p.due_date, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, p.active_date, ifnull(pc_count.count,0) as count, p.shared_budget
+        FROM sr_project p
+        INNER JOIN sr_address a ON p.uid_address = a.uid
+        INNER JOIN sr_city c ON a.uid_city = c.uid
+        LEFT JOIN (
+            SELECT pc.uid_project, count(pc.uid) as count
+            FROM sr_project_contractor pc
+            WHERE accepted_date > 0
+            GROUP BY pc.uid_project
+            ) AS pc_count ON pc_count.uid_project = p.uid
+        WHERE ABS(DATEDIFF(now(), active_date)) BETWEEN '" .+ configs.rows.project_halfprice_days .+ "' AND '".+ configs.rows.project_max_days .+"'
+        AND p.status = 'active'
+        AND EXISTS (SELECT null FROM sr_contractor_service cs WHERE cs.uid_contractor='" .+ extranet_user.uid .+ "' AND p.uid_service=cs.uid_service AND cs.approved = 'yes')
+        AND EXISTS (SELECT null FROM sr_contractor_territory ct WHERE ct.uid_contractor='" .+ extranet_user.uid .+ "' AND uid_territory=(SELECT uid_territory 
+            FROM sr_city WHERE sr_city.uid=a.uid_city LIMIT 1))
+        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project=p.uid AND pc.uid_contractor='" .+ extranet_user.uid .+ "' 
+            AND (pc.accepted = 'yes' OR pc.hidden='yes' )
+        )
+        AND EXISTS (SELECT null FROM sr_contractor co WHERE co.uid='" .+ extranet_user.uid .+ "' AND co.verified = 'yes')
+        HAVING ((suid = '" .+ cgidata.services .+ "' OR s = '') AND (tuid = '" .+ cgidata.territories .+ "' OR t = ''))
+        ";
+
+    query_half = "SELECT p.uid, p.description, p.lead_price, p.due_date, p.active_date, p.shared_budget
+        FROM sr_project p
+        INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+        WHERE ABS(DATEDIFF(now(), active_date)) < '".+ configs.rows.project_max_days .+"'
+        AND p.status = 'active'
+        AND pc.uid_contractor='" .+ extranet_user.uid .+ "' 
+        AND pc.accepted_rebate = 'yes'
+        AND pc.lead_price is null
+        ORDER BY p.active_date DESC
+        ";
+    
+    pg = new Pagination
+    (
+        items_per_page, // number of items to display per page
+        links_per_page,             // Number of links allowed per page. cannot be empty.
+        offset,         // offset to query 1 page at a time. cannot be empty.
+        query, // the main query used without sorting. cannot be empty
+        limit, // limit restriction on total rows to display
+        "p.active_date",      // Field to sort query from
+        "DESC",       // order by possible values are DESC,ASC (ASC if empty)
+        "{{lg.rows.lg}}"// language to display navigation strings. (english if empty)
+    );
+    
+    
+    
+    if(cgidata.cancel eq true && cgidata.uid ne "") then
+        //Delete halfprice project for sr contractor
+        void sql("DELETE FROM sr_project_contractor WHERE uid_contractor = ? AND uid_project = ?", extranet_user.uid, cgidata.uid);
+        headers_out('X-cancel', 1);
+    endif
+    
+    
+        i=1;
+        half_prices = sql(query_half);
+        html .+= "<table id='halflist'>";
+            for item in half_prices.rows do
+                price = money_format(item.lead_price / 2,"{{lg.rows.lg}}");
+                alt_color = (i % 2 == 0)? '#eee': '';
+                html .+= "<tr bgcolor='".+ alt_color .+ "' id='".+ item.uid .+"'><td class='itemuid' style='vertical-align:middle'>" .+ item.uid .+ "</td><td class='desc' style='vertical-align:middle'>".+ item.description .+ "</td><td class='active_date' style='vertical-align:middle'>".+ item.active_date .+ "</td><td class='price' style='vertical-align:middle'>".+ price .+"</td><td class='actions' style='vertical-align:middle'><img title='Cancel project' class='cancel_pro_btn' onclick='cancel_project(" .+ item.uid .+ ")' width='30px' src='/sn_uploads/icon/icon_minus.png'/></td></tr>";
+                i++;
+            endfor
+        html .+= "</table>";
+
+    projects = pg.newQuery();
+}}
+
+
+    <div class="row" style="margin-bottom:20px">
+        <form action="" method="POST">
+            <div class="col-md-6">
+                <label>{{sn_ct("contractor_discounted_projects Filtrer par service", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <select name="services" class="form-control" onclick="filterProjects(this)">
+                    <option value="">{{sn_ct("Choisir un service")}}</option>
+                    \{{for service sql("SELECT s.name_long_? as sname, s.uid FROM sr_service s INNER JOIN sr_contractor_service cs ON cs.uid_service = s.uid  WHERE cs.approved = 'yes' AND cs.uid_contractor = '?' GROUP BY sname", "{{lg.rows.lg}}", extranet_user.uid) do}}
+                        <option \{{(cgidata.services eq service.rows.uid)?'selected':''}} value="\{{service.rows.uid}}">\{{service.rows.sname}}</option>
+                    \{{endfor}}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label>{{sn_ct("contractor_discounted_projects Filtrer par territoire", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+                <select name="territories" class="form-control" onclick="filterProjects(this)">
+                    <option value="">{{sn_ct("Choisir un térritoire")}}</option>
+                    \{{for territory sql("SELECT t.name_? as tname, t.uid FROM sr_territory t INNER JOIN sr_contractor_territory ct ON ct.uid_territory = t.uid WHERE ct.uid_contractor = '?' GROUP BY tname", "{{lg.rows.lg}}", extranet_user.uid) do}}
+                        <option \{{(cgidata.territories eq territory.rows.uid)?'selected':''}} value="\{{territory.rows.uid}}">\{{territory.rows.tname}}</option>
+                    \{{endfor}}
+                </select>
+            </div>
+        </form>
+    </div>
+
+
+\{{
+    if projects.nbrows > 0 then
+}}
+
+
+    <div class="row">
+        <div class="accepted_half_input">
+            <label>{{sn_ct("contractor_discounted_projects afficher mes projets a moitié prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+            <input type='checkbox' id='display_half_price' name='display_half_price' />
+        </div>
+
+        <div class="accepted_half" style="display:none">
+            <table class='table'>
+            <tr bgcolor='#eee' height='35px'><th class='itemuid'>ID</th><th class='desc'>{{sn_ct("contractor_discounted_projects Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th><th class='active_date'>{{sn_ct("contractor_discounted_projects Activation date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th><th class='price'>{{sn_ct("contractor_discounted_projects Price", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th><th class='actions'>Action</th></tr>
+            </table>
+            <div class="half_price_lst">
+                \{{html}}
+            </div>
+        </div>
+    </div>
+
+    <div class="custom_nav">
+        \{{pg.previous(cgidata.start, page_index, "next_arr");}}
+        \{{pg.navigation(cgidata.start, page_index, "linkStyle");}}
+        \{{pg.next(cgidata.start, page_index, "right_arr");}}
+    </div>
+    
+    
+
+    <div class="row no-print mb-sm">
+    <div class="col-sm-offset-9 col-sm-3">
+        <a class="btn btn-primary btn-block" href="javascript:void(0);" onclick="window.print();">
+            {{sn_ct("contractor_discounted_projects Imprimer", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+        </a>
+    </div>
+    </div>
+    <div class="mb-md">
+    </div>
+
+    \{{ for p in projects.rows do}}
+        
+        <div id="project-panel" class="panel panel-default">
+            <div class="panel-heading"><h2 class="heading-sm"><b>{{sn_ct("contractor_discounted_projects ID", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b> \{{p.uid}}</h2></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div>
+                            <b>{{sn_ct("contractor_discounted_projects Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                        </div>
+                        <p>
+                            \{{ if p.description then p.description; else "-"; endif}}
+                        </p>
+                    </div>
+                    <div class="col-sm-6 font-md">
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Date activation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.active_date then contractor::contractorTime(extranet_user.uid,p.active_date); else "-"; endif}} 
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Date voulue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.due_date then p.due_date; else "-"; endif}} 
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Ville", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.city then p.city; else "-"; endif}}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{money_format(p.lead_price / 2,"{{lg.rows.lg}}")}} {{sn_ct("contractor_discounted_projects + taxes", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Budget du client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                \{{if p.shared_budget then p.shared_budget; else "-"; endif}}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Nombre d'entrepreneur(s) déjà référé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}: \{{p.count}}
+                            </label>
+                        </div>
+                        <div class="form-group no-print">
+                            <label>
+                                {{sn_ct("contractor_discounted_projects Action", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            <div>
+                                <div class="btn btn-primary btn-block" onclick="accept_project(this,'\{{p.uid}}')">
+                                    {{sn_ct("contractor_discounted_projects Achat", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} <i class="fa fa-chevron-right"></i>
+                                </div>
+                                <div class="btn btn-primary btn-block" onclick='if (confirm("{{sn_ct(edit:false,"contractor_discounted_projects Êtes-vous certain de vouloir cacher ce projet ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")) { hide_project(this,"\{{p.uid}}")}'>
+                                    {{sn_ct("contractor_discounted_projects Retirer de la liste", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} <i class="fa fa-chevron-right"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    \{{ endfor}}
+\{{else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_discounted_projects Aucun projet correspondant à votre profil n'est à rabais", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+        </div>
+\{{endif}}
+
+
+    <div class="client_infos" style="display:none">
+        
+        <p><span style="font-weight: 500; line-height: 1.5;"><h2>Voici les informations du client&nbsp;:</h2></span></p>
+        <hr style="color: rgb(79, 79, 79); font-family: &quot;Open Sans&quot;, sans-serif;" />
+        <div class="client_info_txt">
+        <table class = 'table' style="color: rgb(79, 79, 79); font-family: &quot;Open Sans&quot;, sans-serif;">
+        	<tbody>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Nom&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id='client_name'>{{client_titre}} {{client_nom}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Adresse :</em></td>
+        			<td style="vertical-align:top;"><span id="client_addr">{{adresse}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Code postal:</em></td>
+        			<td style="vertical-align:top;"><span id='client_cp'>{{code_postal}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Téléphone&nbsp;maison&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id='client_tel'>telephone_maison</span></a></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Téléphone&nbsp;bureau&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="client_tel_bureau">{{telephone_bureau}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Téléphone&nbsp;cellulaire&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="client_tel_cell">{{telephone_cellulaire}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Courriel&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="client_courriel">{{courriel}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Moment suggéré pour&nbsp;contacter&nbsp;le&nbsp;client&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="client_best_time">{{meilleur_moment}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Travaux&nbsp;à&nbsp;faire&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="client_project">{{description}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>Information&nbsp;additionnelle&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="cilent_info_add">{{info_additionnelle}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;"><em>ID projet&nbsp;:</em></td>
+        			<td style="vertical-align:top;"><span id="client_uid_projet">{{id_projet}}</span></td>
+        		</tr>
+        		<tr>
+        			<td style="vertical-align:top;">&nbsp;</td>
+        			<td style="vertical-align:top;">&nbsp;</td>
+        		</tr>
+        	</tbody>
+        </table>
+        </div>
+        <div class="client_info_geo">
+        </div>
+        
+        <p>&nbsp;</p>
+
+    </div>
+
+    <div class="custom_nav">
+        \{{pg.previous(cgidata.start, page_index, "next_arr");}}
+        \{{pg.navigation(cgidata.start, page_index, "linkStyle");}}
+        \{{pg.next(cgidata.start, page_index, "right_arr");}}
+    </div>
+
+<script>
+    // removes a project from the list only for this contractor
+    function hide_project(e,uid_project){
+	    $.ajax({
+    		type: "post",
+    		data:{
+    			"uid_project": uid_project
+    		},
+
+    		url: "{{ sn_pages('ajax_hide_project', lg.rows.lg, table:'ressources')}}",
+    		success:function(data){
+                $(e).parents("#project-panel").hide("swing", function(){ $(this).remove();});
+    		}
+	    });
+    }
+    
+    function filterProjects(sel){
+        $(sel).click(function(){
+            $(this).closest('form').submit();
+        });
+    }
+    
+    // links the project to the contractor
+    function accept_project(e,uid_project){
+	    $.ajax({
+    		type: "post",
+    		data:{
+    			"uid_project": uid_project
+    		},
+    		
+    	    beforeSend: function(){
+            var r = confirm("{{sn_ct('contractor_discounted_projects êtes-vous sûre d\'accepter le projet ', edit:false, publish:'/extenso/publish/pages.sn', uids:page.rows.uid)}} " + uid_project + "?");
+                if (r == false) {
+                    return false;
+                } 
+            },
+            
+    		url: "{{ sn_pages('ajax_add_discounted_project', lg.rows.lg, table:'ressources')}}",
+    		success:function(data, statusText, xhr){
+                if(xhr.getResponseHeader('X-status') == 1 || xhr.getResponseHeader('X-status') == 2){
+                    $(e).parents("#project-panel").hide("swing", function(){ 
+                        $(this)
+                            .addClass('alert alert-success')
+                            .html("{{sn_ct("contractor_discounted_projects Votre demande à été completée avec succès. Les informations du client vous ont été envoyées par courriel ", edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")
+                            .show('swing');
+                    });
+                    
+                   clientobj =  jQuery.parseJSON(xhr.getResponseHeader('X-infos'));
+                   var addr = clientobj.street_no + " " + clientobj.street + " " + clientobj['city_' + '{{lg.rows.lg}}'].decode();
+                //   alert(xhr.getResponseHeader('X-infos'));
+                   $('#client_name').html(clientobj.lastname + " " + clientobj.firstname);
+                   $('#client_addr').html(addr);
+                   $('#client_cp').html(clientobj.zip);
+                   $('#client_tel').html(clientobj.phone1);
+                   $('#client_tel_bureau').html(clientobj.phone2);
+                   $('#client_tel_cell').html(clientobj.phone3);
+                   $('#client_courriel').html(clientobj.email);
+                   $('#client_best_time').html(clientobj.when_to_call);
+                   $('#client_project').html(clientobj.description.decode());
+                   $('#client_info_add').html(clientobj.additional_info);
+                   $('#client_uid_project').html(clientobj.uid);
+                   $('.client_info_geo').html( '<a href="https://www.google.ca/maps/?q=' + addr + ' ' + clientobj.zip + '"><img src="https://maps.googleapis.com/maps/api/staticmap?center=' + addr + ' ' + clientobj.zip + '&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C' + addr + ' ' + clientobj.zip + '&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a>')
+                   $('.client_infos').show();
+
+    		    }else{
+    		        $(e).parents("#project-panel").hide("swing", function(){ 
+                        $(this)
+                            .addClass('alert alert-warning')
+                            .html("{{sn_ct("contractor_discounted_projects Désolé nous ne pouvions pas traiter votre demande. nous essaierons de nouveau toutes les 20 minutes. Entre temps, je vous prie de verifier limite de crédit. ", edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}")
+                            .show('swing');
+                    });
+
+    		    }
+                    
+    		}
+	    });
+    }
+    
+    $('#display_half_price').change(function(){
+        if($(this).is(':checked')){
+            ($('.accepted_half').slideDown('slow'));
+        }else{
+            ($('.accepted_half').slideUp('slow'));
+        }
+        
+    });
+    
+    function cancel_project(uid){
+        $.ajax({
+            type: 'POST',
+            data: {'cancel':true, 'uid':uid}, // An object with the key 'submit' and value 'true;
+            beforeSend: function(){
+            var r = confirm("{{sn_ct("contractor_discounted_projects êtes-vous sure d'annuler le projet ", edit:false, publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} " + uid + "?");
+                if (r == false) {
+                    return false;
+                } 
+            },
+            success: function (data,statusText,xhr) {
+                var upd = xhr.getResponseHeader('X-cancel');
+                if(upd == 1){
+                    $("table#halflist tr#" + uid).remove();
+                }
+            }
+        });
+    }
+
+
+        String.prototype.encode = function(encoding) {
+            var result = "";
+         
+            var s = this.replace(/\r\n/g, "\n");
+         
+            for(var index = 0; index < s.length; index++) {
+                var c = s.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                }
+                else if((c > 127) && (c < 2048)) {
+                    result += String.fromCharCode((c >> 6) | 192);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+                else {
+                    result += String.fromCharCode((c >> 12) | 224);
+                    result += String.fromCharCode(((c >> 6) & 63) | 128);
+                    result += String.fromCharCode((c & 63) | 128);
+                }
+            }
+         
+            return result;
+        };
+         
+         
+        String.prototype.decode = function(encoding) {
+            var result = "";
+         
+            var index = 0;
+            var c = c1 = c2 = 0;
+         
+            while(index < this.length) {
+                c = this.charCodeAt(index);
+         
+                if(c < 128) {
+                    result += String.fromCharCode(c);
+                    index++;
+                }
+                else if((c > 191) && (c < 224)) {
+                    c2 = this.charCodeAt(index + 1);
+                    result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                    index += 2;
+                }
+                else {
+                    c2 = this.charCodeAt(index + 1);
+                    c3 = this.charCodeAt(index + 2);
+                    result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                    index += 3;
+                }
+            }
+         
+            return result;
+        };
+
+    
+</script>

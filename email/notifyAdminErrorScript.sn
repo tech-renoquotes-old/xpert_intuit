@@ -1,0 +1,47 @@
+{{
+    /*
+        @title 			notifyAdminErrorScript
+        Description		Email for the admin when there is a problem in the script.  
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+    
+    use email;
+    use lg;
+}}
+
+\{{
+	use project;
+    use territory;
+    
+    id = project.rows.client_uid;
+    prenom = project.rows.firstname;
+    nom = project.rows.lastname;
+    sexe = project.rows.gender;
+    adresse = project.rows.street_no .+ " " .+ project.rows.street;
+    ville = project.rows.city;
+    codePostal = project.rows.zip;
+    langue = project.rows.lang;
+    bilingue = project.rows.languages;
+    telephoneMaison = project.rows.phone1;
+    telephoneBureau = project.rows.phone2;
+    telephoneCellulaire = project.rows.phone3;
+    
+    id_projet = project.rows.project_uid;
+    service = project.rows.service;
+    description = project.rows.description;
+    dateVoulue = project.rows.due_date;
+    statut = project.rows.status;
+    soumission = project.rows.max_quotes;
+    commentaires = project.rows.comments;
+    projetHash = project.rows.token;
+    territoire = territory.rows.name;
+
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

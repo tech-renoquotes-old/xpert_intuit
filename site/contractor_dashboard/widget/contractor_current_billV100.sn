@@ -1,0 +1,131 @@
+{{
+    /*
+        @title contractor_current_bill
+        Description: This widget displays the current bill of the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-22
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn"; 
+}}
+\{{
+    use extranet_user;
+    cgidata = cgidata();
+
+    billing = contractor::getCurrentBilling(extranet_user.uid);
+   // billing_footer = contractor::getBillingFooter(billing);
+    billing_footer = contractor::getBillingFooterByProv(billing,extranet_user.uid);
+  
+    configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+}}
+
+\{{ if cgidata.token ne "" && cgidata.accepted eq 'yes' then}}
+<div class="alert alert-warning">
+    {{sn_ct("contractor_current_bill Vous devez payer votre facture courante avant d'accepter un nouveau projet. Le prélevement automatique a échoué, veuillez effectuer le paiement manuellement.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+</div>
+\{{endif}}
+<div data-hide_after_payment>
+    <h2>
+        {{sn_ct("contractor_current_bill Facture courante / solde", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    </h2>
+    \{{ if (length(billing) <= 1 && billing_footer.solde == 0) then }}
+        \{{ hide_payment = true; }}
+        <h3>
+            \{{money_format(extranet_user.balance, "{{lg.rows.lg}}")}}
+        </h3>
+    \{{ else }}
+        <div class="mb-sm table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{{sn_ct("contractor_current_bill ID du projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                        <th>{{sn_ct("contractor_current_bill Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                        <th>{{sn_ct("contractor_current_bill Adresse", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                        <th>{{sn_ct("contractor_current_bill Prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                \{{for i in billing do}}
+                <tr>
+                    <td>\{{i.id}}</td>
+                    <td>\{{i.description}}\{{(i.type eq 'transaction' || i.type eq 'balance')? ' '.+money_format(i.amount,"{{lg.rows.lg}}"):''}}</td>
+                    <td>\{{i.address}}</td>
+                    <td>\{{(i.type eq 'transaction' || i.type eq 'balance')? '':money_format(i.amount,"{{lg.rows.lg}}")}}</td>
+                </tr>
+                \{{endfor}}
+                </tbody>
+            </table>
+        </div>
+    \{{ endif }}
+        <!-- taxes -->
+        <table class="table font-md table-style-1">
+            <tbody>
+                <tr>
+                    <td>
+                        {{sn_ct("contractor_current_bill Sous-total", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.subtotal, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        \{{billing_footer.tps_name.+" #828542779 RT0001"}} 
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.tps, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                 \{{if billing_footer.tvp_name ne '' then}}
+                <tr>
+                    <td>
+                        \{{billing_footer.tvp_name.+" #".+ billing_footer.tvp_taxe_no}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.tvq, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                \{{ endif }}
+                \{{ if (billing_footer.balance != 0) then }}
+                <tr>
+                    <td> 
+                        {{sn_ct("contractor_current_bill Balance/Ajustement", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.balance, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                \{{ endif }}
+                \{{ if (billing_footer.paid < 0) then }}
+                <tr>
+                    <td>
+                        {{sn_ct("contractor_current_bill Montant payé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format(billing_footer.paid, "{{lg.rows.lg}}")}}
+                    </td>
+                </tr>
+                \{{ endif }}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>
+                        {{sn_ct("contractor_current_bill Total", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </td>
+                    <td class="text-right">
+                        \{{money_format((billing_footer.solde > 0)? billing_footer.solde : 0, "{{lg.rows.lg}}")}}
+                        \{{(billing_footer.solde < 0)? "<br>({{sn_ct(edit:false,'contractor_current_bill Balance', publish:'/extenso/publish/pages.sn', uids:page.rows.uid)}}: ".+money_format(billing_footer.solde, "{{lg.rows.lg}}").+')' : '';}}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    \{{// endif }}
+</div>

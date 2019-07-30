@@ -1,0 +1,15 @@
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+
+	for content sql("select * from widget_text where uid_widget = '?'", widget.rows.uid_widget_list) do
+		dq((<div class="box">));
+		dq((<strong class="big red">)); content.rows{"title_" .+ lg}; dq((</strong>));
+		dq((<br />));
+		content.rows.content;
+		dq((</div>));
+	endfor
+}}

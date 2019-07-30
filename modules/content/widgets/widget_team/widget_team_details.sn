@@ -1,0 +1,87 @@
+{{
+    %include "/extenso/functions/sn_ct.snc"; 
+    use uid;
+    use table;
+    use lg;
+    dir_nouvelles="/fr/equipe_chambre/";
+    // if lg.rows.lg eq "en"  then
+    //  dir_nouvelles="/en/news/";
+    // endif
+    
+    resource = sql(single:true, "select uid from ressources where code = 'widget_team_details'");
+}}
+\{{
+    cgidata=cgidata();  
+    config=config();    
+    sql_select = "member_team.active='yes' AND member_team.uid='?'";
+    if config.site ne "staging" then 
+        sql_select = sql_select .+ " AND member_team.production='yes'"; 
+    endif  
+         
+    content = sql(single:true, "
+                    SELECT 
+                        member_team.uid,
+                        member_team.image,
+                        member_team.firstname,
+                        member_team.lastname,
+                        member_team.activation_year,
+                        member_team.role,
+                        member_team.description_{{lg.rows.lg}} AS description,
+                        member_team.linkedin_url,
+                        member.logo,
+                        member.name
+                    FROM
+                        member_team LEFT JOIN member ON member_team.uid_member=member.uid
+                    WHERE
+                  " .+ sql_select, cgidata.team_seo);
+}} 
+\{{ if content.nbrows > 0 then }}
+    <div class="row "> 
+        <div class="col-md-4">
+            <div class="w-box inverse">
+                <div class="figure">
+                    \{{
+                        if content.rows.image ne "" && -e content.rows.image then
+                            img = content.rows.image;
+                        else
+                            img = "http://placehold.it/270x270&text=" .+ content.rows.firstname .+ " " .+ content.rows.lastname;
+                        endif
+                    }}
+                    <img class="img-responsive" src="\{{img}}" alt="\{{content.rows.firstname .+ " " .+ content.rows.lastname;}}" />
+                </div>
+                <h2 class="sn_pencil" 
+                    data-sn_link1="/extenso/extranet/member_team/{{lg.rows.lg}}/edit.snc?uid=\{{content.rows.uid}}" 
+                    data-sn_class1="edit" 
+                    data-sn_title1="{{sn_ct(edit:false,"Edit team",lg:lg.rows.lg,publish:"/publish/ressources.sn",uids:ressource.rows.uid)}}">
+                    \{{content.rows.firstname .+ " " .+ content.rows.lastname;}}
+                </h2>
+                <p>\{{content.rows.role}}</p>
+                \{{ if content.rows.activation_year then }}
+                <p>{{ sn_ct("Active member since:", publish:"/publish/ressources.sn", uids:resource.rows.uid);}} \{{content.rows.activation_year}}</p>
+                \{{ endif }}
+                \{{ if content.rows.linkedin_url ne "" then }}
+                <p>
+                    <a target="_blank" href="\{{content.rows.linkedin_url}}" class="slink">
+                        <span class="fa-stack fa-lg">
+                            <i class="fa fa-circle fa-stack-2x"></i>
+                            <i class="fa fa-linkedin fa-stack-1x fa-inverse"></i>
+                        </span>                        
+                        {{ sn_ct(edit:false, "Profil Linkedin", publish:"/publish/ressources.sn", uids:resource.rows.uid);}}
+                    </a>                    
+                </p>
+                \{{ endif }}                
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="figure pull-right col-md-6" style="padding-right:0;padding-bottom:5px;">
+                <img class="img-responsive" src="\{{content.rows.logo}}" alt="\{{content.rows.name}}" />
+            </div>
+            \{{content.rows.description;}}
+        </div>
+    </div> 
+\{{ else }}
+    <div role="alert" class="alert alert-danger">
+        <strong><i class="fa fa-exclamation-circle fa-lg" style="padding-right: 10px;"></i></strong> 
+        {{ sn_ct("Member not found!", publish:"/publish/sn_widgets.sn", uids:widget.rows.uid);}}
+    </div>
+\{{ endif }}

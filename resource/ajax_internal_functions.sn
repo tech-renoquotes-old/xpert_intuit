@@ -1,0 +1,495 @@
+{{
+    /*
+        @title ajax_add_contractor
+        Description: Adds a contractor to the database via ajax call.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-14
+        @version 1.01 2017-03-07  add language default bilingue
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include '/site/package/all.sn';
+    use extranet_user;
+}}
+\{{
+
+cgidata = cgidata();  
+
+fullname=user.firstname .+ " " .+ user.lastname;
+
+//answer for a contractor_service request
+if cgidata.contractor_service_answer then 
+    if cgidata.uid_contractor_service ne "" then
+        exists = sql("SELECT uid FROM sr_contractor_service WHERE uid ='?'", cgidata.uid_contractor_service);
+        if exists.nbrows > 0 then
+            if cgidata.answer eq 'add' then
+                void sql("UPDATE sr_contractor_service SET approved= 'yes' WHERE uid='?'", cgidata.uid_contractor_service);
+            elseif cgidata.answer eq 'refuse' then
+                automail::notifyContractorRefuseService(cgidata.uid_contractor_service);
+                void sql("DELETE FROM sr_contractor_service WHERE uid = ?", cgidata.uid_contractor_service);
+            endif
+        endif
+    endif
+endif
+
+//our action for the satisfaction_survey from clients
+if cgidata.satisfaction_survey then
+    if cgidata.pcuid then
+        if cgidata.answer eq 'hide' then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'no' WHERE uid = '?'", cgidata.pcuid);
+        elseif cgidata.answer eq 'show' then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'yes' WHERE uid = '?'", cgidata.pcuid);
+        elseif cgidata.answer eq 'show_email' then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'yes' WHERE uid = '?'", cgidata.pcuid);
+            automail::ask_client_for_review(cgidata.pcuid);
+        elseif cgidata.answer eq 'follow_up' then
+            void sql("UPDATE sr_project_contractor SET survey_callback_date = '?', survey_our_comments = '?' WHERE uid = '?'", cgidata.cb_date, cgidata.our_comments, cgidata.pcuid);
+        elseif cgidata.answer eq 'ask_comments' then
+            void sql("UPDATE sr_project_contractor SET comment_verified = 'no' WHERE uid = '?'", cgidata.pcuid);
+            automail::ask_client_for_comments_on_review(cgidata.pcuid);
+        endif
+    endif
+endif
+
+//result for contractor followups when offering projects
+if cgidata.followup_contractor_project then
+    if cgidata.puid then
+        if cgidata.cuid then
+            if cgidata.answer eq 'accept' then
+                if cgidata.pcuid then
+                    project::acceptProjectContractor(cgidata.pcuid, cgidata.lead_price);
+                else
+                    token = project::generateProjectContractorToken(cgidata.puid, cgidata.cuid);
+                    pcuid = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE token = '?'", token);
+                    project::acceptProjectContractor(pcuid.rows.uid, cgidata.lead_price);
+                endif
+            elseif cgidata.answer eq 'refuse' then
+                if cgidata.pcuid then
+                    void update(
+                        tables:"sr_project_contractor",
+                        uid: cgidata.pcuid,
+                        fields:{
+                            "accepted":"no",
+                            "accepted_rebate":"no"
+                        }
+                    );
+                else
+                    token = project::generateProjectContractorToken(cgidata.puid, cgidata.cuid);
+                    pcuid = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE token = '?'", token);
+                    void update(
+                        tables:"sr_project_contractor",
+                        uid: pcuid.rows.uid,
+                        fields:{
+                            "accepted":"no",
+                            "accepted_rebate":"no"
+                        }
+                    );
+                endif
+            endif
+        endif
+    endif
+endif
+
+//remove a contractor followup when offering projects
+if cgidata.followup_contractor_project_remove then
+    if cgidata.uid then
+        void sql("DELETE FROM sr_contractor_followup WHERE uid = '?'", cgidata.uid);
+    endif
+endif
+
+//remove a contractor followup when offering projects
+if cgidata.contractor_verify then
+    if cgidata.uid then
+        void sql("UPDATE sr_contractor SET verified = 'yes', comments = concat(comments, ' Vérifié le ', date(now()), ' par ', '?') WHERE uid = '?'", fullname, cgidata.uid);
+    endif
+endif
+    
+//send an email to the contractor about missing insurance information
+if cgidata.contractor_missing_insurance then
+    if cgidata.uid then
+        automail::notifyContractorMissingInsurance(cgidata.uid);
+        void sql("UPDATE sr_contractor SET comments = concat(comments, 'Courriel de rappel pour les infos d\'assurances envoyé le ', date(now()), ' par ', '?') WHERE uid = '?'", fullname, cgidata.uid);
+    endif
+endif
+
+//send an email to the contractor about missing insurance information
+if cgidata.contractor_missing_hst then
+    if cgidata.uid then
+        automail::notifyContractorMissingHST(cgidata.uid);
+        void sql("UPDATE sr_contractor SET comments = concat(comments, 'Courriel de rappel pour les infos de taxes ou numéro d\'entreprise envoyé le ', date(now()), ' par ', '?') WHERE uid = '?'", fullname, cgidata.uid);
+    endif
+endif
+
+//send an email to the contractor about missing services
+if cgidata.contractor_missing_services then
+    if cgidata.uid then
+        automail::notifyContractorMissingService(cgidata.uid);
+        void sql("UPDATE sr_contractor SET comments = concat(comments, 'Courriel de rappel pour le manque de service envoyé le ', date(now()), ' par ', '?'), missing_parameter_cb_date = DATE_ADD(curdate(), INTERVAL 3 DAY) WHERE uid = '?'", fullname, cgidata.uid);
+    endif
+endif
+
+//send an email to the contractor about missing territories
+if cgidata.contractor_missing_territories then
+    if cgidata.uid then
+        automail::notifyContractorMissingTerritory(cgidata.uid);
+        void sql("UPDATE sr_contractor SET comments = concat(comments, 'Courriel de rappel pour le manque de territoire envoyé le ', date(now()), ' par ', '?'), missing_parameter_cb_date = DATE_ADD(curdate(), INTERVAL 3 DAY) WHERE uid = '?'", fullname, cgidata.uid);
+    endif
+endif
+
+//send an email to the contractor about missing hours
+if cgidata.contractor_missing_hours then
+    if cgidata.uid then
+        automail::notifyContractorMissingHours(cgidata.uid);
+        void sql("UPDATE sr_contractor SET comments = concat(comments, 'Courriel de rappel pour les heures de réception problématique envoyé le ', date(now()), ' par ', '?'), missing_parameter_cb_date = DATE_ADD(curdate(), INTERVAL 3 DAY) WHERE uid = '?'", fullname, cgidata.uid);
+    endif
+endif
+
+//Unlock a client that was locked
+if cgidata.client_unlock then
+    if cgidata.uid then
+        void sql("UPDATE sr_client SET locked = null, locked_by = null WHERE uid = '?'", cgidata.uid);
+    endif
+endif
+
+//Send an email reminder to a contractor for his subscription if it's missing ingo
+if cgidata.followup_contractor_subscription then
+    if cgidata.uid then
+        automail::followup_contractor_subscription(cgidata.uid, cgidata.insurance, cgidata.rbq, cgidata.architect, cgidata.engineer, cgidata.technologue, cgidata.neq, cgidata.surveyor);
+        info = '';
+        if cgidata.insurance then
+            info = "Assurance ";
+        endif
+        if cgidata.rbq then
+            info .+= "RBQ ";
+        endif
+        if cgidata.architect then
+            info .+= "Architecte ";
+        endif
+        if cgidata.engineer then
+            info .+= "Ingénieur ";
+        endif
+        if cgidata.technologue then
+            info .+= "Technologue ";
+        endif
+        if cgidata.neq then
+            info .+= "NEQ ";
+        endif
+        if cgidata.surveyor then
+            info .+= "Arpenteur ";
+        endif
+        void sql("UPDATE sr_contractor SET comments = concat('Courriel de rappel pour information manquante pour l\'inscription envoyé le ', date(now()), ' par ', '?', ' pour ', '?', ' - ', comments), missing_parameter_cb_date = DATE_ADD(curdate(), INTERVAL 5 DAY) WHERE uid = '?'", fullname, info, cgidata.uid);
+        headers_out('X-res', "Success");
+    endif
+endif
+
+//Send an email to the contractor because he forgot his password
+if cgidata.contractorForgotPassword then
+    if cgidata.uid then
+        automail::contractorForgotPassword(cgidata.uid);
+        headers_out('X-res', "Success");
+    endif
+endif
+
+//Send the welcome email to the contractor
+if cgidata.contractorActivation then
+    if cgidata.uid then
+        automail::contractorActivation(cgidata.uid);
+        headers_out('X-res', "Success");
+    endif
+endif
+
+// send an email to the contractor with his unpaid balance
+if cgidata.notifyUnpaidBalanceToContractor then
+    if cgidata.uid then
+        automail::notifyUnpaidBalanceToContractor(cgidata.uid);
+        headers_out('X-res', "Success");
+    endif
+endif
+
+// get contractor's stats for emails
+if cgidata.get_email_stats then
+    if cgidata.uid then
+        // emails_list = project::create_table_sql("SELECT * FROM sr_log_email_contractor WHERE uid_contractor = ".+ cgidata.uid .+ " ORDER BY uid DESC LIMIT 50");
+        emails_list = sql(wantarray:true,"SELECT * FROM sr_log_email_contractor WHERE uid_contractor = '?' ORDER BY uid DESC LIMIT 50", cgidata.uid);
+        headers_out('X-res', emails_list.rows);
+    endif
+endif
+
+if cgidata.followup_interested_contractor then
+    if cgidata.result eq 'suivi' then
+        if cgidata.callback_date then
+            callback = cgidata.callback_date;
+        else
+            date = date();
+            callback = datetime(date:date.iso,op:"+5d");
+        endif
+        email = sql(single:true,"SELECT email FROM sr_contractor_interested WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Suivi', callback_date = '?', comments = concat('?', ' - Appelé le ', curdate()), sn_mdate = now() WHERE email = '?'", callback, cgidata.comments, email.rows.email);
+        void sql("UPDATE sr_contractor_interested SET status = 'Double' WHERE uid != '?' AND email = '?'", cgidata.uid, email.rows.email);
+    endif
+    
+    if cgidata.result eq 'refus' then
+        email = sql(single:true,"SELECT email FROM sr_contractor_interested WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Refus', sn_mdate = now() WHERE email = '?'", email.rows.email);
+        void sql("UPDATE sr_contractor_interested SET status = 'Double' WHERE uid != '?' AND email = '?'", cgidata.uid, email.rows.email);
+    endif
+
+    if cgidata.result eq 'automatic_followup' then
+        email = sql(single:true,"SELECT email FROM sr_contractor_interested WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Suivi_automatique', callback_date = curdate(), sn_mdate = now() WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Double' WHERE uid != '?' AND email = '?'", cgidata.uid, email.rows.email);
+    endif
+    
+    if cgidata.result eq 'already_with_us' then
+        email = sql(single:true,"SELECT email FROM sr_contractor_interested WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Inscrit', sn_mdate = now() WHERE email = '?'", email.rows.email);
+        void sql("UPDATE sr_contractor_interested SET status = 'Double' WHERE uid != '?' AND email = '?'", cgidata.uid, email.rows.email);
+    endif
+    
+    if cgidata.result eq 'resend_registration_email' then
+        if cgidata.callback_date then
+            callback = cgidata.callback_date;
+        else
+            date = date();
+            callback = datetime(date:date.iso,op:"+5d");
+        endif
+        email = sql(single:true,"SELECT email, contact_name FROM sr_contractor_interested WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Suivi', callback_date = '?', comments = concat('?', ' - Appelé le ', curdate()), sn_mdate = now() WHERE email = '?'", callback, cgidata.comments, email.rows.email);
+        void sql("UPDATE sr_contractor_interested SET status = 'Double' WHERE uid != '?' AND email = '?'", cgidata.uid, email.rows.email);
+        automail::contractorProfileReminder1_new(email.rows.email, email.rows.contact_name, cgidata.uid, "{{lg.rows.lg}}", 'interested');
+    endif
+    
+    if cgidata.result eq 'resend_registration_email_and_automatic_followup' then
+        if cgidata.callback_date then
+            callback = cgidata.callback_date;
+        else
+            date = date();
+            callback = datetime(date:date.iso,op:"+5d");
+        endif
+        comments = "Appelé le " .+ date.iso .+ " - " .+ cgidata.comments;
+        email = sql(single:true,"SELECT email, contact_name FROM sr_contractor_interested WHERE uid = '?'", cgidata.uid);
+        void sql("UPDATE sr_contractor_interested SET status = 'Suivi_automatique', callback_date = '?', comments = '?', sn_mdate = now() WHERE email = '?'", callback, comments, email.rows.email);
+        void sql("UPDATE sr_contractor_interested SET status = 'Double' WHERE uid != '?' AND email = '?'", cgidata.uid, email.rows.email);
+        automail::contractorProfileReminder1_new(email.rows.email, email.rows.contact_name, cgidata.uid, "{{lg.rows.lg}}", 'interested');
+    endif
+endif
+
+if cgidata.send_info then
+    void sql("INSERT INTO sr_service_seo_result (ip, url, uid_contractor, user_agent, sn_cdate) VALUES ('?', '?', '?', '?', now())", cgidata.ip, cgidata.url, cgidata.uid_contractor, cgidata.user_agent);
+endif
+
+if cgidata.add_contractor_followup_ronaldo then
+    void sql("INSERT INTO sr_contractor_followup (uid_contractor, uid_service, uid_territory, uid_project_type, min_value) VALUES ('?', '?', '?', '?', '?')
+    ", cgidata.uid_contractor, cgidata.uid_service, cgidata.uid_territory, cgidata.uid_project_type, cgidata.min_value);
+endif
+
+if cgidata.show_emails then
+    emails = sql("
+    SELECT *
+    FROM
+        (
+        SELECT count(*) as received
+        FROM sr_log_email_contractor ec
+        WHERE uid_contractor = '?'
+        ) as e_all
+    CROSS JOIN
+        (
+        SELECT count(*) as opened
+        FROM sr_log_email_contractor ec
+        WHERE uid_contractor = '?'
+        AND first_open is not null
+        ) as e_open
+    ", cgidata.uid_contractor, cgidata.uid_contractor);
+    
+    emails_list = sql("SELECT * FROM sr_log_email_contractor WHERE uid_contractor = '?' ORDER BY uid DESC LIMIT 50", cgidata.uid_contractor);
+    
+    headers_out("X-emails", emails_list.rows, "X-emails_ratio", emails.rows);
+endif
+
+if cgidata.save_ajax then
+    if cgidata.second_field then
+        void sql("UPDATE sr_contractor SET ? = '?', ? = now() WHERE uid = '?'", cgidata.field, cgidata.value, cgidata.second_field, cgidata.uid_contractor);
+    else
+        void sql("UPDATE sr_contractor SET ? = '?' WHERE uid = '?'", cgidata.field, cgidata.value, cgidata.uid_contractor);
+    endif
+endif
+
+if cgidata.save_ajax_table then
+    if cgidata.second_field then
+        void sql("UPDATE ? SET ? = '?', ? = now() WHERE uid = '?'", cgidata.table, cgidata.field, cgidata.value, cgidata.second_field, cgidata.uid);
+    else
+        void sql("UPDATE ? SET ? = '?' WHERE uid = '?'", cgidata.table, cgidata.field, cgidata.value, cgidata.uid);
+    endif
+endif
+
+if cgidata.save_ajax_address then
+    void sql("UPDATE sr_address SET ? = '?' WHERE uid_contractor = '?'", cgidata.field, cgidata.value, cgidata.uid_contractor);
+endif
+
+if cgidata.save_ajax_project then
+    void sql("UPDATE sr_project SET ? = '?' WHERE uid = '?'", cgidata.field, cgidata.value, cgidata.uid_project);
+endif
+
+if cgidata.get_stats then
+    stats = sql("select q2.count as today_me, q1.count as last7days_me, q3.count as lastweek_me, q4.count as today_team, q5.count as last7days_team, q6.count as lastweek_team, q7.count as lastyear_team
+    from 
+    (
+    select count(*) as count from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q1
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status = 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q2
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q3
+    CROSS JOIN
+    (
+    select count(*) as count, activated_by from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q4
+    CROSS JOIN
+    (
+    select count(*) as count, activated_by from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q5
+    CROSS JOIN
+    (
+    SELECT count(*) as count, activated_by FROM sr_project WHERE yearweek(active_date) = (yearweek(curdate())-1) AND active_date < (DATE_SUB(now(), INTERVAL 7 DAY))
+    ) as q6
+    CROSS JOIN
+    (
+    SELECT count(*) as count FROM sr_project WHERE year(active_date) = (year(curdate())-1) AND week(active_date) = (week(curdate())+1)   
+    ) as q7", cgidata.agent, cgidata.agent, cgidata.agent);
+    
+    headers_out("X-stats", stats.rows);
+endif
+
+if cgidata.get_stats_main then
+    stats = sql("select q2.count as today_me, q1.count as last7days_me, q3.count as lastweek_me, q4.count as today_team, q5.count as last7days_team, q6.count as lastweek_team, q7.count as lastyear_team
+    from 
+    (
+    select count(*) as count from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q1
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status = 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q2
+    CROSS JOIN
+    (
+    select count(*) as count from sr_project WHERE yearweek(sn_cdate) = yearweek(curdate())-1 AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed') AND activated_by = '?'
+    ) as q3
+    CROSS JOIN
+    (
+    select count(*) as count, activated_by from sr_project where DATE(active_date) = DATE(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q4
+    CROSS JOIN
+    (
+    select count(*) as count, activated_by from sr_project where yearweek(active_date) = yearweek(NOW()) AND (status = 'active' OR status= 'cancelled-after-qualification' OR status = 'completed')
+    ) as q5
+    CROSS JOIN
+    (
+    SELECT count(*) as count, activated_by FROM sr_project WHERE yearweek(active_date) = (yearweek(curdate())-1) AND active_date < (DATE_SUB(now(), INTERVAL 7 DAY))
+    ) as q6 
+    CROSS JOIN
+    (
+    SELECT count(*) as count FROM sr_project WHERE year(active_date) = (year(curdate())-1) AND week(active_date) = (week(curdate())+1)   
+    ) as q7", cgidata.agent, cgidata.agent, cgidata.agent);
+    
+    headers_out("X-stats", stats.rows);
+endif
+
+if cgidata.to_handle then
+    to_handle = sql("SELECT c.lang, count(*) as count FROM sr_client c 
+        INNER JOIN sr_project p ON p.uid_client = c.uid
+        WHERE p.status = 'new'
+        AND NOT EXISTS(SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND uid_client = p.uid_client)
+        AND p.sn_cdate < NOW() - INTERVAL 3 MINUTE
+        GROUP BY c.lang;
+        ");
+    
+    left_to_handle = sql("SELECT c.lang, count(*) as count      
+            FROM sr_client c 
+            INNER JOIN sr_project p ON p.uid_client = c.uid
+            WHERE p.status = 'new'
+            AND EXISTS(SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND sn_cdate < NOW() - INTERVAL 30 HOUR AND uid_client = p.uid_client)
+            AND NOT EXISTS (SELECT * from sr_followup WHERE msg_uid IN(1,11,6,4,3,5) AND time_to_sec(timediff(NOW(), sn_cdate)) / 3600 < 30 AND uid_client = p.uid_client ORDER BY sn_cdate)
+            GROUP BY c.lang;
+        ");
+        
+    headers_out("X-stats", to_handle.rows, "X-stats-left", left_to_handle.rows);   
+endif
+
+if cgidata.get_service_questions then
+    questions = sql("SELECT uid, question_? as question, placeholder_client_? as placeholder, more_info_? as more_info FROM sr_service_question WHERE uid_service = '?' ORDER BY required ASC, uid ASC LIMIT 4", cgidata.lang, cgidata.lang, cgidata.lang, cgidata.uid);
+
+    headers_out("X-questions", questions.rows);
+endif
+
+if cgidata.answer_service_questions then
+    project = sql(single:true,"
+        SELECT p.uid
+        FROM sr_project p
+        INNER JOIN sr_client c ON c.uid = p.uid_client
+        WHERE p.uid = '?'
+        AND c.email = '?'"
+        ,cgidata.prj, cgidata.email);
+        
+    if project.nbrows < 1 then
+    project = sql(single:true,"
+        SELECT p.uid
+        FROM sr_project p
+        INNER JOIN sr_client c ON c.uid = p.uid_client
+        WHERE p.uid = '?'
+        AND TIMESTAMPDIFF(MINUTE, p.sn_cdate, now()) <= 10"
+        ,cgidata.prj);
+    endif
+
+    //additionnal questions for the service
+    answers = split(cgidata{"answers[]"});
+    questions = split(cgidata{"field[]"});
+    
+
+    pointer = 0;
+    for q in questions do
+        // pointer;
+        answer = cgidata{"answers[" .+ pointer .+ "]"};
+        // field = "q-" .+ q;
+        void insert(
+            table: "sr_service_question_answers",
+            fields: {
+                'uid_service_question': q,
+                'uid_project': project.rows.uid,
+                'answer': answers[pointer]
+            });
+        pointer = pointer + 1;
+    endfor
+    
+    if cgidata.budget_type eq "1" then
+        shared_budget = "{{sn_ct(edit:false,'budget pour main d\'oeuvre uniquement')}}";
+    elseif cgidata.budget_type eq "2" then
+        shared_budget = "{{sn_ct(edit:false,'budget pour main d\'oeuvre + matériaux')}}";
+    endif
+    
+    budget = cgidata.budget .+ ' ' .+ shared_budget;
+    
+    xs_lead = 'Notaire: ' .+ cgidata.notary .+ ' Courtier immobilier: ' .+ cgidata.real_estate_broker .+ ' Courtier hypothécaire: ' .+ cgidata.mortgage_broker .+ ' Inspecteur: ' .+ cgidata.home_inspector;
+    
+    void sql("
+    UPDATE sr_project 
+    SET uid_service = '?', shared_budget = '?', budget = '?', budget_type = '?', estimate_duration = '?', is_owner = '?', xs_lead = '?'
+    WHERE uid = '?'"
+    , cgidata.service, budget, cgidata.budget, cgidata.budget_type, cgidata.duration, cgidata.is_owner, xs_lead, project.rows.uid);
+
+endif
+
+
+
+}}
+

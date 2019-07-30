@@ -1,0 +1,26 @@
+{{
+    table_dest = 'sr_service';
+    table_from = 'tbl_services';
+
+    select_query_from_src = "SELECT * FROM `".+table_from.+"` WHERE Actif != 0";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid'           : 'idTBL_Services',
+        'service'       : 'Service',
+        'sn_cdate'      : 'Timestamp',
+        'active'        : "Actif::IF('?', 'yes', 'no')",
+        'name_fr'       : 'Service_fr',
+        'name_en'       : 'Service_en',
+        'name_long_fr'  : 'Service',
+        'name_long_en'  : 'Service',
+        'example_fr'    : "Exemple1,Exemple2,Exemple3::CONCAT('?', '\n', '?', '\n', '?')",
+        'example_en'    : "Exemple1,Exemple2,Exemple3::CONCAT('?', '\n', '?', '\n', '?')"
+    };
+    
+    %include 'migration.sn';
+    

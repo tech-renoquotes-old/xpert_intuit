@@ -1,0 +1,46 @@
+{{
+	use uid;
+	use table;
+	use lg;
+	%include "/extenso/functions/sn_ct.snc"; 
+	use widget;
+}}
+{{	
+	config=config();
+	cgi=cgidata();
+	lg_rows="{{lg.rows.lg}}";
+}}
+<!-- style a enelver en prod -->
+<style>
+.client {
+    background: none repeat scroll 0 0 transparent;
+    border: 1px solid #ddd;
+    padding: 0 15px;
+    margin-bottom:20px;
+}
+.client img {
+    width: 100%;
+}
+</style>
+
+			{{ /* --------- affichage des partenaires ------*/
+				for content sql("select * from widget_partners where actif='oui' " .+ " ORDER BY sn_custom ;") do
+				restrow = sn_nb1 % 6;
+				restrow2 = sn_nb % 6;
+				}}
+				{{if sn_nb1==1 || restrow2==0 then}}<div class="row">
+                {{endif}}
+				<div class="col-md-2 col-sm-3 col-xs-6">
+					<div class="client">
+                    {{ if content.rows{'url_'.+ lg.rows.lg} ne "" then}}
+                        <a href="{{content.rows{'url_'.+ lg.rows.lg};}}" target="_blank">
+                            <img src="{{content.rows.image}}" alt="{{content.rows{'alt_'.+ lg.rows.lg};}}">
+                        </a>
+                    {{else}}
+                        <img src="{{content.rows.image}}" alt="{{content.rows{'alt_'.+ lg.rows.lg};}}">
+                    {{endif}}
+                    
+					</div>
+				</div>
+				{{if restrow==0 || sn_nb1==content.nbrows then}}</div>{{endif}}
+			{{endfor}}

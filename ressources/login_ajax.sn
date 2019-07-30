@@ -1,0 +1,10 @@
+{{    
+    %include "/extenso/functions/sn_captcha.snc"; 
+    %include "/extenso/functions/sn_session.snc";
+}}  
+\{{  
+    // reload captcha --------------------------------------------------------
+    c=sn_captcha(); 
+    sn_session_set("captcha",c[1], exp:"+300s");
+    c[0];
+}}

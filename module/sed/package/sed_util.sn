@@ -1,0 +1,189 @@
+{{ 
+    package sed_util;
+
+	// --------------------------------------------------------------------------
+	/* 
+		@title		package sed_util
+	
+		Regroup all function for extenso
+
+		@version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	*/
+	// --------------------------------------------------------------------------
+    
+        function resource(code)
+        
+	        // --------------------------------------------------------------------------
+	        /* 
+		        @title		resource
+        	
+		        Return url of a resource
+		        
+		        @param      code : string : code of resource
+		        @param      lg : string : language default try a use
+		        @param      table : string : table for resource
+		        
+		        @return     string : url of resource
+        
+		        @version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	        */
+	        // --------------------------------------------------------------------------
+
+	        if table == undefined then
+		        table = "ressources";
+	        endif
+	        
+	        if lg == undefined then
+	            use lg;
+		        
+		        lg = lg.rows.lg;
+	        endif
+	        
+	        resource = sql(single:true,"select * from ? where code = '?'", table, code);
+        
+	        if (resource.nbrows != 1) then
+		        error("Can't find this code '%s'in table '%s'", code, table);
+	        endif
+	        
+	        if resource.rows{"file_" .+ lg} ne "index" then
+		        return resource.rows{"url_" .+ lg} .+ resource.rows{"file_" .+ lg};
+	        else
+		        return resource.rows{"url_" .+ lg} ;
+	        endif
+        endf
+        
+        function ct(;)
+	        // --------------------------------------------------------------------------
+	        /* 
+		        @title		ct
+        	
+		        Return a text for a code
+		        
+		        @param      code : string : code of resource
+		        @param      ct : string : table of all ct
+		        @param      edit : bool : de we put pencil around the ct
+		        @param      uids : string : uid of element to republish when ct is modified (default use sn_ct of page.rows.uid)
+		        @param      publish : string : table to use to republish element (default use ct_publish or pages)
+		        @param      format : string : default format for ct (text, ck, ...)
+		        @param      lg : string : language default try a use (default use ct_lg or use lg)
+		        @param      prefix : string : define a profix for ct(default use ct_prefix or nothing)
+		        @param      module : string : module for ct
+		        @param      filter : string : apply filter for code (as defined by function esc)
+		        
+		        @return     string : url of resource
+        
+		        @version	1.0 2015-11-18 16:01:13 laplante@sednove.com
+	        */
+	        // --------------------------------------------------------------------------
+
+        	if code == undefined then
+	            code = sn_argsp.shift();
+	        endif
+
+	        if ct == undefined then
+		        ct = "ct";
+	        endif
+        
+	        if edit == undefined then
+		        edit = true;
+	        endif
+        
+	        if uids == undefined then
+		        use ct_uids;
+		        if ct_uids == undefined then
+			        use page;
+			        uids = page.rows.uid;
+		        else
+			        uids = ct_uids;
+		        endif
+	        endif
+        
+	        if publish == undefined then
+		        use ct_publish;
+		        if ct_publish == undefined then
+			        publish = "pages";
+		        else
+			        publish = ct_publish;
+		        endif
+            endif
+        
+	        if format == undefined then
+		        format = "text";
+	        endif
+        
+	        if lg == undefined then
+		        use ct_lg;
+		        if ct_lg == undefined then
+			        use lg;
+			        if lg.type() ne "string" then
+				        lg = lg.rows.lg;
+			        endif
+		        else
+			        lg = ct_lg;
+		        endif
+	        endif
+        
+	        if prefix == undefined then
+		        use ct_prefix;
+		        if ct_prefix == undefined then
+			        prefix = '';
+		        else
+			        prefix = ct_prefix;
+		        endif
+	        endif
+        
+        
+	        if lg.type() ne "string" then
+		        error("Invalid type for parameter lg: %s", lg.type());
+	        endif
+        
+	        if module == undefined then
+		        info = sql(wantarray:true,single:true,"select ?,uid from ? where code = '?' and uids = '?' and publish = '?' and prefix = '?'", format .+ "_".+ lg, ct, code, uids, publish, prefix);
+		        module="";
+	        else
+		        info = sql(wantarray:true,single:true,"select ?,uid from ? where code = '?' and uids = '?' and publish = '?' and module = '?' and prefix = '?'", format .+ "_".+ lg, ct, code, uids, publish,module, prefix);
+	        endif
+	        
+	        if info.nbrows == 0 then
+		        altinfo = sql(single:true,"select * from ct where code = '?'", code);
+		        newuid = insert(table:ct,fields:{"code":code,"publish":publish,"uids":uids,"format":format,"ok":"no","module":module,"prefix":prefix});
+		        for i sql(wantarray:true,"select lg from sn_languages where active = 'yes'") do
+			        lg = i.rows[0];
+			        field = format .+ "_" .+ lg;
+			        if altinfo.rows{field} ne "" then
+                        value = altinfo.rows{field};
+                    else
+                        value = code;
+                    endif
+			        void update(tables:ct,uid:newuid.uid, fields: {field : value});
+		        endfor
+		        info = sql(wantarray:true,single:true,"select ?,uid from ? where code = '?' and uids = '?' and publish = '?' and module = '?' and prefix = '?'", format .+ "_".+ lg, ct, code, uids, publish, module, prefix);
+	        endif
+	        retcode =  info.rows[0];
+	        ctuid =  info.rows[1];
+        
+	        if (sn_argcp != 0) then
+		        retcode = printf(retcode, sn_argsp);
+	        endif
+        
+	        if filter ne "" then
+		        retcode = esc(filter:filter, retcode);
+	        endif
+        
+	        if format eq "ck" then
+		        tag="div";
+	        else
+		        tag="span";
+	        endif
+        
+	        if edit then
+		        retcode_with_pencil = dq((<)) .+ tag .+ dq(( class="sn_pencil sn_small" data-sn_title1="Edit ct" data-sn_class1="pencil" data-sn_link1="/extenso/extranet/)) .+ ct .+ "/" .+ lg .+
+		        "/edit?sn_modal=t&uid=" .+ ctuid .+ dq((">)) .+ retcode .+ dq((</)) .+ tag .+ dq((>));
+		        return retcode_with_pencil;
+	        else
+		        return retcode;
+	        endif
+        endf
+    
+    endp;
+}}

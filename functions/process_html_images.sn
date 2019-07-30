@@ -1,0 +1,62 @@
+{{
+    %include '/package/image_processor.sn';
+    
+    /*
+        This function applies ImageProcessor transformations to all images in a HTML content using
+        a haystack search instead of the usual (slower) regex approach.
+        
+        @author jg
+        
+        @param content <string> HTML content
+        @param options <string> imageprocessor.sn options in HTTP GET format (without the ?)
+        
+        @return <string> Processed rich-text
+        
+        // ex: to apply a max width of 720px to all images in my_content
+        process_html_images(my_content, "maxw=720");
+    */
+    function process_html_images(content, options)
+        // the length of the marker used to spot the beginning of a SRC dom property
+        SRC_MARKER_LEN = 5;
+        // number of iterations done
+        total_itr = 0;
+        // used as an infinite loop stopper
+        max_itr = 1000;
+        // used as the main loop stopper
+        do_next_itr = true;
+        // current offset
+        search_offset = 0;
+        // main loop
+        while(do_next_itr && total_itr < max_itr) do
+            // find the position of the next IMG tag
+            img_start_pos = strpos(content, "<img", search_offset);
+            // no (more) image to process, so let's stop here
+            if img_start_pos < 0 then
+                do_next_itr = false;
+            else
+                // trying to get the SRC dom property
+                src_start_pos = strpos(content, "src=\"", img_start_pos);
+                if src_start_pos >= 0 then
+                    // find the end of the SRC dom property
+                    src_end_pos = strpos(content, "\"", src_start_pos + SRC_MARKER_LEN);
+                    src_substr_limit = (src_end_pos - src_start_pos - SRC_MARKER_LEN);
+                    // extract the image src
+                    img_src = substr(content, src_start_pos + SRC_MARKER_LEN, src_substr_limit);
+                    // we don't go further if the src already has GET parameters
+                    if strpos(img_src, '?') < 0 then
+                        // lets append our ImageProcessor options as GET parameters to the SRC
+                        img_src .+= "?" .+ options;
+                        void sed_image_processor::src(img_src);
+                        content = substr(content, 0, src_start_pos + SRC_MARKER_LEN) .+ img_src .+ substr(content, src_end_pos);
+                    endif
+                    // we move the cursor to our current position to continue the search
+                    search_offset = src_end_pos;
+                endif
+            endif
+            // increasing the infinite loop stopper
+            total_itr++;
+        endw
+        // returning the processed content
+        return content;
+    endf
+}}

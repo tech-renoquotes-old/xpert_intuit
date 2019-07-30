@@ -1,0 +1,25 @@
+{{
+    /*
+        @title ajax_change_cc_priority
+        Description: Change the priority a photo in the contractor's gallery.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-25
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+    
+    for photo in explode(",", cgidata.photo_uid) do
+        void sql("UPDATE sr_gallery SET priority='?' WHERE uid='?' AND uid_contractor='?'", sn_nb1, photo, extranet_user.uid);
+    endfor
+}}

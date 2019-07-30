@@ -1,0 +1,1358 @@
+{{
+    /*
+        @title contractor_confirmation_accept_project
+        Description: Confirmation message after a contractor accepts a project.
+        Page 3 du processus
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-18
+        @version 1.02 2017-01-20   Ajout du calcul de taxes par prov
+        @version 1.03 2017-02-08   correction du nombre d'acceptations possibles
+        @version 1.03 2017-02-14   ORDER BY a.uid  DESC
+        @version 1.05 2017-03-18   Verifie si déjà accepté
+        @version 1.06 2017-04-26    Change google map api key and redirect 'Not enough bill' request to alert page(lines:106, 189)
+        
+        @lastmodify by mjodoin@soumissionrenovation.ca
+        @version 1.07 2018-03-29    Debit charge also happens after having bought a project if the contractor has a credit card on file
+        
+        
+        
+    //http://ssr.sednove.ca/en/confirmation-accept-project?token=&accepted=yes
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    DBG_CACCEPT = 16;
+    use page;
+    use lg; 
+    %include "/site/package/all.sn";
+}}
+
+<style>
+    #map {
+        
+        height: 400px;
+        max-width: 600px;
+        
+    }
+
+    .loader
+        {
+            height:100px;
+            width:100%;
+            margin-left:-10px;
+            position:absolute;
+            bottom:0px;
+            filter: alpha(opacity=40);
+            opacity: 0.4;
+            -moz-opacity: 0.4;
+            background-color:#000;
+            border-radius:10px;
+        }
+        
+    .loader img{
+        float:right;
+        filter: alpha(opacity=40);
+        opacity: 0.4;
+        -moz-opacity: 0.4;
+    }
+    
+    .approved_services{
+    	width: 100%;
+    	max-height: 300px;
+    	float:left;
+    	overflow:scroll;
+    	border: 1px #c7e6cf solid;
+    	padding-left:5px;
+    	margin-bottom:20px;
+    }
+    
+    
+    
+</style>
+<script type="text/javascript" src="/js/datepicker/jquery-ui-i18n.min.js"></script>
+<script type="text/javascript" src="/js/datepicker/jquery.ui.datepicker.validation.js"></script>
+
+
+\{{
+    cgidata = cgidata();
+
+    refus_txt="";
+    // warning_limit = false;
+    if cgidata.token ne "" && cgidata.accepted ne "" then
+        //void insert(table:'sr_debug', fields:{'description':'debut confirmation accept','text':'début'});
+        //V1.05 add accepted info
+        project_contractor = sql(single:true, "SELECT uid, uid_project, uid_contractor, accepted FROM sr_project_contractor WHERE token='?'", cgidata.token);
+        console.log(cgidata.token);
+        if project_contractor.nbrows > 0 then
+            project = sql(single:true,"
+                SELECT p.*, (SELECT COUNT(*) FROM sr_project_contractor WHERE uid_project=p.uid AND accepted='yes') as nb_accepted 
+                FROM sr_project p 
+                WHERE uid='?'", project_contractor.rows.uid_project);
+            contractor = sql(single:true,"SELECT * FROM sr_contractor WHERE uid='?'", project_contractor.rows.uid_contractor);
+            client = sql(single:true, "SELECT * FROM sr_client WHERE lang = '?'", project.rows.uid_client);
+            services = sql("SELECT s.* FROM sr_service s INNER JOIN sr_contractor_service cs ON cs.uid_service = s.uid WHERE cs.uid_contractor = '?' ORDER BY s.name_long_?", contractor.rows.uid, "{{lg.rows.lg}}");
+            
+            if project.nbrows > 0 && contractor.nbrows > 0 then
+                addr = sql(single:true,"SELECT t.name_? as territory, c.uid_territory FROM sr_address a 
+                            INNER JOIN sr_city c ON c.uid = a.uid_city 
+                            INNER JOIN sr_territory t ON t.uid = c.uid_territory 
+                            WHERE a.uid = '?'","{{lg.rows.lg}}", project.rows.uid_address);
+                
+                min_max = sql(single:true,"SELECT * from sr_contractor_territory ct INNER JOIN sr_territory t ON t.uid = ct.uid_territory WHERE t.uid = '?' AND uid_contractor = '?'",addr.rows.uid_territory, contractor.rows.uid);
+                myterritory = sql("SELECT * FROM sr_contractor_territory WHERE uid_contractor = '?' AND uid_territory = '?' ", contractor.rows.uid, addr.rows.uid_territory);
+                myservice = sql("SELECT * FROM sr_contractor_service WHERE uid_contractor = '?' AND uid_service = '?' ", contractor.rows.uid, project.rows.uid_service);
+
+                if cgidata.accepted eq 'yes' then
+                    //  Vérifier si la balance courante de l'entrepreneur dépasse sa limite de crédit
+                    total = contractor::getCurrentBillingTotal(contractor.rows.uid);
+                    if total >= contractor.rows.credit_threshold then
+                        if  contractor.rows.credit_cards eq 'yes' then  //privilege card 
+                            // Effectuer un prélevement sur la carte de crédit
+                            transaction_uid = contractor::debit_charge(contractor.rows.uid, total);
+                            void insert(table:'sr_debug', fields:{'description':'contractor_confirmation_accept_project - contractor::debit_charge: '.+contractor.rows.uid,'text':'uid_transaction='.+transaction_uid.+'amount='.+total});
+                        endif
+                    endif
+                    //void insert(table:'sr_debug', fields:{'description':'total','text':total});
+                    // Si la balance ne dépasse pas la limite de crédit OU que la transaction à été effectuée
+                    if total < contractor.rows.credit_threshold || (transaction_uid != false && transaction_uid ne "") then
+                        if cgidata.confirm eq 'yes' then
+                            // Vérifier que le projet est encore actif et que le nombre de soumissions maximum n'est pas atteint
+                            if project.rows.status eq "active" &&  project.rows.nb_accepted < project.rows.max_quotes then
+                                // Vérifier que l'entrepreneur peut accepter des projets
+                                if contractor.rows.verified eq 'yes' then
+                                    if (project_contractor.rows.accepted ne 'yes') then
+                                        project::acceptProjectContractor(project_contractor.rows.uid, project.rows.lead_price);
+                                        void insert(table:'sr_debug', fields:{'description':'avant contractorAccountBlocked','text':'total='.+total.+'lead_price='.+project.rows.lead_price});
+                                        
+                                        //V1.07
+                                        newtotal = contractor::getCurrentBillingTotal(contractor.rows.uid);
+                                        if newtotal >= contractor.rows.credit_threshold then
+                                            if  contractor.rows.credit_cards eq 'yes' then  //privilege card 
+                                                // Effectuer un prélevement sur la carte de crédit
+                                                transaction_uid = contractor::debit_charge(contractor.rows.uid, newtotal);
+                                                void insert(table:'sr_debug', fields:{'description':'contractor_confirmation_accept_project v107 - contractor::debit_charge: '.+contractor.rows.uid,'text':'uid_transaction='.+transaction_uid.+'amount='.+newtotal});
+                                                if (transaction_uid eq false || transaction_uid eq "") then
+                                                    void insert(table:'sr_debug', fields:{'description':'contractorAccountBlocked v107','text':'total='.+newtotal.+'lead_price='.+project.rows.lead_price});
+                                                    automail::contractorAccountBlocked(contractor.rows.uid); 
+                                                endif
+                                            endif
+                                        endif
+                                        
+                                        //V1.02
+                                        // taxes = contractor::calculateTaxesByProv(project.rows.lead_price, contractor.rows.uid);
+                                        if (newtotal >= contractor.rows.credit_threshold && contractor.rows.credit_cards ne 'yes') then 
+                                            void insert(table:'sr_debug', fields:{'description':'après contractorAccountBlocked','text':'total='.+newtotal.+'lead_price='.+project.rows.lead_price});
+                                            automail::contractorAccountBlocked(contractor.rows.uid); 
+                                            //warning_limit =true;
+                                        endif 
+                                    endif
+                                    //V1.03  if project.rows.nb_accepted + 1 >= project.rows.max_quotes then
+                                    if project.rows.nb_accepted >= project.rows.max_quotes then
+                                        project::completeProject(project.rows.uid);
+                                        //void sql("UPDATE sr_project SET status='completed' WHERE uid='?'", project.rows.uid);
+                                    endif
+                                    cgidata.accepted = 'success';
+                                else
+                                    cgidata.accepted = "cant_accept_projets";
+                                endif
+                            else
+                                cgidata.accepted = "inactive";
+                            endif
+                            
+                        else
+                            cgidata.accepted = "confirm";
+                        endif
+                    else
+                        if (contractor.rows.username eq '') then    // Create Username
+                            contractor::activateContractor(contractor.rows.uid);
+                            contractor_needs_activation = "&need_activation";
+                        endif
+                        "total: ";total; "-"; contractor.rows.credit_threshold;"br>";
+                        "transaction_uid: ";transaction_uid;
+                        redirect("{{pages('redirect_to_current_bill',lg.rows.lg,table:'pages')}}?accepted=yes&token=" .+ cgidata.token .+ contractor_needs_activation);
+                    endif
+                    
+                elseif cgidata.accepted eq 'no' then
+                    //V1.05
+                    if  project_contractor.rows.accepted ne 'yes' then
+                        void update(
+                            tables:"sr_project_contractor",
+                            uid: project_contractor.rows.uid,
+                            fields:{
+                                "accepted":"no",
+                                "accepted_rebate":"no"
+                            }
+                        );
+                    endif
+                elseif cgidata.accepted eq "halfpriced" then
+                    //V1.05
+                    //if (cgidata.confirm eq 'yes') then
+                    if (cgidata.confirm eq 'yes'   &&    project_contractor.rows.accepted ne 'yes') then
+                        void update(
+                            tables:"sr_project_contractor",
+                            uid: project_contractor.rows.uid,
+                            fields:{
+                                "accepted_rebate":"yes",
+                                "accepted_rebate_date":datetime()
+                            }
+                        );
+                    endif
+                endif
+            else
+                cgidata.accepted = "";
+            endif    
+        else
+            cgidata.accepted = "";
+        endif
+    endif
+    
+
+}}    
+
+\{{ if cgidata.accepted eq "success" then}}
+    <div class="alert alert-success">
+        {{sn_ct("contractor_confirmation_accept_project texte projet accepté",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+    \{{
+        project = sql(single:true,"
+            SELECT p.uid, a.street_no, a.street, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.province, a.zip, p.description, p.due_date, p.lead_price, p.shared_budget
+            FROM sr_project_contractor pc
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city c ON c.uid=a.uid_city
+            WHERE pc.token='?'
+            ORDER BY a.uid DESC
+            ", cgidata.token);
+            
+        project_contractor = sql(single:true, "
+            SELECT  ct.contact_title, ct.contact_firstname, ct.contact_lastname, c.firstname, c.lastname, c.gender, 
+                    a.street_no, a.street, a.city, city.name_fr as city_fr, city.name_en as city_en, a.zip, a.phone1, a.phone2, a.phone3, 
+                    ct.contact_gender,
+                    c.email, c.when_to_call, p.description, p.additional_info, p.uid,
+                    ct.contact_lg
+            FROM sr_project_contractor pc 
+            INNER JOIN sr_contractor ct ON ct.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid=pc.uid_project
+            INNER JOIN sr_client c ON c.uid=p.uid_client
+            LEFT JOIN sr_address a ON a.uid=p.uid_address
+            LEFT JOIN sr_city city ON city.uid=a.uid_city
+            WHERE pc.token = '?'
+            ORDER BY a.uid DESC
+            ", cgidata.token);
+        
+        client_nom = project_contractor.rows.firstname .+ " " .+ project_contractor.rows.lastname;
+        adresse = project_contractor.rows.street_no .+ " " .+ project_contractor.rows.street .+ ", " .+ project_contractor.rows.city;
+        telephone_maison = project_contractor.rows.phone1;
+        telephone_bureau = project_contractor.rows.phone2;
+        telephone_cellulaire = project_contractor.rows.phone3;
+        courriel = project_contractor.rows.email;
+        code_postal=project_contractor.rows.zip;
+        meilleur_moment = project_contractor.rows.when_to_call;
+        description = project_contractor.rows.description;
+        info_additionnelle = project_contractor.rows.additional_info;
+        id_projet = project_contractor.rows.uid;
+    
+            
+        // if (warning_limit == true) then
+        //     redirect("{{pages('redirect_to_current_bill',lg.rows.lg,table:'pages')}}?accepted=yes&token=" .+ cgidata.token .+ contractor_needs_activation);
+        // endif
+    }}
+    <table class="table_blog">
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{project.rows.uid}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Nom :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{client_nom}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Adresse :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{project.rows.street_no}}&nbsp;\{{project.rows.street}}, \{{project.rows.city}}, \{{project.rows.province}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{project.rows.zip}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  telephone_maison :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td><a href="tel:\{{telephone_maison}}">\{{telephone_maison}}</a></td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  telephone_bureau :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td><a href="tel:\{{telephone_bureau}}">\{{telephone_bureau}}</a></td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  telephone_cellulaire :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td><a href="tel:\{{telephone_cellulaire}}">\{{telephone_cellulaire}}</a></td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  courriel :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{courriel}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Meilleur moment pour contacter le client :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{meilleur_moment}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{project.rows.description}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  info_additionnelle :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{info_additionnelle}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{project.rows.due_date}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{money_format(project.rows.lead_price, {{"lg.rows.lg"}} )}}</td>
+        </tr>
+        <tr>
+            <td>{{sn_ct("contractor_accept_project  Budget du client:", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+            <td>\{{project.rows.shared_budget}}</td>
+        </tr>
+    </table>
+
+    <br>
+    <div class="row">
+        <div class="col-md-8 bold">
+        <p>{{sn_ct("contractor_accept_project Si vous avez essayé d'entrer en contat avec ce client", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</p>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-md-8 bold" style="font-weight:bold;">
+        {{sn_ct("contractor_accept_project La balance de votre est de", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}} \{{money_format(contractor::getCurrentBillingTotal(contractor.rows.uid));}}.
+        <br> 
+        {{sn_ct("contractor_accept_project Pour voir votre facture courante ou pour payer votre compte,", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}} <a target="_blank" href="{{pages("sr_contractor_current_bill", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_accept_project cliquez-ici", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</a>.
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        
+        \{{address = urlencode(project.rows.zip .+ ' ' .+ project.rows.city.+ ' ' .+ project.rows.province .+ ' ,' .+     project.rows.street_no .+ ' ' .+ project.rows.street );
+           void insert(table:'sr_debug', fields:{'description':'Projet accepté #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Adresses=','text': address}); }}   
+        <div class="col-md-12">
+            <p><a href="https://www.google.ca/maps/?q=\{{address}}"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>
+        </div>
+    </div>
+    
+
+    
+\{{ elseif cgidata.accepted eq "no" then }}
+   
+  \{{ if  project_contractor.rows.accepted eq 'yes' then}}
+
+    <div class="alert alert-info">
+        {{sn_ct("contractor_confirmation_accept_project texte projet déjà accepté", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+    
+    \{{ else}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_confirmation_accept_project Choisissez la raison pour laquelle vous ne voulez pas accepter ce projet.", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            <br>
+            <a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+        </div>
+        
+        <!-- Preferences start here -->
+            <div style="border:1px solid #eee; padding:10px">
+                <input class="form-control" name="reason1" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "1" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Le projet est trop loin", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span><br/>
+                <div id="r1_content" style="display:none;width:60%">
+                    <br />
+                    {{sn_ct("Les travaux auraient lieu a ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<b>\{{addr.rows.territory}}</b><br /><br />
+                    \{{if (myterritory.nbrows > 0) then}}
+                    <div class="tpane">
+                    <li>
+                        {{sn_ct("Vous pouvez enlever ce territoire dans votre liste des térritoires en cliquant ici:  ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
+                        <a href="javascript:void(0)" onclick="rmTerritory(\{{addr.rows.uid_territory}},\{{contractor.rows.uid}},\{{project_contractor.rows.uid}},1)"> Enlever territoire</a>
+                        <p><span style="display:none;" class="alert-success" id="msg_log">\{{addr.rows.territory}}{{sn_ct(" a été enlevé dans votre préference de territoires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span></p>
+                    </li>
+                    <span style="display:none;" class="alert-success" id="msg_log">\{{addr.rows.territory}}{{sn_ct("a été enlevé dans votre préference de territoires", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <br>
+                    <li>{{sn_ct("Vous pouvez aussi changer les montants minimum et maximum ci-dessous pour vos future projets:  ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                        <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="1"/>
+
+                        <fieldset>
+                            <label class="col-md-3" style="display:inline-block" for="min_amount">{{sn_ct("Montant minimum ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <input class="form-control col-md-4" style="display:inline-block;width:80%" name="min_amount" type="text" value="\{{min_max.rows.min_amount}}"/>
+                            <label class="col-md-3" style="display:block;margin-top:15px" for="max_amount">{{sn_ct("Montant maximum ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <input class="form-control col-md-4" style="display:inline-block;width:80%" name="max_amount" type="text" value="\{{min_max.rows.max_amount}}"/>
+                            <br/><br/>
+                            <input style="float:right" class="btn btn-primary" name="submit" type="submit" value="{{sn_ct(edit:false, "Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" onclick="change_pref(this.form, 'msg_log1', 'msg_log2')"/>
+                        </fieldset>
+                    </form>
+                    <span style="display:none" class="alert alert-danger" id="msg_log1">{{sn_ct("Montant minimum doit être inférieur au montant maximum et ne doivent pas être vide", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <span style="display:none" class="alert alert-success" id="msg_log2">{{sn_ct("Mise-à-jour du territoire réussie!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </div>
+                    <hr>
+                    \{{else}}
+                        <b>\{{addr.rows.territory}}</b>{{sn_ct(" Ne fais pas parti de vos territoires")}}
+                    \{{endif}}
+                    <br>
+                </div>
+                    
+                <input class="form-control" name="reason2" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "2" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Je ne fais pas ce genre de service", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span><br/>
+                <div id="r2_content" style="display:none">
+                    <h5>{{sn_ct("Projet de: ")}} \{{project_service = sql(single:true,"SELECT name_long_? as name FROM sr_service WHERE uid = '?'", "{{lg.rows.lg}}", project.rows.uid_service); project_service.rows.name;}}</h5>
+                   <label for="from" class="control-label{{col_label;}}">
+                      {{sn_ct("Vous pouvez vérifier si ce service existe dans la liste des services que vous avez ajoutés:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                    </label>
+                    <div class="approved_services">
+                        <ul class="pendings">
+                            \{{if(services.nbrows == 0) then}}
+                                <h4>{{sn_ct("Vous n'avez ajouté aucun service dans votre dossier, de ce fait tous les types de projets vous seront envoyés")}}</h4>
+                            \{{endif}}
+                            \{{for s in services.rows do}}
+                                <li id="\{{s.uid}}">\{{('{{lg.rows.lg}}' eq 'fr')?s.name_long_fr:s.name_long_en}} - <a src="javascript:void(0)" style="cursor:pointer" onclick="rmService(\{{s.uid}},\{{contractor.rows.uid}},\{{project_contractor.rows.uid}},2)">{{sn_ct("enlever ici")}}</a></li>
+                            \{{endfor}}
+                        </ul>
+                    </div>
+                    <div style="position:relative;margin-top:20px;margin-bottom:20px">
+                        <span style="display:none" class="alert alert-danger" id="msg_log0">{{sn_ct("L'opération a échoué. veuillez ré-éssayer plus tard.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                        <span style="display:none" class="alert alert-success" id="msg_log3">{{sn_ct("Mise-à-jour des services réussie!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </div>
+                </div>
+                
+                <input class="form-control" name="reason3" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "3" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Le projet est trop petit ou trop gros", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span><br/>
+                <div id="r3_content" style="display:none;width:60%">
+                    <br />
+                    {{sn_ct("Les travaux auraient lieu a ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}<b>\{{addr.rows.territory}}</b><br /><br />
+                    \{{if (myterritory.nbrows > 0) then}}
+                    <div class="tpane">
+                        <li>{{sn_ct("Savez-vous que pouvez changer les montants minimum et maximum ci-dessous pour vos future projets:  ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                        <hr>
+                        <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                           <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                            <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                            <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                            <input name="reason" type="hidden" value="3"/>
+    
+                            <fieldset>
+                                <label class="col-md-3" style="display:inline-block" for="min_amount">{{sn_ct("Montant minimum ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                                <input class="form-control col-md-4" style="display:inline-block;width:80%" name="min_amount" type="text" value="\{{min_max.rows.min_amount}}"/>
+                                <label class="col-md-3" style="display:block;margin-top:15px" for="max_amount">{{sn_ct("Montant maximum ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                                <input class="form-control col-md-4" style="display:inline-block;width:80%" name="max_amount" type="text" value="\{{min_max.rows.max_amount}}"/>
+                                <br/><br/>
+                                <input style="float:right" class="btn btn-primary" name="submit" type="submit" value="{{sn_ct(edit:false, "Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" onclick="change_pref(this.form, 'msg_log4', 'msg_log5')"/>
+                            </fieldset>
+                        </form>
+                        <span style="display:none" class="alert alert-danger" id="msg_log4">{{sn_ct("Montant minimum doit être inférieur au montant maximum et ne doivent pas être vide", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                        <span style="display:none" class="alert alert-success" id="msg_log5">{{sn_ct("Mise-à-jour du territoire réussie!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </div>
+                    <hr>
+                    \{{else}}
+                        <b>\{{addr.rows.territory}}</b>{{sn_ct(" Ne fais pas parti de vos territoire")}}
+                    \{{endif}}
+                </div>
+                
+                <input class="form-control" name="reason4" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "4" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Il me manque des informations par rapport au projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span><br/>
+                <div id="r4_content" style="display:none">
+                    <br />
+                    <li>{{sn_ct("Précisez l'information manquante dans le champ ci-dessous pour nous aider a nous améliorer:?  ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                       <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="4"/>
+
+                        <fieldset>
+                            <label class="col-md-4" style="display:block;margin-top:15px" for="more_info">{{sn_ct("Précision", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <textarea rows="3" class="form-control col-md-3" style="display:inline-block;width:80%" name="more_info"></textarea>
+                            <input style="float:right" class="btn btn-primary" name="submit" type="submit" value='{{sn_ct(edit:false,"Soumettre",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}' onclick="change_pref(this.form, 'msg_log14', 'msg_log15')"/>
+                        </fieldset>
+                    </form>
+                    <span style="display:none" class="alert alert-danger" id="msg_log14">{{sn_ct("Tous les champs sont requis", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <span style="display:none" class="alert alert-success" id="msg_log15">{{sn_ct("Merci! Il se peut que plusieurs autres entrepreneurs soient du même avis. Nous allons compiler vos informations pour améliorer notre formation.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <hr>
+                </div>
+                
+                <input class="form-control" name="reason5" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "5" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Le budget du client est irréaliste", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span><br/>
+                <div id="r5_content" style="display:none">
+                    <br />
+                    <li>{{sn_ct("quel est selon vous le budget approprié?  ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                       <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="5"/>
+
+                        <fieldset>
+                            <label class="col-md-3" style="display:block;margin-top:15px" for="budget">{{sn_ct("Proposez un budget", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <input class="form-control col-md-3" style="display:inline-block;width:80%" name="budget" type="text" value=""/>
+                            <br/><br/>
+                            <label class="col-md-4" style="display:block;margin-top:15px" for="explanation">{{sn_ct("Pourquoi travailleriez-vous avec ce budget?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <textarea rows="5" class="form-control col-md-3" style="display:inline-block;width:80%" name="explanation"></textarea>
+                            <input style="float:right" class="btn btn-primary" name="submit" type="submit" value='{{sn_ct(edit:false,"Soumettre",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}' onclick="change_pref(this.form, 'msg_log6', 'msg_log7')"/>
+                        </fieldset>
+                    </form>
+                    <span style="display:none" class="alert alert-danger" id="msg_log6">{{sn_ct("Le champ budget est requis pour votre proposition", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <span style="display:none" class="alert alert-success" id="msg_log7">{{sn_ct("Merci! Il se peut que plusieurs autres entrepreneurs soient du même avis. Nous allons compiler vos informations pour améliorer notre formation.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <hr>
+                </div>
+                
+                <input class="form-control" name="reason6" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "6" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Je suis trop occupé", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span><br/>
+                <div id="r6_content" style="display:none">
+                   <br />
+                   <li>{{sn_ct("Voici les informations sur votre disponibilité tel que vous les avez fournies : ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr />
+                    <h4>
+                        {{sn_ct("Disponibilité de votre équipe:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                    </h4>
+                
+                    <div class="form-group  reception-delay-group "   >
+                        <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                            <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                            <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                            <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                            <input name="reason" type="hidden" value="6"/>                        
+                            <fieldset class="">  
+                                <div class="col-md-6">
+                                    <label for="start_reception_date">
+                                            {{sn_ct("contractor_confirmation_accept_project Début réception", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                    </label>
+                                    <input class="form-control datepicker_date reception-delay-group" type="text"  name="start_reception_date" id="start_reception_date" value="\{{contractor.rows.delay_from}}">      
+                                    <span class="help-block" id="start_reception_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="start_reception_date"></span>                  
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="or">
+                                        {{sn_ct("contractor_confirmation_accept_project OU", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                    </label>
+                                </div>
+                                
+                                <div class="col-md-6"   >
+                                    <label for="reception_days">
+                                        {{sn_ct("contractor_confirmation_accept_project Nombre de jours", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                    </label>
+                                    <input class="form-control reception-delay-group" type="text" name="reception_days" id="reception_days" value="\{{contractor.rows.delay_dynamic}}">   
+                                    <span class="help-block" id="days_validator" data-validator-msg="{{sn_ct(edit:false,'contractor_profile  invalide')}}" data-validator-error="reception_days"></span>                  
+                                </div>
+                                <input style="float:right" class="btn btn-primary" name="submit" type="submit" value="{{sn_ct(edit:false, "Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" onclick="change_pref(this.form, 'msg_log8', 'msg_log9')"/>
+                            </fieldset>
+                        </form>
+                        <span style="display:none" class="alert alert-danger" id="msg_log8">{{sn_ct("Au moins un des 2 champs ne doit pas être vide", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                        <span style="display:none" class="alert alert-success" id="msg_log9">{{sn_ct("Merci! votre disponibilité a été modifié avec succès", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </div>
+
+                    <li>{{sn_ct("Modifier votre horaire de reception ci-dessous: ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                   <h4>
+                        {{sn_ct("horaire régulier:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                    </h4>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                        <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="6"/>    
+                        
+
+                           <label for="from" class="control-label{{col_label;}}">
+                              {{sn_ct("Send me project:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                            </label>
+                            
+                        <div class="form-group reception-group"   >
+                            <fieldset class="">  
+                                <div class="col-md-4">
+                                    <label for="from_active_hour"  class="control-label {{col_label;}}">
+                                            {{sn_ct("contractor_confirmation_accept_project From", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                    </label>
+                                    <select class="form-control reception-group"  name="from_active_hour" id="from_active_hour">
+                                        <option \{{(contractor.rows.from_active_hour eq '00:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:00</option>
+                						<option \{{(contractor.rows.from_active_hour eq '00:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '01:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '01:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '02:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '02:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '03:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '03:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '04:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '04:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '05:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '05:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '06:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '06:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '07:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '07:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '08:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '08:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '09:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '09:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '10:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '10:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '11:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '11:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '12:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '12:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '13:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '13:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '14:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '14:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '15:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '15:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '16:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '16:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '17:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '17:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '18:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '18:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '19:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '19:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '20:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '20:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '21:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '21:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '22:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '22:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:30</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '23:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:00</option>
+                                        <option \{{(contractor.rows.from_active_hour eq '23:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:30</option>
+                                    </select>
+                                    <span class="help-block" id="from_active_hour_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="from_active_hour"></span>                  
+                                </div>
+                                    
+                                <div class="col-md-4"   >
+                                    <label for="to_activate_hour"  class="control-label{{col_label;}} vacation-group">
+                                        {{sn_ct("contractor_confirmation_accept_project jusqu'a:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                    </label>
+                                    <select class="form-control reception-group"  name="to_active_hour" id="to_active_hour">
+                                        <option \{{(contractor.rows.to_active_hour eq '00:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:00</option>
+                						<option \{{(contractor.rows.to_active_hour eq '00:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>00:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '01:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '01:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>01:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '02:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '02:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>02:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '03:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '03:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>03:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '04:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '04:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>04:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '05:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '05:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>05:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '06:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '06:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>06:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '07:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '07:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>07:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '08:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '08:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>08:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '09:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '09:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>09:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '10:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '10:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>10:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '11:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '11:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>11:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '12:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '12:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>12:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '13:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '13:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>13:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '14:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '14:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>14:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '15:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '15:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>15:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '16:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '16:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>16:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '17:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '17:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>17:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '18:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '18:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>18:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '19:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '19:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>19:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '20:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '20:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>20:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '21:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '21:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>21:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '22:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '22:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>22:30</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '23:00' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:00</option>
+                                        <option \{{(contractor.rows.to_active_hour eq '23:30' && contractor.rows.enable_daily_schedule eq 'yes') ? 'selected' : ''}}>23:30</option>
+                                    </select>
+                                    <span class="help-block" id="to_active_hour_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="to_ctive_hour"></span>                  
+                                </div>
+                                <input style="float:right" class="btn btn-primary" name="submit" type="submit" value="{{sn_ct(edit:false, "Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" onclick="change_pref(this.form, 'msg_log10', 'msg_log11')"/>
+                            </fieldset>
+                            
+                        </div>  
+                        <span style="display:none" class="alert alert-danger" id="msg_log10">{{sn_ct("Vous ne pouvez pas soumettre les mêmes valeurs.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                        <span style="display:none" class="alert alert-success" id="msg_log11">{{sn_ct("Votre horaire de reception a été mis-à-jour avec succès", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    </form>
+                    
+                    <hr>
+                    
+                    <h4>
+                        {{sn_ct("contractor_confirmation_accept_project Vacation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                    </h4>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                        <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="6"/>                    
+                        
+
+                        <div class="form-group  vacation-group "   >
+                            <fieldset class="">  
+                                <div class="col-md-4    "   >
+                                    <label for="desactivate_date"  class="control-label {{col_label;}}">
+                                            {{sn_ct("Date de désactivation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                    </label>
+                                    <input class="form-control datepicker_date vacation-group" type="text" name="desactivate_date" id="desactivate_date" value="\{{contractor.rows.deactivate_date}}">      
+                                    <span class="help-block" id="desactivate_date_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="desactivate_date"></span>                  
+                                </div>
+                            
+                                <div class="col-md-4"   >
+                                        <label for="reactivate_date"  class="control-label{{col_label;}} vacation-group">
+                                            {{sn_ct("Date de réactivation", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+                                        </label>
+                                        <input class="form-control datepicker_date vacation-group" type="text" name="reactivate_date" id="reactivate_date" value="\{{contractor.rows.reactivate_date}}">   
+                                        <span class="help-block" id="reactivate_date_validator" data-validator-msg="{{sn_ct(edit:false,'contractor__date  invalide')}}" data-validator-error="reactivate_date"></span>                  
+                                </div>
+                                <input style="float:right" class="btn btn-primary" name="submit" type="submit" value="{{sn_ct(edit:false, "Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" onclick="change_pref(this.form, 'msg_log12', 'msg_log13')"/>
+                            </fieldset>
+                            
+                        </div>
+                    </form>
+                    <span style="display:none" class="alert alert-danger" id="msg_log12">{{sn_ct("Vous ne pouvez pas soumettre les mêmes valeurs", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <span style="display:none" class="alert alert-success" id="msg_log13">{{sn_ct("Merci! votre periode de vacance a été modifié avec succès", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <br><br>
+                </div>
+                
+                <input class="form-control" name="reason7" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "7" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Je ne parle pas ", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}} \{{(client.rows.lang eq 'fr')?'le francais':"l'anglais"}}</h4></span><br/>
+                <div id="r7_content" style="display:none" >
+                    <li>{{sn_ct("Mais vous pouvez modifier votre langue de reception de projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                   <h4>
+                        {{sn_ct("Langue actuelle:", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}    
+                    </h4>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                        <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="7"/>                    
+                        <fieldset class="col-md-6"   >
+                            <select class="form-control"  name="myLang" id="myLang">
+                                <option value="1" \{{(contractor.rows.languages eq '1') ? 'selected' : ''}}>{{sn_ct("Français",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                                <option value="2" \{{(contractor.rows.languages eq '2') ? 'selected' : ''}}>{{sn_ct("Anglais",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+        						<option value="3" \{{(contractor.rows.languages eq '3') ? 'selected' : ''}}>{{sn_ct("Billingue",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+        					</select>
+                        </fieldset>
+                        <fieldset class="col-md-6" style="margin-bottom:20px"  >
+                            <input style="float:right" class="btn btn-primary" name="submit" type="submit" value="{{sn_ct(edit:false, "Soumettre", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}" onclick="change_pref(this.form, 'msg_log16', 'msg_log17')"/>
+                        </fieldset>
+                        <div class="col-md-12" style="margin-bottom:20px">
+                            <span style="display:none" class="alert alert-danger" id="msg_log16">{{sn_ct("Votre langue n'a pas été changée. Veuillez choisir une autre langue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                            <span style="display:none" class="alert alert-success" id="msg_log17">{{sn_ct("Vous avez changé votre langue avec succès!", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                        </div>
+                    </form>
+                </div>
+                
+                <input class="form-control" name="reason8" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "8" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Vous chargez trop cher pour ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span></br>
+                <div id="r8_content" style="display:none">
+                    <br />
+                    <li>{{sn_ct("quel est selon vous le prix approprié?  ", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                       <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="8"/>
+
+                        <fieldset>
+                            <label class="col-md-3" style="display:block;margin-top:15px" for="myPrice">{{sn_ct("Votre prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <input class="form-control col-md-3" style="display:inline-block;width:80%" name="myPrice" type="text" value=""/>
+                            <br/><br/>
+                            <label class="col-md-4" style="display:block;margin-top:15px" for="explainPrice">{{sn_ct("Plus d'explication?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <textarea rows="5" class="form-control col-md-3" style="display:inline-block;width:80%" name="explainPrice"></textarea>
+                            <input style="float:right" class="btn btn-primary" name="submit" type="submit" value='{{sn_ct(edit:false,"Soumettre",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}' onclick="change_pref(this.form, 'msg_log18', 'msg_log19')"/>
+                        </fieldset>
+                    </form>
+                    <span style="display:none" class="alert alert-danger" id="msg_log18">{{sn_ct("Le champ 'votre prix' est requis pour proposer un prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <span style="display:none" class="alert alert-success" id="msg_log19">{{sn_ct("Merci! Il se peut que plusieurs autres entrepreneurs soient du même avis. Nous allons compiler vos informations pour améliorer notre formation.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <hr>
+                </div>
+                
+                <input class="form-control" name="reason9" style="display:inline-block;width:20px;height:20px" type="checkbox" value = "9" />&nbsp;&nbsp;<span style="display:inline-block"><h4>{{sn_ct("contractor_confirmation_accept_project Autre", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</h4></span></br>
+                <div id="r9_content" style="display:none">
+                    <br />
+                    <li>{{sn_ct("Précisez ci-dessous la raison pour laquelle vous refusez ce projet pour nous aider a nous améliorer.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</li>
+                    <hr>
+                    <form name="preference_form" style="margin-bottom:20px" method="post" action="{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}">
+                       <input name="tuid" type="hidden" value="\{{addr.rows.uid_territory}}"/>
+                        <input name="cuid" type="hidden" value="\{{contractor.rows.uid}}"/>
+                        <input name="pcuid" type="hidden" value="\{{project_contractor.rows.uid}}"/>
+                        <input name="reason" type="hidden" value="9"/>
+
+                        <fieldset>
+                            <label class="col-md-4" style="display:block;margin-top:15px" for="other_info">{{sn_ct("Précision", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}\{{project.rows.address}}</label>
+                            <textarea rows="3" class="form-control col-md-3" style="display:inline-block;width:80%" name="other_info"></textarea>
+                            <input style="float:right" class="btn btn-primary" name="submit" type="submit" value='{{sn_ct(edit:false,"Soumettre",publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}' onclick="change_pref(this.form, 'msg_log20', 'msg_log21')"/>
+                        </fieldset>
+                    </form>
+                    <span style="display:none" class="alert alert-danger" id="msg_log20">{{sn_ct("Tous les champs sont requis", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <span style="display:none" class="alert alert-success" id="msg_log21">{{sn_ct("Merci! Il se peut que plusieurs autres entrepreneurs soient du même avis. Nous allons compiler vos informations pour améliorer notre formation.", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</span>
+                    <hr>
+                </div>
+            
+            </div>
+            <!--<button style="margin-top:10px;float:right" type="submit" class="btn btn-primary" name="confirm" value="no">{{sn_ct("contractor_confirmation_accept_project no",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   -->
+            
+        <!-- preferences end here -->
+            
+        <!--<div class="alert alert-info">-->
+        <!--    {{sn_ct("contractor_confirmation_accept_project texte projet pas accepté", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}-->
+        <!--    <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>-->
+        <!--</div>-->
+    
+ \{{ endif}}
+    <script>
+        // setTimeout(function(){
+        //     window.location = '{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}';
+        // }, 3000);
+    </script>
+\{{ elseif cgidata.accepted eq "halfpriced" && cgidata.confirm ne 'no' then }}
+    \{{if (cgidata.confirm eq '') then}}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_confirmation_accept_project Vous êtes sur le point d'accepter un projet si il tombe à moitier prix. Voulez-vous vraiment participer à ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        \{{
+            project = sql(single:true,"
+                SELECT p.uid, a.street_no, a.street, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.province, a.zip, p.description, p.due_date, p.lead_price, p.shared_budget, p.uid_project_type, p.employee
+                FROM sr_project_contractor pc
+                INNER JOIN sr_project p ON p.uid=pc.uid_project
+                LEFT JOIN sr_address a ON a.uid=p.uid_address
+                LEFT JOIN sr_city c ON c.uid=a.uid_city
+                WHERE pc.token='?'
+                ORDER BY a.uid DESC
+                ", cgidata.token);
+                
+            if(project.rows.uid_project_type eq '1') then
+            	project_type_fr = "Résidentiel";
+                project_type_en = "Residential";
+            elseif(project.rows.uid_project_type eq '2') then
+            	project_type_fr = "Commercial";
+                project_type_en = "Commercial";
+            elseif(project.rows.uid_project_type eq '4') then
+            	project_type_fr = "Nouvelle construction";
+                project_type_en = "New construction";
+            endif
+            project_type = ("{{lg.rows.lg}}" eq "fr")? project_type_fr : project_type_en;
+        }}
+        <table class="table_blog">
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project.rows.uid}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{substr(project.rows.zip, 0, 3)}} \{{project.rows.city}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project.rows.description}}</td>
+            </tr>
+            \{{if project.rows.employee ne 'yes' then}}
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Type de projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project_type}}</td>
+            </tr>
+            \{{endif}}
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project.rows.due_date}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Budget du client:", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project.rows.shared_budget}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{money_format((project.rows.lead_price)/2, {{"lg.rows.lg"}} )}}</td>
+            </tr>
+            
+        </table>
+
+
+        <div class="row">
+            \{{address = urlencode(substr(project.rows.zip, 0, 3) .+ ' ' .+ project.rows.city.+ ' ' .+ project.rows.province);}}
+           \{{ //bd12347
+            void insert(table:'sr_debug', fields:{'description':'Projet à accepter #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Adresses=','text': address}); }}   
+           \{{ void insert(table:'sr_debug', fields:{'description':'Projet Map #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Map=','text': "https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w"}); }}   
+            <div class="col-md-12">
+                <p><a href="https://www.google.ca/maps/?q=\{{address}}"  target="_blank"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w" /></a></p>
+            </div>
+        </div>
+        
+        <div style="margin:20px 0px"><hr>
+            <div class="loader" style="display:none"><div class="center"><img alt="" src="/sn_uploads/icon/loading3.gif" /></div></div>
+        </div>
+
+        <form action="" name="confirmation_form" method="GET">
+            <input type="hidden" name="token" value="\{{cgidata.token}}">
+            <input type="hidden" name="accepted" value="halfpriced">
+            <button type="submit" class="btn btn-primary" name="confirm" value="yes">{{sn_ct("contractor_confirmation_accept_project yes",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+            <button type="submit" class="btn btn-primary" name="confirm" value="no">{{sn_ct("contractor_confirmation_accept_project no",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+        </form>
+    \{{elseif (cgidata.confirm eq 'yes') then}}
+        <div class="alert alert-success">
+            {{sn_ct("contractor_confirmation_accept_project texte projet accepté à moitié prix",  publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+            <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+        </div>
+    \{{endif}}
+\{{ elseif cgidata.accepted eq "inactive" then }}
+    <div class="alert alert-danger">
+        {{sn_ct("contractor_confirmation_accept_project Désolé, le nombre de demandes maximum est déjà atteint ou le projet est inactif", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{ elseif cgidata.accepted eq "cant_accept_projets" then }}
+    <div class="alert alert-danger">
+        {{sn_ct("contractor_confirmation_accept_project Désolé, vous ne pouvez pas accepter de projet pour l'instant, veuillez contacter un administrateur", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{ elseif cgidata.confirm eq "no" then }}
+    <div class="alert alert-info">
+        {{sn_ct("contractor_confirmation_accept_project Vous ne participerez pas à ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{ elseif cgidata.accepted eq "confirm" then }}
+        <div class="alert alert-info">
+            {{sn_ct("contractor_confirmation_accept_project Vous êtes sur le point d'accepter un projet. Voulez-vous vraiment participer à ce projet", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        </div>
+        \{{
+            project = sql(single:true,"
+                SELECT p.uid, a.street_no, a.street, IFNULL(c.name_{{lg.rows.lg}}, a.city) as city, a.province, a.zip, p.description, p.due_date, p.lead_price, ifnull(pc_count.count,0) as count, p.shared_budget, p.uid_project_type, p.employee
+                FROM sr_project_contractor pc
+                INNER JOIN sr_project p ON p.uid=pc.uid_project
+                LEFT JOIN sr_address a ON a.uid=p.uid_address
+                LEFT JOIN sr_city c ON c.uid=a.uid_city
+                LEFT JOIN (
+                    SELECT pc.uid_project, count(pc.uid) as count
+                    FROM sr_project_contractor pc
+                    WHERE accepted_date > 0
+                    GROUP BY pc.uid_project
+                    ) AS pc_count ON pc_count.uid_project = p.uid
+                WHERE pc.token='?'
+                ORDER BY a.uid DESC
+                ", cgidata.token);
+                
+            if(project.rows.uid_project_type eq '1') then
+            	project_type_fr = "Résidentiel";
+                project_type_en = "Residential";
+            elseif(project.rows.uid_project_type eq '2') then
+            	project_type_fr = "Commercial";
+                project_type_en = "Commercial";
+            elseif(project.rows.uid_project_type eq '4') then
+            	project_type_fr = "Nouvelle construction";
+                project_type_en = "New construction";
+            endif
+            project_type = ("{{lg.rows.lg}}" eq "fr")? project_type_fr : project_type_en;
+        }}
+        <table class="table_blog">
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  ID projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project.rows.uid}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Code postal :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{substr(project.rows.zip, 0, 3)}} \{{project.rows.city}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Description :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{project.rows.description}}</td>
+            </tr>
+            \{{if project.rows.employee ne 'yes' then}}
+                <tr>
+                    <td>{{sn_ct("contractor_accept_project  Type de projet :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                    <td>\{{project_type}}</td>
+                </tr>
+            \{{endif}}
+            <tr>
+                <td>
+                    \{{if project.rows.employee ne 'yes' then}}
+                    {{sn_ct("contractor_accept_project  Date voulue :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    \{{else}}
+                    {{sn_ct("contractor_accept_project  Disponibilités :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    \{{endif}}
+                </td>
+                <td>\{{project.rows.due_date}}</td>
+            </tr>
+            <tr>
+                <td>
+                    \{{if project.rows.employee ne 'yes' then}}
+                    {{sn_ct("contractor_accept_project  Budget du client:", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    \{{else}}
+                    {{sn_ct("contractor_accept_project  Salaire voulu:", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+                    \{{endif}}
+                </td>
+                <td>\{{project.rows.shared_budget}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_accept_project  Prix :", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</td>
+                <td>\{{money_format(project.rows.lead_price, {{"lg.rows.lg"}} )}}</td>
+            </tr>
+            <tr>
+                <td>{{sn_ct("contractor_discounted_projects Nombre d'entrepreneur(s) déjà référé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}: </td>
+                <td>\{{project.rows.count}}</td>
+            </tr>
+            
+        </table>
+
+        <div class="row">
+            \{{address = urlencode(substr(project.rows.zip,0,3) .+ ' ' .+ project.rows.city .+ ' ' .+  project.rows.province .+ ' ' .+  'Canada');}}
+           \{{//bd12349
+            void insert(table:'sr_debug', fields:{'description':'Projet à accepter2 #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Adresses=','text': address}); }}   
+           \{{ void insert(table:'sr_debug', fields:{'description':'Projet Map2 #'.+project.rows.uid.+' -par:'.+    project_contractor.uid_contractor .+ '- Map=','text': "https://maps.googleapis.com/maps/api/staticmap?center= ".+address.+ " &amp;zoom=13&amp;size=600x300&amp;maptype=roadmap&amp;markers=color:blue%7Clabel:Bon%7C ".+address.+ " &amp;key=AIzaSyBRrqv65Idzw_WYApApAQqgeCQ2nIAru2w"}); }}   
+
+            <div class="col-md-12">
+                <br>
+                <p><a href="https://www.google.ca/maps/?q=\{{address}}" target="_blank"><img src="https://maps.googleapis.com/maps/api/staticmap?center=\{{address}}&amp;zoom=8&amp;size=600x400&amp;maptype=roadmap&amp;markers=color:Red%7Clabel:Bon%7C\{{address}}&amp;key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8" /></a></p>
+                
+            </div>
+        </div>
+        
+        <div style="margin:20px 0px"><hr>
+            <div class="loader" style="display:none"><div class="center"><img alt="" src="/sn_uploads/icon/loading3.gif" /></div></div>
+        </div>
+
+        <form action="" name="confirmation_form" method="GET">
+            <input type="hidden" name="token" value="\{{cgidata.token}}">
+            <input type="hidden" name="accepted" value="yes">
+            <button type="submit" class="btn btn-primary" name="confirm" value="yes">{{sn_ct("contractor_confirmation_accept_project yes",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+            <button type="submit" class="btn btn-primary" name="confirm" value="no">{{sn_ct("contractor_confirmation_accept_project no",publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}</button>   
+        </form>
+\{{ else}}
+    <div class="alert alert-danger">
+        {{sn_ct("contractor_confirmation_accept_project Ce lien est invalide", publish:"/extenso/publish/pages.sn", edit:true, uids:page.rows.uid)}}
+        <br><a href="{{pages("sr_contractor_dashboard", lg.rows.lg, table:"pages")}}">{{sn_ct("contractor_confirmation_accept_project Retour vers le tableau de bord", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    </div>
+\{{  endif }}
+<script>
+    $('#reception_days').keyup(function(){
+        $('#start_reception_date').val("");
+        $('#end_reception_date').val("");
+    });
+    
+    $('#start_reception_date').on('change',function(){
+        $('#reception_days').val("");
+    });
+    
+    $('#end_reception_date').on('change',function(){
+        $('#reception_days').val("");
+    });
+    
+</script>
+
+<script>
+
+    $('form[name=confirmation_form]').submit(function(e){
+        $('.loader').show();
+        setTimeout(function(){
+            $('.loader').hide();
+        }, 3000);
+    })
+
+</script>
+
+<script>
+    function rmTerritory(tuid, cuid, pcuid, reason){
+
+        $.ajax({
+            url:"{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}",
+            type:"post",
+            data: {'rmuid': tuid, 'cuid':cuid, 'pcuid':pcuid, 'reason':reason},
+            success:function(data, statusText, xhr){
+                $('#msg_log').show();
+                $('.tpane').html('{{sn_ct(edit:false,"Ce territoire a été enlevé de votre profil")}}');
+            }
+        })
+    }
+    
+    
+    function rmService(suid, cuid, pcuid, reason){
+
+        $.ajax({
+            url:"{{sn_pages('ajax_project_preferences', lg.rows.lg, table:'ressources')}}",
+            type:"post",
+            data: {'suid': suid, 'cuid':cuid, 'pcuid':pcuid, 'reason':reason},
+            beforesend:function(data){
+                    $('#msg_log3').hide();
+                    $('#msg_log0').hide();
+            },
+            success:function(data, statusText, xhr){
+                
+                if(xhr.getResponseHeader("X-success")){
+                    $('#'+suid).remove();
+                    $('#msg_log3').show();
+                    $('#msg_log0').hide();
+                }else{
+                    $('#msg_log0').show();
+                    $('#msg_log3').hide();
+                }
+            }
+        })
+    }
+    
+    function change_pref(form, msg_error, msg_success){
+
+        $(form).ajaxForm({
+            beforeSubmit:function(){
+                $('#'+msg_error).hide();
+                $('#'+msg_success).hide();
+                
+                if(form.min_amount != undefined ){
+                    if(isNaN(form.min_amount.value)){
+                        alert('invalid!');
+                        return false;
+                    }
+                }
+                
+                if(form.max_amount != undefined ){
+                    if(isNaN(form.max_amount.value)){
+                        alert('invalid!');
+                        return false;
+                    }
+                }
+                
+                if(form.reception_days != undefined ){
+                    if(isNaN(form.reception_days.value)){
+                        alert('invalid!');
+                        return false;
+                    }
+                }
+                
+                if(form.myPrice != undefined ){
+                    if(isNaN(form.myPrice.value)){
+                        alert('invalid!');
+                        return false;
+                    }
+                }
+                
+                
+            },
+            success:function(data, statusText, xhr){
+                if(xhr.getResponseHeader("X-updated")){
+                    $('#'+msg_success).show();
+                }else if(xhr.getResponseHeader("X-failed")){
+                    $('#'+msg_error).show();
+                }
+            }
+        })
+        
+    }
+    
+    
+    function parseDate(str) {
+      var m = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+      return (m) ? new Date(m[3], m[2]-1, m[1]) : null;
+    }
+</script>
+
+<script>
+    $("input[name=reason1").change(function(){
+        if($(this).is(':checked')){
+            $('#r1_content').show();
+        }else{
+            $('#r1_content').hide();
+        }
+        
+    });
+    
+    
+    $("input[name=reason2").change(function(){
+        if($(this).is(':checked')){
+            $('#r2_content').show();
+        }else{
+            $('#r2_content').hide();
+        }
+        
+    });
+    
+    
+    $("input[name=reason3").change(function(){
+        if($(this).is(':checked')){
+            $('#r3_content').show();
+        }else{
+            $('#r3_content').hide();
+        }
+        
+    });
+    
+    $("input[name=reason4").change(function(){
+        if($(this).is(':checked')){
+            $('#r4_content').show();
+        }else{
+            $('#r4_content').hide();
+        }
+        
+    });    
+    
+    
+    $("input[name=reason5").change(function(){
+        if($(this).is(':checked')){
+            $('#r5_content').show();
+        }else{
+            $('#r5_content').hide();
+        }
+        
+    });
+    
+    
+    $("input[name=reason6").change(function(){
+        if($(this).is(':checked')){
+            $('#r6_content').show();
+        }else{
+            $('#r6_content').hide();
+        }
+        
+    });
+    
+    $("input[name=reason7").change(function(){
+        if($(this).is(':checked')){
+            $('#r7_content').show();
+        }else{
+            $('#r7_content').hide();
+        }
+        
+    });
+    
+    $("input[name=reason8").change(function(){
+        if($(this).is(':checked')){
+            $('#r8_content').show();
+        }else{
+            $('#r8_content').hide();
+        }
+        
+    }); 
+    
+    $("input[name=reason9").change(function(){
+        if($(this).is(':checked')){
+            $('#r9_content').show();
+        }else{
+            $('#r9_content').hide();
+        }
+        
+    });  
+
+
+ $( function() {	
+    $(".datepicker_date").datepicker( $.datepicker.regional[ "fr" ] );
+    $(".datepicker_date").datepicker("option", "dateFormat", "yy-mm-dd");
+    
+    $("#desactivate_date").val("\{{(contractor.rows.deactivate_date eq '0000-00-00')?'':contractor.rows.deactivate_date }}");
+    $("#reactivate_date").val( "\{{(contractor.rows.reactivate_date eq '0000-00-00')?'':contractor.rows.reactivate_date }}");
+    $("#start_reception_date").val("\{{contractor.rows.delay_from}}");
+    $("#end_reception_date").val("\{{contractor.rows.delay_to}}");
+    
+    $('#desactivate_date').on('change', function(){
+            var s = $(this).val().split('-');
+            var str = s[2] + '/' + s[1] + '/' + s[0];
+            console.log(str);
+            console.log(parseDate(str));
+
+    }).trigger('change');
+ 
+    $('#enable_vacation').on('change', function(){ 
+        if($(this).is(":checked") )
+        {
+            $(".vacation-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $("#desactivate_date").val("");
+            $("#reactivate_date").val("");
+            
+            $('#reactivate_date_validator').html("");
+            $('#desactivate_date_validator').html("");
+            
+            $(".vacation-group").attr('disabled', '');
+        }
+        
+    }).trigger('change');
+    
+    
+    $('#enable_reception').on('change', function(){ 
+        
+        if($(this).is(":checked") )
+        {
+            $(".reception-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $("#from_active_hour").val("");
+            $("#to_active_hour").val("");
+            
+            $('#from_active_hour_validator').html("");
+            $('#to_active_hour_validator').html("");
+            
+            $(".reception-group").attr('disabled', '');
+        }
+        
+    }).trigger('change');
+    
+    
+    $('#enable_filter_delay').on('change', function(){ 
+        
+        if($(this).is(":checked") )
+        {
+            $(".reception-delay-group").removeAttr('disabled'); 
+        }
+            else
+        {
+            $("#start_reception_date").val("");
+            $("#end_reception_date").val("");
+            
+            $('#start_reception_validator').html("");
+            $('#end_reception_validator').html("");
+            
+            $(".reception-delay-group").attr('disabled', '');
+        }
+        
+    }).trigger('change');
+    
+    
+    $('#reception_days').keydown(function (e) {
+        // Allow: backspace, delete, tab, escape, enter and .
+        if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110]) !== -1 ||
+             // Allow: Ctrl+A, Command+A
+            (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) || 
+             // Allow: home, end, left, right, down, up
+            (e.keyCode >= 35 && e.keyCode <= 40)) {
+                 // let it happen, don't do anything
+                 return;
+        }
+        
+        // Ensure that it is a number and stop the keypress
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
+        }
+        
+    });
+    
+    
+ }); 
+    
+    // $('#reception_days').keydown(function (e) {
+    //     // Allow: backspace, delete, tab, escape, enter and .
+    //     if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110]) !== -1 ||
+    //          // Allow: Ctrl+A, Command+A
+    //         (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) || 
+    //          // Allow: home, end, left, right, down, up
+    //         (e.keyCode >= 35 && e.keyCode <= 40)) {
+    //              // let it happen, don't do anything
+    //              return;
+    //     }
+        
+    //     // Ensure that it is a number and stop the keypress
+    //     if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+    //         e.preventDefault();
+    //     }
+        
+    // });    
+</script>

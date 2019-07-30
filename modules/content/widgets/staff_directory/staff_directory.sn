@@ -1,0 +1,151 @@
+{{ 
+    //
+    // Name:        staff_directory
+    //
+    // Description: Widget to display staff directory
+    //  
+    //
+    //				1.0 2015-03-10 manu@i-manu.com
+    //
+}}
+{{
+
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+	%include "/extenso/functions/sn_ct.snc";
+}}
+
+<style type="text/css">
+/* EMPLOYEE DIRECTORY ============================================== */
+
+.wdg_staffdir .staff-image img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+.wdg_staffdir .staff-info h3 {
+    padding: 10px 0 5px 0 !important;
+    border-bottom: 0;
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+.wdg_staffdir .staff-info h3 small {
+    font-size: 13px;
+    color: #656565;
+    letter-spacing: 0px;
+}
+.wdg_staffdir .staff-info p {
+    font-size: 14px;
+    color: #333;
+    margin-top: 10px;
+}
+.wdg_staffdir .staff-info p.note {
+    font-size: 13px;
+    line-height: 16px;
+    color: #6c6c6c;
+}
+.wdg_staffdir .contact-icon {
+    display: block;
+    width: 30px;
+    float: left;
+    color: #656565;
+}
+.wdg_staffdir .staff-separator{
+	width:auto;
+    display:block;
+    clear:both;
+}
+
+@media (max-width: 767px) {
+    .wdg_staffdir .staff-image {
+        width: 30%;
+        float: left;
+        margin-right: 5%;
+        padding-top: 10px;
+    }
+    .wdg_staffdir .staff-info {
+        width: 65%;
+        float: left;
+    }
+    .wdg_staffdir {
+        clear: both;
+        display: block;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .wdg_staffdir .staff-separator{
+      width:100%;
+      display:block;
+      clear:both;
+  	}
+}
+
+</style>
+
+<!-- Regroup member at 4 in each row -->
+<div class="row" style="margin-bottom:30px;">
+{{	nb_item=0;
+    sel_str = "select * from widget_staff_directory where active = 'yes' AND uid_widget=" .+ widget.rows.uid_widget_list .+ " ORDER BY sn_custom;";
+	for content sql(sel_str) do
+    	 
+		}}<!-- nb_item={{nb_item}} -->{{
+		if nb_item==4 then
+			nb_item=0;
+			}}</div><!-- END .row --><div class="row" style="margin-bottom:30px;">{{
+		endif
+        nb_item++;
+}}
+<style>
+.wdg_staffdir .staff-info p span.contact-icon{display:block;}
+</style>
+    <div class="col-md-3 col-sm-6 wdg_staffdir">
+        {{if content.rows.picture ne "" then}}
+			<div class="staff-image">
+				<img src="{{content.rows.picture}}" alt="">
+			</div>
+        {{else}}
+        	<div class="staff-separator">
+        		<img src="/theme/images/separator-staff.gif">
+            </div>
+        {{endif}}
+        <div class="staff-info">
+            <h3>{{content.rows.name}}
+            {{if content.rows{"employee_title_".+ lg.rows.lg} ne "" then}}
+            	<br><small>{{content.rows{"employee_title_".+ lg.rows.lg};}}</small>
+            {{endif}}
+            </h3>
+            {{if content.rows{"note_".+ lg.rows.lg} ne "" then}}
+            	<p class="note">{{content.rows{"note_".+ lg.rows.lg};}}</p>
+            {{endif}}
+            <div style="color: #333;font-size: 14px;margin: 10px 0;">
+            {{if content.rows.email ne "" && content.rows{"email_text_".+ lg.rows.lg} ne "" then}}
+				<div>
+					<span class="contact-icon"><i class="fa fa-envelope-o"></i></span> <a href="mailto:{{content.rows.email}}">{{content.rows{"email_text_".+ lg.rows.lg};}}</a>
+				</div>
+            {{endif}}
+            {{if content.rows.phone_number ne "" then}}
+			<div>
+                <span class="contact-icon"><i class="fa fa-phone"></i></span> {{content.rows.phone_number}}
+			</div>
+            {{endif}}
+            {{if content.rows.mobile_number ne "" then}}
+			<div>
+                <span class="contact-icon"><i class="fa fa-mobile"></i></span> {{content.rows.mobile_number}}
+			</div>
+            {{endif}}
+			{{if content.rows.linkedin ne "" then}}
+			<div>
+                	<span class="contact-icon"><i class="fa fa-linkedin"></i></span> <a href="{{content.rows.linkedin}}">{{sn_ct("Linkedin", publish:"/publish/sn_widgets.sn",uids:widget.rows.uid)}}</a>
+			</div>
+			{{endif}}
+            </div>
+        </div><!-- END staff-info -->
+    </div><!-- END wdg_staffdir -->
+
+{{endfor}}
+
+</div><!-- last END .row -->

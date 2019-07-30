@@ -1,0 +1,86 @@
+{{
+	use widget;
+	use uid;
+	use table;
+	use lg;
+	
+}}
+<!--style a enlever-->
+<style>
+.testimonial_carousel .description.fluid-center .title {
+    color: #000;
+    font-size: 30px;
+    margin-top: 0;
+
+}
+.testimonial_carousel .description.fluid-center .title p{
+	line-height:32px;
+}
+</style>
+<!--div class container et row a enelver si on veux pas le widget en pleine largeur-->
+<div class="container">
+<div class="row">
+<section id="homepageCarousel{{widget.rows.uid_widget_list}}" class="carousel carousel-1 slide testimonial_carousel color-two-l" data-ride="carousel">
+<!-- Indicators -->
+	<ol class="carousel-indicators">
+{{
+	
+	for content sql("select * from widget_testimonials where actif='oui' and uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list) do
+		nb_testimonial = content.nbrows;
+	}}
+		{{ if content.nbrows > 1 then}}
+		<li data-target="#homepageCarousel{{widget.rows.uid_widget_list}}" data-slide-to="{{sn_nb;}}" {{if sn_nb1==1 then}}class="active"{{endif}}>
+		</li>
+		{{endif}}
+{{
+	endfor
+}} 		
+	</ol>			
+	<div class="carousel-inner">
+{{	
+	for content sql("select * from widget_testimonials where actif='oui' and uid_widget = '?' ORDER BY sn_custom", widget.rows.uid_widget_list) do
+}}
+		<div class="item {{ if sn_nb1==1 then}}active{{endif}}">
+			<div class="container">
+				<div class="col-md-8 col-md-offset-2">
+					<div class="description fluid-center">
+						<span class="title"><img src="/assets/images/guillemets.png"/></span>
+						<span class="title">{{content.rows{'testimonial_'.+lg.rows.lg} }}
+							<p class="padding-y-10">{{content.rows{'description_short_'.+lg.rows.lg} }}</p>
+						</span>
+						<div class="col-md-6 col-md-offset-3">
+							<span class="title">
+								<table>
+								<tr>
+									{{if content.rows.company_logo ne "" && -f content.rows.company_logo then}}
+									<td><img width="50px" src="{{content.rows.company_logo}}" alt="{{content.rows{'company_'.+lg.rows.lg} }}"/></td>
+									{{endif}}
+									<td style="text-align:left;padding-left:10px;">
+										<p style="font-size:12px;line-height:16px;">{{content.rows.person}}</p>
+										<p style="font-size:12px;line-height:16px;">{{content.rows{'direction_'.+lg.rows.lg} }},</p>
+										<p style="font-size:12px;line-height:16px;">{{content.rows{'company_'.+lg.rows.lg} }}</p>											
+									</td>
+								</tr>
+								</table>
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+{{
+	endfor
+}} 				
+	</div>
+	{{	if nb_testimonial > 1 then}}
+	<!-- Controls -->
+	<a class="left carousel-control" href="#homepageCarousel{{widget.rows.uid_widget_list}}" data-slide="prev">
+		<i class="fa fa-angle-left"></i>
+	</a>
+	<a class="right carousel-control" href="#homepageCarousel{{widget.rows.uid_widget_list}}" data-slide="next">
+		<i class="fa fa-angle-right"></i>
+	</a>
+	{{endif}}
+</section> 
+</div>
+</div>

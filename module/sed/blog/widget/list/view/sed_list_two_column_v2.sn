@@ -1,0 +1,375 @@
+{{
+
+//NE PAS EFFACER CE FICHIER
+
+}}
+<link rel="stylesheet" href="/css/blog.css">
+<style>
+    
+    
+    .navigator_table {
+        width: 100%;
+    }
+
+    
+    /* Styling pagination nav default links container*/
+    .navContainer {
+        width: auto%;
+        text-align: center;
+    }
+    
+    .custom_nav {
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    
+    /* Styling pagination nav right next button link*/
+    .next_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: right;
+        padding-left: 30px;
+        padding-right: 10px;
+        background: url("/sn_uploads/icon/arrow_prev.png") no-repeat left;
+        background-size: 20px;
+        border: solid 1px #ccc;
+    }
+    
+    .next_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .next_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    
+    /* Styling pagination nav right button link*/
+    .right_arr{
+        float:left;
+        color: #5896B4;
+        font-weight: bold;
+        width: auto;
+        max-width:150px;
+        height: 30px;
+        line-height: 30px;
+        text-align: left;
+        padding-left: 10px;
+        padding-right: 30px;
+        background: url("/sn_uploads/icon/arrow_next.png") no-repeat right;
+        background-size: 20px;
+        border: solid 1px #ccc;
+
+    }
+    
+    .right_arr:link{
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .right_arr:hover{
+        color: #5896B4;
+        background-color:#eeeeee;
+        font-weight: bold;
+        text-decoration: none;
+    }
+
+
+    
+    /* Styling pagination nav standalone links*/
+    .linkStyle{
+        float:left;
+        min-width:30px;
+        height: 30px;
+        line-height: 30px;
+        border: solid 1px #ccc;
+        padding: 2px;
+    }
+    
+    .linkStyle:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    /* Styling pagination nav page interval links*/
+    .linkStyle a:link {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .linkStyle a:hover {
+        color: #5896B0;
+        background-color:#eeeeee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .linkStyle a:visited {
+        color: #5896B4;
+        text-decoration: none;
+    }
+    
+    .authorpic{
+        border-radius: 50%;
+        behavior: url(PIE.htc); /* remove if you don't care about IE8 */
+        position:absolute;
+        background-color:#dddddf;
+    }
+
+
+
+</style>
+
+
+{{
+    /*
+     * @title Widget blog_article_detail
+     * @Version 1.2 2017-03-17
+     * @author louis.jhonny@gmail.com
+     * 
+     * List of articles in the blog with pagination navigation
+     */ 
+     
+     
+    // Image sizes
+    first_image_size = "930x600"; 
+    other_image_size = "450x300"; 
+    meta_content=sql(single:true,"select * from sn_configs");
+    // include the list of articles
+    %include "/module/sed/blog/widget/list/include/sed_articles.sn";
+}}
+
+\{{
+    %include "/site/package/pagination_v2.sn";
+    
+    //pagination settings
+    pg = new Pagination
+    (
+        items_per_page, // number of items to display per page
+        12,             // Number of links allowed per page. cannot be empty.
+        offset,         // offset to query 1 page at a time. cannot be empty.
+        articles_query, // the main query used without sorting. cannot be empty
+        "date_article",      // Field to sort query from
+        "DESC",       // order by possible value are DESC,ASC (ASC if empty)
+        "{{lg.rows.lg}}"// language to display navigation strings. (english if empty)
+    );
+    
+    //Redraw query;
+    articles = pg.newQuery();
+}}
+
+    <div class="custom_nav">
+        \{{pg.previous(cgidata.start, page_index, "next_arr");}}
+        \{{pg.navigation(cgidata.start, page_index, "linkStyle");}}
+        \{{pg.next(cgidata.start, page_index, "right_arr");}}
+    </div>
+
+\{{
+    // Get the first article and remove it from the articles
+    //first_article = shift(articles.rows);
+    // display the first article
+    if first_article then
+}}
+
+    <div class="two_columns_container text-center" itemscope itemtype="http://schema.org/Article">
+        <meta  itemprop="author" content=" \{{first_article.firstname}} \{{first_article.lastname}}"/>
+        <meta  itemprop="dateModified" content=" \{{first_article.sn_mdate}} "/>
+        <meta  itemprop="datePublished" content=" \{{first_article.date_article}}"/>
+        <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
+            <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+                <meta itemprop="url" content="{{meta_content.rows.url_prod}}/{{meta_content.rows{'logo_'.+lg.rows.lg};}}">
+            </div> 
+            <meta itemprop="name" content="{{meta_content.rows{'DC_title_'.+lg.rows.lg};}}">    
+        </div>
+
+        <div class="mb-20" itemprop="image" itemscope itemtype="http://schema.org/ImageObject">
+            \{{if first_article.featured_image ne "" then}}
+                 <a href="\{{first_article.url}}" ><img itemprop="url" src="\{{first_article.featured_image}}?size={{first_image_size}}&crop" class="img-responsive"></a>
+            \{{else}}
+                 <a href="\{{first_article.url}}" ><img itemprop="url" src="\{{blog_config.rows.first_article_default_image}}?size={{first_image_size}}&crop" class="img-responsive"></a>
+            \{{endif}}    
+            <meta itemprop="height" content="600">
+            <meta itemprop="width" content="930">
+        </div>
+    
+        <!--
+        <div style="position:relative">
+            \{{ucfirst(datetime(lg:"{{lg.rows.lg}}",date:first_article.date_article, format:"%d %B %Y"))}} 
+            \{{if first_article.allow_comments eq "yes" then}}
+                <a href="\{{first_article.url}}#comment_box" class="noblue comment_bubble">
+                    <span class="fa-stack s_col-sm-right" style="color:#D4D4D4;">
+                        <i class="fa fa-comment fa-stack-2x" aria-hidden="true"></i>
+                        <span class="fa-stack-1x fa-stack-text masonry_comment_count">\{{first_article.comment_count}}</span>
+                    </span>
+                </a>      
+            \{{endif}}             
+        </div>
+        <div>
+            -
+        </div>
+        <div class="blog_brand">
+            \{{first_article.surtitle}}
+        </div>
+        -->
+        
+
+        
+        <div class="blog_title" >
+            <a href="\{{first_article.url}}" itemprop="mainEntityOfPage"><h2 itemprop="headline">\{{first_article.title}}</h2></a>
+        </div>             
+        <div class="mt-10 blog_category " itemprop="articleSection">
+                \{{ for category sql("SELECT uid,name FROM sed_blog_category WHERE find_in_set(uid, '?') AND language='?'",first_article.category, "{{lg.rows.lg}}") do}}
+                    <a class="noblue"  href="javascript:void(0)" onclick="$('#category').val('\{{category.rows.uid}}'); $('#sed_blog_form').submit();">#\{{category.rows.name}}</a>    
+                \{{ endfor }}
+        </div>   
+        <div class="two_column_brief_first blog_brief_text" itemprop="text">
+            \{{  
+                if first_article.brief_text ne '' then 
+                    first_article.brief_text;
+                else
+                    firstpos = (strpos(article.full_text,'</style>') != -1) ? strpos(article.full_text,'</style>'): 0;
+                    strlen = article.full_text.length() - firstpos;
+                    text_plain = substr(article.full_text, firstpos, strlen);
+                    text_plain=esc(filter:"cleanhtml",text_plain);
+                    text_part=strsub(start:0,finish:150,endblank:true,text_plain);
+                    
+                    text2=text_part.resub("<strong>","","gi");
+                    text2=text2.resub("</strong>","","gi");
+                    text2=text2.resub("<b>","","gi");
+                    text_final= text2.resub("</b>","","gi");
+                    text_final; 
+                endif
+            }}
+            <a href="\{{first_article.url}}" class="read_more" >{{sn_ct("Read more",edit:false)}}</a>
+            
+        </div> 
+        <!--
+        <div class="two_column_author_first">
+            <i class="fa fa-pencil s_col-sm-left" aria-hidden="true"></i>
+            <a class="noblue" href="javascript:void(0)" onclick="$('#author').val('\{{first_article.author}}'); $('#sed_blog_form').submit();">\{{first_article.firstname}} \{{first_article.lastname}}</a>
+        </div>
+        -->
+        
+        <span style="display:none" itemprop="datePublished"> \{{first_article.date_article}}</span>
+        <div style="display:none"  itemprop="interactionStatistic" itemscope itemtype="http://schema.org/InteractionCounter">
+            <meta itemprop="interactionType" content="http://schema.org/CommentAction"/>
+            <meta itemprop="userInteractionCount" content="\{{first_article.comment_count}}" /> 
+        </div>
+    </div>
+    \{{endif}}
+    <!-- end display first article -->
+    
+    <div class="row article_stack" >
+        \{{
+            
+    // display all other articles
+    for article in articles.rows do
+        categories = sql(single:true, "SELECT GROUP_CONCAT(name ORDER BY uid) as name FROM sed_blog_category WHERE find_in_set(uid, '?') AND language='?'",article.category, "{{lg.rows.lg}}"); 
+     
+}}
+        
+        <div class="col-md-6 text-center" itemscope itemtype="http://schema.org/Article">
+        <meta itemprop="author" content=" \{{article.firstname}} \{{article.lastname}}"/>
+        <meta  itemprop="datePublished" content=" \{{article.date_article}}"/>
+        <meta  itemprop="dateModified" content=" \{{article.sn_mdate}} "/>
+        <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
+            <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+            <meta itemprop="url" content="{{meta_content.rows.url_prod}}/{{meta_content.rows{'logo_'.+lg.rows.lg};}}">
+            </div> 
+        <meta itemprop="name" content="{{meta_content.rows{'DC_title_'.+lg.rows.lg};}}">    
+        </div>
+            <div class="mb-20" itemprop="image" itemscope itemtype="http://schema.org/ImageObject">
+                \{{if article.featured_image ne "" then}}
+                     <a href="\{{article.url}}" ><img  itemprop="url" src="\{{article.featured_image}}?size={{other_image_size}}&crop" class="img-responsive"></a>
+                \{{else}}
+                     <a href="\{{article.url}}" ><img  itemprop="url" src="\{{blog_config.rows.article_default_image}}?size={{other_image_size}}&crop" class="img-responsive"></a>
+                \{{endif}}  
+                <meta itemprop="height" content="600">
+                <meta itemprop="width" content="930">
+            </div>
+      
+            <div class="blog_title" >
+                <a href="\{{article.url}}" itemprop="mainEntityOfPage"><h2 itemprop="headline">\{{article.title}}</h2></a>
+            </div>             
+
+
+            <div class="mb-20 blog_category " itemprop="articleSection" >
+                    \{{ for category sql("SELECT uid, url, name FROM sed_blog_category WHERE find_in_set(uid, '?') AND language='?'",article.category, "{{lg.rows.lg}}") do}}
+                        <a class="noblue"  href="javascript:void(0)" onclick="location.replace('\{{category.rows.url}}');">#\{{category.rows.name}}</a>    
+                    \{{ endfor }}
+            </div>   
+            <div class="two_column_brief_other blog_brief_text" itemprop="text">
+                \{{ 
+                if article.brief_text ne '' then 
+                    article.brief_text;
+                else
+                    firstpos = (strpos(article.full_text,'</style>') != -1) ? strpos(article.full_text,'</style>'): 0;
+                    strlen = article.full_text.length() - firstpos;
+                    text_plain = substr(article.full_text, firstpos, strlen);
+                    text_plain=esc(filter:"cleanhtml",text_plain, htmltag:"br,u,/u,i,/i,b,/b,strong,/strong");
+                    text_part=strsub(start:0,finish:150,endblank:true,text_plain);
+                    
+                    text2=text_part.resub("<strong>","","gi");
+                    text2=text2.resub("</strong>","","gi");
+                    text2=text2.resub("<b>","","gi");
+                    text_final= text2.resub("</b>","","gi");
+                    text_final=esc(filter:"cleanhtml",text_final);
+                    text_final; "...";
+                endif
+                }}
+                <a href="\{{article.url}}" class="read_more" itemprop="mainEntityOfPage">{{sn_ct("Read more",edit:false)}}</a>
+            </div>
+            
+            <div style="display:none" itemprop="interactionStatistic" itemscope itemtype="http://schema.org/InteractionCounter">
+            <meta itemprop="interactionType" content="http://schema.org/CommentAction"/>
+            <meta itemprop="userInteractionCount" content="\{{article.comment_count}}" />     
+        </div>
+        </div>    
+        
+\{{ endfor }}
+    </div>
+
+<!-- end display all other article -->
+
+
+<!-- Footer / Pagination -->
+<div class="container-fluid">
+    \{{pg.previous(cgidata.start, page_index, "next_arr");}}
+    \{{pg.navigation(cgidata.start, page_index, "linkStyle");}}
+    \{{pg.next(cgidata.start, page_index, "right_arr");}}
+</div>
+<!-- end footer / pagination -->
+
+<!-- SCRIPTS -->
+
+
+<!-- Script for add this -->
+{{/*hub_config.rows.code_addthis*/}}
+
+
+
+<!-- end scripts-->

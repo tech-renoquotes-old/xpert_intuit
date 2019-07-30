@@ -1,0 +1,45 @@
+{{
+    table_dest = 'sed_blog_comment';
+    table_from = 'wp_comments';
+
+    select_query_from_src = "
+        SELECT 
+            comment_ID,
+            comment_post_ID,
+            comment_author,
+            comment_author_email,
+            comment_author_url,
+            comment_author_IP,
+            comment_agent,
+            comment_date,
+            comment_content,
+            comment_parent,
+            comment_approved,
+            (SELECT c2.comment_content FROM wp_comments c2 WHERE c2.comment_parent = c1.comment_ID LIMIT 1) as author_reply,
+            (SELECT c2.comment_date FROM wp_comments c2 WHERE c2.comment_parent = c1.comment_ID LIMIT 1) as author_reply_date
+        FROM wp_comments c1
+        WHERE comment_approved != 'spam'
+        AND comment_parent = 0
+        AND comment_post_ID IN (SELECT ID FROM wp_posts WHERE post_status = 'publish' AND post_type = 'post')
+        ";
+    
+    truncate_dest = true;
+    rows_to_keep = [];
+    rows_to_keep_key = 'uid';
+    rows_to_keep_key_void = true;
+
+    fields = {
+        'uid' : "comment_ID",
+        'uid_article' : "comment_post_ID",
+        'uid_user' : "NULL",
+        'approved' : "comment_approved::IF('?', 'yes', 'no')",
+        'comment' : "comment_content",
+        'commentator_name' : "comment_author",
+        'ip_address' : "comment_author_IP",
+        'author_reply': 'author_reply',
+        'author_reply_date': 'author_reply_date',
+        'sn_cdate': 'comment_date'
+    };
+    
+    %include 'migration.sn';
+    

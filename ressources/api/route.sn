@@ -1,0 +1,40 @@
+\{{	
+	%include "/packages/api.sn";
+	
+	// get the request data
+	context = api::get_context();
+	
+	// check if the request is authorized
+	if context.api_user ne '' || api::is_valid_key(context.api_key, context.ip) then
+	
+		// resolving the action controller path
+		controller_file = "/" .+ context.site .+ "/" .+ context.lg .+ "/api/release/" .+ context.package_name .+ "/" .+ context.action_name .+ ".snc";
+
+		// checking if the controller exists
+		if valid(controller_file) then
+
+			// checking permission
+			if api::can_process_request(context.package_name, context.action_name, context.api_user) then
+
+				// we delegate the request to the action controller
+				read(controller_file);
+				
+			else
+
+				// the user cannot execute this action
+				api::response(error: 'Forbidden', http_status_code: 403);
+
+			endif
+			
+		else
+
+			// the requested action controller doesn't exist
+			api::response(error: 'Not Found', http_status_code: 404);
+
+		endif
+	else
+		
+		// invalid api key or token
+		api::response(error: 'Unauthorized', http_status_code: 401 );
+	endif
+}}

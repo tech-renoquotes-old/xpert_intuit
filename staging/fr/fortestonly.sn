@@ -1,0 +1,157 @@
+{{
+        function findContractorsForProject_v2(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+                
+
+            return sql("
+                    SELECT c.* 
+                    FROM sr_contractor c
+                    WHERE   c.active = 'yes'
+                        AND ((now() NOT BETWEEN deactivate_date AND reactivate_date) OR (enable_vacation = 'no'))
+                        AND '?' IN (SELECT ifnull(uid_project_type,0) FROM sr_project_type_contractor WHERE uid_contractor = c.uid)
+                        AND languages & '?' > 0
+                        AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid)
+                        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                        AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid)
+                        AND (
+                            0 = (select ifnull(estimated_value,0)as estimated from sr_project where uid ='?')
+                            OR
+                            (select ifnull(estimated_value,0)as estimated from sr_project where uid ='?') 
+                                between ifnull(amount_min,0) 
+                                        and if(ifnull(amount_max,0)=0,9999999,amount_max)
+
+                        )
+                        
+                    ORDER BY (note_global + IF(uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT ?
+                ", project.rows.uid_project_type, project.rows.languages, project.rows.uid_service, project.rows.uid, project.rows.uid_territory,
+                    project.rows.uid, project.rows.uid,
+                    project.rows.uid_territory, limit);
+                    
+        endf
+
+        
+        function findContractorsForProject(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = ?
+                ", uid_project);
+                
+
+            return sql("
+                    SELECT c.* 
+                    FROM sr_contractor c
+                    WHERE   c.active = 'yes'
+                        AND languages & '?' > 0
+                        AND '?' IN (SELECT cs.uid_service FROM sr_contractor_service cs WHERE cs.uid_contractor = c.uid) 
+                        AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                        AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid)
+                        AND (
+                            0 = (select ifnull(estimated_value,0)as estimated from sr_project where uid ='?')
+                            OR
+                            (select ifnull(estimated_value,0)as estimated from sr_project where uid ='?') 
+                                between ifnull(amount_min,0) 
+                                        and if(ifnull(amount_max,0)=0,9999999,amount_max)
+
+                        )
+                        
+                    ORDER BY (note_global + IF(uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT ?
+                ",  project.rows.languages, project.rows.uid_service, project.rows.uid, project.rows.uid_territory,
+                    project.rows.uid, project.rows.uid,
+                    project.rows.uid_territory, limit);
+                    
+         endf
+ 
+ configs = sql(single:true, "SELECT * FROM sn_configs WHERE uid = 1 LIMIT 1");
+        
+         
+for project sql("
+        SELECT p.*,
+            city.uid_territory,
+            DATEDIFF(now(), active_date) as 'age_in_days',
+            (SELECT COUNT(*) FROM sr_project_contractor WHERE uid_project = p.uid) as 'total_links',
+            (SELECT IFNULL(SUM(IF(lead_price > 0,1,0)),0) FROM sr_project_contractor WHERE uid_project = p.uid) as 'accepted_links'
+        FROM sr_project as p
+        LEFT JOIN sr_address a ON p.uid_address = a.uid
+        LEFT JOIN sr_city city ON a.uid_city = city.uid 
+        WHERE p.status = 'active'  LIMIT 20
+    ") do
+
+     
+      /*      // If number of quotes is met, completed!
+        if (project.rows.accepted_links >= project.rows.max_quotes) then
+            //V1.02        
+            //'project should be completed at this time - no need to continue';
+            //void insert(table:'sr_debug', fields:{'description':'Cron Project to Contractor project completed project.rows.accepted_links='.+project.rows.accepted_links,'text':'projet='.+project.rows.uid});
+            //project::completeProject(project.rows.uid);
+            //bd test maxquote
+            //void insert(table:'sr_debug', fields:{'description':'completed max1 ','text':'accepted_links='.+project.rows.accepted_links.+'  max_quotes='.+project.rows.max_quotes.+'  project='.+project.rows.uid});
+            //continue;
+        endif
+        
+        // If project is more than 21 days old, completed!
+        if (project.rows.age_in_days > configs.rows.project_max_days) then
+            //V1.02
+            'project should be inactive at this time - no need to continue';
+            //void insert(table:'sr_debug', fields:{'description':'Cron Project to Contractor project incomplete = '.+project.rows.age_in_days ,'text':'projet='.+project.rows.uid});
+            //project::incompleteProject(project.rows.uid);
+            //continue;
+        endif
+        */
+
+        nb_contractors_to_contact = 1;
+        
+        if (project.rows.urgent == 'yes') then
+            nb_contractors_to_contact = 3;
+        endif
+        
+        if (project.rows.total_links == 0) then
+            // If it's the first time, send to 6 contractors
+            nb_contractors_to_contact = configs.rows.project_first_n_contractors_to_contact;
+        endif
+        
+         contractors = findContractorsForProject_v2(project.rows.uid, nb_contractors_to_contact);
+         
+         'sending to : '; nb_contractors_to_contact; ' propose project :'; project.rows.uid; '<br />';
+         'Found : '; contractors.nbrows; '<br />'; 
+         
+        // contractors_v2 = findContractorsForProject_v2(project.rows.uid, nb_contractors_to_contact);
+        
+        
+        'sending to : '; nb_contractors_to_contact; ' propose project :'; project.rows.uid; '<br />';
+        for contractor in contractors_v1.rows do
+            'Version 2 - email sent to: '; contractor.uid; ' to propose project :'; project.rows.uid; '<br />';
+      		//project::connectProjectContractor(project.rows.uid, contractor.uid);
+            //void insert(table:'sr_debug', fields:{'description':'Cron_v2 : Project to Contractor =  '.+ contractor.uid,'text':'projet='.+project.rows.uid .+ 'type projet=' .+project.rows.uid_project_type });
+        endfor
+        
+        "***********************************************************************************************************"; '<br>';
+
+        /*'sending to : '; nb_contractors_to_contact; '<br />';
+        "***********************************************************************************************************";'<br>';        
+        for contractor in contractors_v2.rows do
+            'Version 2 - email sent to: '; contractor.uid; ' to propose project :'; project.rows.uid; '<br />';
+      		//project::connectProjectContractor(project.rows.uid, contractor.uid);
+            //void insert(table:'sr_debug', fields:{'description':'Cron_v2 : Project to Contractor =  '.+ contractor.uid,'text':'projet='.+project.rows.uid .+ 'type projet=' .+project.rows.uid_project_type });
+        endfor
+        */
+endfor
+        
+
+}}

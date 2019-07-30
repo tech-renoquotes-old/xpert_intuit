@@ -1,0 +1,1006 @@
+     {{
+        /**
+         * Title: widget_client_project
+         * 
+         **/
+         %include "/extenso/functions/sn_ct.snc"; 
+    	%include "/extenso/functions/sn_pages.snc"; 
+    	%include '/site/package/all.sn';
+		use page;
+		use lg;
+
+     }}    
+     
+     
+     
+     
+     \{{
+        cgidata = cgidata();
+        
+        ptype = sql("SELECT name_? as name, uid FROM sr_project_type WHERE active='yes'", "{{lg.rows.lg}}");
+        service = sql("SELECT name_long_? as name, uid FROM sr_service WHERE active='yes' GROUP BY name", "{{lg.rows.lg}}");
+        sub = "SELECT uid, name_? as name, lead_price FROM sr_subservice WHERE uid_service = '?' AND active = 'yes'";
+        
+        
+        if(cgidata.action eq 'sub_lookup') then
+            subservice = sql(sub, "{{lg.rows.lg}}", cgidata.suid);
+            headers_out("X-sub",subservice.rows);
+        endif
+        
+        if(cgidata.action eq 'price_lookup') then
+            currsub = sql(single:true,"SELECT * FROM sr_subservice WHERE uid ='?'", cgidata.subid);
+            headers_out("X-price",currsub.rows.lead_price);
+            headers_out("X-estimate",currsub.rows.estimated_value);
+        endif
+        
+        prodata = {
+            "description": cgidata.desc,
+            "uid_project_type": cgidata.project_type,
+            "uid_service": cgidata.service1,
+            "uid_subservice": cgidata.subservice,
+            "uid_secondary_service": cgidata.service2,
+            "due_date": cgidata.due_date,
+            "estimated_value": cgidata.estimate,
+            "lead_price": cgidata.lead_price,
+            "additional_info":cgidata.additional_info,
+            "comments": cgidata.comments
+        };
+        
+        addrdata = {
+            "uid_city": cgidata.uid_city,
+            "city": cgidata.locality,
+            "street_no": cgidata.street_number,
+            "street": cgidata.route,
+            "zip": cgidata.postal_code,
+            "province": cgidata.administrative_area_level_1,
+            "country":cgidata.country,
+            "phone1": cgidata.phone1,
+            "phone2": cgidata.phone2
+        };
+        
+        
+        if(cgidata.activate) then
+
+            uid_addr = (cgidata.uid_address == 0)? "" : cgidata.uid_address;
+            project::updateProject(cgidata.uid_project, cgidata.uid_address, prodata, addrdata);
+            
+            activate = sql("UPDATE `sr_project` SET `status` = 'active', activated_by = '?' WHERE `uid` = '?'", cgidata.uid_project, user.username);
+            project::activateProject(cgidata.uid_project);
+            
+            followup =  insert(
+                table:"sr_followup",
+                fields:{
+                "msg_uid":'8',
+                "uid_client": cgidata.clid,
+                "uid_project": cgidata.uid_project,
+                "followup_agent": user.username
+                }
+            );
+            
+            IS_ACTIVATED = true;
+        endif
+        
+        
+        if(cgidata.save) then
+            uid_addr = (cgidata.uid_address == 0)? "" : cgidata.uid_address;
+            project::updateProject(cgidata.uid_project, cgidata.uid_address, prodata, addrdata);
+            IS_MODIFIED = true;
+        endif
+        
+                    
+        if(cgidata.scope eq 'active') then         
+            project = sql("SELECT c.locked, s.name_? as service_name, 
+                        p.uid_project_type, p.uid, p.uid_service, p.uid_subservice, 
+                        p.uid_secondary_service, p.uid_client, p.description, 
+                        p.comments, p.additional_info, p.is_owner, p.best_contact_way, 
+                        p.property_type, p.budget, p.budget_type, p.status, 
+                        p.lead_price, p.estimated_value, p.due_date, p.estimate_duration,  p.uid_address, c.address,
+                        p.file1, p.file2, p.file3, p.file4, p.file5, p.link1, p.link2, p.link3, p.link4,
+                        a.phone1, a.phone2, a.country, a.city, a.uid_city, a.province, a.street_no,
+                        a.street, a.zip, p.additional_comments, p.first_url
+                        FROM sr_project p
+                        INNER JOIN sr_client c ON c.uid = p.uid_client
+                        LEFT JOIN sr_service s ON s.uid = p.uid_service
+                        LEFT JOIN sr_address a ON a.uid = p.uid_address
+                        WHERE p.uid_client = '?'
+                        AND (
+                            p.status='new'
+                            OR p.status='active'
+                        )", "{{lg.rows.lg}}", cgidata.clid);
+        elseif(cgidata.scope eq 'all') then
+            project = sql("SELECT c.locked, s.name_? as service_name, 
+                        p.uid_project_type, p.uid, p.uid_service, p.uid_subservice, 
+                        p.uid_secondary_service, p.uid_client, p.description, 
+                        p.comments, p.additional_info, p.is_owner, p.best_contact_way, 
+                        p.property_type, p.budget, p.budget_type, p.status, 
+                        p.lead_price, p.estimated_value, p.due_date, p.estimate_duration,  p.uid_address, c.address,
+                        p.file1, p.file2, p.file3, p.file4, p.file5, p.link1, p.link2, p.link3, p.link4,
+                        a.phone1, a.phone2, a.country, a.city, a.uid_city, a.province, a.street_no,
+                        a.street, a.zip, p.additional_comments, p.first_url
+                        FROM sr_project p
+                        INNER JOIN sr_client c ON c.uid = p.uid_client
+                        LEFT JOIN sr_service s ON s.uid = p.uid_service
+                        LEFT JOIN sr_address a ON a.uid = p.uid_address
+                        WHERE p.uid_client = '?'
+                        AND p.uid = " .+ cgidata.puid, 
+                        "{{lg.rows.lg}}", cgidata.clid);
+        else
+        project = sql("SELECT c.locked, s.name_? as service_name, 
+                    p.uid_project_type, p.uid, p.uid_service, p.uid_subservice, 
+                    p.uid_secondary_service, p.uid_client, p.description, 
+                    p.comments, p.additional_info, p.is_owner, p.best_contact_way, 
+                    p.property_type, p.budget, p.budget_type, p.status, 
+                    p.lead_price, p.estimated_value, p.due_date, p.estimate_duration,  p.uid_address, c.address,
+                    p.file1, p.file2, p.file3, p.file4, p.file5, p.link1, p.link2, p.link3, p.link4,
+                    a.phone1, a.phone2, a.country, a.city, a.uid_city, a.province, a.street_no,
+                    a.street, a.zip, p.additional_comments, p.first_url
+                    FROM sr_project p
+                    INNER JOIN sr_client c ON c.uid = p.uid_client
+                    LEFT JOIN sr_service s ON s.uid = p.uid_service
+                    LEFT JOIN sr_address a ON a.uid = p.uid_address
+                    WHERE p.uid_client = '?' AND p.status = 'new'", "{{lg.rows.lg}}", cgidata.clid);
+        endif 
+        
+     }}
+     
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="//ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<script type="text/javascript" src="/extenso/ckeditor/ckeditor.js"></script>
+
+<script src="/js/encode.js"></script>
+
+<style>
+
+    .action_list table{
+        width:100%;
+        background-color:#eee;
+    }
+    
+    .action_list td{
+        border:none;
+        padding:10px
+    }
+    
+    .data{
+        width:100%;
+        height:600px;
+        border: 1px solid #ddd;
+        font-family: sans-serif;
+        font-size: 12px;
+
+    }
+    
+
+    .tabhover {
+        background-color: #fff0d8;
+    }
+    
+    .projectpane{
+        width:100%;
+        padding-top:10px;
+        padding-left:10px;
+        padding-right:10px;
+        padding-bottom:5px;
+        margin-bottom:10px;
+        
+    }
+    
+    .projectpane form{
+        margin-top:-10px;
+        border:1px solid #ddd;
+    }
+    
+    .project_form{
+        width:100%;
+        padding:10px;
+        background-color:#fff;
+    }
+    
+    .project_body{
+        width:100%;
+    }
+    
+    [data-validator-error]{
+        display:none;
+        color:red;
+        font-weight:bold;
+    }
+    
+    .autohide{
+        display:none;
+    }
+    
+    .btn_group{
+        display:none;
+    }
+    
+    .actions{
+        width:100%;
+        height:50px;
+        background-color: #4f4f4f;
+        color: #f9b842;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        padding-right:10px;
+        margin-bottom:20px;
+        
+        
+    }
+    
+
+    .project_infos{
+        width:300px;
+        height:50px;
+        line-height:50%;
+        padding-right:10px;
+        padding-bottom:10px;
+        
+    }
+    
+    .input_actions{
+        width:auto;
+        padding-top:20px;
+   }
+    
+    .input_actions input{
+        margin-right:15px;
+        border-radius: 50%;
+        box-shadow: 0px 0px 8px 3px #333;
+    }
+    
+    .input_actions input:hover{
+        cursor:pointer;
+        width:42px;
+        margin-right:15px;
+        border-radius: 50%;
+        box-shadow: 0px 0px 10px 5px #333;
+    }
+    
+    .lock_state{
+        float:right;
+        height:100%;
+        margin-top:10px;
+    }
+    
+    .pcollapse{
+        padding-top:33px;
+        text-align:right;
+        
+
+    }
+    
+    .pcollapse img:hover{
+        cursor:pointer;
+        width:35px;
+    }
+    
+    .modal_ui{
+        width:100%;
+        opacity:0.1;
+        filter: alpha(opacity=10);
+        -moz-opacity:0.1;
+        -khtml-opacity: 0.1;
+        position:fixed;
+        top:0;
+        min-height: 100vh;
+        background-color:#333;
+        color:#fff;
+        z-index:999;
+    }
+    
+    .attachments{
+        font-size:18px;
+    }
+    hr {
+    border: double;
+    }
+    
+
+</style>  
+
+
+    <input name="uid_client" type='hidden' value="\{{cgidata.clid}}" />
+    <input name="sel_project" id="sel_project" type='hidden' value="" />
+    \{{i = 0}}
+    
+    
+
+    <div class="project_body">
+        \{{for p in project.rows do}}
+        \{{nfiles = 0}}
+        \{{claddr = str_replace(" ", "+", p.address);}}
+        \{{addr = p.street_no .+ ' ' .+ p.street .+ ' ' .+ p.city .+ ' ' .+ p.province .+ ' ' .+ p.zip;}}
+        \{{gaddr = addslashes(p.street_no .+ '+' .+ p.street .+ '+' .+ p.city .+ '+' .+ p.province .+ '+' .+ p.zip);}}
+        \{{canada411 = addslashes(p.street_no .+ '+' .+ p.street .+ '+' .+ p.city);}}
+        \{{if gaddr eq "" then gaddr = addslashes(claddr); endif}}
+        \{{if(p.file1 ne "") then nfiles++; endif}} \{{if(p.file2 ne "") then nfiles++; endif}} \{{if(p.file3 ne "") then nfiles++; endif}} \{{if(p.file4 ne "") then nfiles++; endif}} \{{if(p.file5 ne "") then nfiles++; endif}}
+        \{{phone1 = str_replace(['-',' '], ['', ''], p.phone1)}}
+        \{{phone2 = str_replace(['-',' '], ['', ''], p.phone2)}}
+        <div class="modal_ui" \{{if(p.locked eq 'yes') then}} style="display:none" \{{endif}}>
+            <p style="height:100%; display:block;"></p>
+        </div>  
+        <div class="projectpane" id="projectpane_\{{p.uid}}">
+            <div class="actions">
+                <div class="col-xs-3 input_actions">
+                    \{{if(cgidata.scope ne 'all') then}}
+                        \{{if p.status eq 'new' then}}
+                            <input title="{{sn_ct(edit:false,'activer projet')}}"  type='image' name="activate" src="/sn_uploads/icon/check-icon-rounded.png" width="40px" \{{(p.locked ne 'yes')?'disabled':''}} onclick="window.parent.selectedProject(\{{p.uid}}); $(this).closest('div[class=actions]').next('form').submit()"/>
+                        \{{endif}}
+                        <input title="{{sn_ct(edit:false,'annuler projet')}}" type='image' name="cancel" src="/sn_uploads/icon/cancel-icon-rounded.png" width="40px" onclick="window.parent.selectedProject(\{{p.uid}}); window.parent.cancel_project(\{{p.uid_client}});"  \{{(p.locked ne 'yes')?'disabled':''}}/>
+                        <input title="{{sn_ct(edit:false,'Envoyer email')}}" type='image' name="sendemail" src="/sn_uploads/icon/mail_icon.png" width="40px" onclick="window.parent.selectedProject(\{{p.uid}}); window.parent.sendemail(\{{p.uid_client}});" \{{(p.locked ne 'yes')?'disabled':''}}/>
+                        <input title="{{sn_ct(edit:false,'Effectuer un appel')}}" type='image' name="firstcall" src="/sn_uploads/icon/call.png" width="40px" onclick="window.parent.selectedProject(\{{p.uid}}); window.parent.firstcall(\{{p.uid_client}},\{{p.phone1}});"  \{{(p.locked ne 'yes')?'disabled':''}}/>
+                    \{{endif}}
+                        
+                        <input title="{{sn_ct(edit:false,'Google map')}}" type='image' name="map" src="/sn_uploads/icon/google-maps-round.png" width="40px" onclick="window.parent.selectedProject(\{{p.uid}}); window.parent.goto_map('\{{gaddr}}');"/>
+                    
+                    \{{if(p.status ne 'active' && p.status ne 'new') then}}
+                        <input title="{{sn_ct(edit:false,'Rewrite this project')}}" type='image' name="map" src="/sn_uploads/icon/rewrite_orange.png" width="40px" />
+                    \{{endif}}
+                </div>
+                
+                <div class="col-xs-1 pcollapse">
+                    <img title="{{sn_ct(edit:false,'Afficher details')}}" width="32px" src='/sn_uploads/icon/top-arrow-Icon.png'/> 
+                </div>
+                    
+                <div class="col-xs-4 lock_state" style="text-align:right">
+                    {{sn_ct("Projet")}}: #\{{p.uid}}
+                    \{{if (p.locked eq 'yes') then }}
+                    <img style="display:inline-block" width="30px" src='/sn_uploads/icon/cadena.png'/>
+                    \{{endif}}
+                </div>
+           </div>
+           
+            <form class="project_form" name="project_form_\{{i}}" id="project_form_\{{p.uid}}" action="" method="POST" >
+                <div style="display:none;width:100%" id="alert_\{{p.uid}}" class="alert alert-danger">{{sn_ct("Erreur de saisie. Corriger les erreurs ci-dessous avant de continuer")}}</div>
+                <input type='hidden' name="uid_address" value="\{{p.uid_address}}"/>
+                <input name="uid_project" type="hidden" value="\{{p.uid}}"/>
+                <input name="clid" type="hidden" value="\{{p.uid_client}}"/>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="description">
+                        {{sn_ct("Description du projet")}}*
+                    </label>
+                    <span class="control-label col-xs-8" style="text-align:right">
+                        <a class="attachments" href="javascript:void(0)" onclick="window.parent.show_attachments(\{{p.uid}},['','\{{p.file1}}','\{{p.file2}}','\{{p.file3}}','\{{p.file4}}','\{{p.file5}}'])" >(\{{nfiles}})<img width="40px" src="/sn_uploads/icon/paper_clip.png"/></a>
+                        <span class="file1" style="display:none">\{{p.file1}}</span>
+                        <span class="file2" style="display:none">\{{p.file2}}</span>
+                        <span class="file3" style="display:none">\{{p.file3}}</span>
+                        <span class="file4" style="display:none">\{{p.file4}}</span>
+                        <span class="file5" style="display:none">\{{p.file5}}</span>
+                    </span>
+                    <div class="col-xs-12">
+            			<textarea class="ckeditor" cols="80" name="desc_\{{p.uid}}" id="desc_\{{p.uid}}" rows="10">
+            			    \{{p.description}}
+            			</textarea>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Description obligatoire')}}" data-validator-error="description"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="due_date">
+                        {{sn_ct("Date d'échéance")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <input name="due_date" class='form-control' value="\{{p.due_date}}"/>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'durée du projet obligatoire')}}" data-validator-error="estimate_duration"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="service1">
+                        {{sn_ct("Service")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <select name="service1" id="service_\{{p.uid}}" class="form-control">
+                            <option selected value="">{{sn_ct("choisissez un service")}}</option>
+                            \{{for s in service.rows do}}
+                                <option \{{(p.uid_service == s.uid)?'selected':''}} value="\{{s.uid}}">\{{s.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'service obligatoire')}}" data-validator-error="service1"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="sous-service">
+                        {{sn_ct("Sous-service")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <select name="subservice" id="subservice_\{{p.uid}}" class="form-control subservice">
+                            \{{subqry = sql("SELECT uid, name_? as name, lead_price FROM sr_subservice WHERE uid_service = '?' AND active = 'yes'","{{lg.rows.lg}}", p.uid_service)}}
+                            <option selected value="">{{sn_ct(edit:false,"Choisissez un sous-service")}}</option>
+                            <option value="test">{{sn_ct(edit:false,"test sous-service")}}</option>
+                            \{{for sb in subqry.rows do}}
+                                <option \{{(p.uid_subservice == sb.uid)?'selected':''}} value="\{{sb.uid}}">\{{sb.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'sous-service obligatoire')}}" data-validator-error="subservice"></span>
+                    </div>
+                </fieldset>
+                
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="service2">
+                        {{sn_ct("Service secondaire")}}
+                    </label>
+                    <div class="col-xs-12">
+                        <select name="service2" class="form-control">
+                            <option selected value="">{{sn_ct("choisissez un service secondaire")}}</option>
+                            \{{for s in service.rows do}}
+                                <option \{{(p.uid_secondary_service eq s.uid)?'selected':''}} value="\{{s.uid}}">\{{s.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'service secondaire obligatoire')}}" data-validator-error="service2"></span>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="lead_price">
+                        {{sn_ct("Prix")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <input name="lead_price" id="lead_price_\{{p.uid}}" class='form-control' value='\{{(p.lead_price == 0)?"":p.lead_price}}'/>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Prix obligatoire')}}" data-validator-error="lead_price"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="estimate">
+                        {{sn_ct("Valeur estimée")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <input name="estimate" id="estimate_\{{p.uid}}" class='form-control' value='\{{(p.estimated_value > 0)?p.estimated_value:''}}'/> 
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="project_type">
+                        {{sn_ct("Type de projet")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <select name="project_type"  class="form-control" name="project_type">
+                            <option selected value="">{{sn_ct("choisissez un type")}}</option>
+                            \{{for t in ptype.rows do}}
+                                <option \{{(p.uid_project_type == t.uid)?'selected':''}} value="\{{t.uid}}">\{{t.name}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Type de projet obligatoire')}}" data-validator-error="project_type"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="comments">
+                        {{sn_ct("Commentaire")}}
+                    </label>
+                    <div class="col-xs-12">
+                        <textarea name="comments" class="form-control" rows=5>\{{p.comments}}</textarea>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="additional_info">
+                        {{sn_ct("informations additionnelles")}}
+                    </label>
+                    <div class="col-xs-12">
+                        <textarea name="additional_info" class="form-control" rows=5>\{{p.additional_info}}</textarea>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <div class="col-xs-12">
+                        <hr>
+                        <p>{{sn_ct("Coordonnées du client")}}</p>
+                        <hr>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="phone1">
+                        <a href="javascript:void(0)" onclick="window.parent.verifyphone('\{{canada411}}', '\{{phone1}}')">{{sn_ct("Téléphone cellulaire")}}*</a>
+                    </label>
+                    <div class="col-xs-12">
+                        <input name="phone1" class='form-control' value='\{{p.phone1}}'/>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Telephone invalide')}}" data-validator-error="phone1"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="phone2">
+                        <a href="javascript:void(0)" onclick="window.parent.verifyphone('\{{canada411}}', '\{{phone2}}')">{{sn_ct("Autre téléphone")}}</a>
+                    </label>
+                    <div class="col-xs-12">
+                        <input name="phone2" class='form-control' value='\{{p.phone2}}'/>
+                        <span class="help-block LoNotSensitive" data-validator-msg="{{sn_ct(edit:false,'Telephone invalide')}}" data-validator-error="phone2"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="address">
+                        {{sn_ct("Adresse")}}
+                    </label>
+                    <div class="col-xs-12">
+                        <input class="form-control" type="text" name="address" id="address" value="\{{a = p.street_no .+ ' ' .+ p.street .+ ' ' .+ p.city .+ ' ' .+ p.province .+ ' ' .+ p.zip; (p.uid_address == 0 || p.uid_address eq '')? '':a}}" onFocus="geolocate()" placeholder="">
+                        <input type="hidden" class="field" id="street_number" name="street_number"  value="\{{p.street_no}}"></input>
+                        <input type="hidden" class="field" id="route" name="route"  value="\{{p.street}}"></input>
+                        <input type="hidden" class="field" id="locality" name="locality"  value="\{{p.city}}"></input>
+                        <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" value="\{{p.province}}"></input>
+                        <input type="hidden" class="field" id="postal_code" name="postal_code"  value="\{{p.zip}}"></input>
+                        <input type="hidden" class="field" id="country" name="country"  value="\{{p.country}}"></input>
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Address invalide')}}" data-validator-error="address"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="uid_city">
+                        {{sn_ct("Ville")}}*
+                    </label>
+                    <div class="col-xs-12">
+                        <select name="uid_city" class="form-control">
+                            \{{cities = sql("SELECT sr_city.uid, sr_city.name_? as name, area_code, region FROM sr_city INNER JOIN sr_territory t ON t.uid = sr_city.uid_territory HAVING name <> '' ORDER BY name","{{lg.rows.lg}}")}}
+                            <option selected value="">{{sn_ct("choisissez une ville")}}</option>
+                            \{{for c in cities.rows do}}
+                                <option \{{(p.uid_city eq c.uid)?'selected':''}} value="\{{c.uid}}">\{{c.name .+ ' ('.+c.area_code.+') - '.+c.region}}</option>
+                            \{{endfor}}
+                        </select>
+                        <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Ville invalide')}}" data-validator-error="uid_city"></span>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <div class="col-xs-12">
+                        <hr>
+                        <p>{{sn_ct("Information du 2e formulaire")}}</p>
+                        <hr>
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="estimate_duration">
+                        {{sn_ct("Durée du projet")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{p.estimate_duration}}
+                        <!--<input name="estimate_duration" class='form-control' value='\{{p.estimate_duration}}'/>-->
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="is_owner">
+                        {{sn_ct("Propriétaire")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{p.is_owner}}
+                        <!--<input name="is_owner" class='form-control' value='\{{p.is_owner}}'/> -->
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="budget">
+                        {{sn_ct("Budget")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{p.budget}}
+                        <!--<input name="budget" class='form-control' value='\{{p.budget}}'/>-->
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="budget_type">
+                        {{sn_ct("Type de budget")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{(p.budget_type eq "1")?'{{sn_ct(edit:false,"budget pour main d\'oeuvre uniquement")}}':''}}
+                        \{{(p.budget_type eq '2')?'{{sn_ct(edit:false,"budget pour main d\'oeuvre + matériaux")}}':''}}
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="property_type">
+                        {{sn_ct("Type de propriété")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{p.property_type}}
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="additionnal_comment">
+                        {{sn_ct("Commentaires additionnels")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{p.additional_comments}}
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <label class="control-label col-xs-4" for="landing_page">
+                        {{sn_ct("Premier URL")}}
+                    </label>
+                    <div class="col-xs-12">
+                        \{{p.first_url}}
+                    </div>
+                </fieldset>
+                
+                <fieldset class="form-group">
+                    <div class="col-xs-12">
+                        <input style="width:100%" type="button" name="save" class="btn btn-primary" value="{{sn_ct(edit:false,'Sauvegarder')}}" \{{(p.locked ne 'yes' || p.status ne 'new')?'disabled':''}}/> 
+                    <div class="col-xs-12">
+                </fieldset>
+           
+                \{{if(p.status eq 'active') then}} 
+                    <div class="alert alert-success">#\{{cgidata.uid_project}}: {{sn_ct("projet activé avec succès!")}}</div>
+                \{{elseif(IS_MODIFIED && p.uid == cgidata.uid_project) then}}
+                    <div class="alert alert-success">#\{{cgidata.uid_project}}: {{sn_ct("projet modifié succès!")}}</div>
+                \{{endif}}
+            </form>
+            <input type='radio' style="display:none" name="selected" value="\{{p.uid}}" \{{(i==0)?'checked':''}} />
+            \{{
+                // include the validator for contractor_form
+                %include "/site/admin/admin_dashboard/include/validator.sn";
+                validator.startAntibot();
+                // validate client side
+                validator.validateJS(form:'project_form_'.+ i);
+            }}
+        </div>
+        \{{i++}}
+        \{{endfor}}
+
+    </div>
+        
+
+  
+    
+    <form style="display:none" name="project_form" id="project_form" action="" method="POST">
+        <input name="update_project" id="update_project" type="submit"/>
+    </form>
+    
+<script>
+    $(document).ready(function(){
+        
+        h = $('.project_body').height() + 200;
+        window.parent.$('object').css('height', h+'px');
+        
+        window.parent.selectedProject($('input[name=selected]').val());
+        window.parent.$('input[name=plan_sent_btn]').attr('disabled','true');
+        window.parent.$('input[name=unreached_btn]').attr('disabled','true');
+        window.parent.$('input[name=callback_btn]').attr('disabled','true');
+        
+        
+        CKEDITOR.editorConfig = function( config ) {
+        	config.language = 'fr';
+        	config.uiColor = '#F7B42C';
+        	config.height = 300;
+        	config.toolbarCanCollapse = true;
+            config.htmlEncodeOutput = true;
+            config.entities = true;        
+            
+        };
+        
+        CKEDITOR.on('dialogDefinition', function(e) {
+            var dialogName = e.data.name;
+            var dialogDefinition = e.data.definition;
+            dialogDefinition.onShow = function() {
+                    this.move(this.getPosition().x,0); // Top center
+            }
+        });        
+        
+        $('.pcollapse').click(function(){
+            $(this).parent().next('form').slideUp();
+            
+            if($(this).parent().next('form').is(":visible")){
+                $(this).parent().next('form').slideUp();
+                $(this).html('<img title="{{sn_ct(edit:false,'afficher details')}}" width="32px" src="/sn_uploads/icon/down-arrow-Icon.png"/>');
+            }else{
+                $(this).parent().next('form').slideDown();
+                $(this).html('<img title="{{sn_ct(edit:false,'Masquer details')}}" width="32px" src="/sn_uploads/icon/top-arrow-Icon.png"/>');
+            }
+        });
+        
+        
+        $('.projectpane').click(function(){
+            var form = $(this).find('form');
+            var uid = form.find('input[name=uid_project]').val();
+            
+            $('.projectpane').css('background-color','');
+            $(this).css('background-color','#fff0d8');
+            
+            window.parent.selectedProject(uid);
+            window.parent.$('input[name=plan_sent_btn]').removeAttr('disabled');
+            window.parent.$('input[name=unreached_btn]').removeAttr('disabled');
+            window.parent.$('input[name=callback_btn]').removeAttr('disabled');
+        });
+        
+        $('.projectpane').hover(function(){
+            $(this).addClass('tabhover');
+        }, function() {
+            $(this).removeClass('tabhover');
+        }); 
+    })
+</script>
+
+
+    
+<script>
+function goto_map(street_no, address){
+    if(address == ""){
+        
+    }
+    window.open("https://www.google.com/maps/place/"+address, "_blank");
+}
+
+    $('.project_form').on('submit',function(e){
+        e.preventDefault();
+        
+        var uid = this.uid_project.value;
+        var description = CKEDITOR.instances['desc_'+uid].getData();
+        var formdata = {'activate':'activer', desc: description};
+        
+        $(this).find('[name]').each(function() {
+            formdata[this.name] = this.value;  
+        });
+        
+        
+        window.parent.$('.activate').dialog({
+            modal: true, title: '{{sn_ct(edit:false,"Confirmation")}}', zIndex: 9, resizable: false,
+            buttons: {
+                Ok: function () {
+                    $.ajax({
+                        method: 'POST',
+                        data: formdata,
+                        success: function(data, textStatus, xhr){
+                            $('#projectpane_'+uid).remove();
+                            window.parent.$('.activate').dialog("close");
+                            window.location = window.location.href; 
+                        }
+                    });
+    
+                },
+                No: function() {                                                                 
+                    window.parent.$('.activate').dialog("close");
+                }
+            },
+            close: function (event, ui) {
+            }
+        });
+    });
+
+    //check if validator returns at least 1 error
+    $('input[name=activate]').on('click', function(){
+       if($('.has-error')[0]){
+           $(this).closest('div[class=actions]').next('form').find('.alert').show();
+       }
+    });
+
+    //check if validator returns at least 1 error
+    $('input').focusout(function(){
+        if(!$('.has-error')[0]){
+            $('.alert').hide();
+        }
+    });
+
+    //Modifier les informations sans activer le projet
+    $('input[name=save]').on('click', function(){
+        var form = $(this).closest('form');
+        var id=form.attr('id');
+        var uid = form.find('input[name=uid_project]').val();
+        var description = CKEDITOR.instances['desc_'+uid].getData();
+        var formdata = {'save': 'sauvegarder', desc: description};
+        
+        form.find('[name]').each(function() {
+            formdata[this.name] = this.value;  
+        });
+        
+    
+        $.ajax({
+            method: 'POST',
+            data: formdata,
+            success: function(data, textStatus, xhr){
+                
+                window.parent.$('.project_updated').dialog({
+                    modal: true, title: '{{sn_ct(edit:false,"Confirmation")}}', zIndex: 9, resizable: false,
+                    buttons: {
+                        Ok: function() {
+                            window.parent.$('.project_updated').dialog("close");
+                            window.location = window.location.href;
+                        }
+                    },
+                
+                    close: function (event, ui) {
+                    }
+                });
+    
+            }
+        });
+    });
+
+
+    $('input[name=selected]').on('change', function(){
+        if($(this).is(':checked')) { 
+           window.parent.selectedProject($(this).val());
+        }
+    });
+
+
+    $('select[name=service1').on('change',function(){
+        ctrl = $(this);
+        ctrlID = $(this).attr('id');
+        subctrl = $('#sub'+ctrlID);
+        suid = ctrl.val();
+        
+        subctrl.html('<option value="">Choisissez une option</option');
+        subctrl.html('<option value="test">test sous-service</option');
+        //$('#lead_price_'+puid).val(value.lead_price);
+    
+        $.ajax({
+            type: "POST",
+            data: {'action': 'sub_lookup','suid':suid},
+            success: function(data, statusText, xhr) {
+                var res = xhr.getResponseHeader('X-sub');
+                res = res.decode();
+                res = jQuery.parseJSON(res);
+                puid = window.parent.$('#selected_project').val();
+                
+                if(res.length > 0){
+                    $.each(res, function(key,value){
+                        subctrl.append('<option value="' + value.uid + '">' + value.name + '</option');
+                        // if(key == 0){
+                        //     $('#lead_price_'+puid).val("");
+                        // }
+                    });
+                }
+                
+                
+            }
+        });
+    });
+
+
+    $('select[name=subservice').on('change',function(){
+        ctrl = $(this);
+        subid = ctrl.val();
+        
+        $.ajax({
+            type: "POST",
+            data: {'action': 'price_lookup','subid':subid},
+            beforeSend: function(){
+            },
+            
+            success: function(data, statusText, xhr) {
+                var res1 = xhr.getResponseHeader('X-price');
+                var res2 = xhr.getResponseHeader('X-estimate');
+                puid = window.parent.$('#selected_project').val();
+                $('#lead_price_'+puid).val(res1);
+                $('#estimate_'+puid).val(res2);
+            }
+        });
+    
+    });
+
+    (function(window){
+    	window.htmlentities = {
+    		/**
+    		 * Converts a string to its html characters completely.
+    		 *
+    		 * @param {String} str String with unescaped HTML characters
+    		 **/
+    		encode : function(str) {
+    			var buf = [];
+    			
+    			for (var i=str.length-1;i>=0;i--) {
+    				buf.unshift(['&#', str[i].charCodeAt(), ';'].join(''));
+    			}
+    			
+    			return buf.join('');
+    		},
+    		/**
+    		 * Converts an html characterSet into its original character.
+    		 *
+    		 * @param {String} str htmlSet entities
+    		 **/
+    		decode : function(str) {
+    			return str.replace(/&#(\d+);/g, function(match, dec) {
+    				return String.fromCharCode(dec);
+    			});
+    		}
+    	};
+    })(window);
+
+
+
+</script>
+
+
+
+
+
+<!-- Google map api for addresses -->
+<script>
+// This example displays an address form, using the autocomplete feature
+// of the Google Places API to help users fill in the information.
+
+var placeSearch, autocomplete, autocomplete_slim;
+var componentForm = {
+  street_number: 'short_name',
+  route: 'long_name',
+  locality: 'long_name',
+  administrative_area_level_1: 'short_name',
+  country: 'long_name',
+  postal_code: 'short_name'
+};
+
+function initAutocomplete() {
+  // Create the autocomplete object, restricting the search to geographical
+  // location types.
+  autocomplete = new google.maps.places.Autocomplete(
+      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      {types: ['geocode']});
+      
+  // When the user selects an address from the dropdown, populate the address
+  // fields in the form.
+  autocomplete.addListener('place_changed', fillInAddress);
+  autocomplete.name="normal";
+
+
+  // For the second form in the article_detail page (slim)
+  if (document.getElementById('address_slim')){
+      autocomplete_slim = new google.maps.places.Autocomplete(
+          /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+          {types: ['geocode']});
+      autocomplete_slim.addListener('place_changed', fillInAddress);
+      autocomplete_slim.name="slim";
+    }
+}
+
+// [START region_fillform]
+function fillInAddress() {
+  // Get the place details from the autocomplete object.
+  var place = this.getPlace();
+  index = (this.name === "normal") ? 0 : 1 ;
+    
+  for (var component in componentForm) {
+    document.getElementsByName(component)[index].value = '';
+    document.getElementsByName(component)[index].disabled = false;
+  }
+
+  // Get each component of the address from the place details
+  // and fill the corresponding field on the form.
+  for (var i = 0; i < place.address_components.length; i++) {
+    var addressType = place.address_components[i].types[0];
+    if (componentForm[addressType]) {
+      var val = place.address_components[i][componentForm[addressType]];
+      document.getElementsByName(addressType)[index].value = val;
+    }
+  }
+}
+// [END region_fillform]
+
+// [START region_geolocation]
+// Bias the autocomplete object to the user's geographical location,
+// as supplied by the browser's 'navigator.geolocation' object.
+    function geolocate() {
+      if (navigator.geolocation) {
+    //     navigator.geolocation.getCurrentPosition(function(position) {
+    //       var geolocation = {
+    //         lat: position.coords.latitude,
+    //         lng: position.coords.longitude
+    //       };
+    //       var circle = new google.maps.Circle({
+    //         center: geolocation,
+    //         radius: position.coords.accuracy
+    //       });
+    //      autocomplete.setBounds(circle.getBounds());
+    //     });
+       }
+    }
+// [END region_geolocation] 
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&callback=initAutocomplete&key=AIzaSyD7PI5ZfU6ZnTr0iwxYKpdb7kTDNiHw1e8"async defer></script>
+

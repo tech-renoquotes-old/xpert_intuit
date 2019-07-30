@@ -1,0 +1,13 @@
+\{{
+package Exemple
+&nbsp;   e = "!";
+
+    function hello()
+        return "Hello ";
+    endf
+
+    function world()
+        return " World";
+    endf
+endp
+}}

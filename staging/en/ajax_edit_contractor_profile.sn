@@ -1,0 +1,47 @@
+
+{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator.sn";
+    
+    cgidata = cgidata();  
+    use extranet_user;
+    "YAAAAAAAAA"; extranet_user;
+    address = sql(single:true, "SELECT uid FROM sr_address WHERE uid_contractor='?' ORDER BY uid ASC", extranet_user.uid);
+    
+    contractor = update(
+        uid:extranet_user.uid,
+        tables:"sr_contractor",
+        fields:{
+            "contact_firstname":cgidata.contact_firstname,
+            "contact_lastname":cgidata.contact_lastname,
+            "contact_phone":cgidata.contact_phone,
+            "contact_email":cgidata.contact_email,
+            "contact_title":cgidata.contact_title,
+            "website":cgidata.website,
+            "company_phone":cgidata.company_phone,
+            "insurance_company":cgidata.insurance_company,
+            "insurance_number":cgidata.insurance_number
+        }
+    );
+    
+    territory = update(
+        uid:address.rows.uid,
+        tables:"sr_address",
+        fields:{
+            "uid_city":cgidata.city,
+            "street_no":cgidata.street_no,
+            "street":cgidata.street,
+            "zip":cgidata.zip,
+            "province":cgidata.province
+        }
+    );
+    
+    // validate server side
+    if (validator.validate(data:cgidata)) then
+    
+
+    endif
+    
+    
+
+}}

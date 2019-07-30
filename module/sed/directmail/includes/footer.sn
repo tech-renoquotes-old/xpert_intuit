@@ -1,0 +1,88 @@
+{{
+    // --------------------------------------------------------------------------
+    // Name:        Includes  footer
+    //
+    // Description: Display the footer for the template of newsletter of conatct 
+    //
+    // Version:      1.0 2016-06-3 9:00:03 gamila@sednove.com initial
+    // --------------------------------------------------------------------------
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+    use theme_config;
+    use code;
+    use user;
+    use lg;
+    use curcampaign;
+    editct = false;
+    if curcampaign.nbrows != 0 then
+        editct = true;
+    endif
+    
+    langue = user.rows.lg;
+    if langue eq "" then
+        langue = lg.rows.lg;
+    endif
+}}
+
+<tr style="background-color:#F1F1F1;">
+	<td>
+	   <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-top:35px solid #F1F1F1;border-bottom:35px solid #F1F1F1;">
+			<tr>
+				<td width="35">&nbsp;</td>
+				<td width="530">
+					<h2 style="color:#{{theme_config.rows.heading_color}};font-size:20px;line-height:26px;font-family:{{theme_config.rows.heading_font}};margin-bottom:10px;">
+					    {{site_config.rows{"client_name_" .+ langue};}}
+					</h2>
+				</td>
+				<td width="35">&nbsp;</td>
+			</tr>
+		</table>
+	</td>
+</tr>
+
+<!-- FOOTER -->
+<tr style="background-color:#F1F1F1;">
+    <td>
+        <table border="0" cellpadding="0" cellspacing="0" width="600" style="border-bottom:35px solid #F1F1F1;">
+        	<tr>
+        		<td width="35">&nbsp;</td>
+        		<td width="245" style="text-align:left;" valign="top">
+        			<p style="color:#{{theme_config.rows.content_color}};font-size:14px;line-height:18px;font-family:{{theme_config.rows.content_font}};">
+        			    {{nl2br(base_config.rows{"footer_col_left_" .+ langue})}}
+                    </p>
+        		</td>
+        		<td width="40">&nbsp;</td>
+        		<td width="245" valign="top">
+        			<p style="color:#{{theme_config.rows.content_color}};font-size:14px;line-height:18px;font-family:{{theme_config.rows.content_font}};">
+        			    {{nl2br(base_config.rows{"footer_col_right_" .+ langue})}}
+                    </p>
+                    <p style="color:#{{theme_config.rows.content_color}};font-size:14px;line-height:18px;font-family:{{theme_config.rows.content_font}};">
+                        <a href="{{site_config.rows.url_prod}}" style="color:#{{theme_config.rows.link_color}};font-family:{{theme_config.rows.content_font}};">{{site_config.rows.url_prod}}</a>
+                    </p>
+        		</td>
+        		<td width="35">&nbsp;</td>
+        	</tr>
+        </table>
+    </td>
+</tr>
+
+
+<!-- UNSUBCRIBE AREA ================================== -->
+<tr>
+    <td>
+        <div style="background-color:#E4E4E4;border:1px solid #E4E4E4;border-width:20px 35px 20px 35px;text-align:center;">
+            <p style="color:#{{theme_config.rows.content_color}};font-size:11px;line-height:12px;font-family:{{theme_config.rows.content_font}};">
+                {{base_config.rows{"footer_why_" .+ langue};}}
+            </p>
+            <p style="color:#{{theme_config.rows.content_color}};font-size:11px;line-height:12px;font-family:{{theme_config.rows.content_font}};">pour se désabonner :
+                {{if langue eq "" then langue="fr"; endif }} <a href="{{site_config.rows.url_prod;pages('unsubscribe_from_email',langue); "?code="; code}}" style="
+					color:#{{theme_config.rows.link_color}};font-size:11px;line-height:12px;font-family:{{theme_config.rows.content_font}};">
+                  {{sn_ct(code:"Cliquez ici", lg:langue, edit:editct, publish:"/publish/sed_directmail_campaign.sn", uids:curcampaign.rows.uid)}}
+              	</a>
+            </p>
+            <p style="color:#{{theme_config.rows.content_color}};font-size:11px;line-height:12px;font-family:{{theme_config.rows.content_font}};">
+                {{base_config.rows{"footer_all_rights_" .+ langue};}}
+            </p>
+        </div>
+    </td>
+</tr>

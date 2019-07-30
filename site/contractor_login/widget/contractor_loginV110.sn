@@ -1,0 +1,380 @@
+{{
+    
+    /*
+       
+    	@title	sr_contractor_login (based on sed_login)
+    	
+    	Use to display Display login form and lost password form
+    
+    	
+    	@author gamila@sednove.com
+    	
+    	@version 1.0 2016-06-02 10:00:00 laplante@sednove.com Initial Version
+    	@version 1.1 2016-06-03 10:00:00 pascale@sednove.com Code review + page choice from table sed_login_page
+
+
+    */
+
+    %include "/extenso/functions/sn_ct.snc"; 
+    %include "/extenso/functions/sn_pages.snc"; 
+	use widget;
+	use lg;
+    %include "/site/contractor_login/include/fblogin.sn";
+	%include "/site/package/all.sn";
+	config = config();
+
+    page = sql(single:true,"SELECT url_interne FROM sed_login_page");  
+    p = sql(single:true,"select * from pages where uid = '?'", page.rows.url_interne);
+    void insert(table:'sr_debug', fields:{'description':'login','text':cgidata,'module':'login'});
+
+}}
+<style>
+.fb-sep {
+    margin: 20px -10px 20px -10px;
+    position: relative;
+    background-color: #cccccc;
+    height: 1px;
+}
+.fb-login-help {
+    text-align: right;
+    font-size: 11px;
+    line-height: 13px;
+    color: #666;
+    margin-top: -2px;
+    margin-bottom: 8px;
+}
+
+div.chk{
+    display: table;
+    text-align: center;
+    margin: 2px auto;
+}
+</style>
+<link rel="stylesheet" href="/css/bootstrap-social.css">
+\{{
+    //%include "/extenso/functions/sn_login.snc"; 
+    %include "/site/contractor_login/include/sr_login.sn"; // temporaire for testing
+    
+	cgidata = cgidata();
+	request = request();
+//cgidata;
+	use config; 
+	use page; // In template, this variable is defined.
+    ch_password = 1 ;
+	message = "";
+	error = [];
+}}
+
+	<div class="col-sm-offset-3 col-sm-6 well">
+	    <!--Logout-->
+	   \{{	if cgidata.logout then }} 
+        		<div class="alert alert-info" role="alert"> 
+        		    {{ sn_ct("sed_login You have been logout",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}} 
+        		</div>
+		\{{    void sn_logout(user_table:"sr_contractor",login_table:"sr_login");
+	        endif
+
+	        if (request.unparsed_uri =~ 'need_activation') then
+	            }}
+	            <div class="alert alert-warning" role="alert"> 
+        		    {{ sn_ct("sed_login You have not created credentials yet, you will receive an email shortly with a link.",publish:"/publish/sn_widgets.sn",uids:widget.rows.uid,module:"sed_login")}} 
+        		</div>
+	            \{{
+	        endif
+	        
+
+        //	if k is set than this is a link from an email to change password
+    	if cgidata.k ne "" then
+    		forget_user = decrypt(key:"aj58fla74jdna63g",value:cgidata.k);
+    		time = time();
+    		diff = time.secs - forget_user.secs;
+    		finduser = sql(single:true,"SELECT * FROM sr_contractor WHERE uid = '?'", forget_user.uid);
+    		
+    		if finduser.nbrows != 1 || diff > 0 then 
+    			extranet_user = null;
+    			error[length(error)] = dq(({{ sn_ct("sed_login this link is not valid or expired.",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    		else
+    			extranet_user = finduser.rows;
+    			if cgidata.password ne "" && cgidata.password2 ne "" then // fields not empty 
+    			    //if length(cgidata.password) < 6 || cgidata.password !~ "\W" || cgidata.password !~ "\d" || cgidata.password !~ "[A-Z]" || cgidata.password !~ "[a-z]" then
+   			        // caractère spécial n'est plus obligatoire
+   			        if length(cgidata.password) < 6  || cgidata.password !~ "\d" || cgidata.password !~ "[A-Z]" || cgidata.password !~ "[a-z]" then
+    					error[length(error)] = dq(({{ sn_ct("sed_login The password must contain at least 6 characters, one upper letter, one lower case letter, one number ",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    					change_password = null;    			    
+    				elseif cgidata.password ne cgidata.password2 then
+    					error[length(error)] = dq(({{ sn_ct("sed_login both password are different",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    					change_password = null;
+    				else
+    				    
+        				if extranet_user.sn_hash_password eq "md5" then
+            				password = md5(cgidata.password .+ extranet_user.sn_salt_password);
+            			else
+            			    if extranet_user.sn_hash_password eq "sha512" then
+            			        password = hash(algo:'sha512', cgidata.password .+ extranet_user.sn_salt_password);
+            			    else
+            				    password = cgidata.password;
+            				endif
+            			endif
+        				
+    					change_password=update(tables:"sr_contractor",uid:extranet_user.uid,fields:{"password":password});	
+    					if cgidata.after_changing eq "yes" then
+    					    void update(tables:"sr_contractor",uid:extranet_user.uid,fields:{"change_password":"no"});
+    					endif
+    					message .+= dq(({{ sn_ct("sed_login password has been changed",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    				endif
+    			else // empty fields
+    				change_password = null;
+    				if cgidata.action ne "" then
+    					error[length(error)] = dq(({{ sn_ct("sed_login empty fields",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    				endif
+    			endif
+    		endif
+    	endif
+
+        // Force change password
+        if cgidata.action eq "force_change_password" then
+    	    change_password = null;
+    	    time = time();
+            secs = time.secs + 86400;
+            forgot_user = decrypt(key:"aj58fla74jdna63g",value:cgidata.u);
+            finduser = sql(single:true,"SELECT * FROM sr_contractor WHERE uid = '?'", forgot_user);
+            link = { "uid" : finduser.rows.uid, "secs" : secs };
+            cgidata.k = crypt(key:"aj58fla74jdna63g",value:link);
+    	endif
+
+        //login-fb
+        if cgidata.action eq "fb" then
+            if length(error) == 0  then
+                void insert(table:'sr_debug', fields:{'description':'fb.uid','text':cgidata.fb_uid});
+			    if cgidata.fb_uid ne   "" then
+			            extranet_user = sn_login(user_table:"sr_contractor",login_table:"sr_login",username:cgidata.username,password:cgidata.password,fb_uid:cgidata.fb_uid);
+                        void insert(table:'sr_debug', fields:{'description':'extranet_user','text':extranet_user});
+			        
+			        if extranet_user == null  then
+				            error[length(error)] = dq(({{ sn_ct("sed_login incorrect login",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+			        else
+			            if p.nbrows eq 1 then
+                             file = "{{p.rows{'folder_' .+ lg.rows.lg}; p.rows{'page_' .+ lg.rows.lg}; }}.snc";
+        				 else
+        				     file =  "/extranet/{{lg.rows.lg}}/index.snc";
+        				endif
+        				//extranet_user = u;
+                       
+                        "extranet.user=";extranet_user;
+   				                    redirect(url:file);
+    				    void insert(table:'sr_debug', fields:{'description':'fb.uid','text':cgidata.fb_uid});
+    				            "{{ sn_ct(edit:false, 'sed_login Connexion en cours...'); }}";
+    				            "<script>location = location;</script>";
+    				endif
+			    endif
+            endif
+        endif
+       
+       
+        // Login
+    	if cgidata.action eq "login" then
+    		if cgidata.username eq "" then
+    			error[length(error)] = dq(({{ sn_ct("sed_login username is missing",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    		endif
+    
+    		if cgidata.password eq "" then
+    			error[length(error)] = dq(({{ sn_ct("sed_login password is missing",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    		endif
+            
+    		if length(error) == 0  then
+    			extranet_user = sn_login(user_table:"sr_contractor",login_table:"sr_login",username:cgidata.username,password:cgidata.password,fb_uid:cgidata.fb_uid);
+    			
+    	
+    			
+    			if extranet_user == null  then
+    				error[length(error)] = dq(({{ sn_ct("sed_login incorrect login",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    				// sleep(3);
+    			else
+    			
+
+    			    // redirection page
+                     if "{{p.nbrows}}" eq 1 then
+                         file = "{{p.rows{'folder_' .+ lg.rows.lg}; p.rows{'page_' .+ lg.rows.lg}; }}.snc";
+    				 else
+    				     file =  "/extranet/{{lg.rows.lg}}/index.snc";
+    				endif
+
+         			if extranet_user.change_password ne "yes" then
+        				    // redirect(url:file);
+        				    
+        				    "{{ sn_ct(edit:false, 'sed_login Connexion en cours...'); }}";
+        				    "<script>location = location;</script>";
+        				    
+        			else 
+        				    u = crypt(key:"aj58fla74jdna63g",value:extranet_user.uid);
+        				    redirect(url:"{{pages("extranet_login", lg.rows.lg, table:"pages")}}?action=force_change_password&u=".+u);
+        			endif
+    			endif
+    		endif
+    	endif
+
+        // Reset password
+    	if cgidata.action eq "reset_password" then
+    		if cgidata.email eq "" then
+    			error[length(error)] = dq(({{ sn_ct("sed_login email is missing",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+          		ch_password = null ;
+    		else
+    		    userEmail = esc(filter:"sqlqm,cleanhtml",cgidata.email);
+    			//finduser = sql("SELECT uid, contact_email, company_name, username FROM sr_contractor WHERE contact_email = '?' and active = 'yes'", userEmail);
+    			finduser = sql("SELECT uid, contact_email, company_name, username, active FROM sr_contractor WHERE contact_email = '?' ", userEmail);
+    			if finduser.nbrows < 1 then
+    				error[length(error)] = dq(({{ sn_ct("sed_login invalid email",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+    				sleep(3);
+          			ch_password = null ;
+    			else
+    			    with_fullpage = 0;
+    			    inactive_account = false; 
+    			    for contractor_user in finduser.rows do
+    			        if (contractor_user.active ne 'yes') then 
+    			            inactive_account = true;  
+    			        else  // active account
+        			        if (contractor_user.username ne '') then
+                                automail::contractorForgotPassword(contractor_user.uid);
+                                void update(tables:"sr_contractor", uid:contractor_user.uid, fields:{"sent_welcome_email":'yes'});
+                            else
+                                if (sr_contractor.sent_welcome_email ne 'yes') then  // welcome email not sent
+                                    automail::contractorActivation(contractor_user.uid);
+                                endif
+                            endif
+                        endif
+          			endfor 
+ 			        if (inactive_account) then  // one of the accounts is inactive
+     				    message .+= dq(({{ sn_ct("sed_login inactive account",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+     				else
+      				    message .+= dq(({{ sn_ct("sed_login an email has been send to reset your password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}));
+          			    ch_password = 1 ;
+           			endif
+    			endif
+    		endif
+    	endif
+}}
+
+    \{{if cgidata.action eq "forget" || (cgidata.action eq "reset_password" && ch_password == null) then }}  
+          \{{  // forget password form }}
+          \{{ for err in error do}}
+              <div class="alert-wrap">
+                  <div class="alert alert-danger" role="alert">
+                      \{{ err }}
+                  </div>
+              </div>
+          \{{ endfor }}
+          
+          <form role="form" method="post" action="{{pages(table:'pages','extranet_login',lg.rows.lg)}}">
+              <input type="hidden" name="action" value="reset_password">
+              <h2>{{ sn_ct("sed_login Forget password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</h2>
+              <div class="form-group">
+                  <label for="inputEmail3" class="control-label">{{ sn_ct("sed_login Please enter your email",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+                  <input type="email" class="form-control" id="email" name="email">
+              </div>
+              
+              <div class="form-group">
+                	  <a class="btn btn-default pull-left" href="?">
+                          <i class="fa fa-reply left"></i>{{ sn_ct("sed_login Cancel",edit:true,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                      </a>  
+                      <button type="submit" class="btn btn-primary pull-right">
+                          <i class="fa fa-check-circle left red"></i>{{ sn_ct("sed_login Submit",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                      </button>
+              </div>
+              <div class="clearfix"></div>
+          </form>
+    \{{ else }}
+
+        \{{ if message ne "" then }}
+          <div class="alert-wrap">
+            <div class="alert alert-success" role="alert">
+                <i class="fa fa-check-circle left"></i> \{{ message }}
+            </div>
+          </div>
+        \{{ endif }}
+
+        \{{ for err in error do}}
+          <div class="alert-wrap">
+              <div class="alert alert-danger" role="alert">
+                  \{{ err }}
+              </div>
+          </div>
+        \{{ endfor }}
+
+      
+        \{{ 
+          //   Password reset form  
+          if extranet_user != null && change_password == null then }}
+            <h2>{{ sn_ct("sed_login Password reset",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}} \{{extranet_user.contact_email}}</h2>
+            <form role="form" action="?" method="post">
+              <input type="hidden" name="action" value="change_password">
+              <input type="hidden" name="k" value="\{{cgidata.k}}">
+              
+               \{{ if cgidata.action eq "force_change_password" then }}
+                    <input type="hidden" name="after_changing" value="yes" />
+              \{{endif}}
+              
+              <div class="form-group\{{ if length(error) > 0 then }} has-error\{{ endif }}">
+                  <label for="password" class="control-label">{{ sn_ct("sed_login Password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+                  <input type="password" class="form-control" id="password" name="password">
+              </div>
+              
+              <div class="form-group\{{ if length(error) > 0 then }} has-error\{{ endif }}">
+                  <label for="password2" class="control-label">{{ sn_ct("sed_login Repeat Password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</label>
+                  <input type="password" class="form-control" id="password2" name="password2">
+              </div>
+              
+              <div class="form-group">
+                <a class="btn btn-default pull-left" href="">
+                    <i class="fa fa-reply left"></i> {{ sn_ct("sed_login Return to login",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                </a>
+                <button id="btn_go" type="submit" class="btn btn-primary pull-right">
+                  <i class="fa fa-check-circle left red"></i>{{ sn_ct("sed_login change password",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                </button>
+              </div>
+             <div class="clearfix"></div>
+            </form>
+
+        \{{ else 
+            //   Connexion form
+            request = request();
+          
+            // to prevent redirection loop
+            url = (request.uri =~ "extranet-login") ? "{{pages(table:'pages','sr_contractor_dashboard',lg.rows.lg)}}" : "";
+      
+            //  user Login
+        }}
+          
+            <form role="form" action="\{{url}}" method="post">
+              <input type="hidden" name="action" value="login">
+              <h2>{{ sn_ct("sed_login Connection title",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</h2>
+              <div class="form-group\{{ if length(error) > 0 then }} has-error\{{ endif }}">
+                  <label for="inputEmail3" class="control-label">
+                  	<i class="fa fa-user"> </i>{{ sn_ct("sed_login User",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                  </label>
+                  <input type="text" class="form-control" id="username" name="username">
+              </div>
+              <div class="form-group\{{ if length(error) > 0 then }} has-error\{{ endif }}">
+                  <label for="password" class="control-label">
+                  	<i class="fa fa-key"> </i>{{ sn_ct("sed_login Password",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                </label>
+                  <input type="password" class="form-control" id="password" name="password">
+              </div>
+              
+              <div class="form-group">
+                  <a class="password pull-left" href="{{pages("extranet_login", lg.rows.lg, table:"pages")}}?action=forget">{{ sn_ct("sed_login Forget your password ?",publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}</a>
+                  <button id="btn_go" type="submit" class="btn btn-primary pull-right btn-block">
+                      <i class="fa fa-check-circle left red"></i> {{ sn_ct("sed_login Login",edit:false,publish:"/extenso/publish/sn_widgets.sn",uids:widget.rows.uid)}}
+                  </button>
+               </div>
+            
+              <div class="clearfix"></div>
+            </form>
+
+      \{{ endif }}
+  \{{ endif }}
+</div>
+
+
+
+
+

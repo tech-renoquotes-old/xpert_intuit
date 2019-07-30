@@ -1,0 +1,60 @@
+{{  
+	// --------------------------------------------------------------------------
+	// Name:        How does it work
+	//
+	// Description: Displays how our service works in 3 steps
+	//
+	// Version:      1.0 2018-01-09 15:20 Michel Jodoin
+	// --------------------------------------------------------------------------
+
+	%include "/extenso/functions/sn_ct.snc"; 
+	%include "/extenso/functions/sn_pages.snc";
+
+	use lg;
+	use widget;
+	use page;
+
+// these are the parameters for the search bar
+    main_search = 1;
+	width = "600px";
+	center = 1;
+	color = "white";
+// end of the parameters
+}}
+
+<div class="wdg_spotlight_container" style="padding:25px 0;">
+    <div class="mask" style="background-image:url(/sn_uploads/HR-MANAGER-BANNER1_1.jpeg);"></div><div class="mask" style="background-color:#2c7fc1;opacity:.65;"></div>
+    
+    <div class="container">
+        
+        
+        <div class="row widget-image-text-ck">
+            
+                    <div class="col-xs-12 single_box box" style="max-width:700px;">
+                    
+                        
+                        <div id="inner">
+                            <style> .typed-cursor{display:none;}</style>
+                            <h1 class="widget-image-text-ck-title">
+                               <span style="color:#ffffff;">{{sn_ct("Je cherche un entrepreneur pour")}}...</span></h1>{{ %include "/site/widget/sr_search_dynamic.sn"}}
+                        </div>
+                        <div class="clearfix"></div>
+                        <style>
+                            #color-ffffff, #color-ffffff p{
+                                color:#ffffff;
+                            }
+                        </style>
+                        <div id="color-ffffff">
+                            <h2><span style="font-size:20px;color:white;">{{sn_ct("Recevez <strong>3 soumissions gratuites</strong> d'entrepreneurs certifiés en <strong>48 heures</strong>")}}</span></h2>
+                        </div>
+                        
+                        <div class="featured_btn btn_centered">
+        						<a href="#sr_client_form" class="btn btn-default btn-rg btn-highlight btn-extralarge" target="_self">{{sn_ct("Ou cliquez ici pour soumettre votre projet")}}</a>
+        				</div>
+        				
+                    </div>
+            
+        </div>
+        
+    </div>
+</div>

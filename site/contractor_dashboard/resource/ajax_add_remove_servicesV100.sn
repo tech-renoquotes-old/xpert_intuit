@@ -1,0 +1,55 @@
+{{
+    /*
+        @title ajax_add_services
+        Description: Add checked services from the contractor.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-07-29
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+    %include "/site/package/all.sn";
+}}
+\{{
+    cgidata = cgidata();
+    use extranet_user;
+    error = 0;
+    errorDel = 0;
+    services = []; 
+ 
+    for i in explode(",", cgidata.service_uid) do
+    // service to be verified before accepted
+       // service = sql("INSERT INTO sr_contractor_service  (uid_contractor, uid_service) VALUES ('?','?')", extranet_user.uid, i );
+       // error = error + service.sqlcode;
+    void insert(table:'sr_debug', fields:{'description':'services1=','text':explode(",", cgidata.service_uid)});
+        services.push(i);
+    endfor
+
+    if  error == 0 then
+        // send email to vefiy added service
+        automail::notifyAdminContractorAddService(extranet_user.uid, services); 
+    endif
+  
+    //Delete Services
+    uids = esc(filter:"sqlqm", cgidata.services_add_uid);
+    if (uids) then
+        services2 = sql("DELETE FROM sr_contractor_service WHERE uid_contractor='?' AND uid_service IN (?)", extranet_user.uid, uids );
+        errorDel = services2.sqlcode;
+    endif
+    
+   if errorDel == 0 && error == 0 then
+        headers_out("X-add_remove_service_success", "1");
+        // send email
+        //bd    automail::notifyAdminContractorAddService(extranet_user.uid, services); 
+    else
+        headers_out("X-add_remove_service_error", "1");
+        //headers_out("X-delete_service_error", "1");
+    endif
+
+}}

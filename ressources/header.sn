@@ -1,0 +1,14 @@
+{{ 
+	//
+	// Name:		header : Display header of the page
+	//
+	// Parameters:	The header depend on the selected theme.
+	//
+	// Version:		1.0 2014-01-18 10:42:03 laplante@sednove.com
+	//
+
+	theme_choice = sql(single:true,"SELECT * FROM sn_theme_color");
+	layout_setup = sql(single:true,"SELECT * FROM sn_theme where uid = '?'", theme_choice.rows.theme_choice);
+	read(layout_setup.rows.header_code) 
+	
+}}

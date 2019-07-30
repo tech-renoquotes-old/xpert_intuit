@@ -1,0 +1,87 @@
+{{ 
+    /*
+    	@title	sed_img_text_link
+    	Description:Widget to display image,text with link
+        @author gamila@sednove.com
+    	@version 1.0 2016-06-22  initial version 
+    */
+    
+	use widget;
+    use lg; 
+	wcontent = sql(single:true,"SELECT * FROM sed_image_title_text_link where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);
+	if 	wcontent.rows.uid  eq '' then
+    // Set default content
+    	    fields = {
+    	        "actif":"oui",
+                "type_url":"externe",
+                "uid" : widget.rows.uid_widget_list,
+                "image":"/module/sed/img_text_link/image_default/image_default.jpg",
+                "uid_widget":widget.rows.uid_widget_list
+            };
+            
+            
+            for l sql("select * from sn_languages where active = 'yes'") do
+                    fields{"titre_" .+ l.rows.lg} = "Title " .+ l.rows.lg;
+                    fields{"lien_texte_" .+ l.rows.lg} = "Texte for link " .+ l.rows.lg;
+                    fields{"url_externe_" .+ l.rows.lg} = "http://sednove.com/ " .+ l.rows.lg;
+                    fields{"texte_" .+ l.rows.lg} = "<p>Description " .+ l.rows.lg .+ "</p>";
+            endfor
+	
+    
+        verif_ctx = sql(single:true,"SELECT uid FROM sed_image_title_text_link WHERE uid_widget='?'",widget.rows.uid_widget_list);
+	       	if verif_ctx.nbrows == 0 then
+	            void insert(table:"sed_image_title_text_link",fields:fields);
+	        endif
+        wcontent = sql(single:true,"SELECT * FROM sed_image_title_text_link where uid_widget = '?' ORDER BY uid DESC", widget.rows.uid_widget_list);  
+    endif
+    
+}}
+<div class="wdg_ittl">
+{{
+    if wcontent.rows.image ne "" then 
+}}
+      <div class="sc_image">
+          <img src="{{wcontent.rows.image;}}?size=250x250">
+      </div>
+{{
+    endif 
+
+    if wcontent.rows{'titre_'.+ lg.rows.lg} ne "" then 
+}} 
+      <h2>{{wcontent.rows{'titre_'.+ lg.rows.lg};}}</h2>
+{{  endif 
+
+   wcontent.rows{'texte_'.+ lg.rows.lg};
+    if wcontent.rows{'lien_texte_'.+ lg.rows.lg} ne "" then 
+        if wcontent.rows.type_url ne""   then 
+           if wcontent.rows.type_url eq "interne"  &&   wcontent.rows.url_interne ne '' then 
+          			intlink = sql(single:true,"SELECT * FROM pages where uid = '?'", wcontent.rows.url_interne);
+}}
+              	<a href="{{intlink.rows{"folder_" .+ lg.rows.lg};if intlink.rows{"page_" .+ lg.rows.lg} ne "index" then intlink.rows{"page_" .+ lg.rows.lg}; endif}}" class="btn btn-primary">
+                	{{wcontent.rows{'lien_texte_'.+ lg.rows.lg};}}
+                </a>
+{{          endif 
+            if wcontent.rows.type_url eq "externe" && wcontent.rows{'url_externe_'.+lg.rows.lg} ne '' then 
+}}
+              <a href="{{wcontent.rows{'url_externe_'.+ lg.rows.lg};}}" class="btn btn-primary">{{wcontent.rows{'lien_texte_'.+ lg.rows.lg};}}</a>
+{{
+            endif 
+        endif
+    endif 
+}}
+</div>
+<style type="text/css">
+.wdg_ittl{
+	width:100%;
+    margin-top:20px;
+    margin-bottom:30px;
+}
+.sc_image {
+    max-width: 100%;
+    margin-bottom: 15px;
+}
+.sc_image img {
+    margin-bottom: 5px;
+    max-width: 100%;
+}
+</style>

@@ -1,0 +1,152 @@
+{{
+    /*
+        @title client_form_slim
+        Description: This widget is the form used to register a new client.
+        
+        @author madupuis@sednove.com
+        
+        @version 1.0 2016-08-03
+
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    
+    use page;
+    use lg;
+}}
+<style>
+    #upload_files_slim>div{
+        position:relative;
+    }
+    #upload_files_slim > div > input {
+        margin:3px 0px;
+    }
+    #upload_files_slim > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files_slim > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files_slim > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    .side-form {
+        margin-bottom:-20px;
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+</style>
+<div style="padding:10px">
+    <form class="form-horizontal" enctype="multipart/form-data" action="{{pages('client_additional_information', lg.rows.lg, table:'pages')}}" id="add_client_slim" name="add_client_slim" method="POST">
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="name" id="name" value="" placeholder='{{sn_ct(edit:false,"client_form Votre nom", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*'>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid name')}}" data-validator-error="name"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="phone" id="phone" value="" placeholder='{{sn_ct(edit:false,"client_form Votre téléphone", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*'>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid phone')}}" data-validator-error="phone"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="email" id="email" value="" placeholder='{{sn_ct(edit:false,"client_form Votre courriel", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*'>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid email')}}" data-validator-error="email"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <input class="form-control LoNotSensitive" type="text" name="address" id="address_slim" value="" placeholder='{{sn_ct(edit:false,"client_form Votre adresse", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*' onFocus="geolocate()" placeholder="">
+                <input type="hidden" class="field" id="street_number" name="street_number" disabled="true"></input>
+                <input type="hidden" class="field" id="route" name="route" disabled="true"></input>
+                <input type="hidden" class="field" id="locality" name="locality" disabled="true"></input>
+                <input type="hidden" class="field" id="administrative_area_level_1" name="administrative_area_level_1" disabled="true"></input>
+                <input type="hidden" class="field" id="postal_code" name="postal_code" disabled="true"></input>
+                <input type="hidden" class="field" id="country" name="country" disabled="true"></input>
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid address')}}" data-validator-error="address"></span>
+            </div>
+                
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="side-form">
+                <textarea class="form-control LoNotSensitive" name="description" placeholder='{{sn_ct(edit:false,"client_form Votre projet", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}} - {{sn_ct(edit:false,"client_form (ex. : Description des travaux à faire dans vos mots, délai de réalisation, budget, etc.)", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}*' rows="5"></textarea>    
+                <span class="help-block" data-validator-msg="{{sn_ct(edit:false,'Invalid description')}}" data-validator-error="description"></span>
+            </div>
+        </fieldset>
+    
+        <fieldset class="form-group">
+            <b>{{sn_ct("client_form Joindre un fichier", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</b>
+            <div class="side-form" style="margin-top:3px;">
+                <div id="upload_files_slim"></div>
+            </div>
+        </fieldset>
+        
+        <p>{{sn_ct(edit:false,"client_form_slim En soumettant votre projet, vous acceptez nos Conditions d'utilisation", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</p>
+        
+        <div class="form-group">
+            <button id="submit_add_client" type="submit" class="btn btn-primary btn-block">
+                {{sn_ct(edit:false,"client_form Soumettre", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+            </button>
+        </div>
+        <!--<p style="text-align:center;">OU</p>-->
+        <div class="form-group" style="margin-bottom:-15px;">
+            <button class="btn btn-primary btn-block disabled" style="border-top-color:#f9b842 !important;border-left-color:#f9b842 !important;border-right-color:#f9b842 !important;background-color:#f9b842 !important;border-color:#f9b842 !important;color:#004870 !important">
+                {{sn_ct(edit:false,"client_form Contactez-nous au 1 855 239-7836 du lundi au vendredi de 8h à 18h", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
+            </button>
+        </div>
+        <!--<div>-->
+        <!--    {{sn_ct(edit:true,"client_form Contactez-nous au 1 855 239-7836 du lundi au vendredi de 8h à 18h", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}-->
+        <!--</div>-->
+        
+        <script>
+            function addUploadFile_slim() {
+                return $('<div><input type="file" name="file"><a><i class="fa"></i></a></div>').prependTo('#upload_files_slim');
+            }
+            $('#upload_files_slim').on('click', "div:not(:first-child) > a", function(){
+                $(this).parent().remove();
+                $('#upload_files_slim > span').remove();
+            });
+            $('#upload_files_slim').on('click', "div:first-child > a", function(){
+                addUploadFile_slim();
+                if ($('#upload_files_slim').find('div > input').length >= 5) {
+                    $('#upload_files_slim').prepend('<span>');
+                }
+            });
+            addUploadFile_slim();
+        </script>
+    </form>
+</div>
+
+\{{
+    // include the validator for contractor_form
+    %include "/site/client_form/include/validator.sn";
+    validator.startAntibot();
+    // validate client side
+    validator.validateJS(form:'add_client_slim');
+}}
+<script>
+    // separate files 
+    $('form[name=add_client_slim]').submit(function(){
+        var file_nb = 0;
+        $('#upload_files_slim').find('div > input').each(function(){
+            file_nb++;
+            $(this).attr("name", $(this).attr("name") + file_nb);
+        });
+    });
+    
+</script>
+

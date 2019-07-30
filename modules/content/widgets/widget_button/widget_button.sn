@@ -1,0 +1,60 @@
+{{
+	use widget;
+    use lg;	
+    use uid;
+	use table;
+	wdgbutton = sql(single:true,"SELECT * FROM widget_button where uid_widget='?'", widget.rows.uid_widget_list);
+}}
+
+
+{{ 
+  type = "";
+  type = wdgbutton.rows.type;
+
+  format = "";
+  format = wdgbutton.rows.format;
+  
+  alignment = "";
+  alignment = wdgbutton.rows.alignment;
+  
+  target = "";
+  target = wdgbutton.rows.target;
+  
+  url = ""
+}}
+ 
+{{if wdgbutton.rows.type_url eq "externe" then;}}
+	{{url = wdgbutton.rows{'url_externe_'.+ lg.rows.lg};}}
+{{else}}
+    {{pagelink = sql(single:true,"select * from pages where uid = '?'", wdgbutton.rows.url_interne);
+    if pagelink.nbrows == 1 then
+        url = pagelink.rows{"folder_" .+ lg.rows.lg}.+pagelink.rows{"page_" .+ lg.rows.lg};
+	endif
+        
+endif}}
+  
+  
+  
+  
+  
+<style type="text/css">
+    .btn_centered {
+        text-align: center;
+    }
+
+    .btn_right {
+        text-align: right;
+    }
+
+    .btn_left {
+        text-align: left;
+    }
+</style>
+
+
+
+
+<!-- WIDGET BTN -->
+<div class="{{alignment}}">
+    <a href="{{url}}" class="btn {{type}} {{format}}" target="{{target}}">{{wdgbutton.rows{'button_text_'.+ lg.rows.lg};}}</a>
+</div>
