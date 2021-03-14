@@ -63,6 +63,7 @@
                     automail::sendUnreachableNoticeToClient(project_contractor.rows.uid);
                     void sql("UPDATE sr_credit SET survey_sent_time = curdate(), callback_date = DATE_ADD(curdate(), INTERVAL 2 DAY)  WHERE uid = ?", cc.uid);
                 endif
+                automail::notifyAdminContractorCreditProject(extranet_user.uid, cgidata.uid_project);
             elseif(project.rows.status eq 'cancelled-after-qualification' || cgidata.reason == 5) then
                 automail::notifyAdminContractorCreditProject(extranet_user.uid, cgidata.uid_project);
             endif

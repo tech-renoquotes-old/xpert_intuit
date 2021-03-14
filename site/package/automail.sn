@@ -1249,6 +1249,8 @@ package automail;
             , uid_contractor, uid_project
         );
         
+        client = sql(single:true, "SELECT uid_client FROM sr_project where uid = '?'", uid_project);
+        
         contractor_info = {
             "uid_contractor": uid_contractor,
             "uid_project": uid_project,
@@ -1260,7 +1262,8 @@ package automail;
             "call1_date":credit.rows.call1_date,
             "call2_date":credit.rows.call2_date,
             "call3_date":credit.rows.call3_date,
-            "explanation":credit.rows.explanation
+            "explanation":credit.rows.explanation,
+            "uid_client":client.rows.uid_client
         };
 
         automail::sendEmail(
@@ -2582,102 +2585,219 @@ package automail;
     endf
     
     
-    //Survey module
-    function sendSurveyToClientAfterSevenDays(token, uid_project, resource_id)
+    //C12
+    /*
+        string uid_project - the uid of the project   //!!
+    */
+    function sendSatisfactionSurveyToClient(uid_project, ...)
+        client = sql(single:true,"SELECT c.email, c.lang, p.token, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",uid_project);
+        if(client.rows.lang ne "") then
+            lg = client.rows.lang;
+        endif
+        
+        service = sql(single:true,"
+            SELECT s.name_? as service
+            FROM sr_service s
+            INNER JOIN sr_project p ON p.uid_service = s.uid
+            WHERE p.uid = '?'
+            ", lg, uid_project
+        );
         
         contractors = sql("
-            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.uid_contractor, pc.token
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.token, c.contact_lg, seo
             FROM sr_project_contractor pc
             INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
             WHERE accepted = 'yes'
             AND uid_project = '?' 
             ", uid_project
-        );
+        );  
         
 
         if (contractors.nbrows > 0) then
-            client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'", uid_project);
-            lg = client.rows.lang;
-            resource = sql(single:true, "SELECT file_? as fname, url_? as url FROM ressources WHERE uid = '?'", lg, lg, resource_id);
-            survey_url = resource.rows.url .+ resource.rows.fname;
+            token = client.rows.token;
+            //res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            res = client.rows.email;
             
-            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
-            
-            //get information about the project
-            project = sql(single:true, "
-                SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip 
-                FROM sr_project p 
-                LEFT JOIN sr_address a ON p.uid_address=a.uid 
-                LEFT JOIN sr_city c ON c.uid=a.uid_city 
-                WHERE p.token = '?'", lg, token);
-
-            //get the service used for the project
-            svc = sql(single:true, "SELECT s.name_? as svcname FROM sr_service s WHERE s.uid = '?'", lg, project.rows.uid_service);
-
-            service = svc.rows.svcname;
-
-            if (res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0) then //adresse valide
+            if   ( res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
                 email_to = res;
-                void insert(table:'sr_log', fields:{'uid_project':uid_project .+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
-                email_to;
+                void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
+                
+                //create tracking token
+                time = time();
+                token_tracking = hash(algo:"sha512", client.rows.email .+ client.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+                
                 automail::sendEmail(
-                    "sendSurveyToClientAfterSevenDays",
-                    to: email_to,
-                    lg:lg
+                    "sendSatisfactionSurveyToClient",
+                    group: 'clients',
+                    to: client.rows.email, 
+                    lg:lg,
+                    uid_client: client.rows.uid,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
+                );
+            endif
+        endif
+    endf
+    
+    function sendSatisfactionSurveyToClient_reminder1(uid_project)
+        
+        client = sql(single:true,"SELECT c.email, c.lang, p.token, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",uid_project);
+        lg = (client.rows.lang ne "")? lg: 'fr';
+        
+        service = sql(single:true,"
+            SELECT s.name_? as service
+            FROM sr_service s
+            INNER JOIN sr_project p ON p.uid_service = s.uid
+            WHERE p.uid = '?'
+            ", lg, uid_project
+        );
+        
+        contractors = sql("
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.token, c.contact_lg, seo
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            WHERE accepted = 'yes'
+            AND uid_project = '?' 
+            ", uid_project
+        );  
+
+        if (contractors.nbrows > 0) then
+            token = client.rows.token;
+            // res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            res = client.rows.email;
+            
+            if   ( res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+                email_to = res;
+                void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient_reminder1---','value':client.rows.email});
+                
+                //create tracking token
+                time = time();
+                token_tracking = hash(algo:"sha512", client.rows.email .+ client.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+                
+                automail::sendEmail(
+                    "sendSatisfactionSurveyToClient_reminder1",
+                    group: 'clients',
+                    to: client.rows.email, 
+                    lg:lg,
+                    uid_client: client.rows.uid,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
+                );
+            endif
+        endif
+    endf    
+    
+    function sendSatisfactionSurveyToAdmin(uid_project_contractor, uid_project, ...)
+        
+        client = sql(single:true,"SELECT c.email, c.lang, p.token, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'",uid_project);
+        lg = (client.rows.lang ne "" && lg)? lg :'fr';
+        
+        
+        service = sql(single:true,"
+            SELECT s.name_? as service
+            FROM sr_service s
+            INNER JOIN sr_project p ON p.uid_service = s.uid
+            WHERE p.uid = '?'
+            ", lg, uid_project
+        );
+        
+        contractors = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.token, pc.client_satisfaction, pc.client_comment, pc.evaluation_date, c.contact_lg, seo
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            WHERE accepted = 'yes'
+            AND pc.uid = '?' 
+            ", uid_project_contractor
+        );  
+        
+        if (contractors.nbrows > 0) then
+            token = contractors.rows.token;
+            automail::sendEmail(
+                "sendSatisfactionSurveyToAdmin",
+                to: "deb@xpertsource.com",
+                lg:lg
+            );
+        endif
+    endf    
+    
+    //expert send survey to client from his/her profile
+    function expertSendSurveyToClient(uid_project_contractor,...)
+        contractor = sql(single:true,"
+            SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.uid_project, pc.token, c.contact_lg, seo
+            FROM sr_project_contractor pc
+            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            WHERE accepted = 'yes'
+            AND pc.uid = '?'
+            ", uid_project_contractor
+        );  
+        
+        client = sql(single:true,"SELECT c.email, c.lang, p.token, c.uid FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'", contractor.rows.uid_project);
+        client;
+        if(client.rows.lang ne "") then
+            lg = client.rows.lang;
+        else
+            lg = 'fr';
+        endif
+        
+        service = sql(single:true,"
+            SELECT s.name_? as service
+            FROM sr_service s
+            INNER JOIN sr_project p ON p.uid_service = s.uid
+            WHERE p.uid = '?'
+            ", lg, contractor.rows.uid_project
+        );
+        
+
+        if (contractor.nbrows > 0) then
+        
+            token = client.rows.token;
+            
+            //res = (resub(trim2(client.rows.email),emailRegex,"$1"));
+            res = client.rows.email;
+            
+            if   ( res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0)    then //adresse valide
+                email_to = res;
+                void insert(table:'sr_log', fields:{'uid_project':uid_project.+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
+                
+                //create tracking token
+                time = time();
+                token_tracking = hash(algo:"sha512", client.rows.email .+ client.rows.uid .+ time.secs .+ time.usecs .+ random(min:1, max:99999999));
+                company = contractor.rows.company_name;
+                
+                automail::sendEmail(
+                    "expertSendSurveyToClient",
+                    group: 'clients',
+                    to: client.rows.email, 
+                    lg:lg,
+                    parseSubject: "use company;",
+                    uid_client: client.rows.uid,
+                    token_tracking: token_tracking,
+                    tracking: 'yes'
                 );
             endif
         endif
     endf 
     
-    //expert send survey to client from his/her profile
-    function expertSendSurveyToClient(token, resource_id, uid_contractor)
-        //get information about the project
-        
-        client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.token='?'", token);
-        lg = client.rows.lang;
-        
-        project = sql(single:true, "
-            SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip 
-            FROM sr_project p 
-            LEFT JOIN sr_address a ON p.uid_address=a.uid 
-            LEFT JOIN sr_city c ON c.uid=a.uid_city 
-            WHERE p.token = '?'", lg, token);        
-        
-        contractor = sql(single:true,"
-            SELECT c.contact_firstname, c.contact_lastname, c.company_name, c.uid, pc.token
-            FROM sr_project_contractor pc
-            INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
-            WHERE accepted = 'yes'
-            AND pc.uid_project = '?'
-            AND c.uid = '?'
-            ", project.rows.uid, uid_contractor
+    function bad_client_notify_admin(name, address, client_email, phone, ext1, description, country)
+
+        lg = 'fr';
+
+        automail::sendEmail(
+            "bad_client_notify_admin",
+            group: 'clients',
+            to: 'deb@xpertsource.com',
+            lg: lg
         );
 
-        if (contractor.nbrows > 0) then
-            resource = sql(single:true, "SELECT file_? as fname, url_? as url FROM ressources WHERE uid = '?'", lg, lg, resource_id);
-            survey_url = resource.rows.url .+ resource.rows.fname;
-            
-            res = (resub(trim2(client.rows.email),emailRegex,"$1"));
-            company = contractor.rows.company_name;
-
-            //get the service used for the project
-            svc = sql(single:true, "SELECT s.name_? as svcname FROM sr_service s WHERE s.uid = '?'", lg, project.rows.uid_service);
-
-            service = svc.rows.svcname;
-
-            if (res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0) then //adresse valide
-                email_to = res;
-                void insert(table:'sr_log', fields:{'uid_project':uid_project .+'-1','email_to': email_to  ,'description':'email expertSendSurveyToClient---','value':client.rows.email});
-                
-                automail::sendEmail(
-                    "expertSendSurveyToClient",
-                    to: email_to,
-                    parseSubject: "use company;",
-                    lg:lg
-                );
-            endif
-        endif
-    endf      
+    endf
 endp
 
 }}

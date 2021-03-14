@@ -1,0 +1,321 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+   //session 
+    %include "/extenso/functions/sessions.snc"; 
+    
+    use page;
+    use lg;
+
+    %include "/site/package/all.sn";     //Pour publication des Widget et Automail
+    void timeout(60);
+    
+    /******************************** LE PLAN DE MATCH.... // = FAIT
+
+        // créer le widget (ignorer la section des territoires pour débuter)
+        // 	créer le rapport
+        // 	créer un form en haut pour ajouter un nouveau forfait (se baser sur la table pour les champs)
+        // 	créer les filtres
+        
+        // créer une table
+        // 	sr_subscription_contractor_territory
+        // 		uid_subscription_contractor
+        // 		uid_territory
+        
+        // Ajouter la possibilité d'ajouter/supprimer des territoires dans le widget
+        
+        // Pouvoir modifier les champs du tableau (eg: date début, prix, discount, etc.)
+        
+        // modifier le cron qui renew les forfaits pour faire un nouveau insert dans sr_subscription_contractor_territory
+        
+        // ajouter les territoires actuellement utilisés dans cette nouvelle table
+        
+        modifier la requête de findnextcontractor pour utiliser la nouvelle table
+        
+        // enlever la possibilité de mettre un territoire à un forfait via la table backend et avertir Dominik du switch
+
+        // Ajouter la possibilité de ne pas renouveller un forfait
+        
+        // tickbox renew puisse être modifié
+        
+        ****************************************/
+    
+}}
+
+<style>
+    #contractors {
+        font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+    
+    #contractors td, #customers th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    
+    #contractors tr:nth-child(even){background-color: #f2f2f2;}
+    
+    #contractors tr:hover {background-color: #ddd;}
+    
+    #contractors th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: center;
+        background-color: #4CAF50;
+        color: white;
+        position: sticky;
+        top: 0px;
+    }
+</style>
+
+\{{
+use user;
+
+cgidata = cgidata();
+
+if user.uid ne "" then
+
+    today = sql(single:true, "SELECT curdate() as today, curdate() + interval 1 month as next_month");
+
+    //add new plan
+    if cgidata.uid_subscription_plan ne "" then
+        void sql("INSERT INTO sr_subscription_contractor (sn_cdate, price, active, renew, duration, uid_contractor, uid_subscription_plan, discount, start_date, end_date)
+        VALUES (now(), '?', 'yes', 'yes', 1, '?', '?', '?', '?', '?')
+        ", cgidata.price, cgidata.uid_contractor, cgidata.uid_subscription_plan, cgidata.discount, cgidata.start_date, cgidata.end_date);
+    endif
+
+    }}
+    <div style="padding-top:60px; padding-left:30px;">
+    Ajouter un nouveau forfait
+    <form action="" method="post">
+        <input type="uid_contractor" placeholder="uid de l'expert" name="uid_contractor"> 
+        Date de début<input type="date" name="start_date" value="\{{today.rows.today}}">
+        Date de fin<input type="date" name="end_date" value="\{{today.rows.next_month}}">
+        <input type="number" placeholder="prix" name="price" style="mid-width:150px">
+        <input type="number" placeholder="rabais" name="discount" style="mid-width:150px">
+        <select name="uid_subscription_plan">
+            <option value="">Choisir un forfait</option>
+            \{{available_plans = sql("SELECT uid, name_fr FROM sr_subscription_plan ORDER BY name_fr");
+            for a in available_plans.rows do}}
+                <option value="\{{a.uid}}">\{{a.name_fr}}</option>
+            \{{endfor}}
+        </select>
+        <input type="submit" name="new_plan" value="Créer forfait">
+    </form> 
+    <br>
+    <br>
+    Filtres: 
+    <form action="" method="post">
+        <!--Inclure inactif <input type="checkbox" name="inactive" \{{if cgidata.inactive ne "" then "checked"; endif}}>-->
+        <select name="uid_service">
+            <option value="">Choisir un service</option>
+            \{{service = sql("SELECT uid, name_long_fr FROM sr_service WHERE active = 'yes' ORDER BY name_long_fr");
+            for s in service.rows do}}
+                <option value="\{{s.uid}}" \{{if s.uid eq cgidata.uid_service then "selected"; endif}}>\{{s.name_long_fr}}</option>
+            \{{endfor}}
+        </select>
+        <select name="uid_territory">
+            <option value="">Choisir un territoire</option>
+            \{{territory = sql("SELECT uid, name_fr FROM sr_territory WHERE active = 'yes' ORDER BY name_fr");
+            for t in territory.rows do}}
+                <option value="\{{t.uid}}" \{{if t.uid eq cgidata.uid_territory then "selected"; endif}}>\{{t.name_fr}}</option>
+            \{{endfor}}
+        </select>
+        <input type="submit" name="filters">
+    </form>
+    \{{
+        
+        if cgidata.inactive eq 'yes' then
+            active = "";
+        else
+            active = "AND sc.active = 'yes'";
+        endif
+
+    //display report of all subscription plans
+    
+    if cgidata.show_uid_contractor ne "" then
+    
+        report = sql("
+            SELECT sc.uid_contractor, c.company_name, sc.start_date, sc.end_date, sc.price, sc.discount, sp.name_fr as plan_name, sc.uid, sc.paid, sc.active, sc.renew
+            FROM sr_subscription_contractor sc
+            INNER JOIN sr_contractor c ON c.uid = sc.uid_contractor
+            INNER JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+            WHERE sc.uid_contractor = '?'
+            ORDER BY sc.start_date DESC
+            ", cgidata.show_uid_contractor);
+    
+    else
+    
+        report = sql("
+            SELECT sc.uid_contractor, c.company_name, sc.start_date, sc.end_date, sc.price, sc.discount, sp.name_fr as plan_name, sc.uid, sc.paid, sc.active, sc.renew
+            FROM sr_subscription_contractor sc
+            INNER JOIN sr_contractor c ON c.uid = sc.uid_contractor
+            INNER JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+            LEFT JOIN sr_subscription_contractor_territory sct ON sct.uid_subscription_contractor = sc.uid
+            INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+                AND ('?' = '' OR cs.uid_service = '?')
+            WHERE ('?' = '' OR sct.uid_territory = '?')
+                " .+ active .+ "
+            GROUP BY sc.uid
+            ORDER BY sc.start_date, sc.uid_contractor, sc.uid
+            ", cgidata.uid_service, cgidata.uid_service, cgidata.uid_territory, cgidata.uid_territory);
+
+    endif
+        
+    i=0;
+    
+    }}
+    <table id="contractors">
+        <tr>
+            <th>uid contractor</th>
+            <th>Nom d'entreprise</th>
+            <th>Date de début</th>
+            <th>Date de fin</th>
+            <th>Prix</th>
+            <th>Rabais</th>
+            <th>Forfait</th>
+            <th>Payé?</th>
+            <th>Actif?</th>
+            <th>Renew?</th>
+            <th>Territoire</th>
+            <th>Solde dû</th>
+        </tr>
+        \{{for r in report.rows do
+            if r.paid eq 'yes' then
+                i++;
+            endif
+        }}
+            <tr>
+                <td><a href="/fr/manage_subscription.snc?show_uid_contractor=\{{r.uid_contractor}}" target="_blank">\{{r.uid_contractor}}</a></td>
+                <td>\{{r.company_name}}</td>
+                <td>
+                    <input type="date" id="start_date_\{{r.uid}}" onchange="save_ajax('sr_subscription_contractor', 'start_date', '\{{r.uid}}')" value="\{{r.start_date}}">
+                </td>
+                <td>
+                    <input type="date" id="end_date_\{{r.uid}}" onchange="save_ajax('sr_subscription_contractor', 'end_date', '\{{r.uid}}')" value="\{{r.end_date}}">
+                </td>
+                <td>
+                    <input type="text" id="price_\{{r.uid}}" onchange="save_ajax('sr_subscription_contractor', 'price', '\{{r.uid}}')" value="\{{r.price}}">
+                </td>
+                <td>
+                    <input type="text" id="discount_\{{r.uid}}" onchange="save_ajax('sr_subscription_contractor', 'discount', '\{{r.uid}}')" value="\{{r.discount}}">
+                </td>
+                <td>\{{r.plan_name}}</td>
+                <td \{{if r.paid ne 'yes' then "style='background-color:red'"; endif}}>
+                    <input type="checkbox" value="yes" onchange="save_ajax('sr_subscription_contractor', 'paid', '\{{r.uid}}', 'yes')" id="paid_\{{r.uid}}" \{{if r.paid eq 'yes' then}}checked\{{endif}}>
+                </td>
+                <td \{{if r.active ne 'yes' then "style='background-color:red'"; endif}}>
+                    <input type="checkbox" value="yes" onchange="save_ajax('sr_subscription_contractor', 'active', '\{{r.uid}}', 'yes')" id="active_\{{r.uid}}" \{{if r.active eq 'yes' then}}checked\{{endif}}>
+                </td>
+                <td \{{if r.renew ne 'yes' then "style='background-color:red'"; endif}}>
+                    <input type="checkbox" value="yes" onchange="save_ajax('sr_subscription_contractor', 'renew', '\{{r.uid}}', 'yes')" id="renew_\{{r.uid}}" \{{if r.renew eq 'yes' then}}checked\{{endif}}>
+                </td>
+                <td id="territory_for_\{{r.uid}}">
+                    \{{
+                        //display all current territories
+                        territory = sql("
+                            SELECT t.name_fr, ct.uid
+                            FROM sr_territory t
+                            INNER JOIN sr_subscription_contractor_territory ct ON ct.uid_territory = t.uid
+                                AND ct.uid_subscription_contractor = '?'
+                            ORDER BY t.name_fr ASC
+                            ", r.uid);  
+                            
+                        for t in territory.rows do}}
+                            <li id="territory_\{{t.uid}}">\{{t.name_fr}} <button onclick="remove_territory('\{{t.uid}}')">Enlever</button></li>
+                        \{{endfor}}
+                        <br>
+                        <select id="add_territory_\{{r.uid}}">
+                            <option value="">Choisir un territoire</option>
+                            \{{territory = sql("SELECT uid, name_fr FROM sr_territory WHERE active = 'yes' ORDER BY name_fr");
+                            for t in territory.rows do}}
+                                <option value="\{{t.uid}}">\{{t.name_fr}}</option>
+                            \{{endfor}}
+                        </select>
+                        <button onclick="add_territory(\{{r.uid}})">Ajouter</button>
+                </td>
+                <td>
+                    \{{
+                    billing = contractor::getCurrentBilling(r.uid_contractor);
+                    billing_footer = contractor::getBillingFooterByProv(billing,r.uid_contractor);
+                    money_format(billing_footer.solde, "{{lg.rows.lg}}");
+                    }}
+                </td>
+            </tr>
+        \{{endfor}}
+    </table>
+    Total de \{{report.nbrows}} forfaits dont \{{i}} sont payés (\{{i*100/fmax(report.nbrows,1)}}%)
+
+\{{    
+endif
+}}
+
+<script>
+    function remove_territory(uid) {
+        answer = confirm("Êtes-vous sûr d'enlever ce territoire du forfait?");
+        if (answer == true) {
+            $.ajax({
+                type: "post",
+                data:{
+                    "action": "remove_territory_from_plan",
+                    "uid": uid
+                },
+                url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                success:function(data){
+                    $("#territory_"+uid).hide();
+    		    }
+            }); 
+        }
+    }
+    
+    function add_territory(uid_subscription_contractor) {
+        
+        answer = confirm("Êtes-vous sûr d'ajouter ce territoire au forfait?");
+        if (answer == true) {
+            
+            var uid_territory = $("#add_territory_"+uid_subscription_contractor).val();
+
+            $.ajax({
+                type: "post",
+                data:{
+                    "action": "add_territory_to_plan",
+                    "uid_subscription_contractor": uid_subscription_contractor,
+                    "uid_territory": uid_territory
+                },
+                url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                success:function(data, statusText, xhr){
+                    var territory = xhr.getResponseHeader('X-territory');
+                    var uid_territory = xhr.getResponseHeader('X-uid_territory');
+                    
+                    html = '<li id="territory_' + uid_territory + '">' + territory + ' <button onclick="remove_territory(\'' + uid_territory + '\')">Enlever</button></li>';
+                    $("#territory_for_"+uid_subscription_contractor).append(html);
+    		    }
+            }); 
+        }
+    }
+    
+    function save_ajax(table, field, uid, checkbox) {
+        
+        if (checkbox == 'yes') {
+            // console.log($("#" + field + '_' + uid).checked);
+            var value = document.getElementById(field + '_' + uid).checked ? 'yes' : 'no';
+        } else {
+            var value = $("#" + field + '_' + uid).val();
+        }
+
+        $.ajax({
+            type: "post",
+            data:{
+                "action": "save_ajax_subscription_contractor",
+                "table": table,
+                "field": field,
+                "uid": uid,
+                "value": value
+            },
+            url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}"
+        }); 
+    }
+</script>
+</div>

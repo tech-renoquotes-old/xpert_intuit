@@ -43,6 +43,8 @@
     text-align: center;
     background-color: #4CAF50;
     color: white;
+    top:0px;
+    position:sticky;
 }
 
 </style>
@@ -53,6 +55,195 @@ cgidata = cgidata();
 fullname=user.firstname .+ " " .+ user.lastname;
 
 if length(fullname) > 2 then
+}}
+
+\{{
+    if cgidata.code eq 'new_experts_per_service' then
+        
+        }}
+        <form action="" method="post">
+            <input type="date" name="start_date" value="\{{cgidata.start_date}}">
+            <input type="date" name="end_date" value="\{{cgidata.end_date}}">
+            <input type="submit" value="let's go doum">
+        </form>
+        
+        \{{
+    
+        "nouveaux experts depuis ...";
+        project::create_table_sql("
+            SELECT s.name_long_fr, count(*)
+            FROM sr_contractor c
+            INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid
+            INNER JOIN sr_service s ON s.uid = cs.uid_service
+            WHERE c.sn_cdate between '" .+ cgidata.start_date .+ "' and '" .+ cgidata.end_date .+ "'
+            AND c.active = 'yes'
+            AND c.verified = 'yes'
+            GROUP BY s.uid
+            ");
+    endif
+    
+    if cgidata.code eq 'stats_credit' then
+    
+    }}
+        <form action="" method="post">
+            Entre le <input type="date" name="start_date" value="\{{cgidata.start_date}}"> et le <input type="date" name="end_date" value="\{{cgidata.end_date}}">
+            <input type="submit">
+        </form>
+    
+    \{{
+        project::create_table_sql("
+            SELECT c.company_name, count(pc.uid) as nb_project, count(cr.uid) as nb_credit, concat(round(count(cr.uid)/count(pc.uid)*100), '%') as credit_ratio
+            FROM sr_contractor c
+            INNER JOIN sr_project_contractor pc ON pc.uid_contractor = c.uid AND pc.lead_price > 0 AND (pc.accepted_date BETWEEN ifnull('" .+ cgidata.start_date .+ "', date_sub(curdate(), interval 7 day)) AND ifnull('" .+ cgidata.end_date .+ "', curdate()))
+            LEFT JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid AND cr.accepted = 'yes'
+            GROUP BY c.uid
+            ", show_query:'yes');
+    endif
+    
+    if cgidata.code eq 'stats_credit_activator' then
+    
+    }}
+        <form action="" method="post">
+            Entre le <input type="date" name="start_date" value="\{{cgidata.start_date}}"> et le <input type="date" name="end_date" value="\{{cgidata.end_date}}">
+            <input type="submit">
+        </form>
+    
+    \{{
+        project::create_table_sql("
+            SELECT p.activated_by, count(distinct(p.uid_client)) as nb_client, count(distinct(p.uid)) as nb_project, count(pc.uid) as nb_vente, concat(round(count(cr.uid)/count(pc.uid)*100), '%') as credit_ratio
+            FROM sr_contractor c
+            INNER JOIN sr_project_contractor pc ON pc.uid_contractor = c.uid AND pc.lead_price > 0 AND (pc.accepted_date BETWEEN ifnull('" .+ cgidata.start_date .+ "', date_sub(curdate(), interval 7 day)) AND ifnull('" .+ cgidata.end_date .+ "', curdate()))
+            LEFT JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid AND cr.accepted = 'yes'
+            INNER JOIN sr_project p on p.uid = pc.uid_project
+            GROUP BY p.activated_by
+            ");
+    endif
+    
+if cgidata.code eq "unsold_projects" then
+
+    if cgidata.max_days then
+        max_days = cgidata.max_days;
+    else
+        max_days = 21;
+    endif
+    
+    if cgidata.min_days then
+        min_days = cgidata.min_days;
+    else
+        min_days = 0;
+    endif
+
+    report = sql("
+        SELECT p.uid, p.active_date, p.lead_price, p.description, s.service,  sum(pc.lead_price) as ventes, sum(pc.accepted_rebate = 'yes') as rabais, p.rewritten, sp.total,
+        sp2.total as sp_nb, p.uid_client, sp3.total as nb_sales
+        FROM sr_project p
+        INNER JOIN sr_service s ON s.uid = p.uid_service
+        RIGHT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+        LEFT JOIN (
+            SELECT count(*) as total, p.uid
+            FROM sr_project_contractor pc
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            WHERE DATEDIFF(curdate(), p.active_date) < '?'
+            AND DATEDIFF(curdate(), p.active_date) >= '?'
+            AND p.status = 'active'
+            GROUP BY p.uid
+        ) as sp ON sp.uid = p.uid
+        LEFT JOIN (
+            SELECT count(*) as total, p.uid
+            FROM sr_project_contractor pc
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            WHERE DATEDIFF(curdate(), p.active_date) < '?'
+            AND DATEDIFF(curdate(), p.active_date) >= '?'
+            AND p.status = 'active'
+            AND (pc.lead_price is not null OR pc.accepted_rebate = 'yes')
+            GROUP BY p.uid
+        ) as sp2 ON sp2.uid = p.uid
+        LEFT JOIN (
+            SELECT count(*) as total, p.uid
+            FROM sr_project_contractor pc
+            INNER JOIN sr_project p ON p.uid = pc.uid_project
+            WHERE DATEDIFF(curdate(), p.active_date) < '?'
+            AND DATEDIFF(curdate(), p.active_date) >= '?'
+            AND p.status = 'active'
+            AND (pc.lead_price > '')
+            GROUP BY p.uid
+        ) as sp3 ON sp3.uid = p.uid
+        WHERE DATEDIFF(curdate(), p.active_date) < '?'
+        AND DATEDIFF(curdate(), p.active_date) >= '?'
+        AND p.status = 'active'
+        AND (sp2.total < p.max_quotes OR sp2.total is null)
+        GROUP BY p.uid
+        ORDER BY p.active_date DESC
+    ", max_days, min_days, max_days, min_days, max_days, min_days, max_days, min_days);
+    
+    //ORDER BY DATEDIFF(curdate(), p.active_date) < 4 DESC, p.lead_price >= 50 DESC, p.active_date DESC
+    }}
+    <p>Liste des projets actifs et récents (entre \{{min_days}} et \{{max_days}} jours) qui n'ont pas encore atteint 4 fournisseurs.  Pour changer le nombre de jour minimum ou maximum, changer ces valeurs https://sb2bquotes.sednove.com/fr/reporting.snc?code=unsold_projects&min_days=0&max_days=21</p>
+    <table id="contractors">
+        <th>
+            Uid
+        </th>
+        <th>
+            Date activation
+        </th>
+        <th>
+            Prix du lead
+        </th>
+        <th>
+            Fournisseurs sur le projet (incluant futur rabais)
+        </th>
+        <th>
+            Rabais
+        </th>
+        <th>
+            Déjà renvoyé
+        </th>
+        <th>Nombre de founisseur contacté</th>
+        <th>
+            Description
+        </th>
+        <th>
+            Catégorie
+        </th>
+        <th>
+            Service
+        </th>
+        \{{for r in report.rows do}}
+        <tr>
+            <td>
+                uid projet: <a href="/fr/stats-clients?id_client=\{{r.uid_client}}">\{{r.uid}}</a><br>
+                uid client: \{{r.uid_client}}
+            </td>
+            <td>
+                \{{r.active_date;}}
+            </td>
+            <td>
+                \{{r.lead_price;}}
+            </td>
+            <td>
+                \{{r.nb_sales}} (\{{r.sp_nb;}}) 
+            </td>
+            <td>
+                \{{r.rabais;}}
+            </td>
+            <td>
+                \{{r.rewritten;}}
+            </td>
+            <td>\{{r.total}}</td>
+            <td>
+                \{{r.description;}}
+            </td>
+            <td>
+                \{{r.category_name_fr;}}
+            </td>
+            <td>
+                \{{r.service;}}
+            </td>
+        </tr>
+        \{{endfor}}
+    </table>
+\{{
+endif
 }}
 
 \{{
@@ -92,6 +283,136 @@ if length(fullname) > 2 then
 {{endif}}
 
 \{{
+    if cgidata.code eq 'leads_paid' then
+    
+        report = sql("
+            select pc.uid_project, pc.uid_contractor, i.sn_cdate, i.completed, pc.lead_price, c.credit_threshold, c.company_name, c.contact_email
+            from sr_project_contractor pc
+            left join sr_invoice i on i.uid_project_contractor = pc.uid
+            INNER JOIN sr_contractor c ON c.uid = pc.uid_contractor
+            where pc.accepted_date BETWEEN '" .+ cgidata.start_date .+ "' AND date_add('" .+ cgidata.end_date .+ "', INTERVAL 1 DAY)
+            order by uid_contractor
+        ");
+        report.nbrows;
+        }}
+        <form action="" method="post">
+            Début: <input type="date" name="start_date" value="\{{cgidata.start_date}}">
+            Fin: <input type="date" name="end_date" value="\{{cgidata.end_date}}">
+            <input type="submit">
+        </form>
+        <table id="contractors">
+            <th>uid_contractor</th>
+            <th>uid_project</th>
+            <th>Courriel</th>
+            <th>Date acheté</th>
+            <th>Payé</th>
+            <th>Prix</th>
+            <th>Solde du compte</th>
+            <th>Limite de crédit</th>
+            \{{for r in report.rows do}}
+                <tr>
+                    <td>\{{r.uid_contractor}} - \{{r.company_name}}</td>
+                    <td>\{{r.uid_project}}</td>
+                    <td>\{{r.contact_email}}</td>
+                    <td>\{{r.sn_cdate}}</td>
+                    <td>\{{r.completed}}</td>
+                    <td>\{{r.lead_price}}</td>
+                    <td>
+                        \{{
+                            billing = contractor::getCurrentBilling(r.uid_contractor);  
+                            solde = contractor::getBillingFooter(billing);
+                            solde.solde;
+                        }}
+                    </td>
+                    <td>\{{r.credit_threshold}}</td>
+                </tr>
+            \{{endfor}}
+        </table>
+        
+    \{{
+    endif
+    
+    if cgidata.code eq 'results_per_service' then
+        }}
+        <form action="" method="post">
+            Date début: <input type="date" name="start_date" value="\{{cgidata.start_date}}"><br>
+            Date fin: <input type="date" name="end_date" value="\{{cgidata.end_date}}"><br>
+            <select name="uid_lead_source">
+                <option value="">Choisir une source marketing</option>
+                \{{lead_source = sql("SELECT uid, name_fr FROM sr_lead_source ORDER BY name_fr");
+                    for l in lead_source.rows do}}
+                    <option value="\{{l.uid}}" \{{if l.uid eq cgidata.uid_lead_source then "selected"; endif}}>\{{l.name_fr}}</option>
+                \{{endfor}}
+            </select>
+            <input type="submit">
+        </form>
+        \{{
+        if cgidata.start_date then
+            start_date = cgidata.start_date;
+        else
+            start_date = date();
+            start_date = datetime(date:start_date.iso,op:"-1b");
+        endif
+        if cgidata.end_date then
+            end_date = cgidata.end_date;
+        else
+            end_date = date();
+            end_date = datetime(date:end_date.iso,op:"-1d");
+        endif
+    
+        report = sql("
+        SELECT s.name_long_fr, count(*) as total_bought, sum(pc.lead_price) as sales,
+            (SELECT count(*) FROM sr_project p1 WHERE p1.uid_service = s.uid AND p1.active_date BETWEEN '?' AND '?' AND ('?' = '' OR p1.uid_source_lead = '?')) as nb_project,
+            (SELECT sum(max_quotes) FROM sr_project p2 WHERE p2.uid_service = s.uid AND p2.active_date BETWEEN '?' AND '?' AND ('?' = '' OR p2.uid_source_lead = '?')) as potential,
+            (SELECT sum(max_quotes*p3.lead_price) FROM sr_project p3 WHERE p3.uid_service = s.uid AND p3.active_date BETWEEN '?' AND '?' AND ('?' = '' OR p3.uid_source_lead = '?')) as potential_sales
+            FROM sr_project p
+            LEFT JOIN sr_project_contractor pc on pc.uid_project = p.uid AND pc.accepted = 'yes'
+            INNER JOIN sr_service s ON s.uid = p.uid_service
+            WHERE p.active_date BETWEEN '?' AND '?'
+            AND pc.uid NOT IN (SELECT uid_project_contractor FROM sr_credit WHERE accepted = 'yes')
+            AND ('?' = '' OR p.uid_source_lead = '?')
+            GROUP BY s.uid
+        ", start_date, end_date, cgidata.uid_lead_source, cgidata.uid_lead_source, start_date, end_date, cgidata.uid_lead_source, cgidata.uid_lead_source, start_date, end_date, cgidata.uid_lead_source, cgidata.uid_lead_source, start_date, end_date, cgidata.uid_lead_source, cgidata.uid_lead_source);
+
+        }}
+        <table id="contractors">
+            <th>Service</th>
+            <th># projet</th>
+            <th># vendu</th>
+            <th># potentiel</th>
+            <th>$ vendu</th>
+            <th>$ potentiel</th>
+            <th>% complet</th>
+            \{{for r in report.rows do
+            nb_project += r.nb_project;
+            potential += r.potential;
+            total_bought += r.total_bought;
+            sales += r.sales;
+            potential_sales += r.potential_sales;
+            }}
+                <tr>
+                    <td>\{{r.name_long_fr}}</td>
+                    <td>\{{r.nb_project}}</td>
+                    <td>\{{r.total_bought}}</td>
+                    <td>\{{r.potential}}</td>
+                    <td>\{{r.sales}}</td>
+                    <td>\{{r.potential_sales}}</td>
+                    <td>\{{round(r.sales/fmax(r.potential_sales,0.00001)*10000)/100}}%</td>
+                </tr>
+            \{{endfor}}
+            <tr>
+                <td>Total</td>
+                <td>\{{nb_project}}</td>
+                <td>\{{total_bought}}</td>
+                <td>\{{potential}}</td>
+                <td>\{{sales}}</td>
+                <td>\{{potential_sales}}</td>
+                <td>\{{round(sales/fmax(potential_sales,0.00001)*10000)/100}}%</td>
+            </tr>
+        </table>
+    \{{
+    endif
+    
     if cgidata.code eq 'contractors_owing_balance' then
         if cgidata.service then
             service = "INNER JOIN sr_contractor_service cs ON cs.uid_contractor = c.uid AND cs.uid_service = " .+ cgidata.service;
@@ -138,30 +459,47 @@ if length(fullname) > 2 then
     
     if cgidata.code eq 'show_projects' then
         if cgidata.show_projects_result then
+            if cgidata.service ne "" then
+                where = "AND p.uid_service = '" .+ cgidata.service .+ "'";
+            endif
+            
+            if cgidata.marketing ne "" then
+                where .+= "AND p.uid_source_lead = '" .+ cgidata.marketing .+ "'";
+            endif
+
             project::create_table_sql("
-                SELECT p.active_date, c.gender, c.firstname, c.lastname, c.email, a.phone1, a.phone2, p.description, p.lead_price, sum(pc.lead_price) as vente, p.adwords_campaign
+                SELECT p.active_date, c.gender, c.firstname, c.lastname, c.email, a.phone1, a.phone2, p.description, p.lead_price, sum(pc.lead_price) as vente, p.adwords_campaign, sum(if(cr.accepted = 'yes',pc.lead_price,0)) as credits
                 FROM sr_project p
                 INNER JOIN sr_client c ON c.uid = p.uid_client
                 INNER JOIN sr_address a ON a.uid = p.uid_address
                 LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid
-                WHERE p.uid_service = '" .+ cgidata.service .+ "'
-                AND p.active_date >= '" .+ cgidata.start_date .+ "'
+                LEFT JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid AND cr.accepted = 'yes'
+                WHERE  p.active_date >= '" .+ cgidata.start_date .+ "'
                 AND p.active_date <= '" .+ cgidata.end_date .+ "'
+                " .+ where .+ "
                 GROUP BY p.uid
             ");
         endif
         
         services = sql("SELECT uid, name_fr FROM sr_service WHERE active = 'yes' ORDER BY name_fr ASC");
         
+        marketing = sql("SELECT uid, name_fr FROM sr_lead_source ORDER BY name_fr ASC");
         }}
         <form action="" method="POST">
-            Début <input type="date" name="start_date">
-            Fin <input type="date" name="end_date">
+            Début <input type="date" name="start_date" value="\{{cgidata.start_date}}">
+            Fin <input type="date" name="end_date" value="\{{cgidata.end_date}}">
             <select name="service">
+                <option value="">Choisir un service</option>
                 \{{for s in services.rows do}}
-                    <option value="\{{s.uid}}">\{{s.name_fr}}</option>
+                    <option \{{if cgidata.service eq s.uid then "selected"; endif}} value="\{{s.uid}}">\{{s.name_fr}}</option>
                 \{{endfor}}
             </select>
+            <select name="marketing">
+                <option value="">Choisir une source marketing</option>
+                \{{for m in marketing.rows do}}
+                    <option \{{if cgidata.marketing eq m.uid then "selected"; endif}} value="\{{m.uid}}">\{{m.name_fr}}</option>
+                \{{endfor}}
+            </select>            
             <input type="submit" name="show_projects_result">
         </form>
     \{{
@@ -578,7 +916,7 @@ if length(fullname) > 2 then
     
     if cgidata.code eq 'results_per_week' then
         report = sql("
-            SELECT count(*) as nb_project, pc.sales, pc.nb_sales, min(p.active_date) as min_date
+            SELECT count(*) as nb_project, pc.sales, pc.nb_sales, min(p.active_date) as min_date, count(distinct(uid_client)) as nb_client, count(*)/count(distinct(uid_client)) as project_client
             FROM sr_project p
             INNER JOIN
                 (SELECT count(*) as nb_sales, sum(lead_price) as sales, yearweek(accepted_date) as yearweek
@@ -593,19 +931,25 @@ if length(fullname) > 2 then
         }}
         <table id="contractors">
             <th>Semaine</th>
+            <th># Client</th>
             <th># Projet</th>
+            <th>Projet / Client</th>
             <th># Vente</th>
             <th>$ Vente</th>
             <th># Ent/Projet</th>
             <th>$ par projet</th>
+            <th>$ par client</th>
             \{{for r in report.rows do}}
                 <tr>
                     <td>\{{r.min_date}}</td>
+                    <td>\{{r.nb_client}}</td>
                     <td>\{{r.nb_project}}</td>
+                    <td>\{{r.project_client}}</td>
                     <td>\{{r.nb_sales}}</td>
                     <td>\{{money_format(r.sales)}}</td>
                     <td>\{{round(r.nb_sales/r.nb_project*100)/100}}</td>
                     <td>\{{money_format(r.sales/r.nb_project)}}</td>
+                    <td>\{{money_format(r.sales/r.nb_client)}}</td>
                 </tr>
             \{{endfor}}
         </table>
@@ -762,6 +1106,7 @@ if length(fullname) > 2 then
             INNER JOIN sr_transaction t ON t.uid_contractor = c.uid
             INNER JOIN sr_territory te ON te.uid = c.uid_territory
             WHERE (t.status = 'succeeded' OR t.status is null OR t.status = '')
+            AND t.sn_cdate > curdate() - interval 28 day
             GROUP BY c.uid
             ORDER BY sales DESC
             LIMIT 50
@@ -1139,25 +1484,31 @@ if length(fullname) > 2 then
         if cgidata.search then
             if cgidata.territory >= 1 then
                 report = sql("
-                    SELECT c.uid, c.company_name, c.contact_phone, c.contact_firstname, c.contact_lastname, c.contact_gender
+                    SELECT c.uid, c.company_name, c.contact_phone, c.contact_firstname, c.contact_lastname, c.contact_gender, count(distinct(pc.uid)) as nb_bought, sum(pc.lead_price) as sold
                     FROM sr_contractor c
                     INNER JOIN sr_contractor_service cs on c.uid = cs.uid_contractor
                     INNER JOIN sr_contractor_territory ct on c.uid = ct.uid_contractor
+                    LEFT JOIN sr_project_contractor pc ON pc.uid_contractor = c.uid
+                        AND pc.accepted_date > curdate() - interval 6 month
                     WHERE c.active = 'yes'
                     AND c.verified = 'yes'
                     AND cs.uid_service = '?'
                     AND ct.uid_territory = '?'
+                    GROUP BY c.uid
                     ORDER BY c.uid
                     ", cgidata.service, cgidata.territory);
             else
                 report = sql("
-                    SELECT c.uid, c.company_name, c.contact_phone, c.contact_firstname, c.contact_lastname, c.contact_gender, t.name_fr, c.contact_email
+                    SELECT c.uid, c.company_name, c.contact_phone, c.contact_firstname, c.contact_lastname, c.contact_gender, t.name_fr, c.contact_email, count(distinct(pc.uid)) as nb_bought, round(sum(pc.lead_price),2) as sold
                     FROM sr_contractor c
                     INNER JOIN sr_contractor_service cs on c.uid = cs.uid_contractor
                     INNER JOIN sr_territory t ON t.uid = c.uid_territory
+                    LEFT JOIN sr_project_contractor pc ON pc.uid_contractor = c.uid
+                        AND pc.accepted_date > curdate() - interval 6 month
                     WHERE c.active = 'yes'
                     AND c.verified = 'yes'
                     AND cs.uid_service = '?'
+                    GROUP BY c.uid
                     ORDER BY c.uid
                     ", cgidata.service);
             endif
@@ -1169,6 +1520,8 @@ if length(fullname) > 2 then
                 <th>Téléphone</th>
                 <th>Territoire</th>
                 <th>Courriel</th>
+                <th># Achat 6 mois</th>
+                <th>$ Achat 6 mois</th>
                 \{{for r in report.rows do}}
                     <tr>
                         <td>\{{r.uid}}</td>
@@ -1177,6 +1530,8 @@ if length(fullname) > 2 then
                         <td>\{{r.contact_phone}}</td>
                         <td>\{{r.name_fr}}</td>
                         <td>\{{r.contact_email}}</td>
+                        <td>\{{r.nb_bought}}</td>
+                        <td>\{{r.sold}}</td>
                     </tr>
                 \{{endfor}}
             </table>

@@ -1,0 +1,189 @@
+{{
+    /*
+        @title client_form_slim
+        Description: This widget is the form used to register a new client from its profile page.
+        
+        @author louis.jhonny@gmail.com
+        
+        @version 1.0 2019-10-22
+    */
+}}
+<style>
+    #upload_files_slim>div{
+        position:relative;
+    }
+    #upload_files_slim > div > input {
+        margin:3px 0px;
+    }
+    #upload_files_slim > div > a {
+        display:block;
+        cursor: pointer;
+        position:absolute;
+        right:0;
+        top:50%;
+        margin-top:-10px;
+    }
+    #upload_files_slim > div > a > i:before {
+        content: "\f1f8"; /* fa-trash */
+    }
+    #upload_files_slim > div:first-child > a > i:before {
+        content: "\f067"; /* fa-plus */
+    }
+    [data-validator-error]{
+        color:red;
+        font-weight:bold;
+    }
+    
+   .center
+    {
+        width: auto;
+    }
+    
+    
+    .center img
+    {
+        height: 50px;
+        width: 50px;
+    }
+    
+    
+    .validemail{
+        color: #f4aa42;
+        font-size:1
+        2px;
+    }
+
+    .loader{
+        height:100%;
+        width:100%;
+        position:absolute;
+        left: 0;
+        bottom:0px;
+        filter: alpha(opacity=40);
+        opacity: 0.4;
+        -moz-opacity: 0.4;
+        background-color:#000;
+        border-radius:10px;
+        overflow:hidden;
+        z-index: 2;
+    }
+        
+    .loader img{
+        filter: alpha(opacity=30);
+        opacity: 0.3;
+        -moz-opacity: 0.3;
+        line-height:50%;
+        
+    }
+    
+    .loader_center{
+        margin-top:50%;
+        margin-left:40%;
+    }
+</style>
+
+\{{
+    
+    cookies = cookies();
+    cgidata = cgidata();
+    contractor = sql(single:true,"select * from sr_contractor where md5(uid) = '?'", cgidata.cid);
+    
+    //verifie que le lien est valide
+    if(contractor.nbrows > 0) then
+        if(cookies.refID == undefined) then
+            token = substr(hash(algo:"sha512", time.secs .+ time.usecs .+ random(min:1, max:9999999)),0,45);
+            aff = insert(
+                table:"sr_affiliation",
+                fields:{
+                    "uid_contractor":contractor.rows.uid,
+                    "uid_project":"",
+                    "token": token,
+                    "referral_date":datetime(format:"%Y-%m-%d"),
+                    "referred_email":"",
+                    "reason":""
+                }
+            );
+        
+            //expirytime for the cookies 1209600 seconds (14 days);
+            cookies(name:'refID',value:token,path:"/",maxage:1209600);
+            cookies(name:'reftype',value:cgidata.p,path:"/",maxage:1209600);
+            reftype = cgidata.p;
+            refID = token;
+        endif
+    else
+        reftype = cookies.reftype;
+        refID   = cookies.refID;
+    endif
+}}
+
+<div style="padding:10px">
+    <div class="loader" style="display:none"><div class="loader_center"><img alt="" src="/sn_uploads/icon/loading3.gif" /></div></div>
+    <form class="form-horizontal" enctype="multipart/form-data" action="{{(lg eq 'fr')? '/fr/information-additionnelle-client' :'/en/client-additional-information'}}" id="add_client_slim" name="add_client_slim" method="POST">
+        <fieldset class="form-group">
+            <div class="">
+                <input class="form-control" type="text" name="name" id="name" value="" placeholder='\{{contractor::profile_ct("client_form Votre nom","profile_template",lg:lg)}}*'>
+                <span class="help-block" data-validator-msg="\{{contractor::profile_ct('Invalid name',"profile_template",lg:lg)}}" data-validator-error="name"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="">
+                <input class="form-control" type="text" name="phone" id="phone" value="" placeholder='\{{contractor::profile_ct("client_form Votre téléphone","profile_template",lg:lg)}}*'>
+                <span class="help-block" data-validator-msg="\{{contractor::profile_ct('Invalid phone', "profile_template",lg:lg)}}" data-validator-error="phone"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="">
+                <input class="form-control" type="text" name="email" id="email" onfocusout="validate_email()" value="" placeholder='\{{contractor::profile_ct("client_form Votre courriel","profile_template",lg:lg)}}*'>
+                <span class="help-block" data-validator-msg="\{{contractor::profile_ct('Invalid email',"profile_template",lg:lg)}}" data-validator-error="email"></span>
+                <span style="display:none" class="validemail" name="validemail" >\{{contractor::profile_ct("Attention: la validation du courriel a échouée. Si c'est le bon courriel, je vous prie d'ignorer ce message.","profile_template",lg:lg)}}</span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="">
+            <input class="form-control" type="text" id="city" name="city" placeholder='\{{contractor::profile_ct("Votre ville complete","profile_template",lg:lg)}}' onInput="getCity(this)" onFocusOut="$('.city_lookup').hide()" autocomplete="off">
+            <span class="help-block" data-validator-msg="\{{contractor::profile_ct('Votre ville actuelle est obligatoire','profile_template',lg:lg )}}" data-validator-error="city"></span>
+            </div>
+        </fieldset>
+        
+        <fieldset class="form-group">
+            <div class="">
+                <textarea class="form-control" name="description" placeholder='\{{contractor::profile_ct("client_form Votre projet","profile_template",lg:lg)}} - \{{contractor::profile_ct("client_form (ex. : Description des travaux à faire dans vos mots, délai de réalisation, budget, etc.)","profile_template",lg:lg)}}*' rows="5"></textarea>    
+                <span class="help-block" data-validator-msg="\{{contractor::profile_ct('Invalid description','profile_template',lg:lg)}}" data-validator-error="description"></span>
+            </div>
+        </fieldset>
+    
+        <fieldset class="form-group">
+            <b>\{{contractor::profile_ct("client_form Joindre un fichier","profile_template",lg:lg)}}</b>
+            <div class="" style="margin-top:3px;">
+                <div id="upload_files_slim"></div>
+            </div>
+        </fieldset>
+        
+        <div class="form-group">
+            <button id="submit_add_client" type="submit" class="btn btn-primary btn-block">
+                \{{contractor::profile_ct("client_form Soumettre","profile_template",lg:lg)}}
+            </button>
+            <input type='hidden' name='emailChk' id='emailChk'/>
+        </div>
+        
+        <script>
+            function addUploadFile_slim() {
+                return $('<div><input type="file" name="file"><a><i class="fa"></i></a></div>').prependTo('#upload_files_slim');
+            }
+            $('#upload_files_slim').on('click', "div:not(:first-child) > a", function(){
+                $(this).parent().remove();
+                $('#upload_files_slim > span').remove();
+            });
+            $('#upload_files_slim').on('click', "div:first-child > a", function(){
+                addUploadFile_slim();
+                if ($('#upload_files_slim').find('div > input').length >= 5) {
+                    $('#upload_files_slim').prepend('<span>');
+                }
+            });
+            addUploadFile_slim();
+        </script>
+    </form>
+</div>

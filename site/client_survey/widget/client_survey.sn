@@ -17,136 +17,46 @@
 }}
 \{{
     cgidata = cgidata();
-    
-    project = sql(single:true, "SELECT uid FROM sr_project WHERE token = '?'", cgidata.token);
 
-    contractors = sql("
-        SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, c.seo
+    contractors = sql(single:true,"
+        SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid_contractor, pc.uid, c.seo
         FROM sr_project_contractor pc
         INNER JOIN sr_contractor c ON c.uid=pc.uid_contractor
         WHERE accepted = 'yes'
-        AND uid_project = '?' 
-        ", project.rows.uid
+        AND pc.token = '?' 
+        ", cgidata.token
     );  
     
+    company_url = sql("SELECT * FROM sr_contractor WHERE uid = '?'", contractors.rows.uid_contractor);
+    
 }}
-\{{if contractors.nbrows > 0 then}}
-<div>
-    <span style="font-size:12px;">
-        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
-            {{sn_ct("client_survey RAPPEL   Vous recevez ce courriel en tant que client de soumissionrenovation.ca.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
-        </span>
-    </span>
-</div>
-<br/>
-<div>
-    <span style="font-size:16px;">
-        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
-            {{sn_ct("client_survey Text haut", format:"ck", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
-        </span>
-    </span>
-</div>
-<br>
-<style>
-    table.vote  tr  td{
-        padding-right:20px;
-        padding-top:10px;
-        padding-bottom:10px;
-    }
-    table.vote  tr{
-        padding:10px 0px;
-    }
-</style>
-\{{for c in contractors.rows do
 
-token_array = sql(single:true,"SELECT * FROM sr_project_contractor WHERE uid = ?", c.uid);
-
-tokenval = token_array.rows;
-token = tokenval.token;
-
-if c.contact_lg eq 'fr' then
-    profile = "/entrepreneur/" .+ c.seo;
-else
-    profile = "/contractor/" .+ c.seo;
-endif
-
-
-}}
+\{{
+    if contractors.nbrows > 0 then
+      upd =  update(tables:'sr_project_contractor', 
+                        fields:{
+                            'comment_verified':'yes'
+                        },
+                        uid: contractors.rows.uid
+                    );
+        
+        if(upd.sqlcode == 0) then
+            %include '/class/profile_generator.sn';
+            
+            //instanciate profil generator class
+            profil = new Profilgen();
+            
+            update_seo = sql("UPDATE sr_contractor SET seo = '' WHERE uid = ?", contractors.rows.uid_contractor);
+            profile = profil.generate(contractors.rows.uid_contractor);
+        
+}}  
+<p><h1>Comfirmation</h1></p>
+<p><hr></p>
     <div>
-        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
-           <span style="font-size:16px;font-weight:bold;">
-               \{{c.contact_firstname}} \{{c.contact.lastname}} - \{{c.company_name}}
-           </span> 
-        </span> 
+        <p><h3 style="color:green">Le sondage de l'expert \{{contractors.rows.company_name}} a été publié avec success!</h3></p>
+        <p style="color:blue"><h5>Un apercu de la page se trouve ici : \{{profile}}</h5></p>
     </div>
-    <table class="vote" cellpadding="0" cellspacing="5" width="100%">
-        <tr>
-            <td width="20%">
-                <a href="\{{profile}}?token=\{{token}}&n=1" style="text-decoration:none;">
-                    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
-                        *
-                    </div>
-                </a>
-            </td>
-            <td width="20%">
-                <a href="\{{profile}}?token=\{{token}}&n=2" style="text-decoration:none;">
-                    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
-                        **
-                    </div>
-                </a>
-            </td>
-            <td width="20%">
-                <a href="\{{profile}}?token=\{{token}}&n=3" style="text-decoration:none;">
-                    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
-                        ***
-                    </div>
-                </a>
-            </td>
-            <td width="20%">
-                <a href="\{{profile}}?token=\{{token}}&n=4" style="text-decoration:none;">
-                    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
-                        ****
-                    </div>
-                </a>
-            </td>
-            <td width="20%">
-                <a href="\{{profile}}?token=\{{token}}&n=5" style="text-decoration:none;">
-                    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
-                        *****
-                    </div>
-                </a>
-            </td>
-        </tr>
-    </table>
-    \{{endfor}}
-    <table cellpadding="0" cellspacing="0" width="100%">
-        <tr>
-            <td>
-                <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je ne recommande pas",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span>
-            </td>
-            <td style="text-align:right;">
-                <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je recommande fortement",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span>
-            </td>
-        </tr>
-    </table>
-    <!--<br>-->
-    <!--<br>-->
-    <!--<hr style="background:#2a769f;color:#2a769f;"> -->
-    <!--<br>-->
-    <!--<br>-->
-    <!--<table width="100%" border="0" cellspacing="0" cellpadding="0">-->
-    <!--  <tr>-->
-    <!--    <td>-->
-    <!--      <table width="100%" border="0" cellspacing="0" cellpadding="0">-->
-    <!--        <tr>-->
-    <!--          <td align="center" style="font-weight:bold;-webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;" bgcolor="#2a769f"><a  href="{{pages(table:'pages','client_share_satisfaction',lg.rows.lg)}}?n=not_evaluated" target="_blank" style="border-top:7px #2a769f solid;border-bottom:7px #2a769f solid;font-size: 14px; color: #ffffff; text-decoration: none; text-decoration: none; -webkit-border-radius: 3px; -moz-border-radius: 3px; border-radius: 3px;display: block;width:100%;"><span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">{{sn_ct("client_survey Je n'ai pas retenu les services de ces entrepreneurs",publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}</span></a></td>-->
-    <!--        </tr>-->
-    <!--      </table>-->
-    <!--    </td>-->
-    <!--  </tr>-->
-    <!--</table>-->
-\{{else}}
-    <div class="alert alert-info">
-        {{sn_ct("client_survey Aucun entrepreneur n'est relié à ce projet", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
-    </div>
+
+    \{{endif}}
+        
 \{{endif}}

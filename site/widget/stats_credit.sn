@@ -80,13 +80,13 @@ if cgidata.accepted then
         do_not_count = 'yes';
     endif
     void sql("UPDATE sr_credit
-            SET accepted = 'yes', msg_acceptation = '?', legit_request = '?'
+            SET sn_mdate = now(), accepted = 'yes', msg_acceptation = '?', legit_request = '?'
             WHERE uid = ?
         ", cgidata.reason, do_not_count, cgidata.cruid);
     automail::creditApproved(cgidata.cruid);
     if cgidata.cancel then
         project_cancel = sql(single:true, "SELECT p.uid FROM sr_project p INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid WHERE cr.uid = ?", cgidata.cruid);
-        void sql("UPDATE sr_project SET status = 'cancelled-after-qualification' WHERE uid = ?", project_cancel.rows.uid);
+        void sql("UPDATE sr_project SET sn_mdate = now(), status = 'cancelled-after-qualification' WHERE uid = ?", project_cancel.rows.uid);
     endif
 endif
 
@@ -95,19 +95,19 @@ if cgidata.refused then
         do_not_count = 'yes';
     endif
     void sql("UPDATE sr_credit
-            SET accepted = 'no', refusal_reason = '?', legit_request = '?'
+            SET sn_mdate = now(), accepted = 'no', refusal_reason = '?', legit_request = '?'
             WHERE uid = ?
         ", cgidata.reason, do_not_count, cgidata.cruid);
     automail::creditDenied(cgidata.cruid, cgidata.reason);
     if cgidata.cancel then
         project_cancel = sql(single:true, "SELECT p.uid FROM sr_project p INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid INNER JOIN sr_credit cr ON cr.uid_project_contractor = pc.uid WHERE cr.uid = ?", cgidata.cruid);
-        void sql("UPDATE sr_project SET status = 'cancelled-after-qualification' WHERE uid = ?", project_cancel.rows.uid);
+        void sql("UPDATE sr_project SET sn_mdate = now(), status = 'cancelled-after-qualification' WHERE uid = ?", project_cancel.rows.uid);
     endif
 endif       
 
 if cgidata.callback then
     void sql("UPDATE sr_credit
-            SET callback_date = '?', sr_comment = '?', follow_up = '?'
+            SET sn_mdate = now(), callback_date = '?', sr_comment = '?', follow_up = '?'
             WHERE uid = ?
             ", cgidata.callback_date, cgidata.our_comments, cgidata.follow_up, cgidata.cruid);
 endif
@@ -156,8 +156,7 @@ else
             WHERE accepted_date > 0
             GROUP BY pc.uid_project
         ) as sold_count ON sold_count.uid_project = p.uid
-        WHERE c.lang = '?'
-        AND ((cr.refusal_reason is null 
+        WHERE ((cr.refusal_reason is null 
         AND (cr.accepted is null or cr.accepted = 'no') 
         AND (cr.callback_date is null OR cr.callback_date <= curdate()))
     OR 
@@ -165,8 +164,7 @@ else
         AND (cr.callback_date is null OR cr.callback_date = '' OR cr.callback_date <= curdate())))
         GROUP BY p.uid
         ORDER BY cr.sn_cdate
-        LIMIT 3
-        ", "{{lg.rows.lg}}");
+        ");
 endif
 
 '<div style="width: 100%; float:both">{{sn_ct("Nombre de crédits à traiter")}}: '.+ nb_project.rows.count.+'</div>';

@@ -1,0 +1,67 @@
+
+{{
+    cgidata = cgidata();
+    connection = connection();
+    
+    if cgidata.action eq 'get_projects_sample' then
+        //query is seperated to show best projects to potential contractor if available
+        query = "SELECT p.uid, p.uid_service as suid, c.uid_territory as 
+                tuid, p.active_date, p.description, p.lead_price, left(a.zip, 3) as zip,
+                p.due_date, a.city, c.name_fr, p.shared_budget, p.uid_project_type,
+                p.delay_to, p.delay_from, p.estimated_value
+                FROM sr_project p 
+                LEFT JOIN sr_project_contractor pc ON pc.uid_project = p.uid AND accepted = 'yes'
+                LEFT JOIN sr_address a ON p.uid_address = a.uid 
+                LEFT JOIN sr_city c ON a.uid_city = c.uid 
+                LEFT JOIN sr_client cl ON cl.uid = p.uid_client 
+                WHERE (p.status = 'active' OR p.status = 'completed' OR p.status = 'inactive-incomplete' OR p.status = 'cancelled-after-qualification')
+                AND p.uid_service = '?'
+                AND cl.lang = '?'
+                GROUP BY p.uid
+                ORDER BY p.active_date DESC LIMIT 5";
+        projects = sql(query, cgidata.uid_service, cgidata.lang);
+
+        if (projects.nbrows > 0) then
+            headers_out("X-get-projects", projects.rows);
+        else
+            queryBis = "SELECT p.uid, p.uid_service as suid, c.uid_territory as 
+            tuid, p.active_date, p.description, p.lead_price, left(a.zip, 3) as zip,
+            p.due_date, a.city, c.name_fr, p.shared_budget, p.uid_project_type,
+            p.delay_to, p.delay_from, p.estimated_value
+            FROM sr_project p 
+            INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid AND accepted = 'yes'
+            LEFT JOIN sr_address a ON p.uid_address = a.uid 
+            LEFT JOIN sr_city c ON a.uid_city = c.uid 
+            LEFT JOIN sr_client cl ON cl.uid = p.uid_client 
+            WHERE (p.status = 'active' OR p.status = 'completed' OR p.status = 'inactive-incomplete' OR p.status = 'cancelled-after-qualification')
+            AND p.uid_service = '?'
+            AND cl.lang = '?'
+            GROUP BY p.uid
+            ORDER BY p.active_date DESC LIMIT 5";
+            projectsBis = sql(queryBis, cgidata.uid_service, cgidata.lang);
+            if (projectsBis.nbrows > 0) then
+                headers_out("X-get-projects", projectsBis.rows);
+            else
+                queryBis2 = "SELECT p.uid, p.uid_service as suid, c.uid_territory as 
+                tuid, p.active_date, p.description, p.lead_price, left(a.zip, 3) as zip,
+                p.due_date, a.city, c.name_fr, p.shared_budget, p.uid_project_type,
+                p.delay_to, p.delay_from, p.estimated_value
+                FROM sr_project p 
+                INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid AND accepted = 'yes'
+                LEFT JOIN sr_address a 
+                ON p.uid_address = a.uid LEFT JOIN sr_city c ON a.uid_city = c.uid 
+                LEFT JOIN sr_client cl ON cl.uid = p.uid_client 
+                WHERE (p.status = 'active' OR p.status = 'completed' OR p.status = 'inactive-incomplete' OR p.status = 'cancelled-after-qualification')
+                AND p.uid_service = '?'
+                AND cl.lang = '?'
+                GROUP BY p.uid
+                ORDER BY p.active_date DESC LIMIT 5";
+                projectsBis2 = sql(queryBis2, cgidata.uid_service, cgidata.lang);
+                if (projectsBis2.nbrows > 0) then
+                    headers_out("X-get-projects", projectsBis2.rows);
+                endif
+            endif
+        endif
+        void sql("INSERT INTO sr_log (sn_cdate, description, value) VALUES (now(), 'r_contractor_demo requested from ?', '?')", connection.client_ip, cgidata.uid_service);
+    endif
+}}

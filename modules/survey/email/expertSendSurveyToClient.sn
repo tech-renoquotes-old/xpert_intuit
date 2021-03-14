@@ -1,11 +1,11 @@
 {{
     /*
-        @title 			contractorSendSurveyToClient
-        Description		Contractor sends a survey email to know the satisfaction of client. 
+        @title 			expertSendSurveyToClient
+        Description		An expert Sends a survey email to know the satisfaction of client. 
         
         @author 		louis.jhonny@gmail.com
         
-		@version		1.0 2019-02-28 louis.jhonny@sednove.com
+		@version		1.0 2020-02-13
     */
     
     %include "/extenso/functions/sn_ct.snc";
@@ -17,111 +17,104 @@
 
 \{{
     use contractor;
-	use project;
-	use client;
 	use service;
-	use service_categ;
-
 	use token;
+	use client;
 
-  	if(client.rows.gender eq 'm') then
-       cgender = ("{{lg.rows.lg}}" eq 'fr')? "M.": "Mr.";
-    elseif(client.rows.gender eq 'f') then
-        cgender = ("{{lg.rows.lg}}" eq 'fr')? "Mme.": "Mrs.";
-    endif
-
-    lastname = client.rows.lastname;
-	company_name = contractor.rows.company_name;
-
+	token = client.rows.token;
     url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
 	url = url.rows.url_prod;
-	url_survey = url.+"{{sn_pages(table:'ressources','client_review_form_00',lg.rows.lg)}}";
-	submitdate = project.rows.sn_cdate;
-	shortdesc = substr(html2text(project.rows.description), 0, strpos(project.rows.description, '.'));
+	
+	service = service.rows.service;
+	uid_client = client.rows.uid;
+	company_name = contractor.rows.company_name;
+}}
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+        </span>
+    </span>
+</div>
+<br>
+
+\{{
+    
+    if contractor.rows.contact_lg eq 'fr' then
+		ctoken = contractor.rows.token;
+        profile = "/expert/" .+ contractor.rows.seo;
+    else
+        profile = "/expert/" .+ contractor.rows.seo;
+    endif
+
 }}
 
 
-    <div>
-        <span style="font-size:12px;">
-        </span>
-    </div>
-    <div>
-        <span style="font-size:16px;">
-            <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
-              
-              {{
-                  email.rows{"content_".+lg.rows.lg};
-              }}
-              
-            </span>
-        </span>
-    </div>
+<div>
+    <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+       <span style="font-size:16px;font-weight:bold;">
+           \{{contractor.rows.contact_firstname}} \{{contractor.rows.contact.lastname}} - \{{contractor.rows.company_name}}
+       </span> 
+    </span> 
+</div>
+<table class="vote" cellpadding="0" cellspacing="5" width="100%">
+    <tr>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{ctoken}}&n=1" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{ctoken}}&n=2" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    **
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{ctoken}}&n=3" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ***
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{ctoken}}&n=4" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    ****
+                </div>
+            </a>
+        </td>
+        <td width="20%">
+            <a href="\{{url .+ profile}}?token=\{{ctoken}}&n=5" style="text-decoration:none;">
+                <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+                    *****
+                </div>
+            </a>
+        </td>
+    </tr>
+</table>
+ 
+<br>
+<br>
 
- <table style="width:100%">
+{{sn_ct("client_survey Note: Est-ce qu'un autre entrepreneur que ceux listé ici s'est présenté comme ayant été référé par SoumissionRenovation.ca?  Si c'est le cas et dans le but d'offrir d'offrir un service sans soucis, nous aurions besoin de votre collaboration.", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}{{sn_ct("client_survey Vous pouvez tout simplement répondre à ce courriel en indiquant qui est cet entrepreneur.")}}
+<br><br>
+{{sn_ct("client_survey  Merci de votre participation!", publish:"/extenso/publish/sn_widgets.sn", uids:widget.rows.uid)}}
 
-     <tr>
-       <td colspan='2'>
-         	<h3><a style="text-decoration:none;font-weight:bold,color:rgb(0,81,126);" href="\{{url_survey}}?token=\{{token}}" >\{{contractor.rows.contact_firstname}} \{{contractor.rows.contact.lastname}} - \{{contractor.rows.company_name}}</a></h3>
-       </td>	
-     </tr>
-     <tr>
-       <td colspan='2'>
-        <table cellpadding="0" cellspacing="5" width="100%">
-            <tr>
-                <td width="20%">
-                    <a href="\{{url_survey}}?ct_rate=1&cuid=\{{contractor.rows.uid}}&token=\{{token}}" style="text-decoration:none;">
-                        <div style="width:100%;height:50px;line-height:60px;border:1px solid orange;background:#ffffff;color:orange;font-size:26px;text-align:center;">
-                            *
-                        </div>
-                    </a>
-                </td>
-                <td width="20%">
-                    <a href="\{{url_survey}}?ct_rate=2&cuid=\{{contractor.rows.uid}}&token=\{{token}}" style="text-decoration:none;">
-                        <div style="width:100%;height:50px;line-height:60px;border:1px solid orange;background:#ffffff;color:orange;font-size:26px;text-align:center;">
-                            **
-                        </div>
-                    </a>
-                </td>
-                <td width="20%">
-                    <a href="\{{url_survey}}?ct_rate=3&cuid=\{{contractor.rows.uid}}&token=\{{token}}" style="text-decoration:none;">
-                        <div style="width:100%;height:50px;line-height:60px;border:1px solid orange;background:#ffffff;color:orange;font-size:26px;text-align:center;">
-                            ***
-                        </div>
-                    </a>
-                </td>
-                <td width="20%">
-                    <a href="\{{url_survey}}?ct_rate=4&cuid=\{{contractor.rows.uid}}&token=\{{token}}" style="text-decoration:none;">
-                        <div style="width:100%;height:50px;line-height:60px;border:1px solid orange;background:#ffffff;color:orange;font-size:26px;text-align:center;">
-                            ****
-                        </div>
-                    </a>
-                </td>
-                <td width="20%">
-                    <a href="\{{url_survey}}?ct_rate=5&cuid=\{{contractor.rows.uid}}&token=\{{token}}" style="text-decoration:none;">
-                        <div style="width:100%;height:50px;line-height:60px;border:1px solid orange;background:#ffffff;color:orange;font-size:26px;text-align:center;">
-                            *****
-                        </div>
-                    </a>
-                </td>
-            </tr>
-        </table>         
-         
-       </td>
-     </tr>
-   	 <tr>
-       <td colspan='2'> <hr /> </td>
-     </tr>
-     <tr>
-       <td>
-       		<input type='hidden' id="ctNote" name="ctNote" value=''>
-       </td>
-       <td>
-         	&nbsp;
-       </td>
-     </tr>        
-  </table>  
-    
-  <p><strong>{{sn_ct("Catégorie")}} </strong>: <em>\{{service_categ}}</em><br />
-  <strong>{{sn_ct("Service")}}</strong>: <em>\{{service}}</em><br />
-  <strong>{{sn_ct("Date de soumission")}}</strong>: <em>\{{submitdate}}</em><br />
-  <strong>{{sn_ct("Brève description")}}</strong>: <em>\{{shortdesc}}</em></p>
+<p style="font-size: 8px;">\{{uid_client}}</p>
+
+\{{
+	use token_tracking;
+	"<img alt='' p='' src='https://soumissionrenovation.ca/widgets/fr/email_tracking.snc?token_client=" .+ token_tracking .+ "' style='width:0px; max-height:0px; overflow:hidden' />";
+}}

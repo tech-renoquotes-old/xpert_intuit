@@ -2545,7 +2545,7 @@ package automail;
     
     
     //Survey module
-    function sendSurveyToClientAfterSevenDays(token, uid_project, resource_id)
+    function sendSurveyToClientAfterSevenDays(token, resource_id, uid_project)
         
         contractors = sql("
             SELECT c.contact_firstname, c.contact_lastname, c.company_name, pc.uid, pc.uid_contractor, pc.token
@@ -2555,11 +2555,13 @@ package automail;
             AND uid_project = '?' 
             ", uid_project
         );
-        
+
 
         if (contractors.nbrows > 0) then
             client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.uid='?'", uid_project);
             lg = client.rows.lang;
+            
+
             resource = sql(single:true, "SELECT file_? as fname, url_? as url FROM ressources WHERE uid = '?'", lg, lg, resource_id);
             survey_url = resource.rows.url .+ resource.rows.fname;
             
@@ -2581,7 +2583,7 @@ package automail;
             if (res ne '' && client.rows.email ne '' && strpos(res,' ') < 0 && strpos(res,',') < 0 && res ne 'aucun' &&  strpos(res,'@') > 0) then //adresse valide
                 email_to = res;
                 void insert(table:'sr_log', fields:{'uid_project':uid_project .+'-1','email_to': email_to  ,'description':'email sendSatisfactionSurveyToClient---','value':client.rows.email});
-                email_to;
+                
                 automail::sendEmail(
                     "sendSurveyToClientAfterSevenDays",
                     to: email_to,
@@ -2595,8 +2597,9 @@ package automail;
     function expertSendSurveyToClient(token, resource_id, uid_contractor)
         //get information about the project
         
-        client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.token='?'", token);
+        client = sql(single:true,"SELECT c.email, c.lang, c.gender, c.firstname, c.lastname, p.token FROM sr_project p INNER JOIN sr_client c ON c.uid = p.uid_client WHERE p.token='?' AND p.token IS NOT NULL", token);
         lg = client.rows.lang;
+        
         
         project = sql(single:true, "
             SELECT p.*, IFNULL(c.name_?, a.city) as city, a.zip 
@@ -2614,7 +2617,7 @@ package automail;
             AND c.uid = '?'
             ", project.rows.uid, uid_contractor
         );
-
+        
         if (contractor.nbrows > 0) then
             resource = sql(single:true, "SELECT file_? as fname, url_? as url FROM ressources WHERE uid = '?'", lg, lg, resource_id);
             survey_url = resource.rows.url .+ resource.rows.fname;
@@ -2639,8 +2642,21 @@ package automail;
                 );
             endif
         endif
-    endf      
-endp
+    endf 
+    
+    
+    function sendAnsweredSurveyToAdmin(uid_survey)
+        project_survey = sql(single:true,"SELECT * FROM xpert_project_survey WHERE uid = '?'", uid_survey);
+        project = sql(single:true,"SELECT * FROM sr_project WHERE uid = '?'", project_survey.rows.uid_project);
+     
+        
+        uid_client = project.rows.uid_client;
+        uid_expert = project_survey.rows.winner;
+        
+        if(uid_client ne "" && uid_expert ne "") then
+            automail::sendEmail("sendAnsweredSurveyToAdmin");
+        endif
+    endf endp
 
 }}{{
     /*
@@ -4955,12 +4971,16 @@ endp
                 upd = update(tables:'xpert_project_survey',fields: survey, uid:project_survey.rows.uid);
                 if(upd.sqlcode > 0) then
                     failed++;
+                else
+                    automail::sendAnsweredSurveyToAdmin(upd.uid);
                 endif
                 
             else
                 ins = insert(table:'xpert_project_survey', fields:survey);
                 if(ins.sqlcode > 0) then
                     failed++;
+                else
+                    automail::sendAnsweredSurveyToAdmin(ins.uid);
                 endif
                 
             endif

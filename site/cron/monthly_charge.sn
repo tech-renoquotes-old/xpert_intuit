@@ -1,0 +1,46 @@
+{{
+%include '/site/package/all.sn';
+}}
+
+\{{
+    
+    /**
+     * Author: Michel Jodoin
+     * @description: Charge the monthly plans
+     * @version 1.00 2019-02-04
+     *          2.00 2019-08-31 Redid everything to work the new way subscription works
+	 *
+	 * @modified: 2019-09-25 by louis.jhonny@gmail.com
+     * @version 2.01 2019-09-25 don't renew subscription that was already renewed manually 
+     * 
+     * 
+     **/ 
+
+//automail 1 semaine à l'avance
+
+//deactive all subscriptions that aren't set to renew and that the end date is passed
+void sql("UPDATE sr_subscription_contractor SET active = 'no' WHERE renew <> 'yes' AND end_date < curdate()");
+
+//renew all subscriptions the end date is passed and renew = yes, then debit_charge
+renew = sql("SELECT uid_contractor, uid_subscription_plan, duration, price, start_date, end_date, uid, uid_territory FROM sr_subscription_contractor WHERE renew = 'yes' AND end_date < curdate()");
+
+for r in renew.rows do
+  
+        void sql("INSERT INTO sr_subscription_contractor (sn_cdate, sn_mdate, uid_contractor, uid_subscription_plan, duration, price, start_date, end_date, renew, active, uid_territory)
+		VALUES (now(), now(), '?', '?', '?', '?', curdate(), date_add(curdate(), INTERVAL ? MONTH), 'yes', 'yes', '?')", r.uid_contractor, r.uid_subscription_plan, r.duration, r.price, r.duration, r.uid_territory);
+        
+		new_sub = sql(single:true, "SELECT uid FROM sr_subscription_contractor WHERE uid_contractor = '?' ORDER BY uid DESC LIMIT 1", r.uid_contractor);
+
+		void insert(table:'sr_debug', fields:{'description':'Monthly charge: monthly created automatically = '.+ new_sub.rows.uid,'text':'Subscription ' .+ new_sub.rows.uid .+ ' Created for contractor ='.+ r.uid_contractor});
+    
+		void sql("UPDATE sr_subscription_contractor SET active = 'no', renew = 'no' WHERE uid = '?'", r.uid);
+
+		territories = sql("
+			INSERT INTO sr_subscription_contractor_territory (sn_cdate, uid_territory, uid_subscription_contractor)
+			SELECT now(), uid_territory, '?'
+			FROM sr_subscription_contractor_territory 
+			WHERE uid_subscription_contractor = '?'", new_sub.rows.uid, r.uid);
+
+endfor
+
+}}

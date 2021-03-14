@@ -61,7 +61,7 @@
                 \{{for i in billing do}}
                 \{{if i.type ne 'balance' then}}
                 <tr>
-                    \{{if i.type eq 'transaction' then}}
+                    \{{if i.type eq 'transaction' || i.type eq 'subscription' then}}
                         <td></td>
                         <td>\{{i.description}}</td>
                         <td>\{{money_format(i.amount,"{{lg.rows.lg}}")}}</td>

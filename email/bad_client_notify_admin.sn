@@ -1,0 +1,28 @@
+{{
+    /*
+        @title 			sendSatisfactionSurveyToAdmin
+        Description		Sends a survey notification email to Admin. 
+        
+        @author 		louis.jhonny@sednove.com
+        
+		@version		1.0 2020-02-13 louis.jhonny@sednove.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+	use client;
+}}
+
+Nom: \{{use name; name;}}
+Adresse: \{{use address; address;}}
+Email: \{{use client_email; client_email;}}
+Téléphone: \{{use phone; phone;}} - \{{use ext1; ext1;}}
+Description: \{{use description; description}}
+Pays: \{{use country; country}}
+       
+{{
+//email.rows{"content_".+lg.rows.lg};
+}}

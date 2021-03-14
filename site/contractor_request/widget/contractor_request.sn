@@ -99,6 +99,22 @@
         border-radius:10px;
         padding:10px;
     }
+    
+    .description-projet img{
+        width:350px!important;       
+    }
+    @media only screen and (max-width: 768px) {
+        .description-projet img{
+            width:250px!important;       filterProjects
+        }
+    }
+    .panel-default{
+        border-left: solid 2px black;
+        border-right: solid 2px black;
+        border-top: solid 2px black;
+        border-radius: 4px
+    }
+    
 </style>
 \{{
     if (cgidata.id ne '') then
@@ -254,7 +270,7 @@ function annulerMessages(){
                     </label>
                     <select class="form-control" name="service" id="service" data-validator-name="service">
                         <option value="">{{sn_ct(edit:false,"contractor_request Choisir un service")}}</option>
-                    \{{for p sql("SELECT  uid, name_long_{{lg.rows.lg}} as name FROM sr_service GROUP BY name ORDER BY name ASC") do }}
+                    \{{for p sql("SELECT  uid, name_long_{{lg.rows.lg}} as name FROM sr_service WHERE active = 'yes' GROUP BY name ORDER BY name ASC") do }}
 					    <option value="\{{p.rows.uid}}">\{{p.rows.name }}</option>
 				    \{{endfor}}
 				        <option value="other">{{sn_ct(edit:false,"contractor_request Autre")}}</option>
@@ -386,6 +402,65 @@ function annulerMessages(){
     </div>
     
 </div> <!-- inscription -->
+
+
+<a name="examples"></a>
+<div id="panel_container">
+    <hr>
+    <div class="row">
+        <div class="col">
+            <h2><strong>{{sn_ct("Vous voulez voir des exemples de projets que nous fournissons ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</strong></h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <label>{{sn_ct("contractor_request Choisissez un service pour afficher jusqu'à 5 exemples de projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+            <select id="services" name="services" class="form-control" onchange="getProjects(this.value)">
+                <option value="">{{sn_ct("Choisir un service", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                \{{for service sql("SELECT s.name_long_? as sname, s.uid FROM sr_service s WHERE s.active = 'yes' GROUP BY sname", "fr") do}}
+                    <option \{{if cgidata.uid_service eq service.rows.uid then "selected"; endif}} value="\{{service.rows.uid}}">\{{service.rows.sname}}</option>
+                \{{endfor}}
+            </select>
+        </div>
+    </div>
+    <div class="row text-center" id="loadingrow" style="display:none">
+        <div class="col pt-5">
+            <i class="fas fa-circle-o-notch fa-spin fa-3x fa-fw"></i>
+        </div>
+    </div>
+    <br>
+    <div id="projectshere">
+        
+    </div>
+    <div class="col text-center" id="no_projects" style="display:none">
+        <i>\{{(lg eq 'en')?"No preview projects available for this service":"Aucun exemple de projets disponible pour ce service"}}</i>
+    </div>
+</div>
+
+<!-- widget Project Preview -->
+<div class="row project_panel_sample" style="display:none">
+    <div class="col">
+        <div id="project-panel" class="panel panel-default well custom-well">
+            <div class="panel-body">
+                <div class="row description-projet">
+                    <div class="col-sm-12">
+                        <div>
+                            <b class="h3">{{sn_ct("contractor_request Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                            <hr mt-1 mb-1>
+                        </div>
+                        <p class="i_project_desc">
+                            \{{ 
+                                if p.description then  p.description; else "-"; endif
+                            }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<hr>
+
 
 \{{
     // include the validator for contractor_request
@@ -556,3 +631,54 @@ $(document).ready(function(){
 </script>
 
 \{{endif}}
+
+<script src="/js/encode.js"></script>
+<script>
+    function loadProject(res){
+        var project_panel = document.getElementsByClassName("project_panel_sample")[0];
+        project_panel.style.display = "block";
+        var cln = project_panel.cloneNode(true);
+        var cloned = document.getElementById("projectshere").appendChild(cln);
+        cloned.classList.add("project_panel");
+        cloned.classList.remove("project_panel_sample");
+        
+        cloned.getElementsByClassName("i_project_desc")[0].innerHTML = res.description.decode();
+        project_panel.style.display = "none";
+    }
+    
+    \{{if cgidata.uid_service ne "" then}}
+        $('#services').trigger('change');
+    \{{endif}}
+    
+    function getProjects(uid_service){
+        $.ajax({
+        	type: "post",
+        	data: {
+        	    "action": "get_projects_sample",
+        	    "uid_service":uid_service,
+        	    "lang":"{{lg.rows.lg}}"
+        	},
+        	url: "{{sn_pages('r_contractor_demo', lg.rows.lg, table:'ressources')}}",
+        	beforeSend: function() {
+        	    document.getElementById("loadingrow").style.display = "block";
+        	    document.getElementById("projectshere").innerHTML = "";
+        	    document.getElementById("no_projects").style.display = "none";
+            },
+        	success:function(data, statusText, xhr){
+        	    console.log(xhr.getResponseHeader('X-debug'));
+        	    var projects = xhr.getResponseHeader("X-get-projects");
+                
+        	    if (projects !== null){
+        	        var res = JSON.parse(projects);
+
+        	        for (var i = 0; i < res.length; i++) {
+        	            loadProject(res[i]);
+        	        }
+            	}else{
+            	    document.getElementById("no_projects").style.display = "block";
+            	}
+            	document.getElementById("loadingrow").style.display = "none";
+        	}
+        });
+    }
+</script>

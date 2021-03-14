@@ -489,7 +489,30 @@ if cgidata.answer_service_questions then
 
 endif
 
+if cgidata.action eq 'remove_territory_from_plan' then
+    void sql("DELETE FROM sr_subscription_contractor_territory WHERE uid = '?'", cgidata.uid);
+endif  
 
+if cgidata.action eq 'add_territory_to_plan' then
+    void sql("INSERT INTO sr_subscription_contractor_territory (sn_cdate, sn_cuid, uid_territory, uid_subscription_contractor)
+    VALUES (now(), '?', '?', '?')
+    ", user.uid, cgidata.uid_territory, cgidata.uid_subscription_contractor);
+    
+    sr_subscription_contractor_territory = sql(single:true, "SELECT uid FROM sr_subscription_contractor_territory WHERE uid_subscription_contractor = '?' AND uid_territory = '?'", cgidata.uid_subscription_contractor, cgidata.uid_territory);
+    
+    territory = sql(single:true, "SELECT name_fr FROM sr_territory WHERE uid = '?'", cgidata.uid_territory);
+    
+    headers_out("X-territory", territory.rows.name_fr, "X-uid_territory", sr_subscription_contractor_territory.rows.uid);
+    
+endif
+
+if cgidata.action eq 'save_ajax_subscription_contractor' then
+    void sql("UPDATE ? SET ? = '?' WHERE uid = ?", cgidata.table, cgidata.field, cgidata.value, cgidata.uid);
+endif
+
+if cgidata.action eq "change_comment_verified" then
+    void sql("UPDATE sr_project_contractor SET comment_verified = if(comment_verified = 'yes','no','yes') WHERE uid = '?'", cgidata.uid);
+endif
 
 }}
 

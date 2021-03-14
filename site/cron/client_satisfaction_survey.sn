@@ -1,15 +1,21 @@
-{{%include '/site/package/all.sn';}}
+{{%include '/site/package/automail.sn';}}
 \{{// Saturday 11:30pm
 
 //page 12
+void timeout(600);
 
 for project sql("   
-            SELECT * 
-            FROM sr_project 
+            SELECT p.uid, sum(pc.lead_price) as sales
+            FROM sr_project p
+			INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid
             WHERE DATEDIFF(now(), active_date) > 28 
 			AND DATEDIFF(now(), active_date) < 90
             AND status IN ('active','completed','inactive-incomplete','cancelled-after-qualification') 
             AND (satisfaction_survey_sent IS NULL OR satisfaction_survey_sent != 'yes')
+            AND (p.stop_survey is null or p.stop_survey <> 'yes')
+			AND (employee is null OR employee = 'no' OR employee = '')
+			GROUP BY p.uid
+			HAVING sales > 0
         ") do
     time = time();
     //Il faut prendre le token de sr_project_contractor et non de sr_project
@@ -20,7 +26,35 @@ for project sql("
     automail::sendSatisfactionSurveyToClient(project.rows.uid);
     void update(tables: 'sr_project', fields: {
         'satisfaction_survey_sent': 'yes'
-    }, uid: project.rows.uid); 
+    }, uid: project.rows.uid);
+	void insert(table:'sr_debug', fields:{'description':'satisfaction survey successfully sent for ' .+ p.uid });
 endfor
+
+/*
+project = sql("SELECT p.uid, sum(pc.lead_price) as sales, p.active_date, pc.client_satisfaction, p.token
+            FROM sr_project p
+            INNER JOIN sr_project_contractor pc ON pc.uid_project = p.uid
+            WHERE DATEDIFF(now(), active_date) > 90
+            AND DATEDIFF(now(), active_date) < 150
+            AND status IN ('active','completed','inactive-incomplete','cancelled-after-qualification') 
+			AND (employee is null OR employee = 'no' OR employee = '')
+			AND NOT EXISTS (SELECT null FROM sr_project_contractor WHERE uid_project = p.uid AND client_satisfaction is not null)
+			AND NOT EXISTS (SELECT null FROM sr_complaints WHERE uid_project = p.uid)
+            AND (p.stop_survey is null or p.stop_survey <> 'yes')
+            AND (satisfaction_survey_sent_reminder IS NULL OR satisfaction_survey_sent_reminder != 'yes')
+			AND satisfaction_survey_sent = 'yes'
+			GROUP BY p.uid
+			HAVING sales > 0");
+
+for p in project.rows do
+  automail::sendSatisfactionSurveyToClient_reminder1(p.uid);
+  void update(tables: 'sr_project', fields: {
+  'satisfaction_survey_sent_reminder': 'yes'
+  }, uid: p.uid); 
+  void insert(table:'sr_debug', fields:{'description':'satisfaction survey successfully sent for ' .+ p.uid });
+endfor
+*/
+
+
 
 }}

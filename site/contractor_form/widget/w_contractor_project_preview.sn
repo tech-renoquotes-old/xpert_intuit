@@ -1,0 +1,217 @@
+{{
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+    //http://ssr.sednove.ca/extenso/extranet/ide/#
+    use page;  
+    use lg;
+}}
+<!--<script src="/js/encode.js"></script>-->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<style>
+    .description-projet img{
+        width:350px!important;       
+    }
+    @media only screen and (max-width: 768px) {
+        .description-projet img{
+            width:250px!important;       filterProjects
+        }
+    }
+    .panel-default{
+        border-left: solid 2px black;
+        border-right: solid 2px black;
+        border-top: solid 2px black;
+        border-radius: 4px
+    }
+    /* Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    
+    /* Firefox */
+    input[type=number] {
+      -moz-appearance:textfield;
+    }
+</style>
+<a name="examples"></a>
+<div id="panel_container">
+    <hr>
+    <div class="row">
+        <div class="col">
+            <h2><strong>{{sn_ct("Vous voulez voir des exemples de projets que nous fournissons ?", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</strong></h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <label>{{sn_ct("contractor_projects_preview Choisissez un service pour afficher jusqu'à 5 exemples de projets", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</label>
+            <select id="services" name="services" class="form-control" onchange="getProjects(this.value)">
+                <option value="">{{sn_ct("Choisir un service", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</option>
+                \{{for service sql("SELECT s.name_long_? as sname, s.uid FROM sr_service s WHERE s.active = 'yes' GROUP BY sname", "fr") do}}
+                    <option \{{if cgidata.uid_service eq service.rows.uid then "selected"; endif}} value="\{{service.rows.uid}}">\{{service.rows.sname}}</option>
+                \{{endfor}}
+            </select>
+        </div>
+    </div>
+    <div class="row text-center" id="loadingrow" style="display:none">
+        <div class="col pt-5">
+            <i class="fas fa-circle-o-notch fa-spin fa-3x fa-fw"></i>
+        </div>
+    </div>
+    <br>
+    <div id="projectshere">
+        
+    </div>
+    <div class="col text-center" id="no_projects" style="display:none">
+        <i>\{{(lg eq 'en')?"No preview projects available for this service":"Aucun exemple de projets disponible pour ce service"}}</i>
+    </div>
+</div>
+
+<div class="row project_panel_sample" style="display:none">
+        <div class="col">
+            <div id="project-panel" class="panel panel-default well custom-well">
+                <div class="panel-body">
+                    <div class="row description-projet">
+                        <div class="col-sm-6">
+                            <div>
+                                <b class="h3">{{sn_ct("contractor_project_preview Description", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</b>
+                                <hr mt-1 mb-1>
+                            </div>
+                            <p class="i_project_desc">
+                                \{{ 
+                                    if p.description then  p.description; else "-"; endif
+                                }}
+                            </p>
+                        </div>
+                        <!--<div class="col-sm-6 font-md">-->
+                        <!--    <div class="form-group">-->
+                        <!--        <label class="h3">-->
+                        <!--            {{sn_ct("contractor_project_preview Type de client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                        <!--        </label>-->
+                        <!--        <div style="font-size:14px;" class="i_project_type">-->
+                        <!--            \{{ project_type; }}-->
+                        <!--        </div>-->
+                        <!--    </div>-->
+                        <!--    <div class="form-group">-->
+                        <!--        <label class="h3">-->
+                        <!--            {{sn_ct("contractor_project_preview Date voulue", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                        <!--        </label>-->
+                        <!--        <div style="font-size:14px;" class="i_project_wanted_date">-->
+                        <!--            \{{ if p.due_date then p.due_date; else "-"; endif}}-->
+                        <!--        </div>-->
+                        <!--    </div>-->
+
+                        <!--    <div class="form-group">-->
+                        <!--        <label class="h3">-->
+                        <!--            {{sn_ct("contractor_project_preview Budget du client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}-->
+                        <!--        </label>-->
+                        <!--        <div style="font-size:14px;" class="i_project_budget">-->
+                        <!--            \{{if p.shared_budget then p.shared_budget; else "-"; endif}}-->
+                        <!--        </div>-->
+                        <!--    </div>-->
+                            
+                        <!--    <div class="form-group">-->
+                        <!--        <label class="h3">-->
+                        <!--                {{sn_ct("contractor_discounted_projects Nombre d'entrepreneur(s) déjà référé", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}: <p class="i_project_contractor_nb">\{{p.nb_entr}}</p>-->
+                        <!--        </label>-->
+                        <!--    </div>-->
+                        <!--</div>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<hr>
+<br>
+    <script src="/js/encode.js"></script>
+    <script>
+    $(document).ready(function() {
+        if($('.pasted_img').length){
+            var imgs = document.getElementsByClassName("pasted_img1");
+            imgs.forEach(function (entry) {
+                entry.width = "250";
+            });
+        }
+    });
+    
+    function loadProject(res){
+        
+        var project_panel = document.getElementsByClassName("project_panel_sample")[0];
+        project_panel.style.display = "block";
+        var cln = project_panel.cloneNode(true);
+        var cloned = document.getElementById("projectshere").appendChild(cln);
+        cloned.classList.add("project_panel");
+        cloned.classList.remove("project_panel_sample");
+        
+        cloned.getElementsByClassName("i_project_desc")[0].innerHTML = res.description.decode();
+        // if(res.uid_project_type == '1') {
+        // 	var project_type_fr = "Résidentiel";
+        //     var project_type_en = "Residential";
+        // }else if(res.uid_project_type == '2') {
+        //     var project_type_fr = "Commercial";
+        //     var project_type_en = "Commercial";
+        // }else if(res.uid_project_type == '4') {
+        //     var project_type_fr = "Nouvelle construction";
+        //     var project_type_en = "New construction";
+        // }else{
+        //     var project_type_fr = "N/A"
+        //     var project_type_fr = "N/A"
+        // }
+        
+        // if ('\{{lg}}' == "en"){
+        //     var project_type = project_type_en;
+        // }else{
+        //     var project_type = project_type_fr;
+        // }
+        // cloned.getElementsByClassName("i_project_type")[0].innerHTML = project_type;
+        // //cloned.getElementsByClassName("i_project_qualif_date")[0].innerHTML = res.active_date.decode();
+        // cloned.getElementsByClassName("i_project_wanted_date")[0].innerHTML = res.due_date.decode();
+        // if (res.name_fr == ""){
+        //     var city = "-" + " " + "(" + res.zip + ")";
+        // }else{
+        //     var city = res.name_fr.decode()  + " " + "(" + res.zip + ")";
+        // }
+        // //cloned.getElementsByClassName("i_project_city")[0].innerHTML = city;
+        // var price = res.lead_price + " $ " + "+ taxes";
+        // // cloned.getElementsByClassName("i_project_price")[0].innerHTML = price;
+        // cloned.getElementsByClassName("i_project_budget")[0].innerHTML = res.shared_budget.decode();
+        // cloned.getElementsByClassName("i_project_contractor_nb")[0].innerHTML = res.nb_entr;
+        project_panel.style.display = "none";
+    }
+    
+    \{{if cgidata.uid_service ne "" then}}
+        $('#services').trigger('change');
+    \{{endif}}
+    
+    function getProjects(uid_service){
+        $.ajax({
+        	type: "post",
+        	data: {
+        	    "action": "get_projects_sample",
+        	    "uid_service":uid_service,
+        	    "lang":"\{{lg}}"
+        	},
+        	url: "{{sn_pages('r_contractor_demo', lg.rows.lg, table:'ressources')}}",
+        	beforeSend: function() {
+        	    document.getElementById("loadingrow").style.display = "block";
+        	    document.getElementById("projectshere").innerHTML = "";
+        	    document.getElementById("no_projects").style.display = "none";
+            },
+        	success:function(data, statusText, xhr){
+        	    console.log(xhr.getResponseHeader('X-debug'));
+        	    var projects = xhr.getResponseHeader("X-get-projects");
+                
+        	    if (projects !== null){
+        	        var res = JSON.parse(projects);
+
+        	        for (var i = 0; i < res.length; i++) {
+        	            loadProject(res[i]);
+        	        }
+            	}else{
+            	    document.getElementById("no_projects").style.display = "block";
+            	}
+            	document.getElementById("loadingrow").style.display = "none";
+        	}
+        });
+    }
+    </script>

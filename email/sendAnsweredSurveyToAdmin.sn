@@ -1,0 +1,26 @@
+{{
+    /*
+        @title 			creditDenied
+        Description		Email for the contractor when a credit is denied for one of his project. 
+
+        @author 		madupuis@sednove.com
+        
+        @version 		1.0 2016-08-12
+
+    */
+
+    use email;
+    use lg;
+
+
+    %include "/extenso/functions/sn_ct.snc";
+}}
+
+\{{
+    use uid_client;
+  	use uid_expert;
+}}
+
+{{
+    email.rows{"content_".+lg.rows.lg};
+}}

@@ -45,7 +45,8 @@
                         '' as description,
                         '' as address,
                         '' as info_extra,
-                        balance as 'amount'
+                        balance as 'amount',
+                        '' as name
                     FROM sr_contractor 
                     WHERE uid='?'
                     
@@ -55,13 +56,15 @@
                         p.uid as id,
                         pc.accepted_date as date,
                         'lead' as 'type',
-                        p.description as description,
-                        IF(a.uid IS NULL, '', CONCAT(a.street_no, ' ', a.street, ', ', IF(c.name_".+lg.+"  IS NOT NULL, c.name_".+lg.+", a.city), ', ', a.province, ' ', a.zip)) as address,
+                        concat(cl.firstname, ' ', cl.lastname) as description,
+                        concat(cl.firstname, ' ', cl.lastname, ' ', IF(a.uid IS NULL, '', CONCAT(a.street_no, ' ', a.street, ', ', IF(c.name_".+lg.+"  IS NOT NULL, c.name_".+lg.+", a.city), ', ', a.province, ' ', a.zip))) as address,
                         '' as info_extra,
-                        i.amount as 'amount'
+                        i.amount as 'amount',
+                        concat(cl.firstname, ' ', cl.lastname) as name
                     FROM sr_invoice i
                     INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
                     INNER JOIN sr_project p ON p.uid = pc.uid_project
+                    INNER JOIN sr_client cl ON cl.uid = p.uid_client
                     LEFT JOIN sr_address a ON a.uid = p.uid_address
                     LEFT JOIN sr_city c ON c.uid = a.uid_city
                     WHERE   (i.completed != 'yes' OR i.completed IS NULL)
@@ -76,7 +79,8 @@
                         '' as description,
                         IF(a.uid IS NULL, '', CONCAT(a.street_no, ' ', a.street, ', ', IF(c.name_".+lg.+"  IS NOT NULL, c.name_".+lg.+", a.city), ', ', a.province, ' ', a.zip)) as address,
                         'Credit' as info_extra,
-                        (pc.lead_price*-1) as 'amount'
+                        (pc.lead_price*-1) as 'amount',
+                        '' as name
                     FROM sr_credit cr
                     INNER JOIN sr_project_contractor pc ON pc.uid = cr.uid_project_contractor
                     INNER JOIN sr_project p ON p.uid = pc.uid_project
@@ -95,15 +99,35 @@
                         CONCAT('Transaction', ' ', DATE_FORMAT(sn_cdate, '%Y-%m-%d') , ' ', uniqueref) as description,
                         '' as address,
                         '' as info_extra,
-                        (amount*-1) as 'amount'
+                        (amount*-1) as 'amount',
+                        '' as name
                     FROM sr_transaction
-                    WHERE   uid_contractor = '?'
+                    WHERE uid_contractor = '?'
                         AND (completed != 'yes' OR completed IS NULL)
                         AND (status = 'succeeded' OR status IS NULL)
                         
+                UNION
+                
+                SELECT  sc.uid as uid,
+                        '' as id,
+                        sc.start_date as date,
+                        'subscription' as type,
+                        sp.name_? as description,
+                        '' as address,
+						'' as info_extra,
+                        (sc.price - ifnull(sc.discount,0)) as amount,
+                        '' as name
+                    FROM sr_subscription_contractor sc
+                    INNER JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+                    WHERE sc.uid_contractor = '?'
+                        AND (sc.paid is null OR sc.paid <> 'yes')
+                        AND sc.start_date <= curdate()
+                        AND (sc.trial IS NULL OR sc.trial <> 'yes')
+                        
                 ORDER BY id ASC, date ASC, type DESC
                 
-                ", uid_contractor, uid_contractor, uid_contractor, uid_contractor);
+                ", uid_contractor, uid_contractor, uid_contractor, uid_contractor, lg, uid_contractor);
+                
             return billing.rows;
         endf
         
@@ -175,7 +199,7 @@
         
         function getCurrentBillingTotal(uid_contractor)
             billingTotals = sql(single:true, contractor::getAllContractorsCurrentBillingTotalsQuery() .+ " WHERE c.uid = '?'", uid_contractor);
-            subtotal = billingTotals.rows.invoices_total - billingTotals.rows.credits_total;
+            subtotal = billingTotals.rows.invoices_total - billingTotals.rows.credits_total + billingTotals.rows.subscription_total;
            // taxes = contractor::calculateTaxes(subtotal);
             taxes = contractor::calculateTaxesByProv(subtotal,uid_contractor);
             return billingTotals.rows.balance + taxes.total - billingTotals.rows.transactions_total;
@@ -266,7 +290,15 @@
                         WHERE t.uid_contractor = c.uid
                         AND (t.completed != 'yes' OR t.completed IS NULL)
                         AND (t.status = 'succeeded' OR t.status IS NULL)
-                    ),0) AS 'transactions_total'
+                    ),0) AS 'transactions_total',
+                    IFNULL((
+                        SELECT sum(sc.price) - ifnull(sc.discount,0)
+                        FROM sr_subscription_contractor sc
+                        WHERE sc.uid_contractor = c.uid
+                        AND (sc.paid is null OR sc.paid <> 'yes')
+                        AND sc.start_date <= curdate()
+                        AND (sc.trial is null OR sc.trial <> 'yes')
+                    ),0) AS 'subscription_total'                    
                 FROM sr_contractor c
             ";
         endf
@@ -307,6 +339,7 @@
         endf
         
         function trigger_transaction(uid_transaction)
+            qb_realm_id = "193514830636359";
             void insert(table:'sr_debug', fields:{'description':'test_Billing_debut3','text':'uid_transaction='.+uid_transaction});
 
             transaction = sql(single:true, "SELECT * FROM sr_transaction WHERE uid = '?' AND (status <> 'failed' OR status IS NULL)", uid_transaction);
@@ -331,7 +364,9 @@
             //billing_footer = contractor::getBillingFooter(billing);
             billing_footer = contractor::getBillingFooterByProv(billing,transaction.rows.uid_contractor);
             
-
+            //send data to quickbooks
+            qbdata = contractor::createSalesReceipt(uid_transaction, qb_realm_id);
+            void insert(table:'sr_debug', fields:{'description':'Quickbook_transaction - ' .+ uid_transaction,'text': qbdata});
             
             // If current billing is paid in full, clear billing and generate a pdf invoice
             if (billing_footer.solde < 0.01) then
@@ -345,6 +380,7 @@
                 invoices = [];
                 credits = [];
                 transactions = [];
+                subscription = [];
                 
                 // Calculate totals and list current invoices, credits, transactions
                 for line in billing do
@@ -356,6 +392,9 @@
                     endif
                     if (line.type eq 'transaction') then
                         push(transactions, line.uid);
+                    endif
+                    if (line.type eq 'subscription') then
+                        push(subscription, line.uid);
                     endif
                 endfor
                 void insert(table:'sr_debug', fields:{'description':'test_Billing2','text':'uid_transaction='.+uid_transaction});
@@ -385,6 +424,11 @@
                     void update(tables:'sr_transaction', uid: uid, fields:{'completed':'yes','uid_pivotal':uid_transaction,'pre_solde':prev_solde});
                     //void update(tables:'sr_transaction', uid: uid, fields:{'completed':'yes'});
                 endfor
+                
+                // Clear subscription
+                for uid in subscription do
+                    void update(tables:'sr_subscription_contractor', uid: uid, fields:{'paid':'yes','uid_pivotal':uid_transaction});
+                endfor                
                 
                 // Send email with pdf attached
                 if (pdf) then
@@ -424,6 +468,10 @@
             lg = contractor.rows.contact_lg;
             if (lg eq '') then
                 lg = 'fr';
+            endif
+            
+            if contractor.rows.company_name_legal ne "" then
+                contractor.rows.company_name;
             endif
             
             contractor_address = sql(single:true, "
@@ -514,16 +562,16 @@
                         p.uid as id,
                         pc.accepted_date as date,
                         'lead' as 'type',
-                        -- p.description as description,
-                         CONVERT(p.description USING utf8) as description,  
-                        IF(a.uid IS NULL, '', CONCAT(a.street_no, ' ', a.street, ', ', IF(c.name_".+lg.+"  IS NOT NULL, c.name_".+lg.+", a.city), ', ', a.province, ' ', a.zip)) as address,
+                        concat(cl.firstname, ' ', cl.lastname) as description,
+                        concat(cl.firstname, ' ', cl.lastname, ' ', IF(a.uid IS NULL, '', CONCAT(a.street_no, ' ', a.street, ', ', IF(c.name_".+lg.+"  IS NOT NULL, c.name_".+lg.+", a.city), ', ', a.province, ' ', a.zip))) as address,
                         i.amount as 'amount'
                     FROM sr_invoice i
                     INNER JOIN sr_project_contractor pc ON pc.uid = i.uid_project_contractor
                     INNER JOIN sr_project p ON p.uid = pc.uid_project
+                    INNER JOIN sr_client cl ON cl.uid = p.uid_client
                     LEFT JOIN sr_address a ON a.uid = p.uid_address
                     LEFT JOIN sr_city c ON c.uid = a.uid_city
-                    WHERE    i.uid_pivotal = '?'   -- and p.uid  in (	23314)
+                    WHERE i.uid_pivotal = '?'
                      
                 UNION
                 
@@ -554,13 +602,32 @@
                         (amount*-1) as 'amount'
                     FROM sr_transaction t
                     WHERE   t.uid_pivotal = '?'
-                    AND t.uid <> t.uid_pivotal
+                    
+                UNION
+                
+                SELECT  sc.uid as uid,
+                        '' as id,
+                        sc.start_date as date,
+                        'subscription' as type,
+                        sp.name_? as description,
+                        '' as address,
+                        (sc.price - ifnull(sc.discount,0)) as amount
+                    FROM sr_subscription_contractor sc
+                    INNER JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+                    WHERE sc.uid_pivotal = '?'
 
                         
                 ORDER BY (type = 'transaction') ASC, date ASC, type DESC
                 
-                ", uid_contractor, uid_pivotal, uid_pivotal, uid_pivotal);
+                ", uid_pivotal, uid_pivotal, uid_pivotal, uid_pivotal, "{{lg.rows.lg}}", uid_pivotal);
+            
+            "<br><br>";
+            "billing sql: " .+ billing.sql;
+            "<br><br>";    
+                
             return billing.rows;
+            
+            
         endf
         
         function test_getAllContractorsCurrentBillingTotalsQuery() // returns uid_contractor,balance,invoices_total,credits_total,transactions_total
@@ -681,9 +748,14 @@
             void insert(table:'sr_debug', fields:{'description':'test_Billing_PDF','text':'output.output='.+output.output});
             success_regex = 'Output written on '.+tmpfilename.+'\.pdf';
             
+            // output;
+            
+            transaction_date = sql(single:true, "SELECT max(sn_cdate) as transaction_date FROM sr_transaction WHERE uid_pivotal = '?'", uid_pivotal);
+            
             if (output.output =~ success_regex) then
                 if(save_pdf eq 'yes') then
                     void update(tables:'sr_billing_pdf', uid: billing_pdf.uid, fields:{
+                        'sn_cdate': transaction_date.rows.transaction_date,
                         'uid_contractor': uid_contractor,
                         'pdf': tmpfilename.+".pdf",
                         'content': stringnify(content)
@@ -944,36 +1016,332 @@
         
         
         function expertSendSurveyToClient(uid_project, uid_contractor)
-            survey = sql(single:true,"SELECT * FROM xpert_survey WHERE isOPen = 'yes' AND uid = 2");
-            s = survey.rows;
+            lead = sql(single:true,
+                        "SELECT pc.* FROM sr_project_contractor pc 
+                        INNER JOIN sr_project p ON p.uid = pc.uid_project 
+                        WHERE pc.uid_project = '?' 
+                        AND pc.uid_contractor = '?' 
+                        AND (p.xpert_sent_survey IS NULL OR p.xpert_sent_survey = '' OR p.xpert_sent_survey = 'no')", 
+                        uid_project, uid_contractor);
             
-            project = sql(single:true,"
-              SELECT p.*
-				FROM sr_project p
-				WHERE p.status IN('completed','inactive-incomplete')
-				AND (p.employee is null OR p.employee = 'no' OR p.employee = '')
-				AND NOT EXISTS(select * from xpert_project_survey WHERE uid_project = p.uid AND uid_survey = '?' AND uid_project IN(SELECT uid_project FROM sr_project_contractor WHERE uid_contractor='?'))
-                AND uid = '?'", s.uid, uid_contractor, uid_project);
-            
-            time = time();
-            token = project.rows.token;
-    
-            leads = sql(single:true,"select * from sr_project_contractor where uid_project = '?' AND uid_contractor = '?'", project.rows.uid, uid_contractor);
-            
-            if(project.nbrows > 0) then
-                if(leads.nbrows > 0) then
-                    void update(tables: 'sr_project', fields: {
-                      'satisfaction_survey_sent': 'yes'
-                    }, uid: project.rows.uid);
-                    automail::expertSendSurveyToClient(token, s.resource_id, uid_contractor);
-                    return true;
-                else
-                    return false;
-                endif
+            if(lead.nbrows > 0) then
+                automail::expertSendSurveyToClient(lead.rows.uid);
+                void update(tables: 'sr_project', fields: {
+                  'xpert_sent_survey': 'yes'
+                }, uid: uid_project);
+                
+                return true;
             else
                 return false;
             endif
-        endf        
+        endf
+        
+        //*******************************************************************************************************//
+        // Quickbooks application SALES RECEIPT créé via l'API de Quickbooks Online pour petite entreprise
+        //*******************************************************************************************************//
+        
+        /**
+         * Charger les access générer par l'application Tiers qbapp dand le fichier /qbapp/jsondata/access.json
+         * @args {uid_transaction} integer
+         * @return JSON
+         * 
+         **/        
+        function getQBAccess()
+            access = read('/apps/jsondata/access.json');
+            return unstringnify(access);
+        endf
+        
+        function getQBSalesReceipt(query, reamlId)
+            auth = unstringnify(contractor::getQBAccess());
+            encoded_query = urlencode(query);
+            prod_url = "https://quickbooks.api.intuit.com";
+            full_url = prod_url .+ "/v3/company/" .+ reamlId .+ "/query?query=" .+ encoded_query .+ "&minorversion=51";
+            
+            res = curl(
+                error: t,
+                url: full_url, 
+                header:"Content-Type: application/json",
+                header:"Accept: application/json",
+                header: "Authorization: Bearer " .+ auth.access_token,
+                sslversion:6
+                );
 
+            if(t ne "") then
+                return res.body;
+            else
+                return t;
+            endif
+        endf
+        
+        
+        function getQBTaxeCode(taxe_code, reamlId)
+        
+            taxe_code_query = urlencode("select Id From TaxCode Where Name = '" .+ taxe_code .+ "'");
+
+            auth = unstringnify(contractor::getQBAccess());
+            
+            prod_url = "https://quickbooks.api.intuit.com";
+            
+            full_url = prod_url .+ "/v3/company/" .+ reamlId .+ "/query?query=" .+ taxe_code_query .+ "&minorversion=51";
+            
+            res = curl(
+                error: t,
+                url: full_url, 
+                header:"Content-Type: application/json",
+                header:"Accept: application/json",
+                header: "Authorization: Bearer " .+ auth.access_token,
+                sslversion:6
+                );
+            json = unstringnify(res.body);
+
+            if(json ne "") then
+                return json.QueryResponse.TaxCode[0].Id;
+            else
+                return 7;
+            endif
+        endf
+
+
+        /**
+         * Trouver un client existant dans Quickbooks Online sinon créer le client
+         * @args {uid_transaction} integer
+         * @return JSON
+         * 
+         **/
+        function getQBCustomer(company_data, reamlId)
+
+            if(company_data.customer ne "") then
+                customer_query = urlencode("select * from Customer Where DisplayName = '" .+ company_data.customer .+ "'");
+            else
+                return false;
+            endif
+            
+            auth = unstringnify(contractor::getQBAccess());
+            
+            prod_url = "https://quickbooks.api.intuit.com";
+            full_url = prod_url .+ "/v3/company/" .+ reamlId .+ "/query?query=" .+ customer_query .+ "&minorversion=51";
+            
+            res = curl(
+                error: t,
+                url: full_url, 
+                header:"Content-Type: application/json",
+                header:"Accept: application/json",
+                header: "Authorization: Bearer " .+ auth.access_token,
+                sslversion:6
+            );
+            
+            jsondata = unstringnify(res.body);
+            if(jsondata.QueryResponse.Customer) then
+                jsondata = unstringnify(res.body);
+                return jsondata.QueryResponse.Customer[0];
+            else
+                newQBCustomer = {
+                  "FullyQualifiedName": company_data.customer, 
+                  "PrimaryEmailAddr": {
+                    "Address": company_data.email
+                  }, 
+                  "DisplayName":company_data.customer , 
+                  "Notes": "Here are other details.", 
+                  "FamilyName": company_data.contact_lastname, 
+                  "PrimaryPhone": {
+                    "FreeFormNumber": company_data.contact_phone
+                  }, 
+                  "CompanyName": company_data.customer, 
+                  "BillAddr": {
+                    "CountrySubDivisionCode":company_data.billing_address_country_subdivision_code, 
+                    "City": "Mountain View", 
+                    "PostalCode": company_data.billing_address_zip, 
+                    "Line1": company_data.sale.billing_address_line_1, 
+                    "Country": "CANADA"
+                  }, 
+                  "GivenName": company_data.contact_firstname
+                };                
+                customer = contractor::createQBCustomer(newQBCustomer, reamlId);
+                jsondata = unstringnify(customer);
+                
+                return jsondata.Customer;
+            endif
+        endf
+        
+        
+        /**
+         * Ajouter un nouveau client dans Quickbooks Online
+         * @args {jsonData: Json, realmId: string}
+         * @return JSON
+         * 
+         **/        
+        function createQBCustomer(jsonData, reamlId)
+            auth = unstringnify(contractor::getQBAccess());
+            prod_url = "https://quickbooks.api.intuit.com";
+            full_url = prod_url .+ "/v3/company/" .+ reamlId .+ "/customer?minorversion=51";
+            
+            res = curl(
+                error: t,
+                url: full_url, 
+                header:"Content-Type: application/json",
+                header:"Accept: application/json",
+                header: "Authorization: Bearer " .+ auth.access_token,
+                data: jsonData,
+                sslversion:6
+            );
+
+            return res.body;
+        endf
+        
+        
+        /**
+         * Creer un SalesReceipt dans Quickbooks Online
+         * @args {uid_transaction} integer
+         * @return JSON
+         * 
+         **/
+        function createSalesReceipt(uid_transaction, realmId)
+            auth = unstringnify(contractor::getQBAccess());
+            sale = contractor::getQBData(uid_transaction);
+            
+            customer = contractor::getQBCustomer(sale, realmId);
+            taxe_code = contractor::getQBTaxeCode(sale.Line_item_tax_code, reamlId);
+            
+            // create SalesReceipt json object only if the customer exists or has been succefully created.
+            if(customer.Id ne "") then
+                jsondata =     
+                {
+                    "domain":"QBO",
+                    "DocNumber":sale.sales_receipt_no,
+                    "TxnDate":sale.transaction_date,
+                    "CurrencyRef":{
+                        "value":"CAD",
+                        "name":"Dollar canadien"
+                    },
+                    
+                    "Line": [
+                        {
+                          "Description": "Lead", 
+                          "DetailType": "SalesItemLineDetail", 
+                          "SalesItemLineDetail": {
+                            "TaxCodeRef": {
+                                "value": contractor::getQBTaxeCode(sale.Line_item_tax_code, realmId),
+                                "name": sale.Line_item_tax_code                              
+                            }, 
+                            "Qty": sale.line_item_quantity, 
+                            "UnitPrice": sale.Total, 
+                            "ItemRef": {
+                              "name": "Sales", 
+                              "value": "1"
+                            }
+                          }, 
+                          "LineNum": 1, 
+                          "Amount": sale.Total, 
+                          "Id": "1"
+                        }, 
+                        {
+                          "DetailType": "SubTotalLineDetail", 
+                          "Amount": sale.Total, 
+                          "SubTotalLineDetail": {}
+                        }
+                    ],                     
+                        
+                    "TxnTaxDetail":{
+                        "TotalTax":sale.taxes
+                    },
+                    "CustomerRef":{
+                        "value":customer.Id,
+                        "name":customer.DisplayName
+                    },
+                    "BillAddr":{
+                        "Line1":sale.billing_address_line_1,
+                        "CountrySubDivisionCode":sale.billing_address_country_subdivision_code,
+                        "PostalCode":sale.billing_address_zip
+                    },
+                    "GlobalTaxCalculation":"TaxExcluded",
+                    "PaymentMethodRef":{
+                        "value":"2",
+                        "name":sale.payment_method
+                    },
+                    "PaymentRefNum": sale.reference_no,
+                    "DepositToAccountRef":{
+                        "value":sale.manual_transaction,
+                        "name":sale.deposit_to
+                    }
+                };
+                
+                jsondata;"<br><br>";
+                
+                prod_url = "https://quickbooks.api.intuit.com";
+                full_url = prod_url .+ "/v3/company/" .+ realmId .+ "/salesreceipt?minorversion=51";
+                
+                res = curl(
+                    error: t,
+                    url: full_url, 
+                    header:"Content-Type: application/json",
+                    header:"Accept: application/json",
+                    header: "Authorization: Bearer " .+ auth.access_token,
+                    data: jsondata,
+                    sslversion:6
+                );
+                
+                void sql("UPDATE sr_transaction SET quickbooks = 'yes' WHERE uid = '?'", uid_transaction);
+
+                return res.body;
+            endif
+        endf
+        
+        
+        /**
+         * Recueillir les données nécéssaires pour une transaction de l'entrepreneur
+         * @args {uid_transaction} integer
+         * @return JSON
+         * 
+         **/
+        function getQBData(uid_transaction)
+            qbdata = sql(single:true,
+                "SELECT ctr.uid,
+                CONCAT(ctr.uid, '-', ctr.truid) as sales_receipt_no,
+                CONCAT(REPLACE(REPLACE(ctr.company_name, '’', ''), '\'', ''), ' - ',ctr.uid) as customer,
+                CONCAT(atx.street_no, ' ', REPLACE(atx.street, '\'', '')) as billing_address_line_1,
+                REPLACE(atx.city, '\'', '') as billing_address_city,
+                atx.zip as billing_address_zip,
+                atx.province as billing_address_country_subdivision_code,
+                ctr.sn_cdate as transaction_date,
+                ctr.status,
+                ctr.uniqueref as reference_no,
+                (atx.tps + atx.tvp) AS taxes,
+                ROUND((ctr.amount / (1 + atx.tps + atx.tvp)), 2) AS Total, 
+                'TaxEcluded' as global_tax_calculation,
+                atx.accounting_tax_code as Line_item_tax_code,
+                'Credit Card' as payment_method,
+                'Nuvei / Pivotal' as deposit_to,
+                1 as line_item_quantity,
+                ctr.email,
+                ctr.contact_firstname,
+                ctr.contact_lastname,
+                ctr.contact_phone,
+                if(ctr.manual_transaction = 'yes',52,5) as manual_transaction
+                FROM
+                    (
+                        SELECT c.uid, c.company_name, c.contact_firstname, c.contact_lastname, c.email, c.contact_phone, tr.uid as truid, tr.status, tr.amount, tr.sn_cdate, tr.uniqueref, tr.manual_transaction
+                        FROM sr_contractor c 
+                        INNER JOIN sr_transaction tr ON tr.uid_contractor = c.uid
+                        WHERE tr.status = 'succeeded'
+                    ) as ctr
+                INNER JOIN
+                    (
+                        SELECT a.*, tx.tvp, tx.tps, tx.accounting_tax_code FROM sr_address a INNER JOIN sr_taxes tx ON tx.code_prov = a.province
+                    ) as atx
+                ON ctr.uid = atx.uid_contractor 
+                WHERE (ctr.status = 'succeeded' OR ISNULL(ctr.status ) OR ctr.status = '') AND ctr.truid = '?'
+                GROUP BY ctr.truid,sales_receipt_no,customer,total,transaction_date,reference_no,taxes, 
+                ROUND(total/(1+taxes),2), global_tax_calculation, atx.accounting_tax_code,payment_method,deposit_to  
+                ORDER BY ctr.truid
+                ",
+                uid_transaction
+            );
+            
+            return qbdata.rows;
+        endf
+        
+        //*******************************************************************************************************//
+        // Fin de l'API QuickBooks Online SALES RECEIPTS
+        //*******************************************************************************************************//        
     endp
 }}

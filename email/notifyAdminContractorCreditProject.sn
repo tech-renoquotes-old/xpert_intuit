@@ -30,6 +30,7 @@
     dateAppelle2 = (contractor_info.call2_date eq "0000-00-00 00:00:00") ? "" : contractor_info.call2_date ;
     dateAppelle3 = (contractor_info.call3_date eq "0000-00-00 00:00:00") ? "" : contractor_info.call3_date ;
     explication = contractor_info.explanation;
+    uid_client = contractor_info.uid_client;
 }}
 
 {{

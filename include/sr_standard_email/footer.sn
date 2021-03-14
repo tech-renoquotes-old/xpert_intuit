@@ -40,8 +40,8 @@
                         					<span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
 			                        		<span style="font-weight: bold;color:#00517e;font-size:16px;">{{sn_ct("standard_email_template Pour nous joindre")}}</span>
 			                        		<br><br>
-			                        		<span>6750 De l'Esplanade #240,<br>
-											{{sn_ct("Montréal",edit:false)}}, {{sn_ct("Québec",edit:false)}} H2V 4M1<br>
+			                        		<span>200-7675 Boul Saint-Laurent,<br>
+											{{sn_ct("Montréal",edit:false)}}, {{sn_ct("Québec",edit:false)}} H2R 1W9<br>
 											Canada<br>
 											<a href="tel:{{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}" style="text-decoration:none;">
 											    {{sn_ct("standard_email_template 1 855 239-7836", edit:false)}}

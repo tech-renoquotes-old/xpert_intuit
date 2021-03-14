@@ -23,7 +23,7 @@
     //instanciate profil generator class
     profil = new Profilgen();
     
-    res = sql("select * from sr_contractor where active = 'yes'");
+    res = sql("select * from sr_contractor where active = 'yes' AND verified = 'yes'");
     contractors = res.rows;
 
 	// clear all existing seo flag

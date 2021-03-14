@@ -271,22 +271,22 @@
     res = sql(single:true,"select * from sr_contractor where active = 'yes' and uid = ?", extranet_user.uid);
     contractor = res.rows;
                     
-    query = "SELECT ps.uid_project_contractor as uid,
-                    ps.sn_cdate as evaluation_date, 
-                    ps.uid_project, 
-                    ps.service_comment, 
-                    ps.service_rate, 
-                    ps.xpert_reply, 
-                    ps.xpert_reply_date, 
-                    ps.comment_verified,
+    query = "SELECT pc.uid, 
+                    DATE(accepted_date) as system_date, 
+                    pc.evaluation_date, 
+                    pc.uid_project, 
+                    pc.client_comment, 
+                    pc.client_satisfaction, 
+                    pc.contractor_reply, 
+                    pc.reply_date, 
+                    pc.comment_verified, 
                     (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
                     (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
                     (select firstname from sr_client where uid = p.uid_client) as firstname 
-                    FROM xpert_project_survey ps 
-                    INNER JOIN sr_project p on p.uid = ps.uid_project 
-                    WHERE ps.winner = '" .+ contractor.uid .+ "' 
-                    AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL)
-                    AND (ps.comment_verified = 'yes')
+                    FROM sr_project_contractor pc INNER JOIN sr_project p on p.uid = pc.uid_project 
+                    WHERE pc.uid_contractor = '" .+ contractor.uid .+ "' 
+                    AND (pc.client_satisfaction <> '' OR pc.client_satisfaction IS NOT NULL)
+                    AND (pc.comment_verified = 'yes')
                     ";
  
                 
@@ -294,22 +294,23 @@
 
             
                     
-    query_pending = "SELECT ps.uid_project_contractor as uid, 
-                    ps.sn_cdate as evaluation_date, 
-                    ps.uid_project, 
-                    ps.service_comment, 
-                    ps.service_rate, 
-                    ps.xpert_reply, 
-                    ps.xpert_reply_date, 
-                    ps.comment_verified,
+    query_pending = "SELECT pc.uid, 
+                    DATE(accepted_date) as system_date, 
+                    pc.evaluation_date, 
+                    pc.uid_project, 
+                    pc.client_comment, 
+                    pc.client_satisfaction, 
+                    pc.contractor_reply, 
+                    pc.reply_date, 
+                    pc.comment_verified, 
                     (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
                     (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
                     (select firstname from sr_client where uid = p.uid_client) as firstname 
-                    FROM xpert_project_survey ps INNER JOIN sr_project p on p.uid = ps.uid_project
-                    WHERE ps.winner = '" .+ contractor.uid .+ "' 
-                    AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL)
-                    AND (ps.comment_verified = 'no' OR ps.comment_verified = '' OR ps.comment_verified IS NULL)
-                    ORDER BY evaluation_date DESC";
+                    FROM sr_project_contractor pc INNER JOIN sr_project p on p.uid = pc.uid_project
+                    WHERE pc.uid_contractor = '" .+ contractor.uid .+ "' 
+                    AND (pc.client_satisfaction <> '' OR pc.client_satisfaction IS NOT NULL)
+                    AND (pc.comment_verified = '' OR pc.comment_verified IS NULL)
+                    ORDER BY evaluation_date DESC, system_date DESC";
                     
                     
     xquery_pending = sql(query_pending);
@@ -331,7 +332,7 @@
         offset,         // offset to query 1 page at a time. cannot be empty.
         query, // the main query used without sorting. cannot be empty
         limit,
-        "evaluation_date DESC, xpert_reply_date",      // Field to sort query from
+        "evaluation_date DESC, reply_date",      // Field to sort query from
         "DESC",       // order by possible value are DESC,ASC (ASC if empty)
         contractor.contact_lg // language to display navigation strings. (english if empty)
     );
@@ -349,7 +350,7 @@
     f = 0;
     
     for t in total_ratings.rows do
-    	total_rate = total_rate + t.service_rate;
+    	total_rate = total_rate + t.client_satisfaction;;
     endfor
     
      
@@ -363,15 +364,15 @@
     	endif
     		   
     	push(contractor.reviews,{
-    	'rating': r.service_rate, 
-    	'comment': r.service_comment, 
+    	'rating': r.client_satisfaction, 
+    	'comment': r.client_comment, 
     	'service': r.sname, 
     	'city': r.city, 
         'firstname': r.firstname, 
     	'comment_date': d,
     	'pc_uid': r.uid,
-    	'response': r.xpert_reply,
-    	'resp_date': r.xpert_reply_date,
+    	'response': r.contractor_reply,
+    	'resp_date': r.reply_date,
     	'verified': p.comment_verified
     	});
     endfor
@@ -393,15 +394,15 @@
     	endif
     		   
     	push(contractor.pending_reviews,{
-    	'rating': p.service_rate, 
-    	'comment': p.service_comment, 
+    	'rating': p.client_satisfaction, 
+    	'comment': p.client_comment, 
     	'service': p.sname, 
     	'city': p.city, 
         'firstname': p.firstname, 
     	'comment_date': d,
     	'pc_uid': p.uid,
-    	'response': p.xpert_reply,
-    	'resp_date': p.xpert_reply_date,
+    	'response': p.contractor_reply,
+    	'resp_date': p.reply_date,
     	'verified': p.comment_verified
     	});
     endfor
@@ -424,7 +425,7 @@ pending_reviews_txt = ("{{lg.rows.lg}}" eq 'fr')? "Sondages en attente": "pendin
 }}
 
 \{{if xquery.nbrows > 0 then}}
-	    <div class="col-sm-6">
+	    <div class="col-sm-12">
 			<div class="rating-block">
 			    <h4>Average user rating</h4>
     		    <h2 class="bold padding-bottom-7">\{{(strpos(contractor.avgRate, '.') > 0)? substr(contractor.avgRate,0,strpos(contractor.avgRate,'.') + 2): contractor.avgRate}}<small>/ 5</small></h2>
@@ -460,8 +461,7 @@ pending_reviews_txt = ("{{lg.rows.lg}}" eq 'fr')? "Sondages en attente": "pendin
         		    <br>
         	    \{{for rates in contractor.reviews do}}
         		    <div class="review-block-rate">
-        		    <div class="review-block-name"><h5>\{{rates.service}} / \{{rates.city}}</h5></div>
-    
+
     					\{{r1=1}}
     					\{{while (r1 <= rates.rating) do}}
     						<div class="btn btn-warning btn-xs" aria-label="Left Align">
@@ -526,72 +526,7 @@ pending_reviews_txt = ("{{lg.rows.lg}}" eq 'fr')? "Sondages en attente": "pendin
         </div>
     </div>
 \{{endif}}
-\{{if xquery_pending.nbrows > 0 then}}
-	    <div class="col-sm-6">
-    		<div class="review-block-pending">
-            <h4>\{{pending_reviews_txt}} <span class='pending_reviews_count' >(\{{total_pendings}})</span></h4>
-                <hr />
-        	    \{{for rates in contractor.pending_reviews do}}
-        		    <div class="review-block-rate">
-        		    <div class="review-block-name"><h5>\{{rates.service}} / \{{rates.city}}</h5></div>
-    
-    					\{{r1=1}}
-    					\{{while (r1 <= rates.rating) do}}
-    						<div class="btn btn-warning btn-xs" aria-label="Left Align">
-    							<span class="glyphicon glyphicon-star" ></span>
-    						</div>
-    						\{{r1++}}
-    					\{{endw}}
-    					
-    					\{{for (f = 0; f < 5 - rates.rating; f++) do}}
-    						<div class="btn btn-default btn-grey btn-xs" aria-label="Left Align">
-    							<span class="glyphicon glyphicon-star" ></span></span>
-    						</div>
-    					\{{endfor}}
-        			</div>
-            		<div class="review-block-date"><h6><img src='/sn_uploads/icon/user_icon_black.png' width='30px'/>\{{rates.firstname}} \{{wrote_on_txt}} \{{substr(rates.comment_date,0,10)}}:</h6></div>
-        			\{{if (rates.comment ne "") then}}
-        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{rates.comment}}<font color='#00739f' size='4'>»</font></div>
-        			<div class='review-public-response'>
-        			    <div class="response" id='\{{rates.pc_uid}}'>
-            			    <img src='/sn_uploads/icon/user-blue-icon.png' width='30px'/>
-            			    <label>\{{contractor_answered_on_txt}} \{{rates.resp_date}}:</label>
-            			    <br>
-            			    «<div onblur='cancel_comment("\{{rates.pc_uid}}")' onfocus='save_comment("\{{rates.pc_uid}}")' name="textzone" class="textzone" id='textzone_\{{rates.pc_uid}}' contentEditable="false"/>\{{rates.response}}</div>»
-            			    <input type='hidden' value="\{{rates.pc_uid}}"/>
-        	            </div>
-        	            
-        	            \{{if (rates.response ne "") then}}
-                            &nbsp;<img onclick='handle_comments("img_\{{rates.pc_uid}}", "pending_review_count")' name='img_action' id='img_\{{rates.pc_uid}}' class='img_action' src='/sn_uploads/icon/comment-edit.png' width='30px'/>
-                            &nbsp;<label class='action' id='action_\{{rates.pc_uid}}' for='img_action' onmousedown='handle_comments("img_\{{rates.pc_uid}}","pending_review_count")'>\{{edit_txt}}</label>
-                        \{{else}}
-                            &nbsp;<img onclick='handle_comments("img_\{{rates.pc_uid}}","pending_review_count")' name='img_action' id='img_\{{rates.pc_uid}}' class='img_action' src='/sn_uploads/icon/add-comment-icon.png' width='30px'/>
-                            &nbsp;<label class='action' id='action_\{{rates.pc_uid}}' onmousedown='handle_comments("img_\{{rates.pc_uid}}","pending_review_count")'>\{{reply_txt}}</label>
-                        \{{endif}}
-                         
-                            <span class= 'cancel' id='cncl_\{{rates.pc_uid}}' style="display:none">
-                            &nbsp;<img onclick='handle_comments("cancel_\{{rates.pc_uid}}")' name='img_cancel' id='cancel_\{{rates.pc_uid}}' src='/sn_uploads/icon/cancel_icon.png' width='20px'/>
-                            &nbsp;<label for='img_cancel' onclick='handle_comments("cancel_\{{rates.pc_uid}}","pending_review_count")'>\{{delete_txt}}</label>
-                            </span>
-                        
-                    </div>
-        			\{{else}}
-        			<div class="review-block-description"><font color='#00739f' size='4'>«</font>\{{no_comment_txt}}<font color='#00739f' size='4'>»</font></div>
-        			\{{endif}}
-        			<hr />
-        			
-        	    \{{endfor}}
-        	    
-			</div>
-		</div>
-		
-\{{else}}  
-    <div class="col-sm-6">
-        <div class="alert alert-info">
-            {{sn_ct("contractor_satisfaction_survey Vous n'avez présentement aucun commentaire en cours", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}} 
-        </div>
-    </div>
-\{{endif}}
+
 
 
 <script>

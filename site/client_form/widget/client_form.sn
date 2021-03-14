@@ -388,23 +388,34 @@ function initAutocomplete() {
   // Create the autocomplete object, restricting the search to geographical
   // location types.
   autocomplete = new google.maps.places.Autocomplete(
-      /** @type {!HTMLInputElement} */(document.getElementById('address')),
+      /** @type {!HTMLInputElement} */
+      (document.getElementById('address')),
+      {fields: ["name", "formatted_address", "address_components"]},
       {types: ['geocode']});
       
   // When the user selects an address from the dropdown, populate the address
   // fields in the form.
   autocomplete.addListener('place_changed', fillInAddress);
   autocomplete.name="normal";
+  
+  autocomplete.setComponentRestrictions(
+        {'country': ['ca']}
+    );
 
 
   // For the second form in the article_detail page (slim)
   if (document.getElementById('address_slim')){
       autocomplete_slim = new google.maps.places.Autocomplete(
-          /** @type {!HTMLInputElement} */(document.getElementById('address_slim')),
+          /** @type {!HTMLInputElement} */
+          (document.getElementById('address_slim')),
+          {fields: ["name", "formatted_address", "address_components"]},
           {types: ['geocode']});
       autocomplete_slim.addListener('place_changed', fillInAddress);
       autocomplete_slim.name="slim";
     }
+    autocomplete_slim.setComponentRestrictions(
+        {'country': ['ca']}
+    );
 }
 
 // [START region_fillform]

@@ -41,17 +41,18 @@
             <table cellpadding="0" cellspacing="0" style="width:550px;border:1px solid #999999">
                 <thead>
                     <tr style="background-color:#eeeeee;border:1px solid #999999">
+                    	<th style="text-align:left">{{sn_ct("notifyBalanceToContractor Date", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
                         <th style="text-align:left">{{sn_ct("notifyBalanceToContractor ID du projet", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
-                        <!--<th style="text-align:left">{{sn_ct("notifyBalanceToContractor Adresse", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>-->
+                        <th style="text-align:left">{{sn_ct("notifyBalanceToContractor Nom du client", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
                         <th style="text-align:left">{{sn_ct("notifyBalanceToContractor Prix", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</th>
                     </tr>
                 </thead>
                 <tbody>
                 \{{for i in billing do}}
                 <tr style="border:1px solid #99999">
+                	<td>\{{i.date}}</td>
                     <td>\{{i.id}}</td>
-                    {{//V1.01 }}
-                    <!--<td>\{{i.address}}</td>-->
+                    <td>\{{i.name}}</td>
                     <td>\{{(i.type eq 'transaction' || i.type eq 'balance')? '':money_format(i.amount,"{{lg.rows.lg}}")}}</td>
                 </tr>
                 \{{endfor}}

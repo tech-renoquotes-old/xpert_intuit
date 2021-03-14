@@ -34,6 +34,8 @@ theme_color = sql(single:true,"SELECT * FROM sn_theme_color where uid = '1'")}}
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 
+<script src="https://www.googleoptimize.com/optimize.js?id=OPT-NRJ4BD3"></script>
+
 <style>
      /* COLOR FOR THE TOP MENU - Wrapper width*/
 
@@ -782,10 +784,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                             
                                             
                                             <!--   Search input  -->
-                                                <div class="input-group" style="max-width:250px; float:left;">
-                                                    <span class="input-group-addon" href="javascript:void(0)" onclick="openInNewTab('https://search.yahoo.com/search?p=site%3Axpertsource.com+' + $('#txtsearch').val())" id="btnsearch" ><i class="fa fa-search" ></i></span> 
-                                                    <input type="text" class="form-control" style="width:200px;" name="txtsearch" id="txtsearch" placeholder="{{(lg.rows.lg eq 'fr') ? 'Recherche' : 'Search';}}">
-                                                </div>
+                                                <!--<div class="input-group" style="max-width:250px; float:left;">-->
+                                                <!--    <span class="input-group-addon" href="javascript:void(0)" onclick="openInNewTab('https://search.yahoo.com/search?p=site%3Axpertsource.com+' + $('#txtsearch').val())" id="btnsearch" ><i class="fa fa-search" ></i></span> -->
+                                                <!--    <input type="text" class="form-control" style="width:200px;" name="txtsearch" id="txtsearch" placeholder="{{(lg.rows.lg eq 'fr') ? 'Recherche' : 'Search';}}">-->
+                                                <!--</div>-->
                                             <!--End of search input-->
 
                                 		    {{      
@@ -929,12 +931,12 @@ $(document).ready(function(){
         win.focus();
     }
     
-    $("#txtsearch").keyup(function(e){
-        if (e.key == "Enter") {
-        	openInNewTab('https://search.yahoo.com/search?p=site%3A{{site1}}+' + $('#txtsearch').val());
-        	console.log(e);
-        }
-    } );
+    // $("#txtsearch").keyup(function(e){
+    //     if (e.key == "Enter") {
+    //     	openInNewTab('https://search.yahoo.com/search?p=site%3A{{site1}}+' + $('#txtsearch').val());
+    //     	console.log(e);
+    //     }
+    // } );
 
     // add research in table
 	function add_recherche(){

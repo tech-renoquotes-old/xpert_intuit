@@ -349,6 +349,10 @@
     <div class="row">
         <div class="col-md-12">
             
+            \{{if extranet_user.verified ne 'yes' then}}
+                <div class="alert alert-warning">{{sn_ct("contractor_dashboard Votre compte n'a pas encore été vérifié par notre équipe.  La vérification prend normalement 24 à 48h ouvrables.  Si vous êtes toujours en attente après ce délai, vous pouvez nous contacter au 1 855 239-7836 et faire l'option 2")}}</div>
+            \{{endif}}
+            
             \{{if profile_progress < 100 then}}
             <div class="progress" id='progress_1' onmouseover='show_detail(this, "profile")' onmouseout='hide_detail(this, "profile")'>
                 <div style="display:none" class='progress_detail' id='profile'>
@@ -692,7 +696,7 @@
         </div>       
     </div>
 </div>
-
+<!--
 <div class="row">
     <div class="well custom-well">
         <h2 class="panel-title">{{sn_ct("contractor_dashboard Les dernières nouvelles de SoumissionRenovation.ca", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</h2>
@@ -709,7 +713,7 @@
             \{{endfor}}
         </table>
     </div>
-</div>
+</div>-->
 
 <script>
     $(document).ready(function(){

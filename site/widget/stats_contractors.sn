@@ -20,6 +20,8 @@
         redirect(uri:"/index.sn"); 
     endif
 }}
+
+
 <link href="/css/fr/styles.css" rel="stylesheet">
 <style>
 .contractors {
@@ -129,6 +131,20 @@
     
 cgidata = cgidata();
 
+if cgidata.sell_project then
+    if cgidata.uid_project then
+        pc = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE uid_contractor = '?' AND uid_project = '?'", cgidata.uid_contractor, cgidata.uid_project);
+        if pc.nbrows eq 1 then
+            project::acceptProjectContractor(pc.rows.uid, cgidata.lead_price);
+        else
+            token = hash(algo:"sha512", cgidata.uid_project .+ cgidata.uid_contractor .+ time.secs .+ time.usecs .+ random(min:1, max:999999));
+            void sql("INSERT INTO sr_project_contractor (sn_cdate, uid_project, uid_contractor, token) VALUES (now(), '?', '?', '?')", cgidata.uid_project, cgidata.uid_contractor, token);
+            pc = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE uid_contractor = '?' AND uid_project = '?'", cgidata.uid_contractor, cgidata.uid_project);
+            project::acceptProjectContractor(pc.rows.uid, cgidata.lead_price);
+        endif
+    endif
+endif
+
 fullname=user.firstname .+ " " .+ user.lastname;
 
 if 1 == 1 then
@@ -237,7 +253,7 @@ if 1 == 1 then
             GROUP BY c.uid", cgidata.id_contractor);
             if contractor.nbrows > 0 then
                 photos = sql("SELECT photo FROM sr_gallery WHERE active = 'yes' AND uid_contractor = '?' LIMIT 6", cgidata.id_contractor);
-                reviews = sql("SELECT contractor_reply, client_comment, client_satisfaction, uid_project, evaluation_date, comment_verified FROM sr_project_contractor WHERE uid_contractor = '?' AND client_satisfaction >= 1 ORDER BY evaluation_date DESC", cgidata.id_contractor);
+                reviews = sql("SELECT uid, contractor_reply, client_comment, client_satisfaction, uid_project, evaluation_date, comment_verified FROM sr_project_contractor WHERE uid_contractor = '?' AND client_satisfaction >= 1 ORDER BY evaluation_date DESC", cgidata.id_contractor);
                 certification = sql("SELECT lic_name, lic_number FROM sr_additional_license WHERE uid_contractor = '?'", cgidata.id_contractor);
                 complaints = sql("SELECT * FROM sr_complaints WHERE uid_contractor = '?'", cgidata.id_contractor);
                 address = sql(single:true, "SELECT a.street_no, a.street, a.zip, c.name_fr, t.name_fr as territory, uid_city FROM sr_address a LEFT JOIN sr_city c ON c.uid = a.uid_city LEFT JOIN sr_territory t ON t.uid = c.uid_territory WHERE a.uid_contractor = ?", cgidata.id_contractor);
@@ -694,7 +710,9 @@ if 1 == 1 then
                                 <td>\{{r.client_satisfaction}}</td>
                                 <td>\{{r.client_comment}}</td>
                                 <td>\{{r.contractor_reply}}</td>
-                                <td>\{{r.comment_verified}}</td>
+                                <td>
+                                    <input type="checkbox" onchange="change_comment_verified(this, '\{{r.uid}}')" \{{if r.comment_verified eq 'yes' then}}checked\{{endif}}>
+                                </td>
                             </tr>
                         \{{endfor}}
                     </table>
@@ -748,22 +766,17 @@ if 1 == 1 then
                 <br>
                 
                 <div style="width:100%">
-                    Projet gratuit
+                    Vendre le projet à cet expert
                     <form action="" method="post">
-                        <input type="text" name="id_project" placeholder="id project">
-                        <input type="hidden" name="id_contractor" value="\{{cgidata.id_contractor}}">
-                        <input type="submit" name="project_free">
+                        <input type="text" name="uid_project" placeholder="uid project">
+                        <input type="number" name="lead_price" placeholder="prix" style="min-width:50px;">
+                        <input type="hidden" name="uid_contractor" value="\{{cgidata.id_contractor}}">
+                        <input type="submit" name="sell_project">
                     </form>
                 </div>
-            
-                \{{if cgidata.project_free then
-                    if cgidata.id_project then
-                        pc = sql(single:true, "SELECT uid FROM sr_project_contractor WHERE uid_contractor = '?' AND uid_project = '?'", cgidata.id_contractor, cgidata.id_project);
-                        project::acceptProjectContractor(pc.rows.uid, 0);
-                    endif
-                endif}}
                 
-                <script>
+
+                            <script>
                 document.title = "\{{contractor.rows.company_name}} - Stats Entrepreneurs";
                 
                 // set a contractor to verified
@@ -1069,6 +1082,23 @@ if 1 == 1 then
                 function sleep(ms) {
                   return new Promise(resolve => setTimeout(resolve, ms));
                 }
+                
+                function change_comment_verified(e, uid){
+                        $.ajax({
+                            type: "post",
+                            data:{
+                                "action": "change_comment_verified",
+                                "uid": uid
+                            },
+                            url: "{{ sn_pages('ajax_internal_functions', lg.rows.lg, table:'ressources')}}",
+                            success:function(data, statusText, xhr){
+                                $('<img id="checkmark-' +e.id + '" height="24px" style="position:absolute; display:inline-block; z-index:10;" src="/sn_uploads/icon/check-512.png">').insertAfter(e);
+                                sleep(500).then(() => {
+                                    $('#checkmark-' + e.id).remove();
+                                });
+                            }
+                        });
+                    }
                 </script>
                 </div>
                 <script src="https://leaverou.github.io/stretchy/stretchy.min.js" async></script>

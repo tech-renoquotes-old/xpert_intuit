@@ -1,0 +1,65 @@
+{{
+    /*
+        @title 			sendSatisfactionSurveyToAdmin
+        Description		Sends a survey notification email to Admin. 
+        
+        @author 		louis.jhonny@sednove.com
+        
+		@version		1.0 2020-02-13 louis.jhonny@sednove.com
+    */
+    
+    %include "/extenso/functions/sn_ct.snc";
+    %include "/extenso/functions/sn_pages.snc";
+
+    use lg;
+    use email;
+}}
+
+\{{
+    use contractors;
+	use service;
+    use client;
+
+    //Il faut prendre le token de sr_project_contractor et non de sr_project
+	use token;
+    url = sql(single:true, "SELECT url_prod_alt_{{lg.rows.lg}} as url_prod FROM sn_configs");
+	url = url.rows.url_prod;
+	//Il faut prendre le token de sr_project_contractor et non de sr_project
+	url_survey = url.+'{{pages(table:'pages','client_survey',lg.rows.lg)}}?token='.+ token;
+	service = service.rows.service;
+
+	uid_client = client.rows.uid;
+	company_name = contractors.rows.company_name;
+	note = contractors.rows.client_satisfaction;
+	comment = contractors.rows.client_comment;
+	evaluation_date = contractors.rows.evaluation_date;
+}}
+<div>
+    <span style="font-size:12px;">
+    </span>
+</div>
+<div>
+    <span style="font-size:16px;">
+        <span style="font-family:Open Sans, Arial, Helvetica, sans-serif;">
+          
+          {{
+              email.rows{"content_".+lg.rows.lg};
+          }}
+          
+        </span>
+    </span>
+</div>
+<br>
+{{if(lg.rows.lg eq 'fr') then}}
+  <a href="\{{url_survey}}" style="text-decoration:none;">
+    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+      J'approuve ce sondage
+    </div>
+  </a>
+{{else}}
+  <a href="\{{url_survey}}" style="text-decoration:none;">
+    <div style="width:100%;border-top:10px #2a769f solid;border-bottom:10px #2a769f solid;background:#2a769f;color:#FFF;font-size:26px;text-align:center;">
+      I approve this survey
+    </div>
+  </a>
+{{endif}}

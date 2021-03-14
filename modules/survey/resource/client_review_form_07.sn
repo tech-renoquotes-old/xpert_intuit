@@ -125,12 +125,16 @@
                 upd = update(tables:'xpert_project_survey',fields: survey, uid:project_survey.rows.uid);
                 if(upd.sqlcode > 0) then
                     failed++;
+                else
+                    automail::sendAnsweredSurveyToAdmin(upd.uid);
                 endif
                 
             else
                 ins = insert(table:'xpert_project_survey', fields:survey);
                 if(ins.sqlcode > 0) then
                     failed++;
+                else
+                    automail::sendAnsweredSurveyToAdmin(ins.uid);
                 endif
                 
             endif

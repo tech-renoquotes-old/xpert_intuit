@@ -1,0 +1,262 @@
+{{%include '/site/package/contractor.sn'}}
+\{{
+    i=1;
+    
+    id_contractor = "{{contractor.uid}}";
+    firstname = "{{contractor.contact_firstname}}";
+    id_product = id_contractor;
+    
+    oldAvg = ("{{contractor.avgRate}}" eq "" || "{{contractor.avgRate}}" == 0)? 0: "{{contractor.avgRate}}";
+    oldCount = "{{contractor.reviews.length()}}";
+
+    avgRate = oldAvg;
+}}
+<!-- Minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+
+<!-- Optional Theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+
+<!-- jQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<!-- Minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+<style>
+    .average{
+        max-width:500px;
+        width:450px;
+        height:75px;
+        margin-left:auto;
+        margin-right:auto;
+        margin-top:20px;
+        box-shadow: rgba(0, 0, 0, 0.75) -2px 3px 5px -1px;
+        border-radius:5px;
+    }
+    
+    .average .col-md-6{
+        padding:15px;
+        border-top-left-radius:5px;
+        border-bottom-left-radius:5px;
+        height:75px;
+    }
+    
+    .average h4{
+        color:green;
+        margin:0;
+        font-size:1em;
+        font-weight:bold;
+    }
+    
+    .reviews{
+        max-width:500px;
+        width:450px;
+        overflow:hidden;
+        height:auto;
+        margin-left:auto;
+        margin-right:auto;
+        margin-top:20px;
+        box-shadow: rgba(0, 0, 0, 0.75) -2px 3px 5px -1px;
+        border-bottom-right-radius:5px;
+        border-bottom-left-radius:5px;
+        border:1px solid #ddd;
+    }
+    
+    .reviews .col-md-6{
+        height:80px;
+        padding:15px
+        margin:0;
+    }
+    
+    .reviews .glyphicon-star{
+        font-size:1.5em;
+        color:orange;
+        cursor:pointer;
+    }    
+    
+    .reviews .glyphicon-star-empty{
+        font-size:1.5em;
+        color:orange;
+        cursor:pointer;
+    }
+    
+    .content{
+        width:100%;
+        overflow-y:auto;
+        height:auto;
+        max-height:300px;
+        margin-top:20px;
+    }
+    
+    .content::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    .content::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 10px rgba(30, 114, 2,0.3); 
+        border-radius: 10px;
+    }
+    
+    .content::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        -webkit-box-shadow: inset 0 0 10px rgba(30, 114, 2,0.5);
+    }    
+    
+    .average .glyphicon-star{
+        font-size:1.5em;
+        color:orange;
+        cursor:pointer;
+    }    
+    
+    .average .glyphicon-star-empty{
+        font-size:1.5em;
+        color:orange;
+        cursor:pointer;
+    }
+
+    .footer{
+        width:100%;
+        padding-top:20px;
+        padding-bottom:20px;
+        background-color:#eee;
+        border-bottom-right-radius:5px;
+        border-bottom-left-radius:5px;
+        border-top:1px solid #ddd;
+        text-align:center;
+    }
+    
+    .footer a{
+        font-size: 1.5em;
+        text-decoration: none;
+    }
+    
+    .footer button{
+        width:160px;
+        height:40px;
+        line-height:38px;
+        background-color:transparent!important;
+        border-radius:10px;
+        border:1px solid green;
+        color:green;
+        font-weight:bold;
+        font-size:1em;
+        float:right;
+        margin:10px;
+    }
+    
+    .footer button:hover{
+        color:green;
+        font-weight:bold;
+        font-size:1.1em;
+    }    
+    
+    .review{
+        width:100%;
+        padding:15px;
+        border-bottom:1px solid #eee;
+    }
+    
+    .review h4{
+        margin-left:10px;
+        margin-top:0;
+        margin-bottom:0;
+        color:#003d69;
+        font-size:0.9em; 
+        font-weight:bold;
+    }
+    
+    .comment{
+        color:#999;
+        padding:15px;
+    }
+    
+    .dialog_arrow{
+        height:20px;
+        width:20px;
+        z-index:2;
+        margin-top:-10px;
+        margin-left:20px;
+        position:absolute;
+        background-color:#fff;
+        border-top:1px solid #ddd;
+        border-left:1px solid #ddd;
+        -ms-transform: rotate(20deg); /* IE 9 */
+        -webkit-transform: rotate(20deg); /* Safari prior 9.0 */
+        transform: rotate(45deg); /* Standard syntax */ 
+    }
+    
+
+</style>
+
+<div>
+    <div class="average">
+        <div class="col-md-6" style="background-color:#eee">
+            <span style="margin-bottom:5px">
+                \{{for(i=1; i<=5; i++) do}}
+                    \{{if(i <= avgRate) then}}
+                        <span  class="glyphicon glyphicon-star"></span>
+                    \{{else}}
+                        <span class="glyphicon glyphicon-star-empty"></span>
+                    \{{endif}}
+                \{{endfor}}
+            </span>
+            \{{if avgRate < 3 then}}
+                <span><h4 style=""></h4></span>
+            \{{elseif avgRate >=2.5 && avgRate <= 3 then}}
+                <span><h4 style="">\{{contractor::profile_ct("NORMAL","profile_template",lg:lg)}}</h4></span>
+            \{{elseif avgRate >=3 then}}
+                <span><h4 style="">\{{contractor::profile_ct("ELEVE","profile_template",lg:lg)}}</h4></span>
+            \{{endif}}
+        </div>
+        <div class="col-md-6">
+            <span style="display:block;color:#999;font-size:1.2em;">Note: \{{avgRate}}</span>
+            <span style="display:block;color:#999;font-size:1.2em">Avis total: \{{oldCount}}</span>
+        </div>
+    </div>
+    <div class="reviews">
+        <div class="dialog_arrow"></div>
+        <div class="content">
+            \{{if oldCount > 0 then}}
+                {{for rates in contractor.reviews do}}
+                
+                    <div class="review">
+                        <span style="display:inline-block;">
+                            {{for (i=1; i<=5; i++) do}}
+                                {{if(i <= rates.rating) then}}
+                                    <span  class="glyphicon glyphicon-star"></span>
+                                {{else}}
+                                    <span class="glyphicon glyphicon-star-empty"></span>
+                                {{endif}}
+                            {{endfor}}
+                        </span>
+                        <span style="display:inline-block">
+                            <h4>{{rates.firstname}} \{{rates.lastname}}</h4>
+                        </span>
+                        <span style="display:inline-block;float:right;margin-top:10px;color:#999">
+                           {{rates.comment_date}}
+                        </span>
+                        <span style="margin-top:10px;display:block;font-size:0.8em;color:#003d69">
+                            {{if(rates.comment ne "") then}}
+                                {{rates.comment}}
+                            {{else}}
+                                \{{contractor::profile_ct("Sans avis..","profile_template",lg:lg)}}
+                            {{endif}}
+                        </span>
+                        
+                            {{if(rates.response ne "") then}}
+                                <li style="margin-top:10px;margin-left:15px;font-size:0.8em;color:green">
+                                    \{{firstname}} \{{contractor::profile_ct("a répondu le","profile_template",lg:lg)}} {{rates.resp_date}}: {{rates.response}}
+                                </li>
+                            {{endif}}
+                        
+                    </div>
+                {{endfor}}
+            \{{endif}}
+        </div>
+        
+        <div class="footer">
+           <p><a id="quote_request" href="javascript:void(0)">\{{contractor::profile_ct("Recevez une soumission de","profile_template",lg:lg)}} {{contractor.company_name}}</a></p>
+        </div>        
+    </div>
+</div>

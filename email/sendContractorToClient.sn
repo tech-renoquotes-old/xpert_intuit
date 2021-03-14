@@ -87,9 +87,9 @@
     
     if(project_contractor.rows.show_profile eq 'yes') then
         if("{{lg.rows.lg}}" eq 'fr') then
-            profile = "<a class='preview' href='" .+ profile_link .+ "'>Voir un aperçu du profil de l'entrepreneur</a>";
+            profile = "<a class='preview' href='" .+ profile_link .+ "'>Voir un aperçu du profil de l'expert</a>";
         else
-            profile = "<a class='preview' href='" .+ profile_link .+ "'>Preview contractor profile</a>";
+            profile = "<a class='preview' href='" .+ profile_link .+ "'>Preview expert profile</a>";
         endif
     endif
 

@@ -7,19 +7,13 @@
 **/
 class Profilgen 
 
-    
-
 method Profilgen()
-    this.template = "/site/profiles/profile_template.sn";
+    this.template = "/site/profiles/profile_template_v2.sn";
     this.configs = sql(single:true,"SELECT * FROM sn_configs WHERE uid = 1");
 endm
 
 
     method generate(cuid)
-        // if(cuid eq '6312') then
-        //     this.template = "/site/profiles/profile_template_test.sn";
-        // endif
-        
         //get contractor profil information
         res = sql(single:true,"select * 
         from sr_contractor 
@@ -29,7 +23,7 @@ endm
         leaving_reason > '') 
         and uid = ?", cuid);
         contractor = res.rows;
-     	
+        
         if(contractor.active eq 'no' || contractor.active eq 'yes') then
         //get additional information for this contractor.
             photos = sql("SELECT * FROM sr_gallery WHERE uid_contractor='?' AND active='yes' ORDER BY priority ASC, uid DESC", contractor.uid);    	
@@ -39,48 +33,15 @@ endm
             customLicenses = sql("SELECT * FROM sr_additional_license WHERE uid_contractor='?'", contractor.uid);
             update_profile = sql("UPDATE sr_contractor SET show_profile = 'yes' WHERE show_profile IS NULL and uid = ? ", contractor.uid);
 
-            // contractor_rating = "SELECT ps.uid_project_contractor as uid,
-            //         ps.sn_cdate as evaluation_date, 
-            //         ps.uid_project, 
-            //         ps.service_comment, 
-            //         ps.service_rate, 
-            //         ps.xpert_reply, 
-            //         ps.xpert_reply_date, 
-            //         ps.comment_verified,
-            //         (select name_" .+ contractor.contact_lg .+ " from sr_service where uid = p.uid_service) as sname, 
-            //         (select ct.name_" .+ contractor.contact_lg .+ " from sr_address addr INNER JOIN sr_city ct on addr.uid_city = ct.uid where addr.uid = p.uid_address) as city, 
-            //         (select firstname from sr_client where uid = p.uid_client) as firstname 
-            //         FROM xpert_project_survey ps 
-            //         INNER JOIN sr_project p on p.uid = ps.uid_project 
-            //         WHERE ps.winner = '" .+ contractor.uid .+ "' 
-            //         AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL)
-            //         AND (ps.comment_verified = 'yes')
-                    // ";            
-            
-            contractor_rating = sql("SELECT ps.uid_project_contractor, 
-                ps.sn_cdate as evaluation_date, 
-                ps.uid_project, 
-                ps.service_comment, 
-                ps.service_rate, 
-                ps.xpert_reply, 
-                ps.xpert_reply_date, 
-                ps.comment_verified, 
-                psv.name_? as sname, 
-                psv.city, 
-                psv.firstname 
-                FROM xpert_project_survey ps  
-                INNER JOIN (select p.uid, s.name_?, 
-                                (select ct.name_? from sr_address ad INNER JOIN sr_city ct on ad.uid_city = ct.uid where ad.uid = p.uid_address) as city, 
-                                (select firstname from sr_client where uid = p.uid_client) as firstname 
-                                FROM sr_project p INNER JOIN sr_service s on s.uid = p.uid_service
-                            ) 
-                        psv
-                WHERE ps.winner = '?'
-                AND psv.uid = ps.uid_project
-                AND (ps.service_rate <> '' OR ps.service_rate IS NOT NULL) 
-                AND ps.comment_verified = 'yes'
-                ORDER BY service_comment IS NOT NULL DESC, service_comment <> '' DESC, evaluation_date DESC, ps.service_rate DESC;
-                ", contractor.contact_lg, contractor.contact_lg, contractor.contact_lg, contractor.uid);
+             contractor_rating = sql("SELECT pc.uid, DATE(accepted_date) as system_date, pc.evaluation_date, pc.uid_project, pc.client_comment, pc.client_satisfaction, pc.contractor_reply, pc.reply_date, pc.comment_verified, ps.name_? as sname, ps.city, ps.firstname FROM sr_project_contractor pc  
+                                    INNER JOIN (select p.uid, s.name_?, (select ct.name_? from sr_address ad INNER JOIN sr_city ct on ad.uid_city = ct.uid where ad.uid = p.uid_address) as city, (select firstname from sr_client where uid = p.uid_client) as firstname from sr_project p INNER JOIN sr_service s on s.uid = p.uid_service) ps 
+                                    WHERE pc.uid_contractor = '?' 
+                                    AND ps.uid = pc.uid_project
+                                    AND pc.client_satisfaction <> ''
+                                    AND pc.comment_verified = 'yes'
+                                    AND NOT isnull(pc.client_satisfaction) ORDER BY client_comment IS NOT NULL DESC, client_comment <> '' DESC, evaluation_date DESC, system_date DESC , client_satisfaction DESC;
+                                    ", contractor.contact_lg, contractor.contact_lg, contractor.contact_lg, contractor.uid);
+
             
             //  some variable information
             licenses = customLicenses.rows;
@@ -138,7 +99,7 @@ endm
             f = 0;
             
     		for r in contractor_rating.rows do
-    		   total_rate = total_rate + r.service_rate;
+    		   total_rate = total_rate + r.client_satisfaction;
     		   
     		   //display rating date. If not provided display project_contractor sn_mdate.
     		   if(r.evaluation_date ne "" && r.evaluation_date ne '0000-00-00') then
@@ -148,15 +109,15 @@ endm
     		   endif
     		   
     		   push(contractor.reviews,{
-    		    'rating': r.service_rate, 
-    		    'comment': r.service_comment, 
+    		    'rating': r.client_satisfaction, 
+    		    'comment': r.client_comment, 
     		    'service': r.sname, 
     		    'city': r.city, 
     		    'firstname': r.firstname, 
     		    'comment_date': d,
             	'pc_uid': r.uid,
-            	'response': r.xpert_reply,
-            	'resp_date': r.xpert_reply_date,
+            	'response': r.contractor_reply,
+            	'resp_date': r.reply_date,
             	'verified': r.comment_verified
     		   });
     		endfor
@@ -259,16 +220,14 @@ endm
                 // generate the profile in french for the contractor
                 void generate(delcompile: false, compile: true, file: "/html/expert/" .+ contractor.seo .+ ".snc",template: this.template);
         	    void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/expert/" .+ contractor.seo .+ ".snc"});
-                '<br>';'<a href="'.+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc"' .+ '>' .+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc</a>'; 
+                return '<a href="'.+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc"' .+ '>' .+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc</a>'; 
             elseif(lg eq 'en') then
                 contractor.clink = "/expert/" .+ contractor.seo .+ ".snc";
                 // generate the profile in english for the contractor
                 void generate(delcompile: false, compile: true, file: "/html/expert/" .+ contractor.seo .+ ".snc",template: this.template);
                 void insert(table:'sr_debug', fields:{'description':'Profile generation for contractor '.+ contractor.uid,'text':'page='.+ "/html/expert/" .+ contractor.seo .+ ".snc"});
-                '<br>';'<a href="'.+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc"' .+ '>' .+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc</a>';
+                return '<a href="'.+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc"' .+ '>' .+ this.configs.rows.url_prod .+ '/expert/' .+ contractor.seo .+ '.snc</a>';
             endif
-            
-            
         endif
     endm
 endc

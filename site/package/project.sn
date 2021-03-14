@@ -178,7 +178,7 @@
             automail::suggestFreeProjectToContractor(token);
         endf
 
-        function findContractorsForProject_v2(uid_project, limit)
+        function findContractorsForProject_v2_old(uid_project, limit)
             project = sql(single:true, "
                     SELECT  p.*,
                             city.uid_territory,
@@ -424,6 +424,269 @@
                    project.rows.estimated_value, project.rows.uid_territory, limit);*/
                     
         endf
+        
+        function set_limit_new_contractors_to_contact(uid_project, limit)
+            //find out how many contractors should we contact
+                //1. Get next contractor
+                next_contractor = project::findContractorsForProject_v3(uid_project, 1);
+                                    
+                //2. Verifiy if next contractor has same plan as last contractor
+                if next_contractor.rows[0].rank > 0 then
+                    next_contractor_same_plan = project::findContractorsForProject_v3(uid_project, 100, rank: next_contractor.rows[0].rank);
+                    
+                    if next_contractor_same_plan.nbrows > 0 then
+                        limit = next_contractor_same_plan.nbrows;
+                    endif
+                endif
+                
+            //return the limit
+            return limit;
+        endf
+        
+        
+        function findContractorsForProject_v3(uid_project, limit, ...)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+                
+            //if specific rank is provided, use this condition
+            if rank ne "" then
+                rank_where = " AND sp.rank = " .+ rank;
+            endif
+
+            return sql("SELECT c.*, cs.uid_service, sp.rank, c.note_global
+                FROM sr_contractor c
+                INNER JOIN sr_contractor_service cs ON c.uid = cs.uid_contractor
+                LEFT JOIN (
+                    SELECT sp.rank, sc.uid_contractor
+                    FROM sr_subscription_contractor sc
+                    INNER JOIN sr_subscription_contractor_territory sct ON sct.uid_subscription_contractor = sc.uid
+                        AND sct.uid_territory = '?'
+                    INNER JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+                    WHERE sc.active = 'yes' 
+                    AND curdate() BETWEEN sc.start_date AND sc.end_date
+                    ) as sp ON sp.uid_contractor = c.uid
+                LEFT JOIN (SELECT sp.rank, sp.delay, pc.sn_cdate, uid_project 
+                    FROM sr_project_contractor pc 
+                    LEFT JOIN sr_subscription_contractor sc ON sc.uid_contractor = pc.uid_contractor 
+                        AND sc.active = 'yes'
+                    LEFT JOIN sr_subscription_contractor_territory sct ON sct.uid_subscription_contractor = sc.uid
+                        AND sct.uid_territory = '?'
+                    LEFT JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+                    WHERE pc.uid_project = '?' 
+                    ORDER BY pc.uid DESC LIMIT 1) as last_pc ON last_pc.uid_project = '?'
+                WHERE   c.active = 'yes'
+                    AND c.verified = 'yes'
+                    AND languages + '?' <> 3
+                    AND cs.uid_service = '?'
+                    AND ((now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) OR (c.enable_vacation = 'no'))
+                    AND NOT EXISTS (SELECT null FROM sr_project_contractor pc WHERE pc.uid_project = '?' AND pc.uid_contractor = c.uid)
+                    AND '?' IN (SELECT ct.uid_territory FROM sr_contractor_territory ct WHERE ct.uid_contractor = c.uid)
+                    AND NOT EXISTS (SELECT NULL FROM sr_project_contractor pc INNER JOIN sr_project p ON p.uid = pc.uid_project WHERE pc.accepted_date > '2017/01/01' AND p.uid_client = '?' AND p.uid <> '?' AND pc.uid_contractor = c.uid)
+                    AND (
+                        sp.rank = last_pc.rank
+                        OR
+                        last_pc.rank IS NULL
+                        OR
+                        (TIMESTAMPDIFF(MINUTE, last_pc.sn_cdate, now()) > last_pc.delay AND TIMESTAMPDIFF(MINUTE, '?', now()) > last_pc.delay)
+                        )
+                    " .+ rank_where .+ "
+                GROUP BY c.uid
+                ORDER BY if('?' > 0,c.network = '?',0) DESC, sp.rank DESC, (note_global + IF(c.uid_territory = '?', 3.1, 0)) DESC 
+                LIMIT ?", project.rows.uid_territory, project.rows.uid_territory, project.rows.uid, project.rows.uid, project.rows.languages, project.rows.uid_service, project.rows.uid, project.rows.uid_territory,
+                                project.rows.uid_client, uid_project, project.rows.active_date, project.rows.network, project.rows.network,
+                                project.rows.uid_territory, limit);
+                
+        endf
+        
+        
+        function findContractorsForProject_v2(uid_project, limit)
+            project = sql(single:true, "
+                    SELECT  p.*,
+                            city.uid_territory,
+                            client.languages
+                    FROM sr_project p
+                    LEFT JOIN sr_client client ON p.uid_client = client.uid
+                    LEFT JOIN sr_address a ON p.uid_address = a.uid
+                    LEFT JOIN sr_city city ON a.uid_city = city.uid
+                    WHERE p.uid = '?'
+                ", uid_project);
+                
+            //verify if the project is from of an external network (eg: Groupe Reso)
+            if project.rows.network > 0 then
+                //if project is from an external network, offer that project to contractors from that network, if there are contractors remaining in that network, use the usual query but with that extra condition, if none remain, use the usual query without that extra condition.
+                network_remaining = sql(single:true, "
+                    SELECT c.*
+                    FROM   sr_contractor c 
+                            INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid 
+                                  AND ct.uid_territory = ifnull('?',0)
+                                  AND IFNULL(?,0) BETWEEN IFNULL(ct.min_amount,0) AND IF(IFNULL(ct.max_amount,0) = 0,9999999,ct.max_amount)
+                            LEFT JOIN sr_subscription_contractor sc ON sc.uid_contractor = c.uid AND sc.active = 'yes'
+                            LEFT JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan 
+                            LEFT JOIN (SELECT sp.rank, sp.delay, pc.sn_cdate, uid_project 
+                                FROM sr_project_contractor pc 
+                                LEFT JOIN sr_subscription_contractor sc ON sc.uid_contractor = pc.uid_contractor 
+                                LEFT JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+                                WHERE pc.uid_project = '?' 
+                                AND sc.active = 'yes'
+                                ORDER BY pc.uid DESC LIMIT 1) as last_pc ON last_pc.uid_project = '?'
+                    WHERE  c.active = 'yes' 
+                    AND    c.verified = 'yes' 
+                    AND    languages + ? != 3 
+                    AND    ( 
+                                  '?' IN 
+                                  ( 
+                                         SELECT cs.uid_service 
+                                         FROM   sr_contractor_service cs 
+                                         WHERE  cs.uid_contractor = c.uid 
+                                         AND    approved = 'yes') 
+                           OR     '?' IN 
+                                  ( 
+                                         SELECT cs.uid_service 
+                                         FROM   sr_contractor_service cs 
+                                         WHERE  cs.uid_contractor = c.uid 
+                                         AND    approved = 'yes')) 
+                    AND    NOT EXISTS 
+                           ( 
+                                  SELECT NULL 
+                                  FROM   sr_project_contractor pc 
+                                  WHERE  pc.uid_project = '?' 
+                                  AND    pc.uid_contractor = c.uid) 
+                    AND    (( 
+                                         Now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) 
+                           OR     ( 
+                                         c.enable_vacation = 'no' OR c.enable_vacation is null)) 
+                    AND    (( 
+                                         date_format(Now(),'%H:%i') BETWEEN c.from_active_hour AND c.to_active_hour)
+                           OR     ( 
+                                         c.enable_daily_schedule = 'no') 
+                           OR     isnull(c.enable_daily_schedule))
+                           
+                    AND (
+                            c.allow_budget = 'yes' 
+                            AND EXISTS
+                                (
+                                SELECT * FROM sr_project WHERE 
+                                    (
+                                        (shared_budget IS NOT NULL AND shared_budget <> '') 
+                                    ) 
+                                    AND uid = '?' 
+                                ) 
+                            OR c.allow_budget <> 'yes'
+                            OR isnull(c.allow_budget)
+                        )
+                    AND c.network = '?'
+                    ORDER BY (note_global + IF(c.uid_territory = '?', 1.1, 0)) DESC
+                    LIMIT 1",  project.rows.uid_territory, 
+                    project.rows.uid,
+                    project.rows.uid,
+                    project.rows.estimated_value, 
+                    project.rows.languages, 
+                    project.rows.uid_service, 
+                    project.rows.uid_secondary_service, 
+                    project.rows.uid, 
+                    project.rows.uid,
+                    project.rows.network,
+                    project.rows.uid_territory
+                );
+                    
+                if network_remaining.nbrows > 0 then
+                    network_query = "AND c.network = " .+ project.rows.network;
+                endif
+            endif
+                
+            return sql("
+                SELECT c.*
+                FROM   sr_contractor c 
+                        INNER JOIN sr_contractor_territory ct ON ct.uid_contractor = c.uid
+                              AND ct.uid_territory = ifnull('?',0)
+                              AND IFNULL(?,0) BETWEEN IFNULL(ct.min_amount,0) 
+                              AND IF(IFNULL(ct.max_amount,0) = 0,9999999,ct.max_amount)                        
+                        LEFT JOIN sr_subscription_contractor sc ON sc.uid_contractor = c.uid AND sc.active = 'yes'
+                        LEFT JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan 
+                        LEFT JOIN (SELECT sp.rank, sp.delay, pc.sn_cdate, uid_project 
+                            FROM sr_project_contractor pc 
+                            LEFT JOIN sr_subscription_contractor sc ON sc.uid_contractor = pc.uid_contractor 
+                            LEFT JOIN sr_subscription_plan sp ON sp.uid = sc.uid_subscription_plan
+                            WHERE pc.uid_project = '?' 
+                            AND sc.active = 'yes'
+                            ORDER BY pc.uid DESC LIMIT 1) as last_pc ON last_pc.uid_project = '?'
+                WHERE  c.active = 'yes' 
+                AND    c.verified = 'yes' 
+                AND    languages + ? != 3 
+                AND    ( 
+                              '?' IN 
+                              ( 
+                                     SELECT cs.uid_service 
+                                     FROM   sr_contractor_service cs 
+                                     WHERE  cs.uid_contractor = c.uid 
+                                     AND    approved = 'yes') 
+                       OR     '?' IN 
+                              ( 
+                                     SELECT cs.uid_service 
+                                     FROM   sr_contractor_service cs 
+                                     WHERE  cs.uid_contractor = c.uid 
+                                     AND    approved = 'yes')) 
+                AND    NOT EXISTS 
+                       ( 
+                              SELECT NULL 
+                              FROM   sr_project_contractor pc 
+                              WHERE  pc.uid_project = '?' 
+                              AND    pc.uid_contractor = c.uid) 
+                AND    (( 
+                                     Now() NOT BETWEEN c.deactivate_date AND c.reactivate_date) 
+                       OR     ( 
+                                     c.enable_vacation = 'no' OR c.enable_vacation is null)) 
+                AND    (( 
+                                     date_format(Now(),'%H:%i') BETWEEN c.from_active_hour AND c.to_active_hour)
+                       OR     ( 
+                                     c.enable_daily_schedule = 'no') 
+                       OR     isnull(c.enable_daily_schedule))
+                       
+                AND (
+                        c.allow_budget = 'yes' 
+                        AND EXISTS
+                            (
+                            SELECT * FROM sr_project WHERE 
+                                (
+                                    (shared_budget IS NOT NULL AND shared_budget <> '') 
+                                ) 
+                                AND uid = '?' 
+                            ) 
+                        OR c.allow_budget <> 'yes'
+                        OR isnull(c.allow_budget)
+                    )
+                AND (
+                    sp.rank = last_pc.rank
+                    OR
+                    last_pc.rank IS NULL
+                    OR
+                    (TIMESTAMPDIFF(MINUTE, last_pc.sn_cdate, now()) > last_pc.delay AND TIMESTAMPDIFF(MINUTE, '?', now()) > 120)
+                    )
+                " .+ network_query .+ "
+                ORDER BY (note_global + IF(c.uid_territory = '?', 1.1, 0)) DESC
+                LIMIT ?
+            ",   project.rows.uid_territory,
+                project.rows.uid,
+                project.rows.uid,
+                project.rows.estimated_value, 
+                project.rows.languages, 
+                project.rows.uid_service, 
+                project.rows.uid_secondary_service, 
+                project.rows.uid, 
+                project.rows.uid,
+                project.rows.active_date,
+                project.rows.uid_territory, 
+                limit
+            );
+        endf        
 
          
         function findContractorsForProject(uid_project, limit)
@@ -810,7 +1073,7 @@
          * Desc: Create a styled table. headers = column names of the query
          * @args: sql query
          **/
-        function create_table_sql(query)
+        function create_table_sql(query, ...)
             array = sql(wantheader:true, wantarray:true, query);
             }}
             <style>
@@ -850,6 +1113,9 @@
                 </tr>
             \{{endfor
             "</table>";
+            if show_query eq 'yes' then
+                array.sql;
+            endif
         endf
             
             function create_table_array(array)

@@ -1152,7 +1152,7 @@
                 if (st > bottomPosition - 1000){
                     $('.form_fixed_container_destop').fadeOut();
                 }
-                else {
+                else if (screen.width > 1199) {
                     $('.form_fixed_container_destop').fadeIn();
                 }
             }

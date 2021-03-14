@@ -246,6 +246,39 @@ if length(fullname) > 2 then
                 </div>
             </div>
         </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=results_per_service">
+                            {{sn_ct("Résultats par service pour une période de temps")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=leads_paid">
+                            {{sn_ct("Quels leads ont été payé ou pas")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=stats_credit_activator">
+                            Stats activation par activateur
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <h3>Entrepreneurs</h3>
     <div class="dashboard_group">
@@ -392,6 +425,28 @@ if length(fullname) > 2 then
                 </div>
             </div>
         </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/fr/manage_subscription">
+                            Gestion des forfaits
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=new_experts_per_service">
+                            Nouveaux experts depuis 28 jours
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     
@@ -404,6 +459,17 @@ if length(fullname) > 2 then
                     <div class="dtable">
                         <a target="_blank" href="/widgets/{{lg.rows.lg}}/stats_credit.snc">
                             {{sn_ct("Gestion des crédits")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=stats_credit">
+                            {{sn_ct("Stats des crédits")}}
                         </a>
                     </div>
                 </div>
@@ -501,6 +567,28 @@ if length(fullname) > 2 then
                 </div>
             </div>
         </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=sondage">
+                            {{sn_ct("Envoyer un sondage à un client + répondre à un sondage pour un client")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard_item_container">
+            <div class="dashboard_item_ratio">
+                <div class="dashboard_item_position">
+                    <div class="dtable">
+                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=unsold_projects">
+                            {{sn_ct("Projets invendus")}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <h3>Stats de vente</h3>
@@ -572,17 +660,6 @@ if length(fullname) > 2 then
                     <div class="dtable">
                         <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=enlever_entrepreneur">
                             {{sn_ct("pour enlever un entrepreneur pour pas qu'il ne reçoive un projet + ")}}
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="dashboard_item_container">
-            <div class="dashboard_item_ratio">
-                <div class="dashboard_item_position">
-                    <div class="dtable">
-                        <a target="_blank" href="/widgets/{{lg.rows.lg}}/reporting.snc?code=sondage">
-                            {{sn_ct("Envoyer un sondage à un client + répondre à un sondage pour un client")}}
                         </a>
                     </div>
                 </div>

@@ -53,7 +53,8 @@ void insert(table:'sr_debug', fields:{'description':'Cron_v2 : Phase: old projec
 for project sql("
         SELECT p.*,
             city.uid_territory,
-            DATEDIFF(now(), active_date) as 'age_in_days'
+            DATEDIFF(now(), active_date) as 'age_in_days',
+			TIMESTAMPDIFF(MINUTE, active_date, now()) as 'age_in_minutes'
         FROM sr_project as p
         LEFT JOIN sr_address a ON p.uid_address = a.uid
         LEFT JOIN sr_city city ON a.uid_city = city.uid
@@ -64,7 +65,7 @@ for project sql("
     /////////////////////////////////////////
     // For each active project
     
-    nb_contractors_to_contact = 5;
+	nb_contractors_to_contact = 5;
     
     // if (project.rows.urgent eq 'yes') then
     //     nb_contractors_to_contact = 10;
@@ -74,8 +75,10 @@ for project sql("
     //     // If it's the first time, send to 6 contractors
     //     nb_contractors_to_contact = configs.rows.project_first_n_contractors_to_contact;
     // endif
+
+	new_limit = project::set_limit_new_contractors_to_contact(project.rows.uid, nb_contractors_to_contact);
     
-    contractors = project::findContractorsForProject_v2(project.rows.uid, nb_contractors_to_contact);
+    contractors = project::findContractorsForProject_v3(project.rows.uid, new_limit);
     
     for contractor in contractors.rows do
         project::connectProjectContractor(project.rows.uid, contractor.uid);

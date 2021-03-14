@@ -28,7 +28,7 @@ if (cgidata.uid ne '' && cgidata.status eq 'active') then
 	endif
 endif
 
-if ((cgidata.lead_price eq "" || cgidata.lead_price == 0) && cgidata.status eq "active") then
+if ((cgidata.lead_price eq "") && cgidata.status eq "active") then
 	p = sql(single:true, "SELECT status FROM sr_project WHERE uid = '?'", cgidata.uid);
 	cgidata.status = p.rows.status;
 	'<div class="alert alert-danger">*****************LE PRIX DU PROJET DOIT ETRE SUPERIEUR A 0.00****************</div>';

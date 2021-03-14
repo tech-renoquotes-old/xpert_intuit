@@ -31,6 +31,7 @@ contractor = sql("SELECT c.uid,
                 WHERE c.active = 'yes'
                 AND c.verified = 'yes'
                 HAVING last_accepted_days >= 30 
+
               ");
                 
                 
@@ -45,7 +46,7 @@ for ctr in contractor.rows do
         if(billing_footer.solde >= 10) then
             automail::sendEmail(
                 "notifyUnpaidBalanceToContractor",
-                to: email_to, 
+				to: email_to, 
                 lg:ctr.contact_lg
             );
         endif

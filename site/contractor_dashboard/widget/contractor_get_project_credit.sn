@@ -185,6 +185,23 @@
 </div>
 
 <div class="well custom-well">
+    {{sn_ct("contractor_get_project_credit Texte Dominik", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+    
+    \{{
+        guarantee_pdf = sql(single:true, "
+            SELECT guarantee_pdf_? as guarantee_pdf 
+            FROM sr_service s 
+            INNER JOIN sr_contractor_service cs ON cs.uid_service = s.uid
+                AND cs.uid_contractor = '?'
+            ", "{{lg.rows.lg}}", extranet_user.uid);
+    }}
+    
+    <a href="\{{guarantee_pdf.rows.guarantee_pdf}}" target="_blank">{{sn_ct("contractor_get_project_credit Politique de garantie", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}</a>
+    
+    {{sn_ct("contractor_get_project_credit Texte Dominik 2", publish:"/extenso/publish/pages.sn", uids:page.rows.uid)}}
+</div>
+
+<div class="well custom-well">
     <form action="{{ sn_pages('ajax_get_project_credit', lg.rows.lg, table:'ressources')}}" id="get_project_credit" name="get_project_credit" enctype="multipart/form-data" method="POST">
         
         
@@ -502,5 +519,7 @@ $("select[name=reason]").on('change', function(){
         $('#filename').val($(this).val().split('\\').pop());
          
     });
+    
+    alert("{{sn_ct('contractor_get_project_credit Garantie', edit:false, publish:'/extenso/publish/pages.sn', uids:page.rows.uid)}}")
     
 </script>

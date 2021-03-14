@@ -18,35 +18,76 @@
 \{{
     cgidata = cgidata();
     
-    test = sql("
-        SELECT pc.uid_contractor, sum(i.amount), min(pc.accepted_date), max(pc.accepted_date), s.service
-        FROM sr_project_contractor pc
-        INNER JOIN sr_invoice i ON i.uid_project_contractor = pc.uid
-        INNER JOIN sr_project p ON p.uid = pc.uid_project
-        INNER JOIN sr_service s ON s.uid = p.uid_service
-        WHERE (i.completed is null OR i.completed <> 'yes')
-        AND pc.accepted_date < '2019/06/01'
-        GROUP BY uid_contractor, s.uid
-        
-    ");
-    }}
-    <table>
-        <th>qui</th>
-        <th>combien</th>
-        <th>service</th>
-\{{
-    for t in test.rows do
-    balance = contractor::getCurrentBilling(t.uid_contractor);
-        billing_footer = contractor::getBillingFooterByProv(balance,t.uid_contractor);
-        }}
-        <tr>
-            <td>\{{t.uid_contractor}}</td>
-            <td>\{{billing_footer.solde}}</td>
-            <td>\{{t.service}}</td>
-        </tr>
-        \{{
-        
-
-    endfor
 }}
-   </table>
+Recréer facture<br>
+<form action="" method="post">
+    <input type="text" name="uid_pivotal" placeholder="uid_pivotal"><br>
+    Recréer?<input type="checkbox" name="real">
+    <input type="submit">
+</form>
+
+Connaître qui sont les prochains à recevoir le projet
+<form action="" method="post">
+    <input type="text" name="uid_project" placeholder="uid_project"><br>
+    <input type="submit">
+</form>
+
+<br><br>
+
+Supprimer page profil
+<form action="" method="post">
+    <input type="text" name="remove_url" placeholder="url (seulement prendre la partie après 'https://xpertsource.com/expert/')" style="width:800px;"><br>
+    <input type="submit">
+</form>
+\{{
+    
+    if cgidata.remove_url ne "" then
+        remove("/html/expert/" .+ cgidata.remove_url .+ ".snc");
+        remove("/staging/expert/" .+ cgidata.remove_url .+ ".snc");
+        remove("/tmp/-html-expert-" .+ cgidata.remove_url .+ ".snc");
+        remove("/tmp/-staging-expert-" .+ cgidata.remove_url .+ ".snc");
+    endif
+
+    if cgidata.uid_pivotal ne "" then
+        if cgidata.real eq "on" then
+            real = 'yes';
+        endif
+        contractor::recreate_transaction(cgidata.uid_pivotal, 'deb@xpertsource.com', real);
+    endif
+    
+    if cgidata.uid_project ne "" then
+        new_limit = project::set_limit_new_contractors_to_contact(cgidata.uid_project, 5);
+        test = project::findContractorsForProject_v3(cgidata.uid_project, new_limit);
+        "<br><br>";
+        "La requête: " .+ test.sql;
+        "<br>";
+        for t in test.rows do
+            "<br>";
+            "uid: " .+ t.uid;
+        endfor
+    endif
+//     uid_project = 6607
+// 	;
+    
+//     limit = 5;
+
+    // test = "5598280151129017";
+    
+    // substr(test, -4)
+    
+    // contractor::recreate_transaction(4391, 'mjodoin@soumissionrenovation.ca', 'no');
+
+// test = project::findContractorsForProject_v3(7026, 5);
+// "<br><br>";
+// test.sql;
+    
+    
+  
+    // who = sql("SELECT uid FROM sr_transaction WHERE status = 'succeeded' AND year(sn_cdate) = 2020 AND month(sn_cdate) = 1 AND quickbooks is null ORDER BY uid DESC LIMIT 20");
+    
+    // qb_realm_id = "193514830636359";
+    
+    // for w in who.rows do
+    //     contractor::createSalesReceipt(w.uid, qb_realm_id);
+    // endfor
+}}
