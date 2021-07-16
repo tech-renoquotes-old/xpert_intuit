@@ -1,0 +1,27 @@
+
+
+> intuit-nodejsclient@1.0.0 start
+> node xpertapp
+
+Listening securely on port 8002
+
+> intuit-nodejsclient@1.0.0 start
+> node xpertapp
+
+Listening securely on port 8002
+
+> intuit-nodejsclient@1.0.0 start
+> node xpertapp
+
+Listening securely on port 8001
+/usr/local/website/xpertv1/apps/quickbooks/xpertapp.js:165
+	oauthClient.refresh()
+	            ^
+
+TypeError: Cannot read property 'refresh' of null
+    at Job.job (/usr/local/website/xpertv1/apps/quickbooks/xpertapp.js:165:14)
+    at Job.invoke (/usr/local/website/xpertv1/apps/quickbooks/node_modules/node-schedule/lib/schedule.js:173:10)
+    at /usr/local/website/xpertv1/apps/quickbooks/node_modules/node-schedule/lib/schedule.js:552:11
+    at Timeout._onTimeout (/usr/local/website/xpertv1/apps/quickbooks/node_modules/node-schedule/lib/schedule.js:510:7)
+    at listOnTimeout (node:internal/timers:557:17)
+    at processTimers (node:internal/timers:500:7)
